@@ -54,7 +54,7 @@ type attrFate int
 
 const (
 	attrCompiled   attrFate = iota // compiled as its old statement is
-	attrRecorded                   // kept on the Symbol, meaning nothing yet
+	attrRecorded                   // kept on the Symbol, its meaning given by code of its own (intent.go, optional.go, pointer.go)
 	attrNotYet                     // NOTIMPL, waiting for its phase
 	attrModuleOnly                 // an error outside a module
 )

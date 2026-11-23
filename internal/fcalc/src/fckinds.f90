@@ -21,9 +21,9 @@
 ! p significant decimal digits and a decimal exponent range of at least r.
 ! Here that is the kind with 15 digits and a range of 300, which is
 ! G_floating on a VAX, where fcalc is compiled /G_FLOATING, and IEEE double
-! precision elsewhere. (Under the VAX's default D_floating no kind has that
-! range, SELECTED_REAL_KIND gives -2, and the compile stops: fcalc must be
-! built /G_FLOATING.) A constant of the kind is written with the kind after
+! precision elsewhere. (Under the VAX's default D_floating REAL(8) reaches
+! only 1E38, so the kind is REAL(16), H_floating, larger and slower; hence
+! /G_FLOATING.) A constant of the kind is written with the kind after
 ! an underscore: 1.0_rk. Without it, 1.0 would be a default REAL, single
 ! precision, and 0.1 would be correct to only 7 digits.
 !

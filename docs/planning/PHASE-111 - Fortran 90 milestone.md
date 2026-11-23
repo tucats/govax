@@ -279,7 +279,7 @@ As revised by the author's answers (below), with vectors and matrices added:
 13. **The manual's 14.13** finished. (done 2026-11-22; with Appendix E, by the author's
     request)
 14. **FORTRAN-INTERNALS.md** finished, with fcalc as its worked example of a
-    whole program.
+    whole program. (done 2026-11-22)
 15. **Close-out**: PLAN.md, CLAUDE.md, "Where things stand", and Phase 112's
     go or no-go.
 
@@ -1036,3 +1036,29 @@ each script (a `SHOW MEMORY` command of fcalc's own) so a leak shows.
   directory, the image run as a foreign command). Found: chapter 10 named the help sources
   `SYS$HELP:[.SOURCES]`, which RMS rightly refuses (SYS$HELP isn't rooted); now
   `SYS$SYSROOT:[SYSHLP.SOURCES]`. Every `(#anchor)` link in MANUAL.md resolves.
+- **2026-11-22:** Subtask 14, FORTRAN-INTERNALS.md finished. Its opening no longer says
+  Fortran 90 "is being added, a part at a time": it says Fortran 90 is in the same compiler
+  beside VAX FORTRAN, points to the manual's "What Fortran 90 isn't here", and names the two
+  whole programs, DUNGEON and fcalc. By the author's request while it was written, a
+  **contents** list follows the opening, every section under one of seven parts (generated from
+  the headings, every anchor checked), and the opening's long section-by-section roadmap is now
+  a short paragraph. New, **section 36, "A whole program: fcalc"**: the sixteen files and their
+  order, module files, separate compilation, and the built-in image's build; `v = a + (-b)` in
+  FCVALUES' V_SUB, compiled for the section (a non-SEQUENCE VALUE of 32 bytes, naturally aligned;
+  operators resolved while compiling; values past 8 bytes through a hidden argument and the
+  statement's temporaries; the final 32-byte move a safe choice left); FCEVAL's CHOOSE, a pointer
+  path through NODEs as one MOVL per component, in a RECURSIVE unit's frame, with an OPTIONAL
+  dummy's cell; the numerical design that lets three machines agree, and the compiler's part in
+  it; a table of the ten compiler, MACRO, and LINK bugs fcalc found (2a to 8a and the VMS round's)
+  with what they had in common (two features meeting, one build mode, the real machine less
+  forgiving); and how a whole program is tested. Section 21's map gains a row for each Fortran 90
+  topic and fcalc (every file named checked), its "Why" row reaching Phase 111, and two pieces of
+  advice; section 17 points to section 36; section 24's opening and section 25's passages that
+  looked ahead (the attribute table's POINTER row, "recorded for a later phase", keywords waiting
+  for Phase 108) now say how things stand, and `sema/attrtable.go`'s comment on `attrRecorded` no
+  longer says "meaning nothing yet". Found while checking the section's claims: fcalc's FCKINDS
+  said that under D_floating `SELECTED_REAL_KIND(15, 300)` is -2 and the compile stops, and A.3
+  and MANUAL.md's 14.13 said the same in other words; in fact REAL\*16, H_floating, has the range,
+  so the request is answered with it and fcalc compiles, larger and slower. FCKINDS' comment
+  (the same number of lines, so the committed image is unchanged, `TestCommittedImage`) and the
+  manual are corrected; A.3 above stays as the survey wrote it.

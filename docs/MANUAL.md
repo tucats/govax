@@ -10425,8 +10425,9 @@ _$ FCARRAYS,FCLEXER,FCTREE,FCSYMBOLS,FCFUNCS,FCPOLY,FCMATRIX,FCEVAL,-
 _$ FCNUMERIC,FCPLOT,FCSTATE
 ```
 
-`/G_FLOATING` is needed: fcalc's kind, `SELECTED_REAL_KIND(15, 300)`, has G_floating's range,
-which D_floating doesn't. Every operation and function checks its operands before the machine
+`/G_FLOATING` matters: fcalc's kind, `SELECTED_REAL_KIND(15, 300)`, is REAL\*8 in G_floating,
+IEEE double's twin; under D_floating, whose REAL\*8 reaches only 1E38, the same request is
+REAL\*16, H_floating, twice the size and slower. Every operation and function checks its operands before the machine
 could overflow, divide by zero, or meet a reserved operand, and treats a value below the
 smallest as zero, so the VAX, which traps where an IEEE machine gives an infinity, and gfortran
 on an IEEE host compute the same values, shown to 12 digits by default.

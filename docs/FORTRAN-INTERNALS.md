@@ -27,36 +27,100 @@ records, typeless constants, VOLATILE, AUTOMATIC, STATIC, the CDEC$ directives,
 and `/ALIGN`; and what a program needs to use VMS: definition modules, null
 arguments, handlers, ASTs, and the system subroutines; and indexed files, by
 every key (section 22); and recursive routines, safe for ASTs and handlers to enter
-too (section 23). It has no DICTIONARY. Fortran 90 is being added, a part at a time: so far
-free source form and Fortran 90's spellings, with its other statements recognized (section 24), its declarations and kinds (section 25), its control constructs (section 26), arrays as values (section 27), procedures with explicit interfaces (section 28), dynamic arrays: descriptors, allocatable, automatic, and assumed-shape arrays, and array-valued functions (section 29), derived types (section 30), modules and separate compilation (section 31), pointers (section 32), the rest of the intrinsic procedures (section 33), and its I/O (section 34), with the compiler's tools (`/STANDARD`, warnings, listings, `/CHECK`, the debugger, and the optimizer) taught the new language (section 35). A real program, DUNGEON, builds and plays with it, and its
-output has run on a real VAX (section 20).
+too (section 23). It has no DICTIONARY.
+
+Fortran 90 is in the same compiler, beside VAX FORTRAN rather than in place of it (`/F90`, the
+default for free form, settles only what the two languages read differently): free source form
+and Fortran 90's spellings (section 24), its declarations and kinds (section 25), its control
+constructs (section 26), arrays as values (section 27), procedures with explicit interfaces
+(section 28), dynamic arrays: descriptors, allocatable, automatic, and assumed-shape arrays, and
+array-valued functions (section 29), derived types (section 30), modules and separate compilation
+(section 31), pointers (section 32), the intrinsic procedures (section 33), and its I/O (section
+34), with the compiler's tools (`/STANDARD`, warnings, listings, `/CHECK`, the debugger, and the
+optimizer) taught the new language (section 35). What it leaves out is a short list of corners,
+each refused by name (the manual's 14.13, "What Fortran 90 isn't here").
+
+A real program in each language builds and runs, and has run on a real VAX: DUNGEON, about
+11,600 lines of VAX FORTRAN (section 20), and fcalc, a scientific calculator of about 11,000 lines
+of Fortran 90 in sixteen modules, written for the purpose (section 36).
 
 The tour follows one small program through every pass (section 1), then
-takes the passes in order, with a second program for declarations and
-storage (section 8), a third for the types and how each chooses its
-instructions (section 11), and a fourth for control flow and subprograms
-(section 12), a fifth for records and how a layout reaches the code (section
-13), then FTNRTL, then what using VMS asks of them both, then the optimizer,
-then how the compiler is tested, what it tells the debugger, its listings and
-run-time checks, and what a real program and a real VAX found. Section 21 is a
-map of the files, with what building this one suggests about building another.
-Sections 22 and 23 are later additions: indexed files, and recursive routines. Section 24
-begins Fortran 90: free source form and the new tokens and statements; section 25 is its
-declarations, attributes, and kinds; section 26 its control constructs; section 27 arrays
-as values and the scalarizer; section 28 internal procedures, interfaces, and how a call
-is resolved; section 29 descriptors, the stack and the heap, and the arrays they make
-possible; section 30 derived types; section 31 modules: what a module leaves behind for its
-users, how a USE reads it, and how separately compiled pieces are kept in step; section 32
-pointers, and the TARGET attribute that lets the optimizer reason about them; section 33
-the intrinsic procedures: one table, and how each reference chooses its form; section 34
-Fortran 90's I/O: one flag for the language a statement speaks, and a record that outlives
-its statement; section 35 the compiler's tools on Fortran 90: two standards in one walk, warnings
-by scope, a check inside the expression, what the debugger is told, and two loop improvements.
+takes the passes in order, with further programs for declarations and storage
+(section 8), the types and how each chooses its instructions (section 11),
+control flow and subprograms (section 12), and records (section 13). Then come
+FTNRTL, what using VMS asks of compiler and library, the optimizer, testing,
+the debugger, listings and checks, and what a real program and a real VAX
+found. Sections 24 to 35 add Fortran 90 a part at a time, each built on the
+passes as sections 1 to 23 leave them, and section 36 is a whole Fortran 90
+program. The contents below list every section.
 Every dump and MACRO listing before section 16
 is `/NOOPTIMIZE`'s, the compiler's plain code, which is what the earlier chapters
 explain; `/OPTIMIZE` is the command's default.
 Each pass's package also has a `doc.go` that teaches it in more detail;
 this tour is the story across them.
+
+## Contents
+
+Each section stands mostly on its own, but the later ones assume the passes of sections 1 to
+10; a reader who wants only Fortran 90 can start at section 24 after section 1. Section 21 maps
+each topic to the files that hold it.
+
+**The compiler, pass by pass** (AVERAGE, a small program, followed through every pass)
+
+- [1. The shape of the compiler](#1-the-shape-of-the-compiler)
+- [2. The driver: `internal/fortran`](#2-the-driver-internalfortran)
+- [3. Messages: `internal/fortran/diag`](#3-messages-internalfortrandiag)
+- [4. The first pass: source forms (`internal/fortran/source`)](#4-the-first-pass-source-forms-internalfortransource)
+- [5. The second pass: lexing (`internal/fortran/lex`)](#5-the-second-pass-lexing-internalfortranlex)
+- [6. The third pass: the syntax tree and parsing (`ast`, `parse`)](#6-the-third-pass-the-syntax-tree-and-parsing-ast-parse)
+- [7. The fourth pass: semantic analysis (`internal/fortran/sema`)](#7-the-fourth-pass-semantic-analysis-internalfortransema)
+- [8. Declarations and storage](#8-declarations-and-storage)
+- [9. The fifth pass: the IR and lowering (`internal/fortran/ir`)](#9-the-fifth-pass-the-ir-and-lowering-internalfortranir)
+- [10. The last pass: code generation (`internal/fortran/codegen`)](#10-the-last-pass-code-generation-internalfortrancodegen)
+
+**The language, compiled** (how each part of VAX FORTRAN becomes instructions)
+
+- [11. Every type and its instructions](#11-every-type-and-its-instructions)
+- [12. Control flow and subprograms](#12-control-flow-and-subprograms)
+- [13. Records, typeless constants, and the frame](#13-records-typeless-constants-and-the-frame)
+
+**The run-time library and VMS**
+
+- [14. FTNRTL: the run-time library (`internal/ftnrtl`)](#14-ftnrtl-the-run-time-library-internalftnrtl)
+- [15. FORTRAN and VMS](#15-fortran-and-vms)
+
+**Making it good, and knowing it is**
+
+- [16. The optimizer (`internal/fortran/opt`)](#16-the-optimizer-internalfortranopt)
+- [17. Testing a compiler](#17-testing-a-compiler)
+- [18. Telling the debugger](#18-telling-the-debugger)
+- [19. Listings and run-time checks](#19-listings-and-run-time-checks)
+- [20. A real program, and a real VAX](#20-a-real-program-and-a-real-vax)
+- [21. A map, and some advice](#21-a-map-and-some-advice)
+
+**Later additions to VAX FORTRAN**
+
+- [22. Indexed files](#22-indexed-files-phase-88)
+- [23. Recursion and reentrancy](#23-recursion-and-reentrancy-phase-89)
+
+**Fortran 90** (a phase per section, each ending with what its programs found)
+
+- [24. Two source forms and a bigger alphabet](#24-fortran-90-two-source-forms-and-a-bigger-alphabet-phase-99)
+- [25. Scopes, declarations, and kinds](#25-fortran-90-scopes-declarations-and-kinds-phase-100)
+- [26. Control constructs](#26-fortran-90-control-constructs-phase-101)
+- [27. Arrays as values](#27-fortran-90-arrays-as-values-phase-102)
+- [28. Procedures and interfaces](#28-fortran-90-procedures-and-interfaces-phase-103)
+- [29. Descriptors and dynamic storage](#29-fortran-90-descriptors-and-dynamic-storage-phase-104)
+- [30. Derived types](#30-fortran-90-derived-types-phase-105)
+- [31. Modules and separate compilation](#31-fortran-90-modules-and-separate-compilation-phase-106)
+- [32. Pointers and aliasing](#32-fortran-90-pointers-and-aliasing-phase-107)
+- [33. The intrinsic procedures](#33-fortran-90-the-intrinsic-procedures-phase-108)
+- [34. I/O](#34-fortran-90-io-phase-109)
+- [35. The compiler's usability](#35-fortran-90-the-compilers-usability-phase-110)
+
+**A whole Fortran 90 program**
+
+- [36. A whole program: fcalc](#36-a-whole-program-fcalc-phase-111)
 
 ## 1. The shape of the compiler
 
@@ -2486,7 +2550,8 @@ pipeline is tested end to end on govax.
   linker.
 - **Another compiler, and the real machine.** `testdata/dungeon86/gfortran` and
   `testdata/ftn86` compare a whole program's output with gfortran's and with VMS's
-  own run. Section 20 tells what they found.
+  own run. Section 20 tells what they found, and section 36 what the same two witnesses
+  found in a Fortran 90 program.
 
 ## 18. Telling the debugger
 
@@ -2640,7 +2705,20 @@ one list, `ftn86VMSDifferences`, each with its reason: a service govax lacks, a 
 | Recursive storage: the rule; one constructor for cells | `sema/storage.go`'s `recursiveStorage`; `ir/lower.go`'s `Routine.NewCell` |
 | Free form; Fortran 90's tokens and statements | `source/free.go`; `lex/tokenize.go`, `lex/f90stmt.go`, `parse/f90.go`, `sema/notimpl.go` |
 | Scopes; attributes; kinds; the inquiry functions | `sema/scope.go`; `sema/attrtable.go`; `sema/kinds.go`; `sema/inquiry.go`, `sema/intrinsickeys.go`, `vaxfloat/model.go` |
-| Why something is as it is | `docs/planning/PHASE-74` to `PHASE-86`, `PHASE-88` for indexed files, `PHASE-89` for recursion, and `PHASE-99` on for Fortran 90, each with its decisions and log |
+| Construct names, EXIT and CYCLE, SELECT CASE | `sema/constructs.go`, `sema/selectcase.go`; `ir/lowerloops.go`, `ir/lowerselect.go` |
+| Arrays as values: shapes, overlap, the scalarizer, WHERE | `sema/sections.go`, `shape.go`, `overlap.go`, `elements.go`, `where.go`; `ir/lowerarray.go`, `lowerwhere.go`, `lowerctor.go` |
+| Internal procedures and the host's storage | `sema/internal.go`; `parse/units.go` |
+| Interfaces, keyword and OPTIONAL arguments, INTENT, generics, operators | `sema/interface.go`, `optional.go`, `intent.go`, `generic.go`, `operators.go`; `ir/loweroptional.go` |
+| Descriptors: allocatable, automatic, assumed-shape, sections to old dummies, array values | `sema/allocate.go`, `shaped.go`, `sequence.go`, `arrayvalue.go`, `transform.go`; `ir/lowerallocate.go`, `lowerautomatic.go`, `lowershaped.go`, `lowersequence.go`, `lowertemps.go`, `lowervalue.go`; FTNRTL's `ftn_alloc.mar` |
+| Derived types: layouts, values, results, I/O | `sema/derived.go`, `structvalue.go`, `seqtypes.go`, `derivedio.go`; `ir/lowerstruct.go`, `lowerresult.go`, `lowerfield.go` |
+| Modules: the text a module leaves, USE, access | `sema/module.go`, `modwrite.go`, `modread.go`, `use.go`, `access.go`; `dclcmd/fortranmodules.go` |
+| Pointers and what may alias them | `sema/pointer.go`, `pointercomp.go`, `pointerresult.go`, `pointerclass.go`; `ir/lowerpointer.go`, `locate.go`; `opt/places.go`'s `PointerRegion` |
+| The intrinsic procedures' table, and the forms a reference takes | `sema/intrinsics.go`, `constfuncs.go`, `charfuncs.go`, `model.go`, `transfer.go`, `intrinsicsub.go`; `ir/lowercharfuncs.go`, `lowermodel.go` |
+| Fortran 90's I/O under FTNRTL | `ir.ControlF90`; `ftn_format.mar`, `ftn_edit.mar`, `ftn_float.mar`, `ftn_statement.mar`'s `ITEM_NCA`, `ftn_units.mar`'s `UB_OPENREC`, `ftn_namelist.mar` |
+| `/STANDARD=F90`, obsolescent features, warnings, `/CHECK=POINTERS` | `sema/standard.go`, `sema/warnings.go`; `ir/lowerguard.go` |
+| Fortran 90 programs and expected output | `testdata/fortran90` (and its `modules/`), `testdata/fortran/gfortran/compare.py`'s `PROGRAMS90`, `testdata/f90r` |
+| A whole Fortran 90 program | `internal/fcalc/src` (fcalc's sources), `internal/fcalc/build`, `testdata/fcalc` (its scripts); section 36 |
+| Why something is as it is | `docs/planning/PHASE-74` to `PHASE-86`, `PHASE-88` for indexed files, `PHASE-89` for recursion, and `PHASE-99` to `PHASE-111` for Fortran 90, each with its decisions and log |
 
 If you're writing a compiler for this machine, this one's history suggests a few things:
 
@@ -2649,6 +2727,8 @@ If you're writing a compiler for this machine, this one's history suggests a few
 - **Name what isn't done.** A message naming the missing statement, from one place, shows what's left, and a list of what's refused is more use than a program that fails oddly.
 - **Follow the calling standard exactly,** and the system comes free: handlers, ASTs, services, and RTL routines needed almost no code generation (section 15).
 - **Measure before optimizing.** Passes were chosen from counts on real programs, and some standard ones were left out because nothing asked for them (section 16).
+- **Add a language beside the old one, and hold the old one still.** `TestNoF90Unchanged` held every fixed-form program's MACRO file to a digest through all twelve Fortran 90 phases, which worked because each new form reached an old path rather than a new one beside it (section 25).
+- **Write a real program in the language** if none is at hand, and compile it every way you can. A phase's tests check its features; a program checks their combinations (section 36).
 - **Find a witness outside your own reading:** a real run-time library to call, another compiler, and in the end the real machine. Every one of them found what the hand-written expected output couldn't, since the same person wrote both.
 
 ## 22. Indexed files (Phase 88)
@@ -2837,8 +2917,8 @@ growth, because a volume with half again as many files was the first to need an 
 
 ## 24. Fortran 90: two source forms and a bigger alphabet (Phase 99)
 
-Fortran 90 is a large language, and govax adds it a part at a time (`docs/planning/PHASE-99 -
-Fortran 90.md` lays out the program). The first part changes nothing a program can compute. It
+Fortran 90 is a large language, and govax added it a part at a time, a phase each, sections 24
+to 35 (`docs/planning/PHASE-99 - Fortran 90.md` lays out the program). The first part changes nothing a program can compute. It
 teaches the front of the compiler to *read* Fortran 90: a second source form, new tokens, and
 about thirty new statements, each recognized and then refused by name. That is less modest than it
 sounds. The two front passes, `source` and `lex`, are where FORTRAN's oddities live (sections 4 and
@@ -3004,14 +3084,16 @@ this phase:
 ```go
 attrSave:   {"SAVE", attrExternal | attrIntrinsic | attrIntent | attrOptional | attrAutomatic, attrCompiled},
 attrIntent: {"INTENT", attrPointer, attrRecorded},
-attrPointer: {"POINTER", attrAllocatable, attrNotYet},
+attrPointer: {"POINTER", attrAllocatable, attrNotYet},   // attrCompiled since Phase 107
 attrPublic: {"PUBLIC", attrPrivate, attrModuleOnly},
 ```
 
 A pair is excluded if either row names the other, and the fate says whether the attribute is
 compiled, recorded on the `Symbol` for a later phase (INTENT, OPTIONAL, TARGET: a program written
 for Fortran 90 nearly always says INTENT, and refusing it would refuse nearly every program),
-NOTIMPL, or a module's only. A name's attributes are gathered from wherever they were given, old
+NOTIMPL, or a module's only. The table still says "recorded" for those three: later phases gave
+each its meaning in code of its own (`sema/intent.go`, `optional.go`, and `pointer.go`'s NOTTARGET; `opt`'s `findTargets`), which
+reads what the table kept, and no row is NOTIMPL now. A name's attributes are gathered from wherever they were given, old
 statements included (`attrsOf`), but only a Fortran 90 form is checked against the table, so a
 program of old statements hears nothing new.
 
@@ -3085,8 +3167,8 @@ columns, a function's class and its dummies' names (`?` after an optional one), 
 `sema/intrinsickeys.go`'s `intrinsicSlots` puts a reference's arguments in the dummies' order by the
 standard's 12.4.1 before a row is chosen. `KIND=` is taken out there too, and `resultKind` converts
 the result: `INT(X, KIND=2)` is the row for `INT` and a conversion after it. Only the functions whose
-rows name their dummies take keywords; the rest wait for Phase 108, and a program's own procedures
-for Phase 103's interfaces.
+rows named their dummies took keywords in this phase; the rest waited for Phase 108 (section 33),
+and a program's own procedures for Phase 103's interfaces (section 28).
 
 ### What the programs found
 
@@ -6187,3 +6269,313 @@ which is why sections 24 to 34's programs, which check output, didn't find them.
 What waits: the run-time overlap test and `A = F(X)` into A, above; a break at a FORTRAN line given
 as `%LINE n`, which is still the MACRO file's line (`UNIT.$LINEn` is the FORTRAN one); and the
 debugger's language, which stays MACRO, since the module it reads is MACRO's (section 18).
+
+## 36. A whole program: fcalc (Phase 111)
+
+Sections 24 to 35 each ended with what its programs found, and those programs were small, each
+written to exercise its own phase. A compiler's harder test is a program written to *do*
+something, which uses whatever it needs, in whatever combination. For VAX FORTRAN that program was
+DUNGEON (section 20), written by other people long ago. No Fortran 90 program of that kind was at
+hand, so Phase 111 wrote one: **fcalc**, a scientific calculator at a prompt, with complex values,
+vectors and matrices, user-defined functions, equation solving and integration, ASCII plots, and
+saved sessions. The manual's 6.6 is how to use it, and its 14.13 has a table of its sixteen files
+and what each shows of Fortran 90. This section uses it the way section 1 used AVERAGE, but the
+other way round: not one small program through every pass, but one large program through the
+parts of the compiler only a large program reaches.
+
+### Sixteen files, one order
+
+fcalc is 11,017 lines of Fortran 90 (about a fifth of them comments, for a reader learning the
+language and the numerical methods) in fifteen modules and a main program, each file one unit.
+Compiled `/G_FLOATING /OPTIMIZE` they are 64,560 lines of MACRO and 336 routines, and the image,
+linked against FTNRTL, MTHRTL, LIBRTL, and LBRSHR, is 528 blocks.
+
+The files must be compiled in an order, `internal/fcalc/src/compiles.txt`:
+
+```text
+FCPLATFORM FCKINDS FCMESSAGES FCVALUES FCARRAYS FCLEXER FCTREE FCSYMBOLS
+FCFUNCS FCPOLY FCMATRIX FCEVAL FCNUMERIC FCPLOT FCSTATE FCALC
+```
+
+because each compilation of a module writes `NAME.F90$MOD`, the module's text (section 31), and
+a USE reads it. FCVALUES uses FCKINDS and FCMESSAGES; FCEVAL, near the end, uses nearly
+everything. That is the only coupling at compile time. Each MACRO file is assembled alone, and
+what joins them is LINK resolving names like `G^FCVALUES.V_ADD`, a module procedure's name being
+its module's and its own (section 31's `Unit.LinkName`). A change to a module's private code
+changes nothing its users see, and since `writeModuleFiles` rewrites a module file only when
+`sema.ModuleDigest` changes, a build tool watching file times would rebuild only that module.
+
+fcalc ships with govax (the system volume's `SYS$SYSTEM:FCALC.EXE`), and its image is built the
+way FTNRTL's is (section 14): `internal/fcalc/build` compiles, assembles, and links in Go, keeping
+each module's text in memory for the next USE (a `sema.ModuleFinder` of its own) instead of in
+files, with times and tool names fixed, so `TestCommittedImage` can hold the committed image to
+the sources byte for byte.
+
+### One line: `a + (-b)`
+
+Here is all of FCVALUES' subtraction:
+
+```fortran
+  type value
+    complex(rk) :: z
+    integer :: err
+  end type value
+
+  interface operator(+)
+    module procedure v_add, v_plus
+  end interface
+
+  interface operator(-)
+    module procedure v_sub, v_neg
+  end interface
+  ...
+  function v_sub(a, b) result(v)
+    type(value), intent(in) :: a, b
+    type(value) :: v
+
+    v = a + (-b)
+  end function v_sub
+```
+
+A VALUE is a complex number and an error code, so that an error travels with the result of
+every operation instead of stopping the program (more on why below). The compiler makes this of
+it:
+
+```text
+; Storage map for FCVALUES.V_SUB, a TYPE(VALUE) function
+;   V     TYPE(VALUE)              hidden argument 1  @FCVALUES.V_SUB.V(AP)
+;   A     TYPE(VALUE), INTENT(IN)  argument 2         @FCVALUES.V_SUB.A(AP)
+;   B     TYPE(VALUE), INTENT(IN)  argument 3         @FCVALUES.V_SUB.B(AP)
+...
+FCVALUES.V_SUB.$T1:
+	.BLKL	8			; characters, for one statement
+FCVALUES.V_SUB.$T2:
+	.BLKL	8			; characters, for one statement
+...
+	.ENTRY	FCVALUES.V_SUB,^M<R2,R3,R4,R5>
+;  392      v = a + (-b)
+	PUSHAB	@FCVALUES.V_SUB.B(AP)
+	PUSHAB	FCVALUES.V_SUB.$T2
+	CALLS	#2,G^FCVALUES.V_NEG
+	PUSHAB	FCVALUES.V_SUB.$T2
+	PUSHAB	@FCVALUES.V_SUB.A(AP)
+	PUSHAB	FCVALUES.V_SUB.$T1
+	CALLS	#3,G^FCVALUES.V_ADD
+	MOVC3	#32,FCVALUES.V_SUB.$T1,@FCVALUES.V_SUB.V(AP)
+;  393    end function v_sub
+	RET
+```
+
+Four phases' decisions are in those eleven instructions.
+
+**The type is 32 bytes, not 20.** The module's storage map says so:
+
+```text
+;   Type VALUE, 32 bytes
+;     +0     Z     COMPLEX*16
+;     +16    ERR   INTEGER
+```
+
+VALUE isn't a SEQUENCE type, so it is laid out naturally aligned (section 30): each component
+on a boundary of its own size, here 16 for the COMPLEX\*16, and the whole a multiple of its
+largest boundary, so that in an array of VALUEs every Z is aligned too. `SEQUENCE` would have
+made it 20 bytes, at the cost of misaligned Zs. The VAX doesn't fault on a misaligned operand, as
+some machines do; it is only slower, and the choice is the language's rule, not this machine's.
+
+**The operators are chosen while compiling.** Neither `-` nor `+` means anything for a derived
+type, so sema looks among the functions each operator's interface names (`sema/operators.go`'s
+`resolveOperator`, by section 28's rules): `-b` has one operand, which fits V_NEG and not V_SUB,
+and `a + ...` two, which fit V_ADD. From then on each is an ordinary function reference. There is
+no dispatch when the program runs, and nothing in the MACRO shows there was an operator.
+
+**A value past 8 bytes goes through a hidden argument** (section 30). A function's value of up
+to 8 bytes comes back in R0 and R1; a larger one is written where the caller says, through an
+argument the source doesn't show, the first. So each call here gets a temporary from the
+statement's pool: V_NEG writes −B into `$T2`, which is then V_ADD's second argument, and V_ADD
+writes the sum into `$T1`. (The pool began with CHARACTER temporaries, hence the comment; every
+temporary of so many bytes shares it now, `ir`'s `textTemp`.) V_SUB's own V is a hidden argument
+too, so the result is moved there whole, by `MOVC3`.
+
+**What it doesn't do.** The last move could be avoided: V_ADD could be handed V's own place,
+`@V_SUB.V(AP)`, since the standard keeps a function's result from being associated with its
+arguments. The compiler instead always passes a temporary and never the assignment's target,
+which is safe for every function without asking whether the target could reach the arguments.
+For fcalc that costs one 32-byte move per operation, beside two or three calls. It is the scalar
+cousin of computing `A = F(X)` into A, which section 35 measured and left.
+
+### A tree walked by pointers
+
+fcalc parses each line into a tree of NODEs (FCTREE) and evaluates the tree recursively
+(FCEVAL). A NODE's operands are a list: KID points to the first, and each one's NEXT to the one
+after:
+
+```text
+;   Type NODE, 96 bytes
+;     +0     KIND    INTEGER
+;     +4     OP      INTEGER
+;     +8     COLUMN  INTEGER
+;     +12    NAME    CHARACTER*31
+;     +48    NUMBER  TYPE(VALUE)
+;     +80    KID     TYPE(NODE), POINTER
+;     +84    NEXT    TYPE(NODE), POINTER
+```
+
+A scalar pointer is just an address, a longword (section 32), which is how a type can contain a
+pointer to itself: its size doesn't depend on its own. Here is FCEVAL's `if(c, a, b)`, which
+evaluates only the arm it chooses, so that a user's recursive function can stop:
+
+```fortran
+  recursive function choose(p, f) result(v)
+    type(node), pointer :: p
+    type(frame), intent(in), optional :: f
+    type(quantity) :: v
+    type(node), pointer :: arm
+    logical :: chosen
+    ...
+    if (chosen) then
+      arm => p%kid%next
+    else
+      arm => p%kid%next%next
+    end if
+    v = evaluate(arm, f)
+  end function choose
+```
+
+Its storage map, and the two pointer assignments:
+
+```text
+; Storage map for FCEVAL.CHOOSE, a RECURSIVE TYPE(QUANTITY) function
+;   V       TYPE(QUANTITY)                     hidden argument 1  @FCEVAL.CHOOSE.V(AP)
+;   P       TYPE(NODE), POINTER                argument 2         @FCEVAL.CHOOSE.P(AP)
+;   F       TYPE(FRAME), INTENT(IN), OPTIONAL  an argument        @FCEVAL.CHOOSE.$A3(FP)
+;   ARM     TYPE(NODE), POINTER                FP-112             FCEVAL.CHOOSE.ARM(FP)
+;   CHOSEN  LOGICAL                            FP-108             FCEVAL.CHOOSE.CHOSEN(FP)
+...
+;  622        arm => p%kid%next
+	MOVL	@FCEVAL.CHOOSE.P(AP),R0
+	MOVL	80(R0),R0
+	MOVL	84(R0),FCEVAL.CHOOSE.ARM(FP)
+...
+;  624        arm => p%kid%next%next
+	MOVL	@FCEVAL.CHOOSE.P(AP),R0
+	MOVL	80(R0),R0
+	MOVL	84(R0),R0
+	MOVL	84(R0),FCEVAL.CHOOSE.ARM(FP)
+```
+
+P is a pointer dummy, so its argument is the address of the caller's pointer (section 32), and
+`@P(AP)` loads the pointer itself: the node's address. Each `%KID` or `%NEXT` through a pointer is
+then one `MOVL` from the component's offset (`ir`'s `fieldPlace`, `pointerOf`), and `=>` stores the
+address it ends with. Nothing is copied; that is what makes a tree cheap to walk. The map shows
+three more phases' work. CHOOSE is RECURSIVE, so ARM and CHOSEN live in its frame, at negative
+offsets from FP (section 23), and a call of CHOOSE from inside an evaluation CHOOSE started gets
+its own. F is OPTIONAL, so it is reached through a cell, `$A3`, which the entry code fills only
+if the call's argument count reaches it (section 28): FCEVAL passes F, a user function's frame of
+parameter values, only inside a user's function. Under `/CHECK=POINTERS` each of those loads
+gets a test first (section 35), and an unassociated KID would stop the program with FTNRTL's
+NOTASSOC rather than read address 80.
+
+### A program written so two machines agree
+
+fcalc was to print the same lines on govax, under gfortran on an IEEE host, and on a real VAX.
+Most of that is the program's design, not the compiler's, and it is worth saying why, because a
+compiler writer meets the same differences:
+
+- **Range.** fcalc's kind is `SELECTED_REAL_KIND(15, 300)`, IEEE double's precision and range.
+  Compiled `/G_FLOATING` that is REAL\*8, G_floating, the same 53 bits. Under the default,
+  D_floating, whose REAL\*8 reaches only 1E38, the same request is answered with REAL\*16,
+  H_floating: the program still compiles and runs, which is what asking by need rather than by
+  size is for (section 25), but twice the size and slower, so fcalc is built `/G_FLOATING`.
+- **Nothing traps.** A VAX faults on floating overflow, division by zero, and a reserved
+  operand, where an IEEE machine gives an infinity or a NaN and goes on. So every operation in
+  FCVALUES checks its operands before computing (`|x*y| > LIMIT` is tested as `|y| > LIMIT/|x|`,
+  which can't overflow), and gives a VALUE with an error code instead. That is what VALUE's ERR
+  is for.
+- **Underflow** gives zero on both machines only if the program never makes a denormal, which
+  the VAX hasn't: fcalc treats a value below TINY as zero itself.
+- **Digits.** Twelve significant digits are shown by default, so the last bits, where MTHRTL
+  and the host's library may differ, don't reach the output.
+
+The compiler's part is to compute what the source says: no pass of the optimizer reassociates
+arithmetic (it swaps only the operands of a commutative operation, which is exact), so every
+build computes the same bits, and fcalc printed the same lines in every one. The checking builds
+earned their place on the *program*: `/CHECK=UNDERFLOW` found that fcalc's own formatting
+multiplied a value near 1E-300 by 1E-12, which an IEEE machine turns silently into a denormal and
+a VAX under the check faults on.
+
+### What the program found
+
+fcalc was written a subtask at a time, each part's scripts worked by hand from the mathematics
+and then run in every build, and the compiler bugs it found were fixed in subtasks of their own,
+each with a corpus program or test that holds it:
+
+| What failed | Why | Fixed in |
+| --- | --- | --- |
+| `REAL(Z)` of a COMPLEX(8) was REAL\*4 under `/F90`, and `CMPLX(X, Y, 8)` of constants lost all but 24 bits | VAX FORTRAN's Table D-3 read where Fortran 90 reads differently; the constant computed in COMPLEX\*8 and converted | `sema`'s `fortran90Readings`, `evaluator.complexType` |
+| An INTENT(IN) dummy as a READ's internal file was INTENTIN | A READ's internal file is read, not given a value | `sema`'s `sourcePlace` |
+| A section of a scalar record's array component under `/CHECK=BOUNDS` crashed the compiler | The bounds were asked of the record, which has none, before the field | `ir`'s `checkSubscripts` |
+| `/OPTIMIZE/CHECK=ALL` made a byte branch MACRO couldn't reach | `@(Rn)` is assembled `@0(Rn)`, two bytes, and was counted as one | `codegen`'s `operandBound` |
+| An internal procedure of a module procedure with a long name was called by a name nothing defined | The call divided `M.HOST.INNER` at the first period, the definition at the last; past 31 characters each was shortened from a different prefix | `ir`'s call naming |
+| `N = SIZE(Z)` of an INTENT(OUT) dummy was INTENTOUTREF | An inquiry asks about the dummy's shape, not its value | `sema`'s `noteInquired` |
+| `rand()` stopped `/CHECK=ALL`'s build with ADJARRDIM | Under Fortran 90 an adjustable array may have no elements | `ir`'s `checkArrayBounds` |
+| `'0123456789'(K:K)` was a syntax error | A substring of a literal constant, which Fortran 90 allows | `parse`'s `isCharLiteral` |
+| VMS's MACRO refused six modules with DIRSYNX | The compiler wrote a bare `.ASCII` for a text of no characters, and govax's MACRO had accepted it | `codegen`'s `asciiPieces`; govax's MACRO refuses it as VMS's does |
+| VMS's objects of fcalc's MACRO differed from govax's | govax's MACRO stored a repetition factor (`.LONG 0[2]`) as bytes, where VMS's stacks the value and count; govax's LINK couldn't run those commands | `asm`'s `emitRepeated`, `link`'s `storeRepeated` |
+
+Three things stand out.
+
+**Each bug was two features meeting.** None was in a construct a phase had set out to compile,
+and each phase's programs had passed: a bounds check and a component's section, a long name and
+an internal procedure, an inquiry and INTENT(OUT), a substring and a literal. A phase's programs
+test its features; a real program tests their pairs, which no one writes on purpose.
+
+**A build mode must be compared whole.** Three of the bugs showed in one build only. One of
+them, the empty adjustable array, stopped the `/CHECK=ALL` build in the middle of a script, and
+the rest of that script's input was read as the start of the next run, which still looked as if
+it passed. Since then each build's whole output is held to every script's expected output
+(`TestFcalcMilestone`, ten builds), not just "it ran".
+
+**The real machine was again less forgiving** (section 20's lesson). The empty `.ASCII` had
+assembled on govax since the code generator first wrote one, and only VMS's MACRO said it was
+wrong. Getting there found one more forgiveness, below the compiler: the exchange volume's index
+file had an extension header made by govax's disk library, and VMS's file system crashed the VAX
+on reading it. The round went round it (the volume made with room for its headers, `/HEADERS=`),
+and why VMS objects is still open (DEVIATIONS.md). The comparison of objects found the repetition
+factor, and also one place where VMS's MACRO packs records by a rule no probe has explained:
+`testdata/tir111` reproduces it, and the bytes it stores are the same.
+
+fcalc found bugs in itself the same way. The rehearsal of the VMS round on govax, with input
+from a file, showed that its prompt's record stays open after the read: under Fortran 90's
+nonadvancing rules FTNRTL ends a prompt's record only at a terminal's READ, as VMS's would, and
+fcalc had assumed the terminal. What it didn't find is worth as much: gfortran, building fcalc
+plainly, optimized, and with every run-time check it has and floating traps on, printed every
+line the same, so the design of the previous part held. The one disagreement is a reading:
+govax refuses a public type with a component of a type that is private in the using module
+(ACCESSCOMPONENT, Phase 106's reading of 4.4.1 and 5.2.3), where gfortran accepts it, so fcalc's
+modules name such types PUBLIC.
+
+### Testing a whole program
+
+What holds fcalc, and through it the compiler:
+
+- **Scripts worked by hand.** `testdata/fcalc`'s eleven scripts (`basics` to `errors`) each
+  have the output worked from the mathematics (with Python for the arithmetic), and for plots and
+  long tables checked against gfortran's, each difference resolved by hand.
+- **Every build.** `TestFcalcMilestone` (`internal/console`) builds fcalc ten ways (`/OPTIMIZE`
+  both ways and `/RECURSIVE` both ways, each with paging off and on; `/CHECK=ALL`; `/DEBUG`), runs
+  every script in each, and checks the files SAVE and LOG write and the foreign command.
+- **The tools.** `TestFcalcTools` (`internal/dclcmd`) runs `/LIST/CROSS_REFERENCE`,
+  `/STANDARD=F90`, and `/WARNINGS=ALL` on every module; each message left is listed with its
+  reason (`fcalcToolMessages`). `TestFcalcDebugger` holds a debugger session to a log: a break in
+  the evaluator at each level of a user function's recursion, and EXAMINE through a tree's
+  pointers (`FN%BODY%KID%OP`).
+- **gfortran**: `testdata/fortran/gfortran/compare.py` builds it three ways and compares every
+  line of every script and file.
+- **VMS**: `testdata/f90r` has VMS 7.1's MACRO and LINK build FTNRTL and fcalc from govax's
+  MACRO files, four builds, and run every script; `TestF90ROracle` holds govax's run of the same
+  procedure to VMS's log, and `TestF90RObjects` govax's MACRO to VMS's objects.
+
+If you're writing a compiler and no real program in its language is at hand, write one: not a
+test, but a tool you would use, big enough that you stop thinking about the compiler while you
+write it. That is when you write the combinations a test-writer wouldn't: fcalc's first part,
+the expressions and the prompt, found two compiler bugs.
