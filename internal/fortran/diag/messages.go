@@ -1673,6 +1673,18 @@ var messages = map[string]kind{
 	"POINTERINIT": {Error, "a pointer's initial value after => can only be NULL(), not %s"},
 	"NULLPLACE":   {Error, "a reference to NULL() is a disassociated pointer, so it can stand only where a pointer's value goes: after =>, in DATA for a pointer, for a pointer component in a structure constructor, or as a pointer dummy's argument"},
 
+	// Default initialization (docs/planning/PHASE-112 - Fortran 95.md, subtask
+	// 5). COMPSLASH is a derived type's component given a value between
+	// slashes, a STRUCTURE's field's form (the HP manual's 3.3.1 has = only).
+	// DEFAULTINIT is an object of a type with default initialization where
+	// the standard allows none: in a common block (Fortran 95's 5.5.2), named
+	// in DATA (ours: a DATA statement would make it static with values the
+	// defaults then overlap; gfortran -std=f95 takes it but ignores the
+	// value), or as an assumed-size INTENT(OUT) dummy argument, whose
+	// elements nobody can count (Fortran 95's 5.1.2.3).
+	"COMPSLASH":   {Error, "a component's default value is given after =, or after => as NULL() for a pointer, not between slashes"},
+	"DEFAULTINIT": {Error, "%s is of the type %s, whose components have default values, so it can't %s"},
+
 	// Pointer components (docs/planning/PHASE-107 - Fortran 90 pointers.md,
 	// finding 7). POINTERPART is an object of a type with a pointer component,
 	// at any depth, where 4.4.1, 5.5.1, 5.4, 9.4.2, and 5.2.10 forbid one: an

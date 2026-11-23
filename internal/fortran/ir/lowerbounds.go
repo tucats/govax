@@ -379,6 +379,7 @@ func (l *lowerer) layOutEntryBounds() {
 		l.begin(b)
 		l.computeBounds(e.Params)
 		l.clearAllocatables()
+		l.entryDefaults(e.Params)
 		l.jump(body)
 		entry.First = b
 	}

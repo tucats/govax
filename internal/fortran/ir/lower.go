@@ -321,6 +321,7 @@ func (l *lowerer) lowerBody() *Routine {
 	l.begin(l.newBlock())
 	l.computeBounds(u.Params)
 	l.clearAllocatables()
+	l.entryDefaults(u.Params)
 	l.entryValues = entryFill{block: l.cur, at: len(l.cur.Stmts)}
 	l.stmts(u.Body)
 	l.fillEntryValues()

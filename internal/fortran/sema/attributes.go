@@ -187,9 +187,11 @@ func (a *analyzer) saves() {
 				s.saved = true
 
 			case s.Class == UnitName || s.Result || s.Class == Constant || s.Class == StmtFunction ||
-				s.Class == External || s.Class == Intrinsic || s.Struct != nil:
+				s.Class == External || s.Class == Intrinsic || s.Struct != nil && !s.Struct.Derived:
 				// Section 4.13 excludes records, though their storage is
-				// static anyway.
+				// static anyway. A derived type's object may be saved (Fortran
+				// 90's 5.2.4), which decides where its defaults are given
+				// (defaults.go) and keeps it static in a recursive unit.
 				a.badUse(s, item.Pos, "be named in a SAVE statement")
 
 			default:

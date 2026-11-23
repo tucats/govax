@@ -9349,6 +9349,51 @@ data edge%first, edge%second / 4, 5 /
 
 A STRUCTURE's record stays out of DATA and EQUIVALENCE, as before.
 
+**Default initialization** (Fortran 95; the HP Fortran manual's 3.3.1 and 3.3.2). A component
+may give the value every object of its type starts with: `= constant` (an array component takes
+one value for every element, or an array of its shape), and for a pointer component `=> NULL()`.
+A component of a type with defaults has its type's, unless it gives its own. When an object
+starts with its defaults depends on where it is: a main program's and a module's objects, and a
+subprogram's SAVE'd ones, once, as initial values; a subprogram's other objects, its INTENT(OUT)
+dummy arguments, and its function value at **every call**, so a local doesn't keep what the last
+call left (default initialization implies no SAVE); and what ALLOCATE makes, when it makes it.
+An initial value the declaration gives, `TYPE(COUNTER) :: C = COUNTER('tally', 5)`, replaces the
+defaults. So
+
+```fortran
+program tally
+  implicit none
+  type counter
+    character(len=5) :: name = 'count'
+    integer :: n = 0
+  end type counter
+  type(counter) :: total
+  integer :: i
+
+  do i = 1, 3
+    call bump(total)
+  end do
+  print '(1x, a, i3)', total%name, total%n
+
+contains
+  subroutine bump(c)
+    type(counter), intent(inout) :: c
+    type(counter) :: calls
+    type(counter), save :: kept
+    calls%n = calls%n + 1
+    kept%n = kept%n + 1
+    c%n = c%n + calls%n + kept%n
+  end subroutine bump
+end program tally
+```
+
+prints ` count  9`: CALLS is 1 at every call, KEPT counts to 3. An object of such a type may not
+be in a common block, named in DATA, or be an assumed-size INTENT(OUT) dummy argument
+(`%FORT-E-DEFAULTINIT`); a component's value between slashes, a STRUCTURE's form, is
+`COMPSLASH`. A module's file carries the defaults, so a unit compiled apart gets the same. They
+are compiled under `/NOF90` too. (A derived type's object may be named in SAVE, as a STRUCTURE's
+record may not.)
+
 **Derived types in I/O lists and NAMELIST groups** (9.4.2, 9.8). In a formatted,
 list-directed, or internal file statement an object of a derived type is its components in
 order, each an item of its own: a component of a derived type is taken apart in turn, an array
@@ -10530,8 +10575,8 @@ naming what it is:
 
 Without `/CHECK=POINTERS` ([section 14.3](#143-the-fortran-command)) a disassociated pointer's
 target is at address 0, and using it is an access violation. These are Fortran 95's or later's,
-and not Fortran 90 at all: default initial values for components (`%FORT-E-NOTIMPL`; `NULL()`
-is there, under "Pointers"); zero widths (`I0`, `F0.2`, which write `%FOR-E-OUTCONERR`, a field
+and not Fortran 90 at all (`NULL()` and default initialization are there, under "Pointers"
+and "Derived types"): zero widths (`I0`, `F0.2`, which write `%FOR-E-OUTCONERR`, a field
 too narrow for any value); FORALL, PURE, and ELEMENTAL (`%FORT-E-NOTIMPL`, read but not yet
 compiled); and procedure pointers and bounds remapping (`P(1:N) => A`).
 

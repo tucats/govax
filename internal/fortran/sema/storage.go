@@ -57,7 +57,7 @@ func (a *analyzer) recursiveStorage() {
 	static := func(s *Symbol) bool {
 		return s.saved || (a.saveAll && !s.Result) || initial[s] || s.nullInit || s.Common != nil ||
 			(s.storageStmt != nil && s.storageStmt.Kind == lex.Static) ||
-			(s.Struct != nil && len(s.Struct.image()) > 0)
+			(s.Struct != nil && !s.Struct.DefaultInit() && len(s.Struct.image()) > 0)
 	}
 
 	for _, s := range a.unit.Symbols {

@@ -607,6 +607,13 @@ func (a *analyzer) dataNameFor(name string, pos diag.Position, pointers bool) (*
 
 		return s, false
 
+	case hasDefaults(s) && !s.Pointer:
+		a.report("DEFAULTINIT", pos, name, s.Struct.Name, "be given an initial value by DATA")
+
+		s.broken = true
+
+		return s, false
+
 	case s.AutomaticObject:
 		a.autoAttr(s, pos, name, "be given an initial value")
 

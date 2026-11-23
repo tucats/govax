@@ -3,7 +3,7 @@
 **Status:** planned 2026-11-22; subtask 1, the survey (Part A), done 2026-11-22 and
 accepted by the author the same day ("The author's answers"); subtask 2, recovery and syntax,
 done 2026-11-23; subtask 3, zero-sized arrays, done 2026-11-23; subtask 4, `NULL()`, done
-2026-11-23; subtask 5 is next. Phase 99's question 2 left Fortran 95's additions to an
+2026-11-23; subtask 5, default initialization, done 2026-11-23; subtask 6 is next. Phase 99's question 2 left Fortran 95's additions to an
 optional Phase 112, the author chose go at Phase 111's close-out, and the phase was widened
 to the Fortran errata the same day. At the errata survey's review the author split it:
 Fortran 95 is this phase, and the errata, with the survey (its Part A), is Phase 113
@@ -103,7 +103,7 @@ Already Fortran 95's in govax: allocatable locals deallocated at return (Phase 9
 2. Unrecognized statements recovered from; PURE, ELEMENTAL, and FORALL lexed and parsed.
 3. Zero-sized explicit-shape arrays under `/F90` (done 2026-11-23).
 4. `NULL()` and pointer initialization.
-5. Default initialization of components, the module text among it.
+5. Default initialization of components, the module text among it (done 2026-11-23).
 6. PURE: the constraints.
 7. ELEMENTAL procedures and their references.
 8. FORALL, the statement.
@@ -290,7 +290,7 @@ way) and the HPF_LIBRARY routines. **Not planned.**
 3. **Zero-sized explicit-shape arrays** under `/F90` (A.3's 13) (done 2026-11-23).
 4. **NULL()** (A.3's 3): every context of A.1's 6, pointer initialization (A.1's 8),
    DATA (done 2026-11-23; a component's `=> NULL()` default is subtask 5's).
-5. **Default initialization** (A.3's 4), the module text with it.
+5. **Default initialization** (A.3's 4), the module text with it (done 2026-11-23).
 6. **PURE**: the constraints (A.3's 8), PURE interfaces, specification functions (A.3's 5).
 7. **ELEMENTAL** procedures and references (A.3's 7), elemental defined assignment and
    operators in array assignments and WHERE.
@@ -494,3 +494,53 @@ with every recommendation of A.5:
   loses `NULL()` (and FORALL, PURE, and ELEMENTAL are NOTIMPL there now, as subtask 2 made
   them); Phase 113's A.1's 3 is marked resolved in part. Subtask 5, default initialization,
   is next.
+- **2026-11-23:** Subtask 5, default initialization. **The components** (`sema/derived.go`'s
+  `componentDefault`): `= constant` after a component is read by the structure constructor's
+  own code (`componentConst`: converted to the component's type, CONSTRVALUE; an array
+  component one value for every element or an array of its shape, NOTCONFORM), kept as
+  `Field.Default` (a `Const` or `ArrayConst`) and its bytes as the structure's `Initials`, a
+  record component's by `partInitials`; `=> NULL()` for a pointer component is
+  `Field.NullDefault` (no bytes). Errors: NOTPOINTER (`=>` for no pointer), POINTERATTR (`=` for
+  a pointer), POINTERINIT, and the new COMPSLASH (VAX FORTRAN's `/value/`, a STRUCTURE field's
+  form). `Structure.DefaultInit` says whether a derived type has default initialization at any
+  depth (a STRUCTURE's initial values aren't: they stay static, as VAX FORTRAN has them), and
+  `DefaultBytes` is a record as its defaults leave it, from `image`, which now leaves out a
+  component's type's defaults when the component gives its own. **Where they go**
+  (`sema/defaults.go`): a main program's and a module's objects, and a subprogram's SAVE'd ones
+  or ones given a value of their own, get the bytes as initial values, as before for a
+  STRUCTURE (`recordInitials`; a used module variable's are the module's, and an allocatable
+  array, a pointer, or an automatic array gets none there); a subprogram's other locals, its
+  INTENT(OUT) dummies, an automatic array, and its value (the function's own name's place) are
+  `Unit.Defaults`, each an `Assign` of the record constant `DefaultBytes` to the whole object,
+  an OPTIONAL dummy's with its `Present` test, marked `Symbol.entryDefault` so they get no
+  initial values; ALLOCATE's objects get `Allocation.Default` (the array, the pointer's target,
+  or the pointer component's). In a recursive unit such a local stays in the frame
+  (`recursiveStorage`'s static test leaves default-initialized types out): no implied SAVE, the
+  author's answer 4. A name only used through a component is still unclassified when
+  `defaults` runs, so it counts. New DEFAULTINIT: such an object in a common block (Fortran
+  95's 5.5.2; gfortran too), named in DATA (ours: gfortran `-std=f95` takes it but leaves the
+  value out), or an assumed-size INTENT(OUT) dummy (gfortran too). EQUIVALENCE of a SEQUENCE
+  one is allowed, as gfortran allows it. **A fix found on the way**: SAVE of a derived type's
+  object was BADUSE, the VAX rule for records (section 4.13) applied to derived types too;
+  Fortran 90 allows it (5.2.4), and it now decides where the defaults go. **Lowering**
+  (`ir/lowerdefaults.go`): `entryDefaults` follows `clearAllocatables` at the main entry and
+  in each ENTRY's block (`entryClears` now true when there are defaults), setting a dummy or an
+  automatic array only at an entry point that defines it (`defines`); each assignment is an
+  aggregate move, a MOVC3 from a `$PDATA` datum of the bytes, or the scalarizer's loop over an
+  array's elements (assumed-shape ones through their strides); a frame record with defaults
+  isn't also cleared (`clearPointers`'s `defaulted`). `allocationDefault` follows each
+  ALLOCATE call, with STAT= only when it returned 0. **The module text** (`modwrite.go`'s
+  `componentDefault`): each component's default after its name, by `constText` and
+  `arrayConstText`, `=> NULL()` for a pointer, read back by the compiler's own passes.
+  Tests: `sema`'s `TestDefaults` (the forms, the errors, the bytes, which objects are set at
+  entry and which are static, a recursive unit's frame, `/NOF90`), `fortran`'s
+  `TestModuleDefaults` (the text, and a unit compiled apart the same as one compiled with the
+  module), and `testdata/fortran90/defaults.f90` (every place an object is made, in every
+  mode, with paging too; `compare.py` the same on gfortran). The survey's probe
+  `testdata/f95/nullinit.f90` now compiles and prints gfortran's values in every mode (its
+  formats begin without a blank, so the terminal takes each line's first character for
+  carriage control, as FORTRAN does). `testdata/f90r` regenerated, DEFAULTS
+  added to `f90rAwaitingVMS`. MANUAL.md's "Derived types" has a "Default initialization"
+  paragraph and its closing list loses the item; HELP FORTRAN DERIVED_TYPES the same; Phase
+  113's A.1's 3 and A.3.2 are marked resolved. Not done here: a STRUCTURE with initial values
+  in a module's text (`modwrite.go` still refuses it; Phase 113's A.3.2). Subtask 6, PURE, is next.

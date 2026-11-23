@@ -192,7 +192,8 @@ place is a *proposal* for the author's review (**proposed: 112**); nothing is im
    with initial values, an unnamed nested structure, a constant whose bits are no number, in a
    module's text (`modwrite.go`). **Not planned**, ours, but for structures with initial values
    in a module's text, which default initialization (D.3) brings to every module with a
-   derived type: **proposed: 112** with D.3.
+   derived type: **proposed: 112** with D.3. *(A derived type's default values in a module's
+   text resolved in Phase 112, subtask 5; a STRUCTURE with initial values still isn't written.)*
 3. govax's definition modules (`$SSDEF` and the rest) as module files to USE (Phase 106,
    "later, if wanted"). **Proposed: 112**, small (`sysdef` already writes them as text;
    `USE $SSDEF` is not a legal name, so the spelling is question 8).
@@ -232,8 +233,9 @@ HP Fortran manual (`VMS-FORTRAN-LANGUAGE.txt`) describes every one (FORALL 69 ti
    `derived.go`): a variable of such a type is initialized at its storage's start (static:
    `$LOCAL`'s bytes; frame, automatic, allocated: at entry or ALLOCATE, as pointer components
    are cleared today, Phase 107's `clearRecords`); INTENT(OUT) dummies of such a type
-   initialized at entry. **Proposed: 112**, with A.3.2's module text. *(`NULL()` and `=>
-   NULL()` resolved in Phase 112, subtask 4; default initialization is its subtask 5.)*
+   initialized at entry. **Proposed: 112**, with A.3.2's module text. *(Resolved in Phase 112:
+   `NULL()` and `=> NULL()` in subtask 4, default initialization and the module text in subtask
+   5.)*
 4. CPU_TIME (a subroutine; `$GETJPI`'s CPUTIM in FTNRTL). **Proposed: 112.**
 5. A WHERE inside a WHERE, and ELSEWHERE with a mask (F95ONLY, `sema/where.go`, three sites).
    **Proposed: 112.**

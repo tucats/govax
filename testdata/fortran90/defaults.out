@@ -1,0 +1,26 @@
+       Anone    0 1 2 3  1.0 -1.0  0.5  1.5 F
+    B(2)none    0 1 2 3  1.0 -1.0  0.5  1.5 F
+Q  5.0  6.0
+       Anone   10 1 2 3  1.0 -1.0  0.5  1.5 F
+stat 0
+ MANY(3)none    0 1 2 3  1.0 -1.0  0.5  1.5 F
+       Pnone    0 1 2 3  1.0 -1.0  0.5  1.5 F
+  P%NEXTsecond  0 1 2 3  1.0 -1.0  0.5  1.5 F
+P%NEXT%NEXT F
+ clearednone    0 1 2 3  1.0 -1.0  0.5  1.5 F
+cleared  0  0
+maybe  0
+maybe, absent
+A%HITS  6
+fresh  1  1
+fresh  2  3
+depth  1
+depth  2
+depth  3
+autos  2  1.0  1.5
+    MADEmade    4 1 2 3  1.0 -1.0  0.5  1.5 F
+origin  0.5  3.5
+none    2
+tally  1
+tally2  5
+  $STATUS == "%X00000001"

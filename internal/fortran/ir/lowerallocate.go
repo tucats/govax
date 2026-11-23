@@ -99,7 +99,7 @@ func (l *lowerer) clearAllocatables() {
 // entryClears reports whether the routine has an allocatable array or a
 // pointer that each entry point clears (clearAllocatables).
 func (l *lowerer) entryClears() bool {
-	if l.pointerResult() != nil {
+	if l.pointerResult() != nil || len(l.unit.Defaults) > 0 {
 		return true
 	}
 
@@ -197,6 +197,8 @@ func (l *lowerer) allocate(s *sema.Allocate) {
 		default:
 			l.allocateArray(obj, s.Deallocate, flags, status)
 		}
+
+		l.allocationDefault(obj, status)
 
 		if status != nil && i < len(s.Objects)-1 {
 			next := l.newBlock()

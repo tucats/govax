@@ -61,6 +61,11 @@ type Allocation struct {
 	// (docs/planning/PHASE-107 - Fortran 90 pointers.md, finding 7): a scalar
 	// one, with no bounds.
 	Component *FieldRef
+
+	// Default sets what the statement makes to its type's default
+	// initialization (defaults.go): the array's elements, or the pointer's
+	// new target. nil for DEALLOCATE, and for a type without defaults.
+	Default *Assign
 }
 
 // Allocated is ALLOCATED(ARRAY), whether the allocatable array Sym is allocated
@@ -240,6 +245,14 @@ func (a *analyzer) allocateStatement(s *ast.AllocateStmt) Stmt {
 
 	if !ok {
 		return nil
+	}
+
+	// What ALLOCATE makes of a type with default initialization starts with
+	// its defaults (defaults.go).
+	if !st.Deallocate {
+		for _, obj := range st.Objects {
+			obj.Default = a.allocationDefault(obj, s.Pos)
+		}
 	}
 
 	return st

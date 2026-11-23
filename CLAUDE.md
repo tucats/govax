@@ -1461,7 +1461,10 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   header recovered past unknown prefix words, UNRECPREFIX; subtask 3, done 2026-11-23,
   zero-sized explicit-shape arrays under `/F90`, each empty dimension kept as (1:0),
   `sema`'s `emptyDimension` and `Symbol.Empty`; subtask 4, done 2026-11-23, `NULL()` where a
-  pointer's value goes, `sema/null.go`, and generics' pointer dummies given the pointer),
+  pointer's value goes, `sema/null.go`, and generics' pointer dummies given the pointer;
+  subtask 5, done 2026-11-23, default initialization, `Field.Default`, `sema/defaults.go`'s
+  `Unit.Defaults` set at each entry by `ir/lowerdefaults.go`, static objects' initial values,
+  ALLOCATE's, and the module text),
   **Phase 113 is the errata** (its Part B the scope: the cheap
   Fortran 90 NOTIMPLs, LIB$INITIALIZE, STR$'s arithmetic, `USE
   STARLET_SSDEF`, MACRO's and LINK's gaps, housekeeping, and a VMS probe

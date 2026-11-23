@@ -312,7 +312,7 @@ func (l *lowerer) clearPointers() {
 			l.setPointerHeader(c.Sym)
 			l.emit(&Assign{origin: l.origin(), Dst: l.pointerAddress(c.Sym), Src: LongConst(0)})
 
-		case clearsPointers(c.Sym.Type):
+		case clearsPointers(c.Sym.Type) && !l.defaulted(c.Sym):
 			l.clearRecords(&Mem{Cell: c, T: Byte}, LongConst(int32(c.Sym.Elements())), c.Sym.Struct)
 		}
 	}

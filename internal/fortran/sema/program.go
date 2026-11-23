@@ -67,6 +67,12 @@ type Unit struct {
 	// ResultVar it is.
 	Result *Symbol
 
+	// Defaults are the objects that each entry point sets to their type's
+	// default initialization (docs/planning/PHASE-112 - Fortran 95.md, A.3's 4;
+	// defaults.go), in order: a subprogram's locals that aren't saved, its
+	// INTENT(OUT) dummies, and its value.
+	Defaults []*Default
+
 	// Recursive is set for a function or subroutine that may be active more
 	// than once at a time: its header says RECURSIVE, or /RECURSIVE or an
 	// OPTIONS statement's says so (the HP Fortran manual's 8.5.1.1;
@@ -469,6 +475,11 @@ type Symbol struct {
 	// or DATA (null.go): no bytes, a static pointer's storage being 0 already,
 	// but static storage, as any initial value's.
 	nullInit bool
+
+	// entryDefault is set for an object each entry point sets to its type's
+	// default initialization (defaults.go), which therefore has no initial
+	// values in the image.
+	entryDefault bool
 
 	// automaticPos is where the AUTOMATIC statement names the name, or the
 	// name that made it AUTOMATIC.

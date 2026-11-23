@@ -719,6 +719,7 @@ func (a *analyzer) beginUnit(au *ast.Unit, name string) *Unit {
 	a.checkEntryTypes()
 	a.psectDirectives()
 	a.checkCommonTypes()
+	a.checkDefaultCommons()
 
 	if u.Kind == ast.ModuleUnit {
 		a.accessStatements(body)
@@ -768,6 +769,7 @@ func (a *analyzer) finishUnit() {
 	a.passedLengths()
 	a.recursiveStorage()
 	a.freedAtReturn()
+	a.defaults()
 	a.checkAssociated()
 	a.layout()
 	a.recordInitials()

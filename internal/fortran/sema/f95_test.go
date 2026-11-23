@@ -258,3 +258,153 @@ func TestNull(t *testing.T) {
 		t.Errorf("/NOF90: %s", messageText(ms))
 	}
 }
+
+// TestDefaults holds default initialization (Phase 112, subtask 5): the
+// components' forms and their errors, which objects each entry point sets, and
+// which get initial values in the image instead.
+func TestDefaults(t *testing.T) {
+	prog := func(lines ...string) []string {
+		return append(append([]string{"program prog", "  implicit none", "  integer :: n"}, lines...), "end program prog")
+	}
+
+	typed := func(lines ...string) []string {
+		return prog(append([]string{"  type t", "    integer :: i = 1", "    real :: r", "  end type"}, lines...)...)
+	}
+
+	cases := []struct {
+		name  string
+		lines []string
+		want  string
+	}{
+		{"every form", prog("type t", "integer :: i = 2, j", "real :: v(3) = 1.5, w(2) = (/ 1.0, 2.0 /)",
+			"character(len=4) :: c = 'ab'", "integer, pointer :: p => null()", "type(t), pointer :: next => null()",
+			"end type", "type u", "type(t) :: x", "type(t) :: y = t(1, 2, 1.0, 2.0, 'x', null(), null())",
+			"end type"),
+			"DATAVALUE: an initial value must be a constant, and the component P of T is a pointer, whose value is a target"},
+		{"nested defaults", prog("type t", "integer :: i = 2", "end type", "type u", "type(t) :: x, y = t(3)", "end type",
+			"type(u) :: a"), ""},
+		{"slashes", prog("type t", "integer i /3/", "end type"),
+			"COMPSLASH: a component's default value is given after =, or after => as NULL() for a pointer, not between slashes"},
+		{"=> for no pointer", prog("type t", "integer :: i => null()", "end type"), "NOTPOINTER: I is not a pointer"},
+		{"= for a pointer", prog("type t", "integer, pointer :: p = 3", "end type"),
+			"POINTERATTR: the pointer P can't be given an initial value but NULL()"},
+		{"=> of a target", prog("type t", "integer, pointer :: p => n", "end type"),
+			"POINTERINIT: a pointer's initial value after => can only be NULL(), not N"},
+		{"a value of another type", prog("type t", "character(len=2) :: c = 3", "end type"),
+			"CONSTRVALUE: an INTEGER value can't be the value of the component C of T, which is a CHARACTER*2 value"},
+		{"a variable", prog("type t", "integer :: i = n", "end type"),
+			"DATAVALUE: an initial value must be a constant, and N is not a constant"},
+		{"an array of another shape", prog("type t", "integer :: v(3) = (/ 1, 2 /)", "end type"),
+			"NOTCONFORM: the shapes (3) and (2) don't conform"},
+		{"COMMON", prog("type t", "sequence", "integer :: i = 1", "end type", "type(t) :: x", "common /c/ x"),
+			"DEFAULTINIT: X is of the type T, whose components have default values, so it can't be in a common block"},
+		{"DATA", typed("type(t) :: x", "data x%r /2.0/"),
+			"DEFAULTINIT: X is of the type T, whose components have default values, so it can't be given an initial value by DATA"},
+		{"an assumed-size INTENT(OUT) dummy", typed("contains", "subroutine s(x)", "type(t), intent(out) :: x(*)",
+			"end subroutine"), "DEFAULTINIT: X is of the type T, whose components have default values, so it can't be an " +
+			"assumed-size INTENT(OUT) dummy argument"},
+		{"an initial value of its own", typed("type(t) :: x = t(3, 4.0)"), ""},
+	}
+
+	for _, c := range cases {
+		if got := messageText(analyzeFree(t, c.lines...)); got != c.want {
+			t.Errorf("%s:\n got %q\nwant %q", c.name, got, c.want)
+		}
+	}
+
+	// The defaults' bytes: a component's own default replaces its type's.
+	p, ms := analyzeFreeWith(t, Options{}, prog("type t", "integer(2) :: i = 2, j", "end type",
+		"type u", "type(t) :: x, y = t(7, 8)", "character(len=2) :: c = 'a'", "end type", "type(u) :: a")...)
+	if len(ms) != 0 {
+		t.Fatalf("messages: %s", messageText(ms))
+	}
+
+	st := p.Units[0].Lookup("A").Struct
+	if got, want := st.DefaultBytes(), []byte{2, 0, 0, 0, 7, 0, 8, 0, 'a', ' '}; string(got) != string(want) {
+		t.Errorf("DefaultBytes % X, want % X", got, want)
+	}
+
+	// Which objects each entry point sets: an unsaved local, an INTENT(OUT)
+	// dummy, an automatic array, the value; not a saved local, one given a value,
+	// an INTENT(IN) dummy, an allocatable array, or a pointer.
+	p, ms = analyzeFreeWith(t, Options{}, "module m", "  type t", "    integer :: i = 1", "  end type", "contains",
+		"  function f(a, b, k) result(r)", "    type(t), intent(out) :: a", "    type(t), intent(in) :: b",
+		"    integer, intent(in) :: k", "    type(t) :: r, loc, w(k), kept = t(5)", "    type(t), save :: s",
+		"    type(t), allocatable :: al(:)", "    type(t), pointer :: pt", "    loc%i = s%i + kept%i", "    w(1) = loc",
+		"    r = b", "  end function", "end module m",
+		"program main", "  use m", "  type(t) :: x, y", "  x = f(y, y, 2)", "end program main")
+	if len(ms) != 0 {
+		t.Fatalf("messages: %s", messageText(ms))
+	}
+
+	var names []string
+
+	for _, u := range p.Units {
+		for _, d := range u.Defaults {
+			names = append(names, u.Name+"."+d.Sym.Name)
+		}
+	}
+
+	if got, want := strings.Join(names, " "), "F.R F.A F.LOC F.W"; got != want {
+		t.Errorf("defaults %q, want %q", got, want)
+	}
+
+	// A main program's locals are static, their defaults initial values.
+	main := p.Units[len(p.Units)-1]
+
+	given := map[string]bool{}
+	for _, in := range main.Initials {
+		given[in.Sym.Name] = true
+	}
+
+	if !given["X"] || !given["Y"] {
+		t.Errorf("main program's initial values: %v", given)
+	}
+
+	// A recursive unit's unsaved local is in the frame: default initialization
+	// doesn't imply SAVE.
+	p, ms = analyzeFreeWith(t, Options{}, "recursive subroutine s(k)", "  integer :: k", "  type t",
+		"    integer :: i = 1", "  end type", "  type(t) :: a", "  type(t), save :: b", "  a%i = b%i + k", "end subroutine s")
+	if len(ms) != 0 {
+		t.Fatalf("messages: %s", messageText(ms))
+	}
+
+	for name, automatic := range map[string]bool{"A": true, "B": false} {
+		if s := p.Units[0].Lookup(name); s.Automatic != automatic {
+			t.Errorf("%s: Automatic %v, want %v", name, s.Automatic, automatic)
+		}
+	}
+
+	// A host's object is the host's to set: its internal procedure's entry
+	// leaves it alone.
+	p, ms = analyzeFreeWith(t, Options{}, "subroutine h", "  type t", "    integer :: i = 1", "  end type",
+		"  type(t) :: x", "  call inner", "contains", "  subroutine inner", "    x%i = x%i + 1", "  end subroutine",
+		"end subroutine h")
+	if len(ms) != 0 {
+		t.Fatalf("host: %s", messageText(ms))
+	}
+
+	for _, u := range p.Units {
+		if want := map[string]int{"H": 1, "INNER": 0}[u.Name]; len(u.Defaults) != want {
+			t.Errorf("host: %s sets %d objects, want %d", u.Name, len(u.Defaults), want)
+		}
+	}
+
+	// Under /NOF90 too (the author's answer 2).
+	p, ms = analyzeLines(t, "T.FOR",
+		"      SUBROUTINE S",
+		"      TYPE :: T",
+		"        INTEGER :: I = 1",
+		"        INTEGER, POINTER :: P => NULL()",
+		"      END TYPE",
+		"      TYPE(T) X",
+		"      X%I = 2",
+		"      END")
+	if len(ms) != 0 {
+		t.Fatalf("/NOF90: %s", messageText(ms))
+	}
+
+	if d := p.Units[0].Defaults; len(d) != 1 || d[0].Sym.Name != "X" {
+		t.Errorf("/NOF90: defaults %v", d)
+	}
+}

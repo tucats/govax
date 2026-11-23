@@ -232,15 +232,6 @@ func (b *structBuilder) componentStatement(s *ast.TypeStmt) {
 	}
 
 	for _, d := range s.Entities {
-		if d.Value != nil || d.Init != nil {
-			pos := d.ValuePos
-			if d.Init != nil {
-				pos = d.InitPos
-			}
-
-			a.notImplForm(pos, "a component's default initial value")
-		}
-
 		f := &Field{Name: d.Name, Pos: d.Pos, Pointer: pointer}
 
 		var ok bool
@@ -266,9 +257,81 @@ func (b *structBuilder) componentStatement(s *ast.TypeStmt) {
 
 		if !ok || !b.fieldDims(f, decl) {
 			f.Struct, f.Type, f.Dims = nil, invalid, nil
+			ok = false
 		}
 
 		b.add(f)
+
+		if ok {
+			b.componentDefault(f, d)
+		}
+	}
+}
+
+// componentDefault reads the default value the declarator d gives the
+// component f, if it gives one (Fortran 95's default initialization, the HP
+// manual's 3.3.1; the author's answer 2 has it under /NOF90 too): after =, a
+// constant expression of the component's type, which an array component takes
+// for every element, or an array of its shape, each value converted as a
+// structure constructor's (componentConst; CONSTRVALUE); after =>, NULL() for a
+// pointer component. Its bytes join the structure's Initials, which every
+// record of the type starts with (Structure.DefaultBytes). A component's own
+// default replaces its type's (Structure.image), and = between slashes, VAX
+// FORTRAN's form, is a STRUCTURE's field's only (COMPSLASH).
+func (b *structBuilder) componentDefault(f *Field, d *ast.Declarator) {
+	a := b.a
+
+	switch {
+	case d.Init != nil:
+		a.report("COMPSLASH", d.InitPos)
+
+		return
+
+	case d.Value == nil:
+		return
+
+	case d.PointerInit && !f.Pointer:
+		a.report("NOTPOINTER", d.ValuePos, f.Name)
+
+		return
+
+	case d.PointerInit:
+		if _, ok := a.nullReference(d.Value); !ok {
+			a.report("POINTERINIT", d.ValuePos, ast.DumpExpr(d.Value))
+
+			return
+		}
+
+		f.NullDefault = true
+
+		return
+
+	case f.Pointer:
+		a.report("POINTERATTR", d.ValuePos, f.Name, "be given an initial value but NULL()")
+
+		return
+	}
+
+	part, err := a.declEval().componentConst(b.s, f, d.Value)
+	if err != nil {
+		if err.kind != constFailed {
+			a.report("DATAVALUE", err.pos, err.why)
+		}
+
+		return
+	}
+
+	f.Default = part
+
+	switch p := part.(type) {
+	case *Const:
+		b.s.Initials = append(b.s.Initials, a.partInitials(p, f.Offset, f.Name, d.Pos)...)
+
+	case *ArrayConst:
+		for n, e := range p.Elems {
+			item := f.Name + "(" + elementSubscripts(f.Dims, n) + ")"
+			b.s.Initials = append(b.s.Initials, a.partInitials(e, f.Offset+n*f.ElementSize(), item, d.Pos)...)
+		}
 	}
 }
 

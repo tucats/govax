@@ -820,7 +820,15 @@ func argumentKind(s *Structure, t Type) string {
 // values, as DATA's rule has it (DATABLANK; section 4.15.1 doesn't say).
 func (a *analyzer) recordInitials() {
 	for _, s := range a.unit.Symbols {
-		if s.Struct == nil || s.broken || s.Dummy != 0 {
+		if s.Struct == nil || s.broken || s.Dummy != 0 || s.entryDefault {
+			continue
+		}
+
+		// A type's defaults are given only where the object is made: a module's
+		// variable by the module (a used one's block is the module's), an
+		// allocatable array or a pointer's target by ALLOCATE, an automatic
+		// array at each entry point (defaults.go).
+		if hasDefaults(s) && (s.Use != nil || s.Allocatable || s.Pointer || s.AutomaticObject) {
 			continue
 		}
 
@@ -892,8 +900,9 @@ func (s *Structure) image() []*FieldInitial {
 
 	for _, f := range s.Fields {
 		// A pointer component has no initial value: it starts disassociated,
-		// its storage 0.
-		if f.Struct == nil || f.Pointer {
+		// its storage 0. A component with a default value of its own has that
+		// value whole, not its type's defaults (the HP manual's 3.3.1).
+		if f.Struct == nil || f.Pointer || f.Default != nil {
 			continue
 		}
 

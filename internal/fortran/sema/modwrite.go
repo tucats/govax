@@ -858,7 +858,7 @@ func (w *moduleWriter) structure(st *Structure) {
 				spec += ", DIMENSION(" + deferredText(f.Rank) + ")"
 			}
 
-			w.put(2, spec+" :: "+f.Name+dimsText(f.Dims))
+			w.put(2, spec+" :: "+f.Name+dimsText(f.Dims)+w.componentDefault(st, f))
 		}
 
 		w.put(1, "END TYPE "+name)
@@ -922,6 +922,42 @@ func (w *moduleWriter) structure(st *Structure) {
 	}
 
 	w.put(1, "END STRUCTURE")
+}
+
+// componentDefault is the text after a component's name that gives its
+// default value, if it has one (Fortran 95's default initialization): " =
+// value", or " => NULL()" for a pointer component; "" for none.
+func (w *moduleWriter) componentDefault(st *Structure, f *Field) string {
+	if f.NullDefault {
+		return " => NULL()"
+	}
+
+	ft := f.Type
+	if f.Struct != nil {
+		ft = recordType(f.Struct)
+	}
+
+	var (
+		text string
+		ok   bool
+	)
+
+	switch d := f.Default.(type) {
+	case nil:
+		return ""
+	case *Const:
+		text, ok = w.constText(d, ft)
+	case *ArrayConst:
+		text, ok = w.arrayConstText(d, ft, f.Dims)
+	}
+
+	if !ok {
+		w.fail(f.Pos, "the default value of the component "+f.Name+" of "+st.Name+" in a module's text")
+
+		return ""
+	}
+
+	return " = " + text
 }
 
 // oldTypeText is the type t as a VAX FORTRAN type statement writes it, with

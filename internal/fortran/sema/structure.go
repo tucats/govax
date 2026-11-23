@@ -151,6 +151,16 @@ type Field struct {
 	// pointer component, for overlap (overlap.go's baseSymbol), made at its
 	// first need.
 	through *Symbol
+
+	// Default is a derived type's component's default initial value, = a
+	// constant (Fortran 95's default initialization, the HP manual's 3.3.1;
+	// derived.go's componentDefault): a *Const, or an *ArrayConst for an array
+	// component, converted to the component's type. Its bytes are among the
+	// structure's Initials. nil for a component without one. NullDefault is
+	// set for a pointer component given => NULL(), which has no bytes, a
+	// disassociated pointer's storage being 0.
+	Default     Expr
+	NullDefault bool
 }
 
 // Union is one union declaration in a structure: Offset is where its
@@ -300,6 +310,44 @@ func (s *Structure) HasPointers() bool {
 	}
 
 	return false
+}
+
+// DefaultInit reports whether the structure is a derived type with default
+// initialization (Fortran 95; the HP manual's 3.3.1): a component with a
+// default value, = or => NULL(), or a component, not a pointer, of a type with
+// default initialization, at any depth. An object of such a type starts with
+// its defaults wherever it is made: in static storage once, as its initial
+// values (record.go's recordInitials), and anywhere else when the program
+// makes it, each time (Unit.Defaults, Allocation.Default). A STRUCTURE's
+// initial values aren't default initialization: they are static, as VAX
+// FORTRAN has them.
+func (s *Structure) DefaultInit() bool {
+	if !s.Derived {
+		return false
+	}
+
+	for _, f := range s.Fields {
+		if f.Default != nil || f.NullDefault || !f.Pointer && f.Struct != nil && f.Struct.DefaultInit() {
+			return true
+		}
+	}
+
+	return false
+}
+
+// DefaultBytes is a record of the derived type st as its default
+// initialization leaves it: each default value's bytes at its place, at any
+// depth, and 0 everywhere else, which a pointer's storage is when it is
+// disassociated. It is what each record the program makes is set to
+// (Unit.Defaults).
+func (s *Structure) DefaultBytes() []byte {
+	b := make([]byte, s.Size)
+
+	for _, in := range s.image() {
+		copy(b[in.Offset:], in.Bytes)
+	}
+
+	return b
 }
 
 // PointerOffsets are the offsets in a record of the structure of each of its

@@ -902,3 +902,71 @@ func TestModuleEmptyArrays(t *testing.T) {
 		t.Errorf("the user's code differs:\n%s\n----\n%s", routine(both.MACRO), routine(apart.MACRO))
 	}
 }
+
+// TestModuleDefaults holds a module's text to its types' default
+// initialization (Phase 112, subtask 5): each component's default after its
+// name, so that a unit compiled apart gives its objects the same defaults as
+// one compiled with the module.
+func TestModuleDefaults(t *testing.T) {
+	module := strings.Join([]string{
+		"module defs",
+		"  implicit none",
+		"  type point",
+		"    real :: x = 0.5, y",
+		"  end type",
+		"  type rec",
+		"    character(len=4) :: tag = 'it''s'",
+		"    integer :: marks(2, 2) = reshape((/ 1, 2, 3, 4 /), (/ 2, 2 /))",
+		"    logical :: on(3) = .true.",
+		"    type(point) :: at = point(1.0, 2.0)",
+		"    type(point) :: home",
+		"    type(rec), pointer :: next => null()",
+		"  end type",
+		"end module defs",
+	}, "\n")
+	user := strings.Join([]string{
+		"subroutine show(r)",
+		"  use defs",
+		"  type(rec), intent(out) :: r",
+		"  type(rec) :: local",
+		"  r%marks = local%marks",
+		"end subroutine show",
+	}, "\n")
+
+	alone := compileFree("DEFS", module, nil)
+	text := strings.Join(moduleText(t, alone, "DEFS"), "\n")
+
+	for _, want := range []string{
+		"REAL(KIND=4) :: X = 5E-01_4",
+		"REAL(KIND=4) :: Y\n",
+		"CHARACTER(LEN=4) :: TAG = 'it''s'",
+		"INTEGER(KIND=4) :: MARKS(1:2, 1:2) = RESHAPE((/ 1_4, 2_4, 3_4, 4_4 /), (/ 2, 2 /))",
+		"LOGICAL(KIND=4) :: ON(1:3) = (/ .TRUE._4, .TRUE._4, .TRUE._4 /)",
+		"TYPE(POINT) :: AT = POINT(1E+00_4, 2E+00_4)",
+		"TYPE(POINT) :: HOME\n",
+		"TYPE(REC), POINTER :: NEXT => NULL()",
+	} {
+		if !strings.Contains(text, want) {
+			t.Errorf("no %q in\n%s", want, text)
+		}
+	}
+
+	both := compileFree("SHOW", module+"\n"+user, nil)
+	apart := compileFree("SHOW", user, moduleFiles{"DEFS": moduleText(t, alone, "DEFS")})
+
+	for _, r := range []fortran.Result{both, apart} {
+		if r.Errors != 0 {
+			t.Fatalf("messages: %v", messageList(r))
+		}
+	}
+
+	routine := func(lines []string) string { return routineCode(lines, "SHOW") }
+
+	if routine(both.MACRO) != routine(apart.MACRO) {
+		t.Errorf("the user's code differs:\n%s\n----\n%s", routine(both.MACRO), routine(apart.MACRO))
+	}
+
+	if !strings.Contains(routine(apart.MACRO), "MOVC3") {
+		t.Errorf("no defaults set at entry:\n%s", routine(apart.MACRO))
+	}
+}
