@@ -946,9 +946,9 @@
    [NO]ALIGNMENT (fields and common names off their natural
    boundaries), and [NO]ARGUMENT_CHECKING (an argument whose type,
    kind, or rank isn't its dummy's, in a reference without an
-   explicit interface to a routine of the same file).  /WARNINGS alone is ALL and /NOWARNINGS is NONE.  What
-   isn't shown doesn't count: a compilation with only those ends with a
-   good status.
+   explicit interface to a routine of the same file).  /WARNINGS alone
+   is ALL and /NOWARNINGS is NONE.  What isn't shown doesn't count:
+   a compilation with only those ends with a good status.
 
 2 Examples
 
