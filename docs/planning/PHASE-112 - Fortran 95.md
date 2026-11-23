@@ -5,7 +5,7 @@ accepted by the author the same day ("The author's answers"); subtask 2, recover
 done 2026-11-23; subtask 3, zero-sized arrays, done 2026-11-23; subtask 4, `NULL()`, done
 2026-11-23; subtask 5, default initialization, done 2026-11-23; subtask 6, PURE, done 2026-11-23;
 subtask 7, ELEMENTAL, done 2026-11-23; subtask 8, the FORALL statement, done 2026-11-23;
-subtask 9 is next. Phase 99's question 2 left Fortran 95's additions to an
+subtask 9, the FORALL construct, done 2026-11-23; subtask 10 is next. Phase 99's question 2 left Fortran 95's additions to an
 optional Phase 112, the author chose go at Phase 111's close-out, and the phase was widened
 to the Fortran errata the same day. At the errata survey's review the author split it:
 Fortran 95 is this phase, and the errata, with the survey (its Part A), is Phase 113
@@ -109,7 +109,7 @@ Already Fortran 95's in govax: allocatable locals deallocated at return (Phase 9
 6. PURE: the constraints (done 2026-11-23).
 7. ELEMENTAL procedures and their references (done 2026-11-23).
 8. FORALL, the statement (done 2026-11-23).
-9. FORALL, the construct (nesting, WHERE inside, PURE references).
+9. FORALL, the construct (nesting, WHERE inside, PURE references) (done 2026-11-23).
 10. WHERE in WHERE and masked ELSEWHERE; F95ONLY retired.
 11. The intrinsic changes and CPU_TIME.
 12. Zero widths in FTNRTL.
@@ -298,7 +298,8 @@ way) and the HPF_LIBRARY routines. **Not planned.**
 7. **ELEMENTAL** procedures and references (A.3's 7), elemental defined assignment and
    operators in array assignments and WHERE (done 2026-11-23).
 8. **FORALL, the statement** (A.3's 6) (done 2026-11-23).
-9. **FORALL, the construct**: nesting, WHERE inside, pointer assignment, PURE references.
+9. **FORALL, the construct**: nesting, WHERE inside, pointer assignment, PURE references
+   (done 2026-11-23).
 10. **WHERE** in WHERE, masked ELSEWHERE, named WHERE (A.3's 9); F95ONLY retired.
 11. **The intrinsics** (A.3's 10): MAXLOC/MINLOC DIM=, CEILING/FLOOR KIND=, CPU_TIME.
 12. **FTNRTL**: zero widths, namelist comments (A.3's 11).
@@ -699,3 +700,57 @@ with every recommendation of A.5:
   regenerated, FORALLS added to `f90rAwaitingVMS`. MANUAL.md's "Arrays as values" has a
   FORALL item and its closing list names only the construct; HELP FORTRAN ARRAYS the same.
   Subtask 9, the FORALL construct, is next.
+- **2026-11-23:** Subtask 9, the FORALL construct. **Analysis**: FORALL (header) opens a
+  construct on the analyzer's stack (`construct.forallStart`, `forall`; `isForall`), whose
+  scope, holding its indexes, is the analyzer's until END FORALL (`construct.outerScope`, put
+  back by `pop`, so `closeAll` and DONEST's pops restore it too); its statements gather in the
+  construct's arm, and END FORALL adds the `Forall` to the block around it. `forallHeader` is
+  the statement's header code, shared; `forallBody` refuses anything but an assignment, a
+  pointer assignment, a WHERE, or a FORALL (FORALLBODY); NOFORALL, NOENDFORALL; a nested
+  FORALL's index named as an outer one's is FORALLOUTER (`enclosingIndex`); a jump into the
+  construct is INTOBLOCK ("a FORALL construct", `frame.forall`); construct names as a DO's
+  (the dump writes `OUTER: FORALL`). `Forall.Body` is now a list (the statement's one
+  statement, or the construct's), with `Temporaries` parallel to it, `MaskTemp`, and
+  `EndForall`. The FORALL statement may now be a pointer assignment (or `=> NULL()`, a
+  `Nullify`) or a defined assignment. A FORALL statement or construct inside a construct is
+  judged by the outermost, once whole (`sema/forallorder.go`'s `finishForall`, its comment the
+  design): each statement that isn't a FORALL is a step over the indexes of every FORALL
+  around it (`forallSteps`); FORALLSET against every level's indexes; FORALLPURE for every
+  call the construct made, from its start (`construct.firstCall`). The header is computed
+  once: the outermost bounds kept as the construct starts, a nested FORALL's when it is
+  reached (or in its loops, for one whose bounds use an outer index, `ForallVaries`), which is
+  right unless its own steps change what they read (NOTIMPL); a mask that a step may change,
+  in a FORALL of more than one step, is computed for the whole index set into a LOGICAL
+  temporary first (`MaskTemp`; NOTIMPL in a FORALL whose bounds use an outer index). A step
+  is done in turn unless something it reads (or another of its targets) is a target's storage
+  anywhere but at that target's own reference (`forallStepOrder`, over `stepTargets`, whose
+  symbol for a pointer is the pointer's own storage, `pointerOwner`, and `stepReads`); then an
+  assignment goes through temporaries as the statement's does, and a pointer assignment, a
+  defined assignment, or a WHERE is NOTIMPL, as is any statement through temporaries in a
+  FORALL whose bounds vary. The dump writes a construct's statements indented, each "[in
+  temporaries]" as needed, and pointer assignments and NULLIFY (`stmtText`). The construct-
+  pending machinery of subtask 2 (`pendingOpen`, `quietBody`) is gone, having held only FORALL.
+  **Lowering** (`ir/lowerforall.go`): a FORALL is a level (`forallLevel`), its statements
+  lowered in turn, a nested FORALL adding its level (`forallLevels`); `forallNest` is a nest of
+  loops, each level's inside the one around it and its mask tested after its loops (so a
+  nested header is computed only for active outer tuples), the levels through the innermost
+  mask temporary counting from 1 (`counter`, `count`) and testing its element
+  (`forallElement`) in place of the masks it holds; `forallMaskTemp` and `forallThroughTemps`
+  compute masks by `forallMaskInto` (one mask assigned as it is, several tested in turn). The
+  statement's code is as before but for the order of its index cells. **Not done** (NOTIMPL):
+  a nested FORALL's bounds its own statements change; temporaries (of a step or a mask) in an
+  index set that isn't a rectangle; a pointer assignment, defined assignment, or WHERE through
+  temporaries; and, as before, a target whose subscripts read its own storage, and an array or
+  run-time-length CHARACTER target through temporaries. A nested FORALL's kept bounds are
+  computed as it is reached even if no outer tuple is active, an evaluation the standard
+  doesn't make (harmless unless the bound would fault). Tests: `sema`'s `TestForallConstruct`
+  and `TestForallConstructErrors`, `TestF95Pending`'s construct case now clean, and
+  `testdata/fortran90/forallc.f90` (a mask its statements change, statements in order, a
+  triangle, a mask on the outer index with a WHERE, WHERE and ELSEWHERE, a nested mask in a
+  temporary, a transpose through temporaries in a nested FORALL, pointer assignments and
+  NULL(), a PURE function and a PURE defined assignment, empty index sets; every mode, paging
+  too; gfortran `-std=f95` prints the same, `compare.py`). The survey's `forall.f90` now
+  compiles, links, and prints gfortran's values. `testdata/f90r` regenerated, FORALLC added to
+  `f90rAwaitingVMS`. MANUAL.md's "Arrays as values" FORALL item describes the construct and the
+  closing list loses it; HELP FORTRAN (the introduction and ARRAYS) the same; Phase 113's A.1's
+  1 is marked resolved. Subtask 10, WHERE in WHERE, is next.

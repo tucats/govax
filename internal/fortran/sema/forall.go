@@ -1,6 +1,9 @@
 package sema
 
-import "github.com/tucats/govax/internal/fortran/ast"
+import (
+	"github.com/tucats/govax/internal/fortran/ast"
+	"github.com/tucats/govax/internal/fortran/lex"
+)
 
 // The FORALL statement (Fortran 95's 7.5.4; the HP Fortran manual's 4.2.5;
 // docs/planning/PHASE-112 - Fortran 95.md, subtask 8):
@@ -31,25 +34,186 @@ import "github.com/tucats/govax/internal/fortran/ast"
 // nothing the value, the mask, or the target's subscripts read may share the
 // target's storage, or what does is the very element the target names (the
 // same text: B(I,J) = B(I,J) * 2), which no other tuple writes, since a FORALL
-// may assign an element only once (7.5.4.5). Otherwise (Forall.Temporary) the
+// may assign an element only once (7.5.4.5). Otherwise (Forall.Temporaries) the
 // mask and the values are computed first for every tuple into temporaries of
 // the index set's shape, and a second nest stores them. Only procedures
 // declared PURE may be referenced in a FORALL (7.5.4.3), so computing the
 // value has no effect but its result.
 
+// The FORALL construct (7.5.4.2; subtask 9):
+//
+//	FORALL (I = 1:N)
+//	   FORALL (J = 1:N, J > I) A(I,J) = 10.0*I + J
+//	   WHERE (A(I,:) == 0.0) A(I,:) = -1.0
+//	END FORALL
+//
+// is its statements one after another, each done for every tuple before the
+// next begins: an assignment, a pointer assignment, a WHERE, or a nested
+// FORALL, whose indexes join the construct's (a nested FORALL's bounds may use
+// them, its mask too). Every statement that isn't itself a FORALL is a step
+// (forallStep), judged as a FORALL statement is, with the indexes and masks of
+// every FORALL around it, by finishForall once the outermost FORALL is whole.
+// What the header computes is computed once (7.5.4.4): the outermost bounds
+// are kept as the construct starts (ir/lowerforall.go), a nested FORALL's
+// when it is reached, and a mask that the construct's statements may change is
+// computed into a temporary first (Forall.MaskTemp); anything subtler is
+// NOTIMPL (finishForall's rules).
+
+// Construct reports whether f is the FORALL construct, not the statement.
+func (f *Forall) Construct() bool {
+	_, ok := f.AST.(*ast.ForallBlockStmt)
+
+	return ok
+}
+
 // forallStatement analyzes the FORALL statement s, or nil after an error.
 func (a *analyzer) forallStatement(s *ast.ForallStmt) Stmt {
 	f := &Forall{stmtBase: stmtBase{s}}
+
+	// The statement's scope, inside the unit's (or an enclosing FORALL's):
+	// its indexes are its own names, and every other name in it is the
+	// unit's.
+	outer := a.scope
+	a.scope = newInnerScope(outer)
+
+	defer func() { a.scope = outer }()
+
+	first := len(a.unit.calls)
+	ok := a.forallHeader(s.Header, f)
+
+	var st Stmt
+
+	switch then := s.Then.(type) {
+	case *ast.AssignStmt:
+		st = a.assignment(then)
+	case *ast.PointerAssignStmt:
+		st = a.pointerAssignment(then)
+	}
+
+	if st == nil || !ok {
+		return nil
+	}
+
+	f.Body, f.Temporaries = []Stmt{st}, []bool{false}
+
+	if a.inForall() {
+		// The outermost FORALL judges it, with the rest of its statements.
+		return f
+	}
+
+	if !a.forallReferences(first) || !a.finishForall(f) {
+		return nil
+	}
+
+	return f
+}
+
+// forallBlock analyzes FORALL (header) alone, which opens a FORALL construct:
+// its scope, holding its indexes, lasts until its END FORALL (pop). The
+// construct is kept after an error in the header, with no Forall, so that its
+// statements are matched and checked.
+func (a *analyzer) forallBlock(s *ast.ForallBlockStmt) {
+	f := &Forall{stmtBase: stmtBase{s}}
+	c := &construct{forallStart: s, arm: &Arm{AST: s}, outerScope: a.scope, firstCall: len(a.unit.calls)}
+	a.scope = newInnerScope(a.scope)
+
+	if a.forallHeader(s.Header, f) {
+		c.forall = f
+	}
+
+	a.push(c)
+}
+
+// endForall analyzes END FORALL, which closes its construct. The construct is
+// added to the block around it, judged with its statements if it is the
+// outermost FORALL.
+func (a *analyzer) endForall(s *ast.EndForallStmt) {
+	c := a.match(s, (*construct).isForall, "NOFORALL")
+	if c == nil {
+		return
+	}
+
+	a.checkName(c, s, true)
+	a.pop()
+
+	f := c.forall
+	if f == nil {
+		return
+	}
+
+	f.EndForall = s
+	f.Body = c.arm.Body
+	f.Temporaries = make([]bool, len(f.Body))
+
+	if !a.inForall() && (!a.forallReferences(c.firstCall) || !a.finishForall(f)) {
+		return
+	}
+
+	a.add(f)
+}
+
+// brokenForall keeps a FORALL construct's part in the block structure for a
+// statement the parser rejected.
+func (a *analyzer) brokenForall(kind lex.Kind, s ast.Stmt) {
+	switch kind {
+	case lex.ForallBlock:
+		a.push(&construct{forallStart: s, arm: &Arm{AST: s}, reported: true})
+
+	case lex.EndForall:
+		for c := a.top(); c != nil && !c.isForall(); c = a.top() {
+			a.pop()
+		}
+
+		if a.top() != nil {
+			a.pop()
+		}
+	}
+}
+
+// forallBody reports a statement in a FORALL construct that may not be there,
+// FORALLBODY: anything but an assignment, a pointer assignment, a WHERE, a
+// FORALL, and END FORALL (R757). It keeps the statement's part in the block
+// structure, and reports whether it did.
+func (a *analyzer) forallBody(s ast.Stmt) bool {
+	c := a.top()
+	if c == nil || !c.isForall() {
+		return false
+	}
+
+	switch s.(type) {
+	case *ast.AssignStmt, *ast.PointerAssignStmt, *ast.WhereStmt, *ast.WhereBlockStmt, *ast.ForallStmt,
+		*ast.ForallBlockStmt, *ast.EndForallStmt, *ast.BadStmt:
+		return false
+
+	case *ast.EndStmt, *ast.ElseWhereStmt, *ast.EndWhereStmt:
+		// NOENDFORALL from closeAll; NOWHERE from their own analysis.
+		return false
+	}
+
+	a.report("FORALLBODY", s.Position(), aStatement(s))
+	a.brokenStatement(s.Base().Kind, s)
+
+	return true
+}
+
+// inForall reports whether a FORALL construct is open.
+func (a *analyzer) inForall() bool {
+	for _, c := range a.open {
+		if c.isForall() {
+			return true
+		}
+	}
+
+	return false
+}
+
+// forallHeader analyzes a FORALL's header into f, in the FORALL's own scope,
+// a.scope: its indexes, their bounds and strides, and its mask. False after an
+// error.
+func (a *analyzer) forallHeader(h ast.ForallHeader, f *Forall) bool {
 	ok := true
 
-	// The statement's scope, inside the unit's: its indexes are its own
-	// names, and every other name in it is the unit's.
-	unitScope := a.scope
-	a.scope = newInnerScope(unitScope)
-
-	defer func() { a.scope = unitScope }()
-
-	for _, x := range s.Header.Indexes {
+	for _, x := range h.Indexes {
 		index, good := a.forallIndex(x, f)
 		ok = ok && good
 
@@ -60,8 +224,8 @@ func (a *analyzer) forallStatement(s *ast.ForallStmt) Stmt {
 	// The bounds and strides, which may not use an index of this FORALL
 	// (7.5.4.1's constraint): read in the statement's scope, so such a use
 	// finds the index and is reported, rather than reading the unit's
-	// variable of its name.
-	for i, x := range s.Header.Indexes {
+	// variable of its name. An enclosing FORALL's indexes they may use.
+	for i, x := range h.Indexes {
 		index := f.Indexes[i]
 		index.Lower = a.forallBound(x.Lower, f)
 		index.Upper = a.forallBound(x.Upper, f)
@@ -79,47 +243,12 @@ func (a *analyzer) forallStatement(s *ast.ForallStmt) Stmt {
 		ok = ok && index.Lower != nil && index.Upper != nil && (x.Stride == nil || index.Stride != nil)
 	}
 
-	if s.Header.Mask != nil {
-		f.Mask = a.forallMask(s.Header.Mask)
+	if h.Mask != nil {
+		f.Mask = a.forallMask(h.Mask)
 		ok = ok && f.Mask != nil
 	}
 
-	first := len(a.unit.calls)
-
-	switch then := s.Then.(type) {
-	case *ast.AssignStmt:
-		st := a.assignment(then)
-		if st == nil {
-			return nil
-		}
-
-		assign, isAssign := st.(*Assign)
-		if !isAssign {
-			// A defined assignment, a subroutine's call (operators.go).
-			a.notImplForm(then.Pos, "a defined assignment in a FORALL statement")
-
-			return nil
-		}
-
-		f.Body = assign
-
-	case *ast.PointerAssignStmt:
-		a.notImplForm(then.Pos, "a pointer assignment in a FORALL statement")
-
-		return nil
-
-	default:
-		return nil
-	}
-
-	ok = a.forallReferences(first) && ok
-	ok = a.forallTargetIndex(f) && ok
-
-	if !ok || !a.forallOrder(f) {
-		return nil
-	}
-
-	return f
+	return ok
 }
 
 // forallIndex is the index x of the FORALL f: a symbol of its own, of type
@@ -147,6 +276,12 @@ func (a *analyzer) forallIndex(x *ast.ForallIndex, f *Forall) (*ForallIndex, boo
 	)
 
 	if s := a.scope.find(x.Name); s != nil {
+		if a.enclosingIndex(s) {
+			a.report("FORALLOUTER", x.Pos, x.Name)
+
+			return index, false
+		}
+
 		s.typesEntity = true
 
 		if s.broken {
@@ -260,60 +395,6 @@ func (a *analyzer) forallReferences(first int) bool {
 	}
 
 	return ok
-}
-
-// forallTargetIndex reports an assignment in the FORALL f to one of its
-// indexes, which only the FORALL may give values (FORALLSET). False if it is.
-func (a *analyzer) forallTargetIndex(f *Forall) bool {
-	target := definedSymbol(f.Body.Target)
-
-	for _, index := range f.Indexes {
-		if target == index.Sym {
-			a.report("FORALLSET", f.Body.Target.Position(), target.Name)
-
-			return false
-		}
-	}
-
-	return true
-}
-
-// forallOrder decides whether the FORALL f's assignment may run tuple by tuple,
-// or must compute its values first (Forall.Temporary; see the top of this
-// file). False after NOTIMPL, for the forms the temporaries don't take yet: a
-// target that is an array at each tuple, a CHARACTER target whose length is
-// known only when the program runs, and a target whose subscripts read its own
-// storage, which would need its subscripts kept too.
-func (a *analyzer) forallOrder(f *Forall) bool {
-	target := f.Body.Target
-	ts := forallTargetSymbol(target)
-	same := DumpExpr(target)
-
-	if forallSubscriptsRead(target, ts) {
-		a.notImplForm(target.Position(), "a FORALL target whose subscripts read its own storage")
-
-		return false
-	}
-
-	if !readsElsewhere(f.Body.Value, ts, same) && !readsElsewhere(f.Mask, ts, same) {
-		return true
-	}
-
-	switch t := target.Type(); {
-	case rankOf(target) > 0:
-		a.notImplForm(target.Position(), "a FORALL whose array target its value overlaps")
-
-		return false
-
-	case t.Kind == Character && t.Size == 0:
-		a.notImplForm(target.Position(), "a FORALL whose target of run-time length its value overlaps")
-
-		return false
-	}
-
-	f.Temporary = true
-
-	return true
 }
 
 // forallTargetSymbol is the symbol whose storage the FORALL target t writes.

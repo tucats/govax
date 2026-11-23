@@ -53,6 +53,8 @@ func (c *construct) opener() ast.Stmt {
 		return c.selStart
 	case c.whereStart != nil:
 		return c.whereStart
+	case c.forallStart != nil:
+		return c.forallStart
 	}
 
 	return c.ifStart

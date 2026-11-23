@@ -387,11 +387,6 @@ type analyzer struct {
 	// it may be an INTENT(IN) dummy's (sourcePlace).
 	readFrom bool
 
-	// pendingOpen counts Fortran 90's constructs not compiled yet that are
-	// open, by the kind of their first statement (notimpl.go's
-	// unimplemented), so that only that statement is reported.
-	pendingOpen map[lex.Kind]int
-
 	// noFill keeps arrayOrder from filling a target straight from a
 	// constructor, for a WHERE's assignments, which assign only where the
 	// mask holds (where.go).
@@ -599,7 +594,6 @@ func (a *analyzer) makeMaps() {
 	a.stmtFuncs = map[ast.Stmt]*Symbol{}
 	a.entryOf = map[*ast.EntryStmt]*Entry{}
 	a.rejected = map[ast.Stmt]bool{}
-	a.pendingOpen = map[lex.Kind]int{}
 	a.boundVars = map[*Symbol]diag.Position{}
 	a.extensions = newExtensions(a.standard, a.f90)
 }

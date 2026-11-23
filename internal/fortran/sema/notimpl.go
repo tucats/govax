@@ -23,7 +23,7 @@ func handled(s ast.Stmt) bool {
 		*ast.AssignLabelStmt, *ast.AssignedGotoStmt, *ast.ArithIfStmt,
 		*ast.IfStmt, *ast.IfThenStmt, *ast.ElseIfStmt, *ast.ElseStmt, *ast.EndIfStmt,
 		*ast.DoStmt, *ast.DoWhileStmt, *ast.EndDoStmt, *ast.LoopExitStmt, *ast.SelectCaseStmt, *ast.CaseStmt, *ast.EndSelectStmt,
-		*ast.WhereStmt, *ast.ForallStmt, *ast.WhereBlockStmt, *ast.ElseWhereStmt, *ast.EndWhereStmt, *ast.ContinueStmt, *ast.StopStmt, *ast.ReturnStmt, *ast.EndStmt,
+		*ast.WhereStmt, *ast.ForallStmt, *ast.ForallBlockStmt, *ast.EndForallStmt, *ast.WhereBlockStmt, *ast.ElseWhereStmt, *ast.EndWhereStmt, *ast.ContinueStmt, *ast.StopStmt, *ast.ReturnStmt, *ast.EndStmt,
 		*ast.AllocateStmt, *ast.PointerAssignStmt, *ast.NullifyStmt, *ast.EntryStmt, *ast.UseStmt, *ast.ContainsStmt, *ast.StructureStmt, *ast.TypeDefStmt, *ast.RecordStmt, *ast.FormatStmt, *ast.NamelistStmt, *ast.PrintStmt, *ast.CodeStmt, *ast.DefineFileStmt, *ast.AttrStmt, *ast.DirectiveStmt, *ast.BadStmt:
 		return true
 
@@ -50,13 +50,6 @@ func statementWhat(s ast.Stmt) string {
 
 	if b, ok := s.(*ast.InterfaceBlock); ok {
 		return interfaceWhat(b)
-	}
-
-	switch s.(type) {
-	case *ast.ForallBlockStmt:
-		return "the FORALL construct"
-	case *ast.EndForallStmt:
-		return "the END FORALL statement"
 	}
 
 	return "the " + s.Base().Kind.String() + " statement"
@@ -87,9 +80,6 @@ func pendingHeader(u *ast.Unit) ast.Stmt {
 // unimplemented reports a statement semantic analysis doesn't compile
 // yet, and keeps its part in the unit's block structure.
 //
-// A Fortran 90 construct's statements are reported once, at the statement
-// that opens it: the statements inside it say nothing more (pendingOpeners).
-//
 // PUBLIC and PRIVATE statements belong in a module (the standard's R522's
 // constraint), where access.go reads them: anywhere else they are an error,
 // NOTINMODULE.
@@ -110,55 +100,8 @@ func (a *analyzer) unimplemented(s ast.Stmt) {
 		return
 	}
 
-	if quiet, ok := pendingInner[kind]; ok && a.pendingOpen[quiet] > 0 {
-		switch {
-		case pendingClosers[kind]:
-			a.pendingOpen[quiet]--
-		case pendingOpeners[kind]:
-			a.pendingOpen[kind]++
-		}
-
-		a.brokenStatement(kind, s)
-
-		return
-	}
-
-	if _, opens := pendingOpeners[kind]; opens {
-		a.pendingOpen[kind]++
-	}
-
 	a.notImplForm(pendingPosition(s), statementWhat(s))
 	a.brokenStatement(kind, s)
-}
-
-// pendingOpeners, pendingInner, and pendingClosers are the constructs not
-// compiled yet, for unimplemented: the statement that opens each, the
-// statements inside it named by the one that opens their construct (a nested
-// opener among them, counted but not reported again), and of those the ones
-// that close it. pendingBodies are the constructs whose every statement is
-// passed over quietly (quietBody), since what they mean depends on the
-// construct: a FORALL's assignments use its indexes (docs/planning/PHASE-112 -
-// Fortran 95.md, subtask 2, until subtask 9 compiles the construct).
-var (
-	pendingOpeners = map[lex.Kind]bool{lex.ForallBlock: true}
-	pendingInner   = map[lex.Kind]lex.Kind{lex.ForallBlock: lex.ForallBlock, lex.Forall: lex.ForallBlock, lex.EndForall: lex.ForallBlock}
-	pendingClosers = map[lex.Kind]bool{lex.EndForall: true}
-	pendingBodies  = map[lex.Kind]bool{lex.ForallBlock: true}
-)
-
-// quietBody reports whether s, a statement semantic analysis compiles, is
-// inside a construct of pendingBodies, and if so keeps its part in the block
-// structure without analyzing it.
-func (a *analyzer) quietBody(s ast.Stmt) bool {
-	for k := range pendingBodies {
-		if a.pendingOpen[k] > 0 && handled(s) {
-			a.brokenStatement(s.Base().Kind, s)
-
-			return true
-		}
-	}
-
-	return false
 }
 
 // formWhat names an expression's form that semantic analysis doesn't

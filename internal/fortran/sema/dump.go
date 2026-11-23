@@ -279,6 +279,34 @@ func dumpStmts(b *strings.Builder, list []Stmt, depth int) {
 				line(b, s.EndWhere, depth, "END WHERE")
 			}
 
+		case *Forall:
+			if !s.Construct() {
+				line(b, s.AST, depth, forallText(s))
+
+				break
+			}
+
+			header := forallHeaderText(s)
+			if s.MaskTemp {
+				header += "  [mask in a temporary]"
+			}
+
+			line(b, s.AST, depth, header)
+
+			for i, st := range s.Body {
+				if !s.Temporaries[i] {
+					dumpStmts(b, []Stmt{st}, depth+1)
+
+					continue
+				}
+
+				line(b, st.Source(), depth+1, stmtText([]Stmt{st})+"  [in temporaries]")
+			}
+
+			if s.EndForall != nil {
+				line(b, s.EndForall, depth, "END FORALL")
+			}
+
 		case *Do:
 			line(b, s.AST, depth, fmt.Sprintf("DO %s%s = %s, %s, %s", loopLabel(s.Label), symName(s.Var),
 				DumpExpr(s.Start), DumpExpr(s.Limit), DumpExpr(s.Step)))
@@ -364,7 +392,7 @@ func line(b *strings.Builder, s ast.Stmt, depth int, text string) {
 	// construct (OUTER: DO) and after the others (END DO OUTER).
 	if name := s.Base().Construct; name != "" {
 		switch s.Base().Kind {
-		case lex.Do, lex.DoWhile, lex.IfThen, lex.SelectCase:
+		case lex.Do, lex.DoWhile, lex.IfThen, lex.SelectCase, lex.ForallBlock:
 			text = name + ": " + text
 		default:
 			text += " " + name
@@ -413,6 +441,15 @@ func stmtText(list []Stmt) string {
 		return "WHERE " + DumpExpr(s.Mask) + " " + stmtText(s.Then.Body)
 	case *Forall:
 		return forallText(s)
+	case *PointerAssign:
+		return DumpExpr(s.Pointer) + " => " + DumpExpr(s.Target)
+	case *Nullify:
+		parts := make([]string, len(s.Pointers))
+		for i, p := range s.Pointers {
+			parts[i] = DumpExpr(p)
+		}
+
+		return "NULLIFY (" + strings.Join(parts, ", ") + ")"
 	case *Continue:
 		return "CONTINUE"
 	case *Allocate:
@@ -998,6 +1035,16 @@ func dumpCtorItems(items []CtorItem) string {
 // forallText is a FORALL statement as the dump shows it: its indexes, mask,
 // and assignment, and "[in temporaries]" when its values are computed first.
 func forallText(f *Forall) string {
+	text := forallHeaderText(f) + " " + stmtText(f.Body)
+	if f.Temporaries[0] {
+		text += "  [in temporaries]"
+	}
+
+	return text
+}
+
+// forallHeaderText is FORALL (indexes, mask).
+func forallHeaderText(f *Forall) string {
 	parts := make([]string, 0, len(f.Indexes)+1)
 
 	for _, x := range f.Indexes {
@@ -1013,10 +1060,5 @@ func forallText(f *Forall) string {
 		parts = append(parts, DumpExpr(f.Mask))
 	}
 
-	text := "FORALL (" + strings.Join(parts, ", ") + ") " + stmtText([]Stmt{f.Body})
-	if f.Temporary {
-		text += "  [in temporaries]"
-	}
-
-	return text
+	return "FORALL (" + strings.Join(parts, ", ") + ")"
 }

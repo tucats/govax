@@ -1029,17 +1029,30 @@ type (
 		MaskTemp []int // each extent, or -1 for one known only when the program runs (tempShape)
 	}
 
-	// Forall is the FORALL statement (forall.go): Body, an assignment, done
-	// for each tuple of the Indexes' values for which Mask (nil: always) is
-	// true. Temporary says the mask and the values are computed for every
-	// tuple first, into temporaries of the index set's shape, and stored by a
-	// second pass; without it each tuple's assignment is done in turn.
+	// Forall is the FORALL statement or construct (forall.go): each statement
+	// of Body done for every tuple of the Indexes' values for which Mask (nil:
+	// always) is true, one statement wholly before the next. The statement's
+	// Body is its one assignment or pointer assignment; a construct's may hold
+	// assignments (an Assign, or a defined assignment's Call), pointer
+	// assignments (a PointerAssign, or a Nullify for => NULL()), WHEREs, and
+	// FORALLs, whose indexes are added to these.
+	//
+	// Temporaries is parallel to Body: true for a statement whose mask and
+	// values are computed for every tuple first, into temporaries of the index
+	// set's shape, and stored by a second pass; without it each tuple's
+	// statement is done in turn. MaskTemp says the mask is computed once, at
+	// the FORALL, for the whole index set (this FORALL's and those around it,
+	// with their masks), into a LOGICAL temporary its statements read, since
+	// one of them may change what it reads. EndForall is the construct's END
+	// FORALL, nil for the statement.
 	Forall struct {
 		stmtBase
-		Indexes   []*ForallIndex
-		Mask      Expr
-		Body      *Assign
-		Temporary bool
+		Indexes     []*ForallIndex
+		Mask        Expr
+		Body        []Stmt
+		Temporaries []bool
+		MaskTemp    bool
+		EndForall   ast.Stmt
 	}
 
 	// Stop is STOP, or PAUSE when Pause is set, with the text it

@@ -90,8 +90,6 @@ func TestForallErrors(t *testing.T) {
 			"NOTIMPL: a FORALL target whose subscripts read its own storage is not implemented yet"},
 		{"an array target overlapped", []string{"  forall (i = 1:3) w(i,:) = w(i+1,:)"},
 			"NOTIMPL: a FORALL whose array target its value overlaps is not implemented yet"},
-		{"a pointer assignment", []string{"  forall (i = 1:4) pp(i)%p => t(i)"},
-			"NOTIMPL: a pointer assignment in a FORALL statement is not implemented yet"},
 	}
 
 	for _, c := range cases {
@@ -148,5 +146,145 @@ func TestForallNoF90(t *testing.T) {
 
 	if want := "FORALL (I = 2:8) V[I] = V[(-:I I 1)]  [in temporaries]\n"; !strings.Contains(Dump(prog), want) {
 		t.Errorf("the dump has no %q:\n%s", want, Dump(prog))
+	}
+}
+
+// TestForallConstruct holds the FORALL construct's analysis (Phase 112's
+// subtask 9): its statements in a block of their own, a nested FORALL's
+// indexes added to its own, a WHERE inside, pointer and defined assignments,
+// the mask put in a temporary when a statement changes what it reads ("[mask
+// in a temporary]"), and each statement's own choice of temporaries.
+func TestForallConstruct(t *testing.T) {
+	prog, messages := analyzeFreeWith(t, Options{},
+		"module m",
+		"  type cents",
+		"    integer :: c",
+		"  end type cents",
+		"  interface assignment(=)",
+		"    module procedure set",
+		"  end interface",
+		"contains",
+		"  pure subroutine set(x, k)",
+		"    type(cents), intent(out) :: x",
+		"    integer, intent(in) :: k",
+		"    x%c = k",
+		"  end subroutine set",
+		"end module m",
+		"program p",
+		"  use m",
+		"  implicit none",
+		"  type ref",
+		"    integer, pointer :: p",
+		"  end type ref",
+		"  integer :: a(6), b(6), g(3,3), h(3,3), i, j",
+		"  real :: r(4,4)",
+		"  integer, target :: obj(6)",
+		"  type(ref) :: refs(6)",
+		"  type(cents) :: purse(6)",
+		"  outer: forall (i = 1:6, a(i) > 0)",
+		"    a(i) = -a(i)",
+		"    b(i) = a(i) + 100",
+		"  end forall outer",
+		"  forall (i = 1:4)",
+		"    forall (j = 1:i) r(i,j) = 1.0",
+		"    where (r(i,:) == 0.0)",
+		"      r(i,:) = -1.0",
+		"    elsewhere",
+		"      r(i,:) = 2.0",
+		"    end where",
+		"  end forall",
+		"  forall (i = 1:3)",
+		"    forall (j = 1:3, g(i,j) > 0)",
+		"      g(i,j) = 0",
+		"      h(i,j) = g(j,i)",
+		"    end forall",
+		"    forall (j = 1:3) g(i,j) = g(j,i)",
+		"  end forall",
+		"  forall (i = 1:6)",
+		"    refs(i)%p => obj(7-i)",
+		"    purse(i) = i",
+		"  end forall",
+		"  forall (i = 1:6) refs(i)%p => null()",
+		"end program p")
+
+	if len(messages) != 0 {
+		t.Fatalf("messages: %s", messageText(messages))
+	}
+
+	dump := Dump(prog)
+
+	for _, want := range []string{
+		"OUTER: FORALL (I = 1:6, (.GT.:I A[I] 0))  [mask in a temporary]\n",
+		"  A[I] = (-:I A[I])\n",
+		"  B[I] = (+:I A[I] 100)\n",
+		"END FORALL OUTER\n",
+		"  FORALL (J = 1:I) R[I, J] = 1.0\n",
+		"  WHERE (.EQ.:R R[I, 1:4:1] 0.0)",
+		"    FORALL (J = 1:3, (.GT.:I G[I, J] 0))  [mask in a temporary]\n",
+		"      H[I, J] = G[J, I]\n",
+		"  FORALL (J = 1:3) G[I, J] = G[J, I]  [in temporaries]\n",
+		"  REFS[I].P:+0 => OBJ[(-:I 7 I)]\n",
+		"  CALL SET(PURSE[I], (copy I))\n",
+		"FORALL (I = 1:6) NULLIFY (REFS[I].P:+0)\n",
+	} {
+		if !strings.Contains(dump, want) {
+			t.Errorf("the dump has no %q:\n%s", want, dump)
+		}
+	}
+}
+
+// TestForallConstructErrors holds the FORALL construct's messages, and what is
+// still NOTIMPL.
+func TestForallConstructErrors(t *testing.T) {
+	cases := []struct {
+		name  string
+		lines []string
+		want  string
+	}{
+		{"END FORALL alone", []string{"  end forall"},
+			"NOFORALL: this END FORALL statement is not in a FORALL construct"},
+		{"no END FORALL", []string{"  forall (i = 1:4)", "    v(i) = 0"},
+			"NOENDFORALL: this FORALL construct has no END FORALL statement"},
+		{"a DO inside", []string{"  forall (i = 1:4)", "    v(i) = 0", "    call s", "  end forall"},
+			"FORALLBODY: only assignments, pointer assignments, WHERE, and FORALL may be in a FORALL construct, not a CALL statement"},
+		{"an outer index again", []string{"  forall (i = 1:4)", "    forall (i = 1:2) v(i) = 0", "  end forall"},
+			"FORALLOUTER: I is an index of a FORALL around this one already"},
+		{"an outer index assigned", []string{"  forall (i = 1:4)", "    forall (j = 1:2) i = j", "  end forall"},
+			"FORALLSET: I is an index of the FORALL, which only the FORALL gives values"},
+		{"a function not PURE", []string{"  forall (i = 1:4)", "    v(i) = 0", "    w(i,1) = f(i)", "  end forall"},
+			"FORALLPURE: F isn't declared PURE, so it can't be referenced in a FORALL"},
+		{"the wrong name", []string{"  a: forall (i = 1:4)", "    v(i) = 0", "  end forall b"},
+			"WRONGNAME: this END FORALL statement names B, but the FORALL construct at line 9 is named A"},
+		{"a jump in", []string{"  go to 10", "  forall (i = 1:4)", "10  v(i) = 0", "  end forall"},
+			"INTOBLOCK: this jump to label 10 goes into a FORALL construct from outside it"},
+		{"an index outside", []string{"  forall (k = 1:4)", "    v(k) = 0", "  end forall", "  v(k) = 1"},
+			""},
+		{"a nested bound changed", []string{"  forall (i = 1:4)", "    forall (j = 1:v(1))", "      v(j) = 0", "      w(j,i) = 1",
+			"    end forall", "  end forall"},
+			"NOTIMPL: a nested FORALL's bound that its own statements may change is not implemented yet"},
+		{"a mask changed in a triangle", []string{"  forall (i = 1:4)", "    forall (j = 1:i, w(i,j) > 0)", "      w(i,j) = 0", "      v(j) = 1",
+			"    end forall", "  end forall"},
+			"NOTIMPL: a FORALL mask its statements may change, inside a FORALL whose bounds use an outer index is not implemented yet"},
+		{"through temporaries in a triangle", []string{"  forall (i = 1:4)", "    forall (j = 1:i) w(i,j) = w(j,i)", "  end forall"},
+			"NOTIMPL: a FORALL whose target its value overlaps, inside a FORALL whose bounds use an outer index is not implemented yet"},
+		{"a pointer target overlapped", []string{"  forall (i = 1:3) pp(i)%p => pp(i+1)%p"},
+			"NOTIMPL: a FORALL's pointer assignment whose values overlap what it assigns is not implemented yet"},
+		{"a WHERE overlapped", []string{"  forall (i = 1:3)", "    where (w(i,:) > 0) w(i,:) = w(:,i)", "  end forall"},
+			"NOTIMPL: a FORALL's WHERE whose values overlap what it assigns is not implemented yet"},
+	}
+
+	for _, c := range cases {
+		lines := []string{
+			"program p", "  implicit none",
+			"  type pt", "    integer, pointer :: p", "  end type pt",
+			"  integer :: v(8), w(4,4), i, j, k, f",
+			"  integer, target :: t(4)",
+			"  type(pt) :: pp(4)",
+		}
+		lines = append(append(lines, c.lines...), "end program p")
+
+		if got := messageText(analyzeFree(t, lines...)); got != c.want {
+			t.Errorf("%s:\n got %q\nwant %q", c.name, got, c.want)
+		}
 	}
 }

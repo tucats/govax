@@ -9142,14 +9142,42 @@ shifted:  72.0  72.0  85.0  52.0  91.0  49.0
   each tuple (`FORALL (I = 1:N) A(I,:) = B(:,I)`). Where nothing the value or the mask reads
   may be what another tuple writes (or only the very element the target names), the tuples are
   done one after another, as nested DO loops; otherwise the mask and the values go into
-  temporaries of the index set's shape first. Not yet compiled (`NOTIMPL`): the FORALL
-  construct, a pointer assignment or a defined assignment as the statement, a target whose
-  subscripts read its own array, and an array target, or a CHARACTER one of a length known only
-  when the program runs, that the value reads elsewhere.
+  temporaries of the index set's shape first. The statement may be a pointer assignment
+  (`FORALL (I = 1:N) R(I)%P => T(I)`, or `=> NULL()`) or a defined assignment by a PURE
+  subroutine, each done tuple by tuple; one whose value may be what another tuple changes is
+  `NOTIMPL`.
+
+  The FORALL construct, `FORALL (header)` ... `END FORALL`, optionally named as a DO is, is its
+  statements one after another, each done for every tuple before the next begins: assignments,
+  pointer assignments, WHERE statements and constructs, and nested FORALL statements and
+  constructs (`FORALLBODY` for anything else; `NOFORALL`, `NOENDFORALL`). A nested FORALL adds
+  indexes of its own, which can't repeat an outer one's (`FORALLOUTER`); its bounds and mask may
+  use the outer indexes, so `FORALL (J = 1:I)` inside `FORALL (I = 1:N)` walks a triangle. The
+  header is computed once: a mask that a later statement of the construct may change is
+  computed for the whole index set into a temporary first, so in
+
+  ```fortran
+  forall (i = 1:n, a(i) > 0)
+    a(i) = -a(i)
+    b(i) = a(i)                ! where A(I) was positive, not where it is now
+  end forall
+  ```
+
+  B is set where A was positive as the FORALL began. A jump into the construct is `INTOBLOCK`.
+  Not yet compiled (`NOTIMPL`): a target whose subscripts read its own array; an array target,
+  or a CHARACTER one of a length known only when the program runs, that the value reads
+  elsewhere; a pointer assignment, defined assignment, or WHERE whose values may be what another
+  tuple changes; a nested FORALL's bounds that its own statements may change; and a statement
+  that needs temporaries, or a mask that needs one, inside a FORALL whose bounds use an outer
+  index.
 
   ```fortran
   forall (i = 1:n, j = 1:n, a(i,j) /= 0.0) b(i,j) = 1.0 / a(i,j)
   forall (i = 1:3, j = 1:3) m(i,j) = m(j,i)          ! a transpose in place
+  forall (i = 1:4)
+    forall (j = 1:n, j > i) r(i,j) = 10.0*i + j
+    where (r(i,:) == 0.0) r(i,:) = -1.0
+  end forall
   ```
 - *I/O lists*: a section, an array expression, or a constructor in an output list is written,
   and a section in an input list read, in array element order. A section of a variable (with no
@@ -10672,8 +10700,8 @@ Without `/CHECK=POINTERS` ([section 14.3](#143-the-fortran-command)) a disassoci
 target is at address 0, and using it is an access violation. These are Fortran 95's or later's,
 and not Fortran 90 at all (`NULL()` and default initialization are there, under "Pointers"
 and "Derived types", and PURE and ELEMENTAL under "Procedures and interfaces"): zero widths (`I0`, `F0.2`, which write `%FOR-E-OUTCONERR`, a field
-too narrow for any value); the FORALL construct (`%FORT-E-NOTIMPL`, read but not yet
-compiled; the FORALL statement is under "Arrays as values"); and procedure pointers and bounds remapping (`P(1:N) => A`).
+too narrow for any value); and procedure pointers and bounds remapping (`P(1:N) => A`). The
+FORALL statement and construct are under "Arrays as values".
 
 ## 15. Appendices
 

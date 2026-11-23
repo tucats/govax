@@ -42,6 +42,7 @@ type frame struct {
 	do     bool
 	sel    bool
 	where  bool
+	forall bool
 	anyArm bool
 }
 
@@ -130,6 +131,8 @@ func (a *analyzer) checkLabels() {
 				what = "a SELECT CASE construct"
 			case into.where:
 				what = "a WHERE construct"
+			case into.forall:
+				what = "a FORALL construct"
 			}
 
 			a.report("INTOBLOCK", r.pos, r.label, what)

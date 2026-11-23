@@ -73,6 +73,17 @@ type construct struct {
 	whereStart ast.Stmt
 	where      *Where
 
+	// For a FORALL construct: its FORALL statement, and the Forall it makes
+	// (nil after an error in its header, when its statements are still
+	// analyzed for their own errors); its statements are arm's. outerScope is
+	// the scope the construct's own (holding its indexes) is inside, put back
+	// when the construct closes; firstCall the unit's calls before it, for
+	// FORALLPURE (forall.go).
+	forallStart ast.Stmt
+	forall      *Forall
+	outerScope  *scope
+	firstCall   int
+
 	// spans are the CASE construct's case value ranges so far, which each
 	// new one mustn't overlap (selectcase.go).
 	spans []caseSpan
@@ -87,8 +98,11 @@ func (c *construct) isSelect() bool { return c.selStart != nil }
 // isWhere reports whether c is a WHERE construct.
 func (c *construct) isWhere() bool { return c.whereStart != nil }
 
+// isForall reports whether c is a FORALL construct.
+func (c *construct) isForall() bool { return c.forallStart != nil }
+
 // isIf reports whether c is an IF block.
-func (c *construct) isIf() bool { return !c.isDo() && !c.isSelect() && !c.isWhere() }
+func (c *construct) isIf() bool { return !c.isDo() && !c.isSelect() && !c.isWhere() && !c.isForall() }
 
 // line is the line the construct starts on, for messages.
 func (c *construct) line() int {
@@ -101,6 +115,8 @@ func (c *construct) line() int {
 		return c.selStart.Position().Line
 	case c.whereStart != nil:
 		return c.whereStart.Position().Line
+	case c.forallStart != nil:
+		return c.forallStart.Position().Line
 	}
 
 	return c.ifStart.Position().Line
@@ -142,6 +158,8 @@ func (c *construct) what() string {
 		return "SELECT CASE construct"
 	case c.isWhere():
 		return "WHERE construct"
+	case c.isForall():
+		return "FORALL construct"
 	}
 
 	return "IF block"
@@ -193,7 +211,7 @@ func (a *analyzer) statement(s ast.Stmt) {
 
 	a.beforeFirstCase(s)
 
-	if a.whereBody(s) || a.quietBody(s) {
+	if a.whereBody(s) || a.forallBody(s) {
 		return
 	}
 
@@ -276,6 +294,12 @@ func (a *analyzer) statement(s ast.Stmt) {
 
 	case *ast.EndWhereStmt:
 		a.endWhere(s)
+
+	case *ast.ForallBlockStmt:
+		a.forallBlock(s)
+
+	case *ast.EndForallStmt:
+		a.endForall(s)
 
 	case *ast.EndIfStmt:
 		if c := a.matchIf(s); c != nil {
@@ -367,6 +391,9 @@ func (a *analyzer) brokenStatement(kind lex.Kind, s ast.Stmt) {
 	case lex.WhereBlock, lex.ElseWhere, lex.EndWhere:
 		a.brokenWhere(kind, s)
 
+	case lex.ForallBlock, lex.EndForall:
+		a.brokenForall(kind, s)
+
 	default:
 		if label := s.Base().Label; label != 0 {
 			a.endLoops(label, s)
@@ -394,7 +421,7 @@ func forbiddenTerminal(s ast.Stmt) string {
 	case *ast.GotoStmt, *ast.AssignedGotoStmt, *ast.ArithIfStmt, *ast.IfThenStmt, *ast.ElseIfStmt, *ast.ElseStmt,
 		*ast.EndIfStmt, *ast.EndStmt, *ast.ReturnStmt, *ast.DoStmt, *ast.DoWhileStmt, *ast.LoopExitStmt,
 		*ast.SelectCaseStmt, *ast.CaseStmt, *ast.EndSelectStmt, *ast.WhereBlockStmt, *ast.ElseWhereStmt, *ast.EndWhereStmt,
-		*ast.TypeStmt, *ast.DimensionStmt, *ast.ImplicitStmt, *ast.ParameterStmt, *ast.DataStmt, *ast.AttrStmt,
+		*ast.ForallBlockStmt, *ast.EndForallStmt, *ast.TypeStmt, *ast.DimensionStmt, *ast.ImplicitStmt, *ast.ParameterStmt, *ast.DataStmt, *ast.AttrStmt,
 		*ast.CommonStmt, *ast.EquivalenceStmt, *ast.EntryStmt, *ast.FormatStmt, *ast.NamelistStmt:
 		return aStatement(s)
 	}
@@ -413,7 +440,7 @@ func (a *analyzer) path() []frame {
 	path := make([]frame, len(a.open))
 
 	for i, c := range a.open {
-		path[i] = frame{id: c.id, arm: c.arm, do: c.isDo(), sel: c.isSelect(), where: c.isWhere()}
+		path[i] = frame{id: c.id, arm: c.arm, do: c.isDo(), sel: c.isSelect(), where: c.isWhere(), forall: c.isForall()}
 	}
 
 	return path
@@ -427,8 +454,13 @@ func (a *analyzer) push(c *construct) {
 	a.open = append(a.open, c)
 }
 
-// pop closes the innermost construct.
+// pop closes the innermost construct; a FORALL construct's indexes go out of
+// scope with it.
 func (a *analyzer) pop() {
+	if c := a.top(); c.outerScope != nil {
+		a.scope = c.outerScope
+	}
+
 	a.open = a.open[:len(a.open)-1]
 }
 
@@ -517,12 +549,16 @@ func (a *analyzer) closeAll() {
 			a.report("NOENDSELECT", c.selStart.Position())
 		case c.isWhere():
 			a.report("NOENDWHERE", c.whereStart.Position())
+		case c.isForall():
+			a.report("NOENDFORALL", c.forallStart.Position())
 		case !c.isDo():
 			a.report("NOENDIF", c.ifStart.Position())
 		}
 	}
 
-	a.open = nil
+	for len(a.open) > 0 {
+		a.pop()
+	}
 }
 
 // endsLoop reports whether an open DO loop ends at the label.

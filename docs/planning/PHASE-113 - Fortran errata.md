@@ -225,7 +225,7 @@ HP Fortran manual (`VMS-FORTRAN-LANGUAGE.txt`) describes every one (FORALL 69 ti
 1. FORALL, the statement and the construct, with masks and nested FORALL and WHERE inside:
    UNRECSTMT today. On Phase 102's scalarizer and overlap rules (a FORALL is an array
    assignment whose index set is named). **Proposed: 112.** *(The statement resolved in
-   Phase 112's subtask 8; the construct is its subtask 9's.)*
+   Phase 112: the statement in subtask 8, the construct in subtask 9.)*
 2. PURE and ELEMENTAL procedures, module and internal ones among them: UNRECSTMT. PURE's
    constraints checked; an ELEMENTAL reference with array arguments scalarized as an
    intrinsic elemental is (`ir`'s `elementalCall`); a PURE procedure allowed in FORALL and

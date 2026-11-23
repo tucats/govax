@@ -1474,7 +1474,11 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   2026-11-23, the FORALL statement, `sema/forall.go`: its indexes symbols of its own in a
   scope of the statement's, `Forall.Temporary` when the value or mask may read the target
   elsewhere than its own element, lowered by `ir/lowerforall.go` as a loop per index or two
-  nests through temporaries of the index set's shape),
+  nests through temporaries of the index set's shape; subtask 9, done 2026-11-23, the FORALL
+  construct, its statements in a construct on the analyzer's stack whose scope holds its indexes,
+  nested FORALLs, WHERE, pointer and defined assignments, judged by the outermost's
+  `finishForall` (`sema/forallorder.go`: each step over every level's indexes, a mask its steps
+  change in a temporary, `Forall.MaskTemp`), lowered by `ir/lowerforall.go`'s levels),
   **Phase 113 is the errata** (its Part B the scope: the cheap
   Fortran 90 NOTIMPLs, LIB$INITIALIZE, STR$'s arithmetic, `USE
   STARLET_SSDEF`, MACRO's and LINK's gaps, housekeeping, and a VMS probe

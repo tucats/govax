@@ -114,8 +114,8 @@
    compiler does not compile draw %FORT-E-NOTIMPL, and each subtopic
    names its own.  Of Fortran 95's additions, NULL() (see Pointers),
    default values for components (see Derived_Types), PURE and
-   ELEMENTAL (see Procedures), and the FORALL statement (see Arrays)
-   are compiled; the FORALL construct is not yet.
+   ELEMENTAL (see Procedures), and the FORALL statement and construct
+   (see Arrays) are compiled.
 
 3 Source_Form
 
@@ -299,6 +299,16 @@
    anything is stored; a function it references must be PURE:
 
      forall (i = 1:n, j = 1:n, a(i,j) /= 0.0) b(i,j) = 1.0 / a(i,j)
+
+   The FORALL construct does its statements (assignments, pointer
+   assignments, WHERE, and nested FORALL) one after another, each for
+   every tuple before the next; a nested FORALL's bounds and mask may
+   use the outer indexes, and the header is computed once:
+
+     forall (i = 1:n)
+       forall (j = 1:i) l(i,j) = a(i,j)
+       where (a(i,:) < 0.0) a(i,:) = 0.0
+     end forall
 
    A section in an I/O list is one item, passed by a class NCA
    descriptor; an array expression is written an element at a time.  A

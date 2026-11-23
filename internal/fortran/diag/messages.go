@@ -1182,7 +1182,11 @@ var messages = map[string]kind{
 	// a scalar INTEGER; FORALLBOUND one that uses an index of the same FORALL;
 	// FORALLSTRIDE a stride of zero; FORALLMASK a mask that isn't a scalar
 	// LOGICAL; FORALLSET an assignment to an index; FORALLPURE a reference to
-	// a procedure not declared PURE.
+	// a procedure not declared PURE. The construct (subtask 9): NOFORALL is END
+	// FORALL outside any FORALL construct; NOENDFORALL a FORALL construct the
+	// unit's END reaches; FORALLBODY a statement in one that isn't an
+	// assignment, a pointer assignment, a WHERE, or a FORALL (R757);
+	// FORALLOUTER an index named as an enclosing FORALL's is.
 	"FORALLINDEX":  {Error, "a FORALL index must be a scalar INTEGER variable's name, and %s is %s"},
 	"FORALLTWICE":  {Error, "%s is an index of this FORALL already"},
 	"FORALLINT":    {Error, "a FORALL index's bounds and stride must be scalar INTEGER values, and this one is %s"},
@@ -1191,7 +1195,11 @@ var messages = map[string]kind{
 	"FORALLMASK":   {Error, "a FORALL's mask must be a scalar LOGICAL value, and this one is %s"},
 	"FORALLSET":    {Error, "%s is an index of the FORALL, which only the FORALL gives values"},
 	"FORALLPURE":   {Error, "%s isn't declared PURE, so it can't be referenced in a FORALL"},
-	"F95ONLY":        {Error, "%s is Fortran 95's, not Fortran 90's, and isn't compiled yet (Phase 112)"},
+	"NOFORALL":     {Error, "this %s statement is not in a FORALL construct"},
+	"NOENDFORALL":  {Error, "this FORALL construct has no END FORALL statement"},
+	"FORALLBODY":   {Error, "only assignments, pointer assignments, WHERE, and FORALL may be in a FORALL construct, not %s"},
+	"FORALLOUTER":  {Error, "%s is an index of a FORALL around this one already"},
+	"F95ONLY":      {Error, "%s is Fortran 95's, not Fortran 90's, and isn't compiled yet (Phase 112)"},
 
 	// CASEFIRST is a statement between SELECT CASE and the construct's first
 	// CASE, where the standard's R808 has no place for one.
