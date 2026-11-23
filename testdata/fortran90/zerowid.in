@@ -1,0 +1,9 @@
+! The options, read twice.
+&OPTS N = 3, ! the count
+ X = 2.5! the size
+ NAME = 'a!b' ! a ! in the text
+ FLAG = T ! the switch
+! nothing more
+/
+&OPTS! the second set
+ N=12 /

@@ -9657,6 +9657,27 @@ prints
 |    42|  T|     ABC|
 ```
 
+Fortran 95's zero widths, `I0`, `B0`, `O0`, `Z0`, and `F0.d` (and `I0.m`'s forms), write
+a value in the fewest columns that hold it: no blanks, and never asterisks. `F0.d` leaves out
+the 0 before the point unless it is the only digit, as gfortran does:
+
+```fortran
+print '(1x, "[", i0, "] [", z0, "] [", i0.4, "] [", f0.3, "] [", f0.2, "]")', -7, 255, 5, -0.5, 3.14159
+```
+
+prints
+
+```text
+[-7] [FF] [0005] [-.500] [3.14]
+```
+
+`I0.0` of zero is one blank. A value the record's room can't hold makes the record too long,
+`%FOR-F-OUTSTAOVE`, as any field past its end does. One difference from gfortran: a negative
+value that shows only zeros has no minus sign (`F0.2` of -0.001 is `.00`, gfortran's `-.00`), the
+rule every F field here keeps from VMS's FORRTL. In a VAX FORTRAN unit a zero width is still a
+field of no columns, which no value fits: nothing is written there, and the statement fails with
+`%FOR-E-OUTCONERR` after its record, as VMS's FORRTL does.
+
 These, and quotation marks around a format's text, are read in a `/F90` unit's FORMAT
 statements and in its statements' formats, constant or held in a variable (which FTNRTL reads
 when the program runs). A VAX FORTRAN unit's run-time format refuses them, as VMS's FORRTL
@@ -9768,10 +9789,13 @@ its character values undelimited unless the unit says `DELIM=` (such a value can
 by a NAMELIST READ, as the HP Fortran manual warns). Its namelist input reads every column, with
 no carriage control, finds the group at the first character of a record that isn't a blank (`&`
 or `$` and the group's name, so `&GRP` in column 1, as other compilers write it), ends at a slash
-as well as at `$` or `&`, and takes character values between quotation marks too:
+as well as at `$` or `&`, and takes character values between quotation marks too. A `!` outside
+a character value starts a comment, Fortran 95's, which runs to the record's end:
 
 ```text
-&GRP I=5, NM="a/b", X=2.5 /
+! the options
+&GRP I=5, NM="a/b", ! the name
+ X=2.5 /
 ```
 
 A VAX FORTRAN unit's namelist statements read and write VMS's ` $GRP` ... ` $END`, with
@@ -10727,9 +10751,9 @@ naming what it is:
 Without `/CHECK=POINTERS` ([section 14.3](#143-the-fortran-command)) a disassociated pointer's
 target is at address 0, and using it is an access violation. These are Fortran 95's or later's,
 and not Fortran 90 at all (`NULL()` and default initialization are there, under "Pointers"
-and "Derived types", and PURE and ELEMENTAL under "Procedures and interfaces"): zero widths (`I0`, `F0.2`, which write `%FOR-E-OUTCONERR`, a field
-too narrow for any value); and procedure pointers and bounds remapping (`P(1:N) => A`). The
-FORALL statement and construct are under "Arrays as values".
+and "Derived types", PURE and ELEMENTAL under "Procedures and interfaces", and zero widths and
+namelist comments under "Input and output"): procedure pointers and bounds remapping
+(`P(1:N) => A`). The FORALL statement and construct are under "Arrays as values".
 
 ## 15. Appendices
 

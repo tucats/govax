@@ -173,6 +173,7 @@ PROGRAMS90 = {
     "forallc": ["forallc.f90"],
     "wheres": ["wheres.f90"],
     "intrins": ["intrins.f90"],
+    "zerowid": ["zerowid.f90"],
     "optfuse": ["optfuse.f90"],
     "optstride": ["optstride.f90"],
     "mixed": ["modules/mixed/mixed.f90", "modules/mixed/fill.for", "modules/mixed/report.f90"],

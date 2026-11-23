@@ -45,6 +45,18 @@
 ; The sign is a minus for a negative value, a plus too after SP, and
 ; nothing else takes room.
 ;
+; F0.d (Fortran 95's 10.5.1.2.1), in a statement of a unit compiled /F90
+; (the control block's F90 flag), is the least width that holds the value:
+; its sign, its digits before the point, the point, and d digits. The 0
+; before the point is left out unless it is the only digit (gfortran's, the
+; author's choice; the standard leaves it optional): F0.3 of -0.5 is
+; "-.500", F0.0 of 0.3 is "0.". The field is laid out in the record's room
+; left, as if that were w, and only its own columns are put; a value the
+; room can't hold is a record too long (FTN$$FMT_PUT's), never asterisks. A
+; value that shows only zeros still has no minus sign, as VMS's rule above,
+; where gfortran's F0.2 of -0.001 is "-.00". Without the flag F0.d is VAX
+; FORTRAN's: no room, so asterisks, none here, and FOR$_OUTCONERR.
+;
 ; The digits come from LIBRTL's OTS$$CVT_F_T_R8 (and its D, G, and H
 ; forms), which writes a value's exact decimal digits, rounded where it's
 ; asked, into its caller's frame (internal/librtl/otscvtfor.go has its
@@ -83,6 +95,8 @@ OTS_IGNORE_BLANKS = 1
 OTS_IGNORE_TABS	= 16
 
 ; The statement's context: FTN_STATEMENT's fields and FTN_FORMAT's.
+CTX_FLAGS	= 12			; word: the control block's flags
+FLAG_F90	= 16			;  a statement of a unit compiled /F90
 CTX_KIND	= 14			; byte: odd for a WRITE
 CTX_RECORD	= 28			; the record
 RECORD_SIZE	= 256
@@ -137,7 +151,8 @@ L_TAIL		= -88			; the field's last columns, an exponent
 L_DESC		= -96			; a descriptor of an input field
 L_LIMIT		= -100			; how many of the buffer's digits are the
 					;  value's: past them, zeros (EN's carry)
-FRAME_SIZE	= 100
+L_ZERO		= -104			; 1 for F0.d in a Fortran 90 statement
+FRAME_SIZE	= 104
 
 ;
 ; VMS's OTS$$CVT_x_T_R8 writes whole groups of nine digits, so it doesn't stop at the
@@ -174,9 +189,21 @@ BUFFER_SPARE	= 9
 ;
 ; Output: the digit buffer and the field on the stack, big enough for any
 ; digit a field of w columns shows and the one that rounds it, a field past
-; the record's end having failed first.
+; the record's end having failed first. F0.d's w is the record's room left.
 ;
-OUTPUT:	ADDL3	CTX_POS(R11),R9,R0
+OUTPUT:	CLRL	L_ZERO(FP)
+	CMPB	OP_B_CODE(R10),#C_F
+	BNEQ	3$
+	TSTL	R9
+	BNEQ	3$
+	BBC	#0,OP_B_FLAGS(R10),3$	; F_W: given as 0,
+	BITW	#FLAG_F90,CTX_FLAGS(R11) ;  in a Fortran 90 statement
+	BEQL	3$
+	MOVL	#1,L_ZERO(FP)
+	SUBL3	CTX_POS(R11),CTX_RECMAX(R11),R9
+	BGEQ	3$
+	CLRL	R9
+3$:	ADDL3	CTX_POS(R11),R9,R0
 	CMPL	R0,CTX_RECMAX(R11)
 	BLEQ	5$
 	PUSHL	R9			; no room: FTN$$FMT_PUT says so
@@ -360,7 +387,7 @@ LAYOUT:	SUBL3	L_TAIL(FP),R9,R6	; the columns the number has
 	INCL	R3
 	CMPL	R3,R6
 	BLEQ	10$
-	BRW	STARS
+	BRW	WIDE
 	;
 	; A minus sign, unless every digit shown is 0; a plus sign after SP.
 	;
@@ -384,13 +411,15 @@ LAYOUT:	SUBL3	L_TAIL(FP),R9,R6	; the columns the number has
 25$:	INCL	R3
 	CMPL	R3,R6
 	BLEQ	30$
-	BRW	STARS
+	BRW	WIDE
 	;
-	; The 0 before the point, if it is wanted and fits: R1 1 if so.
+	; The 0 before the point, if it is wanted and fits: R1 1 if so. F0.d
+	; wants it only as the only digit.
 	;
 30$:	CLRL	R1
 	TSTL	L_INT(FP)
 	BNEQ	40$
+	BLBS	L_ZERO(FP),35$
 	CMPL	R3,R6
 	BGEQ	35$
 	MOVL	#1,R1
@@ -398,13 +427,23 @@ LAYOUT:	SUBL3	L_TAIL(FP),R9,R6	; the columns the number has
 	BRB	40$
 35$:	TSTL	L_FRAC(FP)		; no room, but it can't be left out
 	BNEQ	40$			;  when it is the only digit
+	BLBS	L_ZERO(FP),37$
 	BRW	STARS
+37$:	MOVL	#1,R1			; F0.0's "0."
+	INCL	R3
+	CMPL	R3,R6
+	BLEQ	40$
+	BRW	WIDE
 	;
-	; The columns, from the first.
+	; The columns, from the first. F0.d's field is only these, so its
+	; first column and width become theirs.
 	;
 40$:	SUBL3	R3,R6,R2
 	ADDL2	L_FIELD(FP),R2
-	TSTL	R5
+	BLBC	L_ZERO(FP),42$
+	MOVL	R2,L_FIELD(FP)
+	MOVL	R3,R9
+42$:	TSTL	R5
 	BEQL	45$
 	MOVB	R5,(R2)+		; the sign, and R2 on to the next column
 45$:	BLBC	R1,50$
@@ -437,6 +476,19 @@ LAYOUT:	SUBL3	L_TAIL(FP),R9,R6	; the columns the number has
 	BLBS	L_REAL(FP),80$
 	MOVB	#1,CTX_MISMATCH(R11)
 80$:	RET
+
+;
+; WIDE: a number of R3 columns that won't fit in the field. F0.d's field was
+; the record's room, so the record is too long: FTN$$FMT_PUT says so, as for
+; a field past the record's end (OUTPUT). Any other is asterisks.
+;
+WIDE:	BLBS	L_ZERO(FP),10$
+	BRW	STARS
+10$:	PUSHL	R3
+	CLRL	-(SP)
+	PUSHL	R11
+	CALLS	#3,FTN$$FMT_PUT		; FTN_FORMAT
+	RET
 
 ;
 ; STARS: a field of w asterisks, and FOR$_OUTCONERR; the statement goes on.

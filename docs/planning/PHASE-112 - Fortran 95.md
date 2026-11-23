@@ -6,7 +6,8 @@ done 2026-11-23; subtask 3, zero-sized arrays, done 2026-11-23; subtask 4, `NULL
 2026-11-23; subtask 5, default initialization, done 2026-11-23; subtask 6, PURE, done 2026-11-23;
 subtask 7, ELEMENTAL, done 2026-11-23; subtask 8, the FORALL statement, done 2026-11-23;
 subtask 9, the FORALL construct, done 2026-11-23; subtask 10, WHERE in WHERE, done 2026-11-23;
-subtask 11, the intrinsics, done 2026-11-23; subtask 12 is next. Phase 99's question 2 left Fortran 95's additions to an
+subtask 11, the intrinsics, done 2026-11-23; subtask 12, FTNRTL's zero widths and namelist
+comments, done 2026-11-23; subtask 13 is next. Phase 99's question 2 left Fortran 95's additions to an
 optional Phase 112, the author chose go at Phase 111's close-out, and the phase was widened
 to the Fortran errata the same day. At the errata survey's review the author split it:
 Fortran 95 is this phase, and the errata, with the survey (its Part A), is Phase 113
@@ -305,7 +306,7 @@ way) and the HPF_LIBRARY routines. **Not planned.**
     2026-11-23).
 11. **The intrinsics** (A.3's 10): MAXLOC/MINLOC DIM=, CEILING/FLOOR KIND=, CPU_TIME (done
     2026-11-23).
-12. **FTNRTL**: zero widths, namelist comments (A.3's 11).
+12. **FTNRTL**: zero widths, namelist comments (A.3's 11) (done 2026-11-23).
 13. **`/STANDARD=F90`** widened, Fortran 95's deleted and obsolescent lists (A.3's 12,
     question 1); listings, cross references (FORALL indexes, PURE in the attributes
     column), and the debugger on the new forms (a FORALL index has no storage of its own
@@ -823,3 +824,37 @@ with every recommendation of A.5:
   clock subroutines, and the FTNRTL table; HELP FORTRAN's Numeric, Subroutines, and arrays
   topics. Phase 113's A.1's 4 and 6 and Phase 108's Phase 112 line are marked resolved.
   Subtask 12, FTNRTL's zero widths and namelist comments, is next.
+- **2026-11-23:** Subtask 12, FTNRTL's zero widths and namelist comments, both only in a
+  statement with the control block's F90 flag (answer 2). **I0, B0, O0, Z0** (`ftn_edit.mar`'s
+  `ZERO_WIDTH`): the output paths already count the columns a value needs (sign, zeros for `.m`,
+  digits) before comparing them with w; a w given as 0 becomes that count, 1 if it is 0 (`I0.0`
+  of zero is one blank, gfortran's, which F2008 later wrote down), and a field that then won't fit
+  the record is FTN$$FMT_PUT's record too long, as a given width's is, never asterisks. **F0.d**
+  (`ftn_float.mar`): the field is laid out as if w were the record's room left (`L_ZERO`, the
+  frame 104 bytes), LAYOUT leaves out the 0 before the point unless it is the only digit
+  (answer 5: `-.500`, and F0.0 of 0.3 `0.`), only the number's own columns are put, and a number
+  the room can't hold goes to `WIDE`, a record too long, rather than STARS. The scale factor and
+  SP work as for any F. One difference from gfortran, kept on purpose: a negative value showing
+  only zeros has no minus sign (VMS's rule for every F field, Phase 80), where gfortran's F0.2 of
+  -0.001 is `-.00`. E0.d, D0.d, G0.d, L0, and A0 are not Fortran 95's and stay what they were.
+  Without the flag a zero width is still VAX FORTRAN's, a field of no columns and OUTCONERR, which
+  `testdata/fortran/zerovax.for` holds (each record `[]`, IOSTAT= 63; in `TestNoF90Unchanged`'s
+  baseline, and `testdata/ftn86` regenerated with ZEROVAX in `ftn86AwaitingVMS`). **Namelist comments**:
+  `FTN$$LI_SKIP` (`ftn_listin.mar`), the one routine that passes over blanks and records' ends for
+  both list-directed and namelist input, passes over a `!` and the rest of its record when the
+  statement is a namelist READ (the kind's low bits K_READ_SN) with the flag; list-directed input
+  has no comments. A number may end at a `!` (`ftn_namelist.mar`'s value reader), and so may the
+  group's name in its record (`FIND_GROUP`); a record before the group whose first nonblank is `!`
+  was already passed over, as any not starting with `&` or `$`; a `!` inside a character value is
+  `FTN$$LI_TEXT`'s, so the value's. Without the flag a `!` is still SYNERRNAM. Tests:
+  `testdata/fortran90/zerowid.f90` and `.in` (the probe's eight cases and twenty more, a sentence of
+  them, and namelist input with comments in every place; every mode, paging too; gfortran
+  `-std=f95` prints the same, `compare.py`) and `zerowidvms.f90` (govax's own: OUTSTAOVE's 66 for
+  an F0.d the record can't hold, nothing of it written, and `.00` for -0.001, so not in
+  `compare.py`). FTNRTL's minor id is unchanged (no new entries); `fcalc.exe` regenerated, its
+  record of FTNRTL's minor id 33 from subtask 11 (LEQUAL took the old one; nothing ran
+  differently). `testdata/f90r` regenerated, ZEROWID and ZEROWIDVMS added to `f90rAwaitingVMS`.
+  MANUAL.md's "Edit descriptors" and namelist input (and the "not there" note), HELP FORTRAN's
+  IO topic, FORTRAN-INTERNALS.md's section 34 "What waits". Phase 113's A.1's 7 is marked
+  resolved. Subtask 13, `/STANDARD=F90` widened with listings, cross references, and the
+  debugger, is next.

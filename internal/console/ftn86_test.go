@@ -268,8 +268,9 @@ var ftn86VMSDifferences = map[string]string{
 }
 
 // ftn86AwaitingVMS are corpus programs newer than VMS's last run of the procedure, which
-// the next VMS round is to run: RECARRAYS, Phase 105's subtask 5a, and RECDYN, 5b.
-var ftn86AwaitingVMS = []string{"RECARRAYS", "RECDYN"}
+// the next VMS round is to run: RECARRAYS, Phase 105's subtask 5a, RECDYN, 5b, and
+// ZEROVAX, Phase 112's subtask 12.
+var ftn86AwaitingVMS = []string{"RECARRAYS", "RECDYN", "ZEROVAX"}
 
 // ftn86NewModules are FTNRTL's modules newer than VMS's last run of the procedure, each a
 // MACRO command, and a success in $STATUS, more in govax's FTNRTL section than in VMS's

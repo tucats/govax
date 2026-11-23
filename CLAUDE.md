@@ -1485,7 +1485,10 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   F95ONLY retired; subtask 11, done 2026-11-23, the intrinsics: MAXLOC and MINLOC with DIM= as
   reductions in `ir`'s `reduce`, a positional LOGICAL second argument still the MASK
   (`keywordAt`), CEILING's and FLOOR's KIND= (`evaluator.wholeType` when folded), and CALL
-  CPU_TIME, FTNRTL's `FTN$CPU_TIME_F` to `_H` over JPI$_CPUTIM, GSMATCH 1,33),
+  CPU_TIME, FTNRTL's `FTN$CPU_TIME_F` to `_H` over JPI$_CPUTIM, GSMATCH 1,33; subtask 12, done
+  2026-11-23, FTNRTL's zero widths, I0, B0, O0, Z0 (`ftn_edit.mar`'s `ZERO_WIDTH`) and F0.d laid
+  out in the record's room (`ftn_float.mar`'s `L_ZERO`), and namelist input's `!` comments
+  (`FTN$$LI_SKIP` in a namelist READ), both only under the F90 flag),
   **Phase 113 is the errata** (its Part B the scope: the cheap
   Fortran 90 NOTIMPLs, LIB$INITIALIZE, STR$'s arithmetic, `USE
   STARLET_SSDEF`, MACRO's and LINK's gaps, housekeeping, and a VMS probe

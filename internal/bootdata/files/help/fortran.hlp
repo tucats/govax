@@ -680,6 +680,11 @@
    format held in a variable too, and take BLANK='NULL' and PAD='YES'
    by default.
 
+   Fortran 95's zero widths, I0, B0, O0, Z0, and F0.d (and I0.m),
+   write a value in the fewest columns that hold it: I0 of -7 is -7,
+   F0.3 of -0.5 is -.500.  In a VAX FORTRAN unit a zero width is still
+   a field of no columns, %FOR-E-OUTCONERR.
+
    A formatted sequential READ or WRITE may be nonadvancing:
 
      write (*, '(1x, a)', advance='no') 'Name? '
@@ -692,7 +697,8 @@
    OPEN takes ACTION=, POSITION=, DELIM=, PAD=, and STATUS='REPLACE',
    and INQUIRE answers them, with READ=, WRITE=, READWRITE=, and
    INQUIRE (IOLENGTH=n) list.  A /F90 unit's NAMELIST is &GRP ... /,
-   and its list-directed input takes "..." and undelimited text.
+   its input takes ! comments to the end of a record, and its
+   list-directed input takes "..." and undelimited text.
    Fortran 90's new run-time conditions are FOR numbers 306 to 310
    (REAWRIFIL, EORDURREA, BADADVANCE, NONADVUNIT, RECTOOSHO).
 

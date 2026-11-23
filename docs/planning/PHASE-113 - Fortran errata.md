@@ -249,7 +249,8 @@ HP Fortran manual (`VMS-FORTRAN-LANGUAGE.txt`) describes every one (FORALL 69 ti
    MOLD=. **Proposed: 112.** *(Resolved in Phase 112: MAXLOC's and MINLOC's `DIM=` and CEILING's
    and FLOOR's `KIND=` in subtask 11, NULL's MOLD= in subtask 4.)*
 7. Zero widths in output, `I0`, `B0`, `O0`, `Z0`, `F0.d` (OUTCONERR today, FTNRTL's
-   `ftn_edit.mar` and `ftn_float.mar`), under the F90 flag only. **Proposed: 112.**
+   `ftn_edit.mar` and `ftn_float.mar`), under the F90 flag only. **Proposed: 112.** *(Resolved
+   in Phase 112, subtask 12, with namelist input's comments.)*
 8. `/STANDARD=F95` beside `F77` and `F90`: F95's additions not flagged under it, the deleted
    features (a REAL DO variable, branching to END IF from outside, PAUSE, ASSIGN and assigned
    GO TO, the H edit descriptor) flagged as deleted, Fortran 95's obsolescent list. Whether

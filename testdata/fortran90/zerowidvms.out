@@ -1,0 +1,6 @@
+A record too long: 66
+                                                                                                    123456789
+One that fits: 0
+[.00]
+[0.]
+  $STATUS == "%X00000001"

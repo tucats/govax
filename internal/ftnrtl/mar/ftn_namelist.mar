@@ -77,8 +77,11 @@
 ; reading starts in column 1, and the group starts at its first byte that isn't
 ; a blank or a tab, & or $ and the group's name ("&GRP" as other compilers
 ; write it, " &GRP" as this module does); a slash ends the statement, as a $ or
-; an & does, wherever a name or a value could start or a value end; and a
-; character value may be between quotation marks, "" one of them.
+; an & does, wherever a name or a value could start or a value end; a
+; character value may be between quotation marks, "" one of them; and a !
+; outside a character value starts a comment, to the record's end (Fortran
+; 95's 10.9.1.3), wherever blanks may stand, or ending a number or the
+; group's name (FTN_LISTIN's FTN$$LI_SKIP passes over it).
 ;
 ; OUTPUT. A record holds 81 bytes, its carriage control and 80 of text:
 ;
@@ -339,7 +342,11 @@ FIND_GROUP:
 	BEQL	70$
 	CMPB	(R2)[R5],#9		; a tab
 	BEQL	70$
-	BRW	10$
+	CMPB	(R2)[R5],#^A/!/		; a Fortran 90 statement's comment
+	BNEQ	60$
+	BITW	#FLAG_F90,CTX_FLAGS(R6)
+	BNEQ	70$
+60$:	BRW	10$
 70$:	MOVL	R5,CTX_POS(R6)
 	RSB
 
@@ -1362,7 +1369,11 @@ BY_FIRST_BYTE:
 	BEQL	94$
 	CMPB	R1,#^A/)/
 	BEQL	94$
-	BSBW	IS_END
+	CMPB	R1,#^A/!/		; a Fortran 90 statement's comment
+	BNEQ	93$
+	BITW	#FLAG_F90,CTX_FLAGS(R6)
+	BNEQ	94$
+93$:	BSBW	IS_END
 	BLBS	R0,94$
 	BRW	BAD_TOKEN
 94$:	MOVB	#V_WORD,CTX_LI_KIND(R6)

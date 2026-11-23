@@ -5805,9 +5805,9 @@ compiler is what made each of these a question rather than a silent agreement. T
 found an internal file's BLANK= default wrong for Fortran 90 (VAX's ZERO, where the standard says
 NULL), and twelve programs from earlier phases that had never been run with paging on.
 
-What waits: Fortran 95's I/O (a zero width in `I0` and `F0.d`, which Fortran 90 doesn't have: FTNRTL
-takes it for a field too narrow for any value, OUTCONERR), for the optional Phase 112, and Fortran 2003's (DECIMAL=, ROUND=,
-stream access), which no phase plans; FTNRTL's limit of 15 dimensions and 8 levels in a NAMELIST object, past which the
+What waits: Fortran 2003's I/O (DECIMAL=, ROUND=, stream access), which no phase plans (Fortran 95's
+zero widths, `I0` and `F0.d`, and namelist comments came later, under the same F90 flag: in a VAX
+FORTRAN statement a zero width is still a field too narrow for any value, OUTCONERR); FTNRTL's limit of 15 dimensions and 8 levels in a NAMELIST object, past which the
 compiler says NOTIMPL.
 
 ## 35. Fortran 90: the compiler's usability (Phase 110)
