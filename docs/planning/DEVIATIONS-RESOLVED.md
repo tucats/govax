@@ -1,4 +1,4 @@
-# Resolged Deviations from ISA/Hardware/Software Standards
+# Resolved Deviations from ISA/Hardware/Software Standards
 
 This file records when a deviation from VAX/VMS has been resolved so that the
 behavior matches the documented instruction operation, hardware emulation, or
