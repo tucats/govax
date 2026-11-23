@@ -9,7 +9,8 @@ import (
 // Phase 112's subtask 2, are NOTIMPL by name until their subtasks, each once,
 // with nothing else said: a FORALL construct's statements are passed over, and
 // a unit with an ELEMENTAL header keeps its structure. PURE is compiled since
-// subtask 6 (pure_test.go).
+// subtask 6 (pure_test.go), ELEMENTAL since 7, and the FORALL statement since 8
+// (forall_test.go).
 func TestF95Pending(t *testing.T) {
 	cases := []struct {
 		name  string
@@ -27,8 +28,8 @@ func TestF95Pending(t *testing.T) {
 			"end program p"},
 			""},
 		{"FORALL statement", []string{
-			"program p", "  implicit none", "  integer :: a(4)", "  forall (i = 1:4) a(i) = i", "end program p"},
-			"NOTIMPL: the FORALL statement is not implemented yet"},
+			"program p", "  implicit none", "  integer :: a(4), i", "  forall (i = 1:4) a(i) = i", "end program p"},
+			""},
 		{"FORALL construct", []string{
 			"program p", "  implicit none", "  integer :: a(4,4)",
 			"  outer: forall (i = 1:4)", "    forall (j = 1:4, j > i) a(i,j) = i + j",

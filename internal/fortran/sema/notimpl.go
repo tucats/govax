@@ -23,7 +23,7 @@ func handled(s ast.Stmt) bool {
 		*ast.AssignLabelStmt, *ast.AssignedGotoStmt, *ast.ArithIfStmt,
 		*ast.IfStmt, *ast.IfThenStmt, *ast.ElseIfStmt, *ast.ElseStmt, *ast.EndIfStmt,
 		*ast.DoStmt, *ast.DoWhileStmt, *ast.EndDoStmt, *ast.LoopExitStmt, *ast.SelectCaseStmt, *ast.CaseStmt, *ast.EndSelectStmt,
-		*ast.WhereStmt, *ast.WhereBlockStmt, *ast.ElseWhereStmt, *ast.EndWhereStmt, *ast.ContinueStmt, *ast.StopStmt, *ast.ReturnStmt, *ast.EndStmt,
+		*ast.WhereStmt, *ast.ForallStmt, *ast.WhereBlockStmt, *ast.ElseWhereStmt, *ast.EndWhereStmt, *ast.ContinueStmt, *ast.StopStmt, *ast.ReturnStmt, *ast.EndStmt,
 		*ast.AllocateStmt, *ast.PointerAssignStmt, *ast.NullifyStmt, *ast.EntryStmt, *ast.UseStmt, *ast.ContainsStmt, *ast.StructureStmt, *ast.TypeDefStmt, *ast.RecordStmt, *ast.FormatStmt, *ast.NamelistStmt, *ast.PrintStmt, *ast.CodeStmt, *ast.DefineFileStmt, *ast.AttrStmt, *ast.DirectiveStmt, *ast.BadStmt:
 		return true
 

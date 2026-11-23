@@ -76,6 +76,9 @@ func (a *analyzer) executableStmt(s ast.Stmt, path []frame) Stmt {
 	case *ast.WhereStmt:
 		return a.whereStatement(s)
 
+	case *ast.ForallStmt:
+		return a.forallStatement(s)
+
 	case *ast.LoopExitStmt:
 		return a.loopExit(s)
 

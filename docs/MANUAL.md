@@ -8546,7 +8546,7 @@ made where the standard leaves one to the processor.
 | The new intrinsic functions and subroutines | [The intrinsic procedures](#the-intrinsic-procedures) |
 | Programs that print the same everywhere | [Writing for any processor](#writing-for-any-processor) |
 | Construct names, EXIT, CYCLE, SELECT CASE | [Control constructs](#control-constructs) |
-| Sections, array expressions, constructors, WHERE | [Arrays as values](#arrays-as-values) |
+| Sections, array expressions, constructors, WHERE, FORALL | [Arrays as values](#arrays-as-values) |
 | Internal procedures, interfaces, generics, operators | [Procedures and interfaces](#procedures-and-interfaces) |
 | TYPE, components, constructors | [Derived types](#derived-types) |
 | Edit descriptors, OPEN's specifiers, ADVANCE=, NAMELIST | [Input and output](#input-and-output) |
@@ -9129,6 +9129,28 @@ shifted:  72.0  72.0  85.0  52.0  91.0  49.0
   computed for an element that isn't assigned. Only assignments of the mask's shape may stand
   inside (`WHEREBODY`, `WHERETARGET`). A WHERE inside a WHERE, and ELSEWHERE with a mask of its
   own, are Fortran 95's (`F95ONLY`).
+- *FORALL* (Fortran 95's 7.5.4; under `/NOF90` too): `FORALL (I = 1:N, J = 1:N, mask) target
+  = expr` assigns the target for every tuple of the indexes' values (each `lower:upper` or
+  `lower:upper:stride`, a stride never zero, `FORALLSTRIDE`) for which the mask, if there is one,
+  is true. It keeps an array assignment's rule: every bound and stride is computed first, then
+  the mask for every tuple, then every value, and only then is anything stored, so
+  `FORALL (I = 2:N) V(I) = V(I-1)` shifts V by one place. The indexes are the statement's own,
+  scalar INTEGER names (`FORALLINDEX`, `FORALLTWICE`) that leave the unit's variables of those
+  names alone; a bound or stride can't use one (`FORALLBOUND`), and the assignment can't change
+  one (`FORALLSET`). The mask is a scalar LOGICAL (`FORALLMASK`), and a function referenced
+  anywhere in the statement must be declared PURE (`FORALLPURE`). The target may be an array at
+  each tuple (`FORALL (I = 1:N) A(I,:) = B(:,I)`). Where nothing the value or the mask reads
+  may be what another tuple writes (or only the very element the target names), the tuples are
+  done one after another, as nested DO loops; otherwise the mask and the values go into
+  temporaries of the index set's shape first. Not yet compiled (`NOTIMPL`): the FORALL
+  construct, a pointer assignment or a defined assignment as the statement, a target whose
+  subscripts read its own array, and an array target, or a CHARACTER one of a length known only
+  when the program runs, that the value reads elsewhere.
+
+  ```fortran
+  forall (i = 1:n, j = 1:n, a(i,j) /= 0.0) b(i,j) = 1.0 / a(i,j)
+  forall (i = 1:3, j = 1:3) m(i,j) = m(j,i)          ! a transpose in place
+  ```
 - *I/O lists*: a section, an array expression, or a constructor in an output list is written,
   and a section in an input list read, in array element order. A section of a variable (with no
   vector subscript), an assumed-shape array, and an array pointer's target go to FTNRTL as one
@@ -10650,8 +10672,8 @@ Without `/CHECK=POINTERS` ([section 14.3](#143-the-fortran-command)) a disassoci
 target is at address 0, and using it is an access violation. These are Fortran 95's or later's,
 and not Fortran 90 at all (`NULL()` and default initialization are there, under "Pointers"
 and "Derived types", and PURE and ELEMENTAL under "Procedures and interfaces"): zero widths (`I0`, `F0.2`, which write `%FOR-E-OUTCONERR`, a field
-too narrow for any value); FORALL (`%FORT-E-NOTIMPL`, read but not yet
-compiled); and procedure pointers and bounds remapping (`P(1:N) => A`).
+too narrow for any value); the FORALL construct (`%FORT-E-NOTIMPL`, read but not yet
+compiled; the FORALL statement is under "Arrays as values"); and procedure pointers and bounds remapping (`P(1:N) => A`).
 
 ## 15. Appendices
 

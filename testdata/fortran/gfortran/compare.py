@@ -169,6 +169,7 @@ PROGRAMS90 = {
     "defaults": ["defaults.f90"],
     "pures": ["pures.f90"],
     "elementals": ["elementals.f90"],
+    "foralls": ["foralls.f90"],
     "optfuse": ["optfuse.f90"],
     "optstride": ["optstride.f90"],
     "mixed": ["modules/mixed/mixed.f90", "modules/mixed/fill.for", "modules/mixed/report.f90"],

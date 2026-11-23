@@ -411,6 +411,8 @@ func stmtText(list []Stmt) string {
 		return "IF (" + DumpExpr(s.Cond) + ") " + labelList(s.Labels[:])
 	case *Where:
 		return "WHERE " + DumpExpr(s.Mask) + " " + stmtText(s.Then.Body)
+	case *Forall:
+		return forallText(s)
 	case *Continue:
 		return "CONTINUE"
 	case *Allocate:
@@ -991,4 +993,30 @@ func dumpCtorItems(items []CtorItem) string {
 	}
 
 	return strings.Join(parts, " ")
+}
+
+// forallText is a FORALL statement as the dump shows it: its indexes, mask,
+// and assignment, and "[in temporaries]" when its values are computed first.
+func forallText(f *Forall) string {
+	parts := make([]string, 0, len(f.Indexes)+1)
+
+	for _, x := range f.Indexes {
+		p := x.Sym.Name + " = " + DumpExpr(x.Lower) + ":" + DumpExpr(x.Upper)
+		if x.Stride != nil {
+			p += ":" + DumpExpr(x.Stride)
+		}
+
+		parts = append(parts, p)
+	}
+
+	if f.Mask != nil {
+		parts = append(parts, DumpExpr(f.Mask))
+	}
+
+	text := "FORALL (" + strings.Join(parts, ", ") + ") " + stmtText([]Stmt{f.Body})
+	if f.Temporary {
+		text += "  [in temporaries]"
+	}
+
+	return text
 }

@@ -1174,6 +1174,23 @@ var messages = map[string]kind{
 	"WHERETARGET":    {Error, "an assignment in a WHERE must be to an array of the mask's shape, not to a scalar"},
 	"WHEREDEFINED":   {Error, "a defined assignment in a WHERE must be by an ELEMENTAL subroutine, and %s isn't one"},
 	"ELSEWHEREORDER": {Error, "this WHERE construct has an ELSEWHERE statement already, at line %d"},
+
+	// Fortran 95's FORALL (its 7.5.4; docs/planning/PHASE-112 - Fortran
+	// 95.md, subtask 8; sema/forall.go). FORALLINDEX is an index whose name
+	// the unit gives something other than a scalar INTEGER variable;
+	// FORALLTWICE an index named twice; FORALLINT a bound or stride that isn't
+	// a scalar INTEGER; FORALLBOUND one that uses an index of the same FORALL;
+	// FORALLSTRIDE a stride of zero; FORALLMASK a mask that isn't a scalar
+	// LOGICAL; FORALLSET an assignment to an index; FORALLPURE a reference to
+	// a procedure not declared PURE.
+	"FORALLINDEX":  {Error, "a FORALL index must be a scalar INTEGER variable's name, and %s is %s"},
+	"FORALLTWICE":  {Error, "%s is an index of this FORALL already"},
+	"FORALLINT":    {Error, "a FORALL index's bounds and stride must be scalar INTEGER values, and this one is %s"},
+	"FORALLBOUND":  {Error, "a FORALL index's bounds and stride can't use %s, an index of the same FORALL"},
+	"FORALLSTRIDE": {Error, "a FORALL index's stride can't be zero"},
+	"FORALLMASK":   {Error, "a FORALL's mask must be a scalar LOGICAL value, and this one is %s"},
+	"FORALLSET":    {Error, "%s is an index of the FORALL, which only the FORALL gives values"},
+	"FORALLPURE":   {Error, "%s isn't declared PURE, so it can't be referenced in a FORALL"},
 	"F95ONLY":        {Error, "%s is Fortran 95's, not Fortran 90's, and isn't compiled yet (Phase 112)"},
 
 	// CASEFIRST is a statement between SELECT CASE and the construct's first

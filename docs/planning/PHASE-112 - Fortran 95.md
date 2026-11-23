@@ -4,7 +4,8 @@
 accepted by the author the same day ("The author's answers"); subtask 2, recovery and syntax,
 done 2026-11-23; subtask 3, zero-sized arrays, done 2026-11-23; subtask 4, `NULL()`, done
 2026-11-23; subtask 5, default initialization, done 2026-11-23; subtask 6, PURE, done 2026-11-23;
-subtask 7, ELEMENTAL, done 2026-11-23; subtask 8 is next. Phase 99's question 2 left Fortran 95's additions to an
+subtask 7, ELEMENTAL, done 2026-11-23; subtask 8, the FORALL statement, done 2026-11-23;
+subtask 9 is next. Phase 99's question 2 left Fortran 95's additions to an
 optional Phase 112, the author chose go at Phase 111's close-out, and the phase was widened
 to the Fortran errata the same day. At the errata survey's review the author split it:
 Fortran 95 is this phase, and the errata, with the survey (its Part A), is Phase 113
@@ -106,8 +107,8 @@ Already Fortran 95's in govax: allocatable locals deallocated at return (Phase 9
 4. `NULL()` and pointer initialization.
 5. Default initialization of components, the module text among it (done 2026-11-23).
 6. PURE: the constraints (done 2026-11-23).
-7. ELEMENTAL procedures and their references.
-8. FORALL, the statement.
+7. ELEMENTAL procedures and their references (done 2026-11-23).
+8. FORALL, the statement (done 2026-11-23).
 9. FORALL, the construct (nesting, WHERE inside, PURE references).
 10. WHERE in WHERE and masked ELSEWHERE; F95ONLY retired.
 11. The intrinsic changes and CPU_TIME.
@@ -296,7 +297,7 @@ way) and the HPF_LIBRARY routines. **Not planned.**
    (done 2026-11-23).
 7. **ELEMENTAL** procedures and references (A.3's 7), elemental defined assignment and
    operators in array assignments and WHERE (done 2026-11-23).
-8. **FORALL, the statement** (A.3's 6).
+8. **FORALL, the statement** (A.3's 6) (done 2026-11-23).
 9. **FORALL, the construct**: nesting, WHERE inside, pointer assignment, PURE references.
 10. **WHERE** in WHERE, masked ELSEWHERE, named WHERE (A.3's 9); F95ONLY retired.
 11. **The intrinsics** (A.3's 10): MAXLOC/MINLOC DIM=, CEILING/FLOOR KIND=, CPU_TIME.
@@ -655,3 +656,46 @@ with every recommendation of A.5:
   has an "ELEMENTAL procedures" paragraph and its closing list loses ELEMENTAL; HELP FORTRAN
   the same; Phase 113's A.4's 2 is marked resolved. Subtask 8, the FORALL statement, is
   next.
+- **2026-11-23:** Subtask 8, the FORALL statement. **Analysis** (`sema/forall.go`): a FORALL
+  is a scope inside the unit's (`newInnerScope`, as a statement function's definition is),
+  where each index is a symbol of its own, `Forall.Indexes`' `ForallIndex.Sym`, a scalar
+  INTEGER in none of the unit's tables, that takes only its being INTEGER from the unit's
+  entity of its name (`typesEntity` set, so it is no UNUSEDNAME): FORALLINDEX if that entity
+  is a constant, an array, or not INTEGER, NOTYPE under IMPLICIT NONE with none, FORALLTWICE.
+  The bounds and strides are read in the statement's scope, so one that uses an index finds it
+  and is FORALLBOUND (7.5.4.1's constraint), each a scalar INTEGER converted to the default
+  (FORALLINT), a stride of constant zero FORALLSTRIDE. The mask is a scalar LOGICAL, an
+  INTEGER's bit 0 as an IF's (FORALLMASK). The assignment is `analyzer.assignment`'s, so a
+  target may be an array at each tuple (`A(I,:) = B(:,I)`, its own `ArrayOrder`); an
+  assignment to an index is FORALLSET; every procedure the statement added to the unit's
+  calls must have an interface that says PURE (FORALLPURE, 7.5.4.3). **The order**
+  (`forallOrder`): the tuples may be done in turn unless the value or the mask may read the
+  target's storage anywhere but at the target's own reference (`readsElsewhere`: the same
+  text, `DumpExpr`, passed over; a function's arguments by the same rule unless it can reach
+  the target otherwise, `readsAny`'s rule); then `Forall.Temporary`, the dump's "[in
+  temporaries]". NOTIMPL, each logged as left for subtask 9 or later: a pointer assignment or
+  a defined assignment as the statement, a target whose subscripts read its own storage
+  (`V(V(I)) = 0`, which would need the subscripts kept too), and through temporaries an
+  array target or a CHARACTER one of a run-time length. **Lowering** (`ir/lowerforall.go`):
+  the bounds and strides first, into temporaries (`arrayNest.keep`); each index an index
+  cell (`lowerer.bound`). In turn: a counted loop per index, the first index's innermost,
+  each running by its stride (`countedLoop`), the mask a branch around the assignment
+  (`forallMasked`, its temporaries given back before the branch by `stmtCond`). Through
+  temporaries: each index's number of values (`tripCount`, never below 0), a value
+  temporary of the target's type and a LOGICAL mask temporary of the index set's shape
+  (cells if every bound is constant, else `runtimeTemp`s given back at the statement's end),
+  and two nests counting from 1, each index computed from its count: the first stores the
+  mask and, where it holds, the value (`forallStore`: a record by `buildRecord` or
+  `moveRecord`), the second the values kept. What one tuple's assignment makes (dynamic
+  strings, an array assignment's run-time temporaries) is given back at the end of its pass
+  (`forallPass`), the statement's own kept apart. Tests: `sema`'s `TestForallStatement`,
+  `TestForallErrors`, `TestForallIndexesHidden`, `TestForallNoF90` (fixed form under
+  `/NOF90`, the author's answer 2), `TestF95Pending`'s FORALL statement case now clean; and
+  `testdata/fortran90/foralls.f90` (masks, strides both ways, an empty index set, run-time
+  bounds, an array target, PURE functions, CHARACTER and record targets, shifts both ways, a
+  reversal, a transpose in place, a mask read through temporaries; every mode, paging too;
+  gfortran `-std=f95` prints the same, `compare.py`). The survey's `forall.f90` now gives
+  only the construct's two NOTIMPLs and the pointer assignment's. `testdata/f90r`
+  regenerated, FORALLS added to `f90rAwaitingVMS`. MANUAL.md's "Arrays as values" has a
+  FORALL item and its closing list names only the construct; HELP FORTRAN ARRAYS the same.
+  Subtask 9, the FORALL construct, is next.

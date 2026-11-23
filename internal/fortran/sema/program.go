@@ -1029,6 +1029,19 @@ type (
 		MaskTemp []int // each extent, or -1 for one known only when the program runs (tempShape)
 	}
 
+	// Forall is the FORALL statement (forall.go): Body, an assignment, done
+	// for each tuple of the Indexes' values for which Mask (nil: always) is
+	// true. Temporary says the mask and the values are computed for every
+	// tuple first, into temporaries of the index set's shape, and stored by a
+	// second pass; without it each tuple's assignment is done in turn.
+	Forall struct {
+		stmtBase
+		Indexes   []*ForallIndex
+		Mask      Expr
+		Body      *Assign
+		Temporary bool
+	}
+
 	// Stop is STOP, or PAUSE when Pause is set, with the text it
 	// displays if it has one.
 	Stop struct {
@@ -1562,4 +1575,12 @@ func (c *ArrayConst) at(pos diag.Position) *ArrayConst {
 	d.Pos = pos
 
 	return &d
+}
+
+// ForallIndex is one index of a FORALL: its own symbol, a scalar INTEGER that
+// no unit's table holds, and its bounds and stride (Stride nil for 1), each a
+// default INTEGER that uses no index of the same FORALL.
+type ForallIndex struct {
+	Sym                  *Symbol
+	Lower, Upper, Stride Expr
 }

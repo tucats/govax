@@ -105,6 +105,9 @@ func (l *lowerer) stmt(s sema.Stmt) {
 	case *sema.Where:
 		l.where(s)
 
+	case *sema.Forall:
+		l.forall(s)
+
 	case *sema.Continue:
 		// Nothing to do: CONTINUE is there for its label.
 
