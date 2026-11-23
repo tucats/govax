@@ -169,11 +169,11 @@
    vax.sysgen.paging.enable), each process has a working set (SET
    WORKING_SET), pages that leave it keep their memory on the free or
    modified page list and come back without I/O when touched again, and
-   a reclaimer trims working sets when free memory runs low.  When the modified list grows long, the modified
-   page writer writes its pages to the page file
-   (vax.sysgen.paging.file), or a file section's to its file, and a page
-   written out is read back when touched.  Each job's PGFLQUOTA limits
-   the pages it may create.
+   a reclaimer trims working sets when free memory runs low.  When the
+   modified list grows long, the modified page writer writes its pages
+   to the page file (vax.sysgen.paging.file), or a file section's to 
+   its file, and a page written out is read back when touched.  Each 
+   job's PGFLQUOTA limits the pages it may create.
 
    Section pages page too: a global section's pages are shared among the
    working sets holding them and leave memory when none does, a
