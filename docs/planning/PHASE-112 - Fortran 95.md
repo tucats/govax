@@ -1,7 +1,7 @@
 # Phase 112 — Fortran 95
 
-**Status:** planned 2026-11-22; subtask 1, the survey (Part A), done 2026-11-22, awaiting the
-author's review. Phase 99's question 2 left Fortran 95's additions to an
+**Status:** planned 2026-11-22; subtask 1, the survey (Part A), done 2026-11-22 and
+accepted by the author the same day ("The author's answers"); subtask 2 is next. Phase 99's question 2 left Fortran 95's additions to an
 optional Phase 112, the author chose go at Phase 111's close-out, and the phase was widened
 to the Fortran errata the same day. At the errata survey's review the author split it:
 Fortran 95 is this phase, and the errata, with the survey (its Part A), is Phase 113
@@ -79,7 +79,7 @@ Already Fortran 95's in govax: allocatable locals deallocated at return (Phase 9
 
 ## Open questions (for subtask 1)
 
-*Answered by the survey's recommendations in Part A's A.5, for the author's review.*
+*Answered: Part A's A.5 recommended, and the author accepted ("The author's answers").*
 
 1. **Deleted features under `/STANDARD=F90`**: Fortran 95 deletes what Fortran 90 called
    obsolescent. Keep the OBSOLESCENT message for them, or a new one saying "deleted in Fortran
@@ -94,7 +94,7 @@ Already Fortran 95's in govax: allocatable locals deallocated at return (Phase 9
 
 ## Subtasks (provisional)
 
-*Superseded, once the author accepts it, by Part A's A.4.*
+*Superseded by Part A's A.4, accepted by the author 2026-11-22.*
 
 1. **The survey** (done 2026-11-22; Part A, revised list A.4): the HP manual's Fortran 95 additions read against govax and gfortran, a
    table of each and its subtask, a probe set of programs for gfortran; the open questions.
@@ -341,9 +341,41 @@ the constraints PURE needs before ELEMENTAL and FORALL lean on it.
 6. **MAXLOC's and MINLOC's KIND=** (DEC's, in the manual): recommended **not planned** (it
    is Fortran 2003's; KEYWORDNAME stays).
 
+## The author's answers (2026-11-22)
+
+The author reviewed Part A, accepted it and A.4's subtasks as they stand, and concurred
+with every recommendation of A.5:
+
+1. **Deleted features**: a new message, `%FORT-I-DELETED, deleted in Fortran 95: %s`, for
+   A.1's 17 (the six deleted features), under the OBSOLESCENT keyword; OBSOLESCENT's text
+   becomes "obsolescent in Fortran 95", its list Fortran 95's (A.1's 18: the computed GO TO,
+   statement functions, DATA among executable statements, an assumed-length CHARACTER
+   function, `CHARACTER*n` added); fixed source form flagged once per file, at its first
+   statement. Subtask 13.
+2. **`/NOF90`**: FORALL, PURE, ELEMENTAL, NULL(), named and nested WHERE, END INTERFACE's
+   name, default initialization, and the intrinsics' new keywords compiled under `/NOF90`
+   too; zero-sized arrays, zero widths, and namelist comments under `/F90` (the F90 flag)
+   only.
+3. **CPU_TIME**: the process's CPU time (JPI$_CPUTIM), in seconds, in 10 ms steps, in the
+   argument's kind.
+4. **Default initialization and SAVE**: no implied SAVE; an unsaved local of such a type
+   set at every entry (A.3's 4).
+5. **`F0.d`**: gfortran's form, no leading zero (`-.500`, `.500`).
+6. **MAXLOC's and MINLOC's KIND=**: not planned; KEYWORDNAME stays.
+
 ## Progress log
 
 - **2026-11-22:** Planned at the review of the errata survey (`PHASE-113 - Fortran
   errata.md`): the author split the phase, Fortran 95 here and the errata in Phase 113, and
   left the split's lines to the survey's judgment. This doc takes A.14's first item: Phase
   113's A.4, with A.1.11, A.3.2's module text, and A.3.5. Subtask 1, the survey, is next.
+- **2026-11-22:** Subtask 1, the survey: Part A. The HP manual's Fortran 95 additions read
+  whole (A.1, 19 rows); nine probe programs, `testdata/f95` (README), built by gfortran
+  `-std=f95` and kept with its outputs, then compiled by govax (A.2): only `zerowid.f90`
+  compiles, and it stops at OUTCONERR. Found beyond the seed list: named WHERE, END
+  INTERFACE's generic name, comments in namelist input, specification functions, and
+  elemental defined assignment. Default initialization sets an unsaved local at every entry
+  (the manual and gfortran agree). A.3 has the findings, A.4 the subtasks revised (the
+  same fifteen, with A.3's items placed), A.5 six questions with recommendations.
+- **2026-11-22:** The author accepted Part A, A.4's subtasks, and every recommendation of
+  A.5 ("The author's answers"). Subtask 2, recovery and syntax, is next.
