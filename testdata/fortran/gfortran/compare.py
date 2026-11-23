@@ -184,6 +184,7 @@ PROGRAMS90 = {
               "modules/polys/roots.f90", "modules/polys/report.f90", "modules/polys/table.for"],
     "concord": ["modules/concord/concord.f90", "modules/concord/words.f90", "modules/concord/lists.f90",
                 "modules/concord/trees.f90"],
+    "colony": ["modules/colony/colony.f90", "modules/colony/cells.f90", "modules/colony/world.f90"],
 }
 
 # fcalc's directory of scripts, its sources' (internal/fcalc/src), and the modules' order

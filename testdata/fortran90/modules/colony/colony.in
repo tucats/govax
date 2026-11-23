@@ -1,0 +1,9 @@
+! Three colonies, and a name that isn't one.
+&SETUP PATTERN = 'GLIDER', ! moves one square down and right in four generations
+ GENERATIONS = 4, EVERY = 2 /
+&SETUP PATTERN = 'BLINKER' ! turns over every generation
+ GENERATIONS = 2, ! drawn every time
+ EVERY = 1
+/
+&SETUP PATTERN='TOAD' /
+&SETUP PATTERN = 'BLOCK', GENERATIONS = 12, EVERY = 6 /  ! still life: only ages change

@@ -8,7 +8,8 @@ subtask 7, ELEMENTAL, done 2026-11-23; subtask 8, the FORALL statement, done 202
 subtask 9, the FORALL construct, done 2026-11-23; subtask 10, WHERE in WHERE, done 2026-11-23;
 subtask 11, the intrinsics, done 2026-11-23; subtask 12, FTNRTL's zero widths and namelist
 comments, done 2026-11-23; subtask 13, `/STANDARD=F90` widened with listings, cross references,
-and the debugger, done 2026-11-23; subtask 14 is next. Phase 99's question 2 left Fortran 95's additions to an
+and the debugger, done 2026-11-23; subtask 14, programs end to end, done 2026-11-23; subtask 15, the
+close-out, is next. Phase 99's question 2 left Fortran 95's additions to an
 optional Phase 112, the author chose go at Phase 111's close-out, and the phase was widened
 to the Fortran errata the same day. At the errata survey's review the author split it:
 Fortran 95 is this phase, and the errata, with the survey (its Part A), is Phase 113
@@ -118,7 +119,8 @@ Already Fortran 95's in govax: allocatable locals deallocated at return (Phase 9
 12. Zero widths in FTNRTL.
 13. `/STANDARD=F90` widened; listings, cross references, and the debugger on the new forms
     (done 2026-11-23).
-14. Programs end to end (`testdata/fortran90`, held to gfortran `-std=f95` by `compare.py`).
+14. Programs end to end (`testdata/fortran90`, held to gfortran `-std=f95` by `compare.py`) (done
+    2026-11-23).
 15. The close-out: MANUAL.md's 14.13, FORTRAN-INTERNALS.md's section 37, HELP FORTRAN.
 
 ## Part A — the survey (subtask 1, 2026-11-22)
@@ -316,7 +318,7 @@ way) and the HPF_LIBRARY routines. **Not planned.**
     2026-11-23).
 14. **Programs end to end**: `testdata/f95`'s probes finished into `testdata/fortran90`,
     with outputs worked by hand, held to gfortran by `compare.py`'s `PROGRAMS90`; a program
-    of some size using them together.
+    of some size using them together (done 2026-11-23).
 15. The close-out: MANUAL.md's 14.13, FORTRAN-INTERNALS.md's section 37, HELP FORTRAN,
     `TestNoF90Unchanged` and the corpus held.
 
@@ -908,3 +910,32 @@ with every recommendation of A.5:
   "Conformance to a standard" table and 14.7's `/STANDARD` note, FORALL's and PURE's paragraphs in
   14.13; HELP FORTRAN's /STANDARD and Compiler_Tools; FORTRAN-INTERNALS.md's section 35 "Obsolescent
   features need what a program means". Subtask 14, programs end to end, is next.
+- **2026-11-23:** Subtask 14, programs end to end. **The survey's probes**: govax now compiles
+  all nine of `testdata/f95` in every optimizer and `/RECURSIVE` mode, and each prints its
+  `name.gfortran` but for list-directed REAL layouts in `misc95` and `zerosize` (VMS's widths,
+  as the corpus's KNOWN differences); a throwaway run over the corpus harness, not kept. Each
+  had already gone into the corpus with its subtask (`testdata/f95/README.md` now has a table of
+  where), but for `misc95.f90`'s END INTERFACE with its generic spec, which no corpus program had.
+  **A program of some size**, `testdata/fortran90/modules/colony` (three files, 330 lines,
+  `colony.in`; `compiles.txt` three orders, `links.txt` two): Conway's Life on a torus. CELLS is a
+  CELL with default values, an elemental defined assignment from a letter (its INTENT(OUT) dummy
+  arriving with the defaults; `END INTERFACE ASSIGNMENT (=)`), an ELEMENTAL CHARACTER function
+  drawing a cell, an ELEMENTAL function of derived-type result giving the next state (the result
+  left with its defaults for an empty cell), a PURE neighbor count, a generic over two ranks (`END
+  INTERFACE ALIVE_COUNT`), and a PURE function for a declaration's length. WORLD is a BOARD with
+  default values and a pointer array component `=> NULL()`; MAKE an INTENT(OUT) board filled by a
+  FORALL of the defined assignment; COUNTS an array-valued function of run-time shape filled by a
+  FORALL of the PURE function, checked against CSHIFT's count; ADVANCE one elemental reference over
+  the board; CENSUS a WHERE in a WHERE and a masked ELSEWHERE; OLDEST MAXLOC and MAXVAL with DIM=
+  over a pointer component's component. COLONY reads each colony as a NAMELIST group with `!`
+  comments (an unknown pattern passed over), draws through an internal WRITE of an elemental
+  function's array value, prints I0, F0.2, and CEILING with KIND=, counts each square's live
+  generations by a named FORALL construct with a mask, sets `=> NULL()` after DEALLOCATE, and
+  calls CPU_TIME. The output was worked by hand (the glider's five phases with each cell's age,
+  the blinker, the block's ages past 9, each census, MAXLOC's first-of-equals for empty rows,
+  the counts); gfortran `-std=f95` prints the same (`compare.py`'s PROGRAMS90 has COLONY), and
+  `/STANDARD=F90` flags nothing in it (`TestStandardF90Witness`). govax ran it right the first
+  time in every mode, both loaders, every compile order and link: no bug found. The corpus
+  README has COLONY's row and the eight Phase 112 programs' rows it lacked (PURES to ZEROWIDVMS).
+  `testdata/f90r` regenerated, M_COLONY added to `f90rAwaitingVMS`. Subtask 15, the close-out,
+  is next.
