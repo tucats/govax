@@ -10153,8 +10153,8 @@ lengths are constants (`POINTERTYPE`); an expression or a function's value is no
 (`NOTTARGET`, `POINTERFUNC`). `=>`, NULLIFY, and ASSOCIATED take a pointer itself
 (`NOTPOINTER` for anything else). A pointer may be in a module or in COMMON, may be
 AUTOMATIC, VOLATILE, or SAVE'd, and may point at a record of a derived type, whose components
-are then reached through it (`PP%X`); it may not have an initial value, nor be in DATA, a
-NAMELIST group, or EQUIVALENCE (`POINTERATTR`). TARGET excludes POINTER, and POINTER
+are then reached through it (`PP%X`); its only initial value is `NULL()`, by `=>` or DATA
+(below), and it may not be in a NAMELIST group or EQUIVALENCE (`POINTERATTR`). TARGET excludes POINTER, and POINTER
 excludes ALLOCATABLE.
 
 A pointer is its target's address, a longword, or for CHARACTER a descriptor of its target's
@@ -10371,6 +10371,32 @@ first argument, the address of a class NCA descriptor of the caller's, which the
 in. An array assignment whose value is reached through a pointer function, `X(4:6) = EVENS(X)`,
 goes through a temporary, the function's value perhaps being part of X.
 
+**NULL()**, Fortran 95's, is a disassociated pointer: of the type, kind, and rank of the
+pointer it is given to, so it may stand only where a pointer's value goes (`NULLPLACE`
+anywhere else). `P => NULL()` is `NULLIFY (P)`; `INTEGER, POINTER :: P => NULL()` and
+`DATA P /NULL()/` give P that initial value (anything else after a declaration's `=>` is
+`POINTERINIT`, and in DATA for a pointer `POINTERATTR`), which, as any initial value, gives P
+the SAVE attribute, so it is static even in a RECURSIVE unit; a structure constructor's
+`NULL()` leaves its pointer component disassociated, `NODE(5, NULL())`; and a pointer dummy
+given `NULL()` gets a disassociated pointer of its own kind, which the routine may change, the
+caller keeping nothing of it.
+
+```fortran
+type(node), pointer :: head => null()
+...
+head = node(1, null())
+call walk(null(), count)    ! COUNT is 0
+```
+
+Its one argument, MOLD, a pointer of any association status, says which kind of pointer is
+meant; where the context says too, they must agree (`POINTERTYPE`). The place MOLD is needed
+is a generic name's reference, `CALL DESCRIBE (NULL (Q))`, when the generic's specifics differ
+only in their pointer dummies: without MOLD, `NULL()` fits each of them (`NULLMOLD`). Under
+`/NOF90` NULL is the intrinsic only where a pointer's value goes, and elsewhere a name of the
+program's, as VAX FORTRAN had it. Every pointer already starts disassociated in govax (above),
+so `=> NULL()` costs nothing; it is what makes a program say so in Fortran 95's terms, and
+other compilers need it.
+
 **What TARGET is for.** A pointer may point only at a TARGET, a part of one, memory
 ALLOCATE made, or another pointer's target, and only at a value of its own type. So
 under `/OPTIMIZE` a store through a pointer is taken to change only those: a TARGET of the
@@ -10504,10 +10530,10 @@ naming what it is:
 
 Without `/CHECK=POINTERS` ([section 14.3](#143-the-fortran-command)) a disassociated pointer's
 target is at address 0, and using it is an access violation. These are Fortran 95's or later's,
-and not Fortran 90 at all: `NULL()` and default initial values for components and pointers
-(`%FORT-E-NOTIMPL`); zero widths (`I0`, `F0.2`, which write `%FOR-E-OUTCONERR`, a field too
-narrow for any value); FORALL, PURE, and ELEMENTAL (`%FORT-E-UNRECSTMT`, statements the
-compiler doesn't know); and procedure pointers and bounds remapping (`P(1:N) => A`).
+and not Fortran 90 at all: default initial values for components (`%FORT-E-NOTIMPL`; `NULL()`
+is there, under "Pointers"); zero widths (`I0`, `F0.2`, which write `%FOR-E-OUTCONERR`, a field
+too narrow for any value); FORALL, PURE, and ELEMENTAL (`%FORT-E-NOTIMPL`, read but not yet
+compiled); and procedure pointers and bounds remapping (`P(1:N) => A`).
 
 ## 15. Appendices
 

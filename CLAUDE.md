@@ -1460,7 +1460,9 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   (`lex/f95stmt.go`, `parse/f95.go`), named WHERE, END INTERFACE's name, and a unit's
   header recovered past unknown prefix words, UNRECPREFIX; subtask 3, done 2026-11-23,
   zero-sized explicit-shape arrays under `/F90`, each empty dimension kept as (1:0),
-  `sema`'s `emptyDimension` and `Symbol.Empty`), **Phase 113 is the errata** (its Part B the scope: the cheap
+  `sema`'s `emptyDimension` and `Symbol.Empty`; subtask 4, done 2026-11-23, `NULL()` where a
+  pointer's value goes, `sema/null.go`, and generics' pointer dummies given the pointer),
+  **Phase 113 is the errata** (its Part B the scope: the cheap
   Fortran 90 NOTIMPLs, LIB$INITIALIZE, STR$'s arithmetic, `USE
   STARLET_SSDEF`, MACRO's and LINK's gaps, housekeeping, and a VMS probe
   round at its end), and **Phase 114 is `CONVERT=`** (`PHASE-114 - FORTRAN

@@ -5090,8 +5090,8 @@ pointer component, which changes only the target; and, in `sparse.f90`, a bound 
 dummy's component (`Y(A%N)`), a defined operator's array operand, a defined assignment's array
 value, and ASSOCIATED of a pointer function's value. Each is held by a test of its own.
 
-What waits: `NULL()` and default initialization (Phase
-112); a CHARACTER pointer whose length is known only when the program runs.
+What waits: default initialization (Phase 112, whose subtask 4 brought `NULL()`);
+a CHARACTER pointer whose length is known only when the program runs.
 
 ## 33. Fortran 90: the intrinsic procedures (Phase 108)
 

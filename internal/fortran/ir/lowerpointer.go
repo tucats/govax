@@ -171,6 +171,11 @@ func arrayPointee(s *sema.Symbol) *sema.Type {
 // may be a pointer's target, or for a pointer its target's address (0 if it is
 // disassociated): what a pointer assigned to it holds.
 func (l *lowerer) targetAddress(target sema.Expr) Expr {
+	// NULL(), a constructor's pointer component's value: disassociated.
+	if _, ok := target.(*sema.Null); ok {
+		return LongConst(0)
+	}
+
 	target = l.targetPointer(target)
 
 	if sema.IsPointer(target) && !isArrayPointer(target) {
@@ -384,6 +389,13 @@ func (l *lowerer) associate(cell *Cell, p *sema.Symbol, target sema.Expr) {
 	target = l.targetPointer(target)
 	l.commonHeader(cell)
 
+	// NULL(): POINTER 0, as NULLIFY leaves an array pointer.
+	if _, ok := target.(*sema.Null); ok {
+		l.emit(&Assign{origin: l.origin(), Dst: &Mem{Cell: cell, T: Long, Offset: PointerOffset}, Src: LongConst(0)})
+
+		return
+	}
+
 	if q := sema.PointerSymbol(target); q != nil {
 		l.copyDescriptor(cell, l.adjustableOf(q))
 
@@ -596,6 +608,10 @@ func (l *lowerer) locatedCell(name string, d *Descriptor, place *Mem) *Cell {
 // have given them, and from which a passed-length dummy takes its length and
 // FTNRTL's ALLOCATE an array's element size and rank.
 func (l *lowerer) pointerActual(x sema.Expr) Arg {
+	if n, ok := x.(*sema.Null); ok {
+		x = l.nullPointer(n)
+	}
+
 	if p := sema.PointerSymbol(x); p != nil {
 		if p.ArrayPointer() {
 			c := l.adjustableOf(p)
@@ -612,6 +628,50 @@ func (l *lowerer) pointerActual(x sema.Expr) Arg {
 	l.setHeader(x)
 
 	return Arg{Ref: l.fieldPlace(x.(*sema.FieldRef), false)}
+}
+
+// nullPointer is the pointer NULL() gives a pointer dummy (sema.Null): a
+// pointer of the statement's own, disassociated, of the dummy's type and rank,
+// as a reference to the pointer (a Var, or for an array pointer an ArrayRef),
+// so that pointerActual passes it as it passes a named one. What the routine
+// does to it is lost with the statement's temporaries.
+//
+//	CALL WALK(NULL())          CLRL   $T1
+//	                           PUSHAL $T1
+//	                           CALLS  #1,WALK
+func (l *lowerer) nullPointer(n *sema.Null) sema.Expr {
+	sym := sema.NewSymbol("$P", n.T)
+	sym.Pointer = true
+
+	if n.Rank > 0 {
+		sym.Class = sema.Array
+
+		for range n.Rank {
+			sym.Dims = append(sym.Dims, sema.Dim{Deferred: true, Lower: 1})
+		}
+
+		if l.adjustable == nil {
+			l.adjustable = map[*sema.Symbol]*Cell{}
+		}
+
+		l.adjustable[sym] = l.descriptorCell(l.ncaDescriptor(sym))
+		l.emit(&Assign{origin: l.origin(), Dst: l.pointerAddress(sym), Src: LongConst(0)})
+
+		return sema.NewArrayRef(sym, n.Pos)
+	}
+
+	var cell *Mem
+
+	if charPointer(n.T) {
+		cell = l.textTemp(sema.StringDescriptorSize)
+	} else {
+		cell = l.temp(Long)
+	}
+
+	l.cells[sym] = cell.Cell
+	l.emit(&Assign{origin: l.origin(), Dst: l.pointerAddress(sym), Src: LongConst(0)})
+
+	return sema.NewVar(sym, n.Pos)
 }
 
 // Pointer results (subtask 6b; finding 9). A function whose value is a pointer

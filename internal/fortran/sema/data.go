@@ -81,6 +81,10 @@ type dataSet struct {
 	// array is an initial value that is an array constant, whose elements are
 	// the items' values in turn (initialValue).
 	array *ArrayConst
+
+	// pointer says the list is a declaration's => value (pointerInitial),
+	// which only a pointer may be given.
+	pointer bool
 }
 
 // dataStatement keeps a DATA statement's lists for dataSets.
@@ -109,7 +113,7 @@ func (a *analyzer) initialValues(d *ast.Declarator) {
 func (a *analyzer) initialValue(sym *Symbol, d *ast.Declarator) {
 	name := &ast.Name{ExprBase: ast.ExprBase{Pos: d.Pos}, Name: d.Name}
 	value := &ast.DataValue{Value: d.Value, Pos: d.ValuePos}
-	set := dataSet{[]ast.Expr{name}, []*ast.DataValue{value}, true, true, nil}
+	set := dataSet{names: []ast.Expr{name}, values: []*ast.DataValue{value}, broadcast: true, assign: true}
 
 	a.initialized = append(a.initialized, sym)
 
@@ -131,6 +135,27 @@ func (a *analyzer) initialValue(sym *Symbol, d *ast.Declarator) {
 	}
 
 	a.dataSets = append(a.dataSets, set)
+}
+
+// pointerInitial keeps the value a Fortran 95 declaration gives the name d
+// declares, sym, after its =>, which must be NULL() and the name a pointer,
+// and notes that the name is initialized, which gives it SAVE (impliedSaves).
+// The list's walk checks both (dataPointer), once every declaration has said
+// what the name is.
+func (a *analyzer) pointerInitial(sym *Symbol, d *ast.Declarator) {
+	if _, ok := a.nullReference(d.Value); !ok {
+		a.report("POINTERINIT", d.ValuePos, ast.DumpExpr(d.Value))
+
+		sym.broken = true
+
+		return
+	}
+
+	name := &ast.Name{ExprBase: ast.ExprBase{Pos: d.Pos}, Name: d.Name}
+	value := &ast.DataValue{Value: d.Value, Pos: d.ValuePos}
+
+	a.initialized = append(a.initialized, sym)
+	a.dataSets = append(a.dataSets, dataSet{names: []ast.Expr{name}, values: []*ast.DataValue{value}, assign: true, pointer: true})
 }
 
 // initialShape reports whether arr, an initial value, has sym's shape:
@@ -178,7 +203,7 @@ func (a *analyzer) impliedSaves() {
 // error: its other items would only be counted wrong.
 func (a *analyzer) dataStatements() {
 	for _, set := range a.dataSets {
-		vals := &dataValues{a: a, list: set.values, broadcast: set.broadcast, assign: set.assign, array: set.array}
+		vals := &dataValues{a: a, list: set.values, broadcast: set.broadcast, assign: set.assign, array: set.array, pointer: set.pointer}
 		ok := true
 
 		for _, e := range set.names {
@@ -216,6 +241,9 @@ type dataValues struct {
 	// and taken how many of them have been.
 	array *ArrayConst
 	taken int
+
+	// pointer says the values are a declaration's => value (dataSet.pointer).
+	pointer bool
 }
 
 // dataValue is one constant of a list. Exactly one of its fields says what it
@@ -224,8 +252,10 @@ type dataValues struct {
 // or a constant of any other type (c).
 //
 // character is set for a character constant's text, not a Hollerith
-// constant's, and assign for a value given with = (dataValues.assign).
+// constant's, and assign for a value given with = (dataValues.assign). null is
+// set, and nothing else, for NULL(), a pointer's value (dataPointer).
 type dataValue struct {
+	null      *ast.Apply
 	text      string
 	isText    bool
 	character bool
@@ -350,6 +380,13 @@ func (a *analyzer) repeatCount(item *ast.DataValue) (int64, bool) {
 func (a *analyzer) dataConstant(item *ast.DataValue) (dataValue, bool) {
 	v := dataValue{source: constantText(item.Value), pos: item.Pos}
 
+	if app, ok := a.nullReference(item.Value); ok {
+		// Its argument, if any, is dataPointer's to check against the pointer.
+		v.null, v.source = app, ast.DumpExpr(app)
+
+		return v, true
+	}
+
 	switch e := item.Value.(type) {
 	case *ast.HollerithConst:
 		v.text, v.isText = e.Value, true
@@ -413,8 +450,18 @@ func constantText(e ast.Expr) string {
 func (a *analyzer) dataItems(e ast.Expr, vars map[string]int32, vals *dataValues) bool {
 	switch e := a.substringForm(e).(type) {
 	case *ast.Name:
-		s, ok := a.dataName(e.Name, e.Pos)
-		if !ok {
+		s, ok := a.dataNameFor(e.Name, e.Pos, true)
+
+		switch {
+		case !ok:
+			return false
+		case s.Pointer:
+			return a.dataPointer(s, e.Pos, vals)
+		case vals.pointer:
+			a.report("NOTPOINTER", e.Pos, e.Name)
+
+			s.broken = true
+
 			return false
 		}
 
@@ -461,6 +508,35 @@ func (a *analyzer) dataItems(e ast.Expr, vars map[string]int32, vals *dataValues
 	return false
 }
 
+// dataPointer gives the pointer s, named whole in a list (an array pointer as
+// one item), the next value, which must be NULL() (POINTERATTR), with a MOLD
+// pointing at what s does (nullValue). It has no bytes: s is static, and so
+// starts disassociated (Symbol.nullInit).
+func (a *analyzer) dataPointer(s *Symbol, pos diag.Position, vals *dataValues) bool {
+	v, ok := vals.next(pos)
+	if !ok {
+		return false
+	}
+
+	if v.null == nil {
+		a.report("POINTERATTR", v.pos, s.Name, "be given an initial value but NULL()")
+
+		s.broken = true
+
+		return false
+	}
+
+	if a.nullValue(v.null, s.Name, s.Type, len(s.Dims)) == nil {
+		s.broken = true
+
+		return false
+	}
+
+	s.nullInit = true
+
+	return true
+}
+
 // dataItem gives one item the next constant.
 func (a *analyzer) dataItem(s *Symbol, offset int, t Type, text string, pos diag.Position, vals *dataValues) bool {
 	if t.Kind == Record {
@@ -490,6 +566,12 @@ func (a *analyzer) dataItem(s *Symbol, offset int, t Type, text string, pos diag
 // initializes only what is in a named block (section 4.1 says "the entities in
 // named common blocks", and nothing else could reach a program from one).
 func (a *analyzer) dataName(name string, pos diag.Position) (*Symbol, bool) {
+	return a.dataNameFor(name, pos, false)
+}
+
+// dataNameFor is dataName, but for a pointer if pointers is set: a whole
+// pointer named in a list is given NULL() (dataPointer).
+func (a *analyzer) dataNameFor(name string, pos diag.Position, pointers bool) (*Symbol, bool) {
 	s := a.local(name, pos)
 	a.note(&s.refs, pos, RefAssigned)
 
@@ -511,14 +593,14 @@ func (a *analyzer) dataName(name string, pos diag.Position) (*Symbol, bool) {
 
 		return s, false
 
-	case s.Pointer:
-		a.report("POINTERATTR", pos, name, "be given an initial value")
+	case s.Pointer && !pointers:
+		a.report("POINTERATTR", pos, name, "be given an initial value but NULL()")
 
 		s.broken = true
 
 		return s, false
 
-	case s.Struct != nil && s.Struct.HasPointers():
+	case s.Struct != nil && s.Struct.HasPointers() && !s.Pointer:
 		a.report("POINTERPART", pos, name, s.Struct.Name, "be given an initial value")
 
 		s.broken = true
@@ -826,6 +908,12 @@ func (a *analyzer) dataInt(e ast.Expr, vars map[string]int32) (int32, bool) {
 // initialBytes is the bytes the constant v gives an item of type t, by section
 // 4.3's rules.
 func (a *analyzer) initialBytes(v *dataValue, t Type) ([]byte, bool) {
+	if v.null != nil {
+		a.report("NULLPLACE", v.pos)
+
+		return nil, false
+	}
+
 	if v.assign && !assignable(v, t) {
 		what := "a CHARACTER"
 		if v.c != nil {

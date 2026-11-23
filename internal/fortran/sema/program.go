@@ -465,6 +465,11 @@ type Symbol struct {
 	saved       bool
 	storageStmt *ast.AttrStmt
 
+	// nullInit is set for a pointer given NULL() as its initial value, by =>
+	// or DATA (null.go): no bytes, a static pointer's storage being 0 already,
+	// but static storage, as any initial value's.
+	nullInit bool
+
 	// automaticPos is where the AUTOMATIC statement names the name, or the
 	// name that made it AUTOMATIC.
 	automaticPos diag.Position

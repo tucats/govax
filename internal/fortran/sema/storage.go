@@ -55,7 +55,7 @@ func (a *analyzer) recursiveStorage() {
 	}
 
 	static := func(s *Symbol) bool {
-		return s.saved || (a.saveAll && !s.Result) || initial[s] || s.Common != nil ||
+		return s.saved || (a.saveAll && !s.Result) || initial[s] || s.nullInit || s.Common != nil ||
 			(s.storageStmt != nil && s.storageStmt.Kind == lex.Static) ||
 			(s.Struct != nil && len(s.Struct.image()) > 0)
 	}
@@ -196,6 +196,15 @@ func (a *analyzer) checkAutomaticInitials() {
 		if in.Sym.Automatic && !seen[in.Sym] {
 			seen[in.Sym] = true
 			a.report("AUTOINIT", in.Sym.automaticPos, in.Sym.Name)
+		}
+	}
+
+	// A pointer given NULL() has no Initial, its storage being 0 already
+	// (null.go), but must be static too.
+	for _, s := range a.unit.Symbols {
+		if s.nullInit && s.Automatic && !seen[s] {
+			seen[s] = true
+			a.report("AUTOINIT", s.automaticPos, s.Name)
 		}
 	}
 }

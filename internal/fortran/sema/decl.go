@@ -276,8 +276,8 @@ func (a *analyzer) f90Entity(s *ast.TypeStmt, sym *Symbol, d *ast.Declarator, sp
 	a.giveAttributes(s, sym, d, specs)
 
 	if d.PointerInit {
-		// P => NULL(): subtask 4's (docs/planning/PHASE-112 - Fortran 95.md).
-		a.notImplForm(d.ValuePos, "a pointer's initial value after =>")
+		// P => NULL(), Fortran 95's pointer initialization (data.go).
+		a.pointerInitial(sym, d)
 
 		return
 	}

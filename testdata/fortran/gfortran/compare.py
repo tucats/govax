@@ -165,6 +165,7 @@ PROGRAMS90 = {
     "wordcount": ["wordcount.f90"],
     "gradebook": ["gradebook.f90"],
     "zerosize": ["zerosize.f90"],
+    "nulls": ["nulls.f90"],
     "optfuse": ["optfuse.f90"],
     "optstride": ["optstride.f90"],
     "mixed": ["modules/mixed/mixed.f90", "modules/mixed/fill.for", "modules/mixed/report.f90"],

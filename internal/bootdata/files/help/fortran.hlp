@@ -112,8 +112,9 @@
 
    Each subtopic describes one part of the language.  The few forms the
    compiler does not compile draw %FORT-E-NOTIMPL, and each subtopic
-   names its own.  Fortran 95's additions (ELEMENTAL, PURE, FORALL,
-   NULL(), and default values for components) are not compiled.
+   names its own.  Of Fortran 95's additions, NULL() is compiled (see
+   Pointers); ELEMENTAL, PURE, FORALL, and default values for
+   components are not yet.
 
 3 Source_Form
 
@@ -519,9 +520,19 @@
    target.  Every pointer starts disassociated, a frame's cleared at
    each entry (Fortran 95's rule; Fortran 90 leaves it undefined).  A
    target that isn't a TARGET is %FORT-E-NOTTARGET, one of another type
-   %FORT-E-POINTERTYPE; a pointer may not be in DATA, NAMELIST, or
-   EQUIVALENCE, nor given an initial value (%FORT-E-POINTERATTR).  A
-   CHARACTER pointer whose length isn't constant draws %FORT-E-NOTIMPL.
+   %FORT-E-POINTERTYPE; a pointer may not be in NAMELIST or
+   EQUIVALENCE, nor given an initial value but NULL()
+   (%FORT-E-POINTERATTR).  A CHARACTER pointer whose length isn't
+   constant draws %FORT-E-NOTIMPL.
+
+   NULL(), Fortran 95's, is a disassociated pointer of the kind of the
+   pointer it is given to: P => NULL() is NULLIFY (P); INTEGER,
+   POINTER :: P => NULL() and DATA P /NULL()/ give P that initial
+   value (and SAVE); NODE(5, NULL()) leaves a pointer component
+   disassociated; and a pointer dummy may be given NULL().  Anywhere
+   else it is %FORT-E-NULLPLACE.  NULL(MOLD), MOLD a pointer, names the
+   kind, which a generic name's choice among pointer dummies may need
+   (%FORT-E-NULLMOLD).
 
    An array pointer, REAL, POINTER :: V(:), takes its shape and
    elements from its target, a whole array (and its bounds), a section

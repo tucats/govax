@@ -301,8 +301,22 @@ const (
 // after GENERICNONE.
 func (a *analyzer) resolveGeneric(s *Symbol, list []ast.Expr, places []int, function bool, pos diag.Position) (*Symbol, []Arg, genericChoice) {
 	analyzed := make([]Arg, len(list))
+	open := false
 
 	for i, e := range list {
+		// NULL(), a pointer of MOLD's kind, or of any if it has none, which
+		// then mustn't leave two specifics to choose from (null.go).
+		if app, ok := a.nullReference(unkeyed(e)); ok {
+			n := a.genericNull(app)
+			if n == nil {
+				return nil, nil, genericFailed
+			}
+
+			analyzed[i], open = Arg{Expr: n, Pointer: true}, open || n.open
+
+			continue
+		}
+
 		// An array section or expression is kept until the specific is
 		// chosen: an assumed-shape dummy takes it (shaped.go).
 		analyzed[i] = a.argValue(unkeyed(e))
@@ -312,6 +326,10 @@ func (a *analyzer) resolveGeneric(s *Symbol, list []ast.Expr, places []int, func
 			return nil, nil, genericFailed
 		}
 	}
+
+	var chosen *Symbol
+
+	var chosenSlots []int
 
 	for g := s; g != nil; g = g.Generic.Host {
 		for _, spec := range g.Generic.Specifics {
@@ -325,25 +343,49 @@ func (a *analyzer) resolveGeneric(s *Symbol, list []ast.Expr, places []int, func
 				continue
 			}
 
-			args := make([]Arg, len(slots))
-			for j, i := range slots {
-				if i < 0 {
-					continue
-				}
+			if chosen != nil {
+				// A second fits only by an open NULL().
+				a.report("NULLMOLD", pos, s.Name, chosen.Name, spec.Name)
 
-				// An array to an assumed-shape dummy goes by descriptor
-				// (shaped.go).
-				if target.Params[j].AssumedShape() {
-					args[j] = a.shaped(analyzed[i])
-				} else {
-					args[j] = a.sequenced(analyzed[i], target.Params[j])
-				}
+				return nil, nil, genericFailed
 			}
 
-			a.noteThrough(spec, pos)
+			chosen, chosenSlots = spec, slots
 
-			return spec, args, genericSpecific
+			if !open {
+				break
+			}
 		}
+
+		if chosen != nil && !open {
+			break
+		}
+	}
+
+	if chosen != nil {
+		target := explicitInterface(chosen)
+		args := make([]Arg, len(chosenSlots))
+
+		for j, i := range chosenSlots {
+			p := target.Params[j]
+
+			switch {
+			case i < 0:
+			case p.Pointer:
+				// The pointer itself (pointerArg), analyzed again as one.
+				args[j] = a.pointerArg(unkeyed(list[i]), j, chosen, p)
+			case p.AssumedShape():
+				// An array to an assumed-shape dummy goes by descriptor
+				// (shaped.go).
+				args[j] = a.shaped(analyzed[i])
+			default:
+				args[j] = a.sequenced(analyzed[i], p)
+			}
+		}
+
+		a.noteThrough(chosen, pos)
+
+		return chosen, args, genericSpecific
 	}
 
 	if function && a.intrinsicNamed(s.Name) {
@@ -368,8 +410,14 @@ func fits(slots []int, analyzed []Arg, target *Unit) bool {
 
 		arg := analyzed[i]
 		_, proc := arg.Expr.(*Procedure)
+		null, isNull := arg.Expr.(*Null)
 
 		switch {
+		case isNull:
+			// NULL() fits only a pointer dummy, of MOLD's kind if it has one.
+			if !p.Pointer || !null.open && differ(dummyShape{t: null.T, rank: null.Rank}, dummyShape{t: p.Type, rank: len(p.Dims)}) {
+				return false
+			}
 		case arg.Expr == nil:
 			if !p.Optional {
 				return false
@@ -409,6 +457,11 @@ func describeActuals(list []ast.Expr, analyzed []Arg) string {
 		case nil:
 		case *Procedure:
 			what = "a procedure"
+		case *Null:
+			what = "NULL()"
+			if !e.open {
+				what = "a pointer to " + pointedText(e.T, e.Rank)
+			}
 		default:
 			what = article(e.Type().String())
 			if rank := argumentRank(e); rank > 0 {

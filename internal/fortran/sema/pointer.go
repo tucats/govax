@@ -245,6 +245,16 @@ func (a *analyzer) pointerArg(x ast.Expr, n int, proc, p *Symbol) Arg {
 		a.report("POINTERARG", pos, n+1, proc.Name, p.Name, pointedText(p.Type, len(p.Dims)))
 	}
 
+	// NULL(), a disassociated pointer of the dummy's kind (null.go).
+	if app, ok := a.nullReference(x); ok {
+		v := a.nullValue(app, p.Name, p.Type, len(p.Dims))
+		if v == nil {
+			return Arg{Expr: a.bad(x.Position())}
+		}
+
+		return Arg{Expr: v, Pointer: true}
+	}
+
 	// nil after a message: POINTERARG, or the reference's own error.
 	ptr := a.pointerObjectOr(x, true, refuse)
 	if ptr == nil {
@@ -527,6 +537,15 @@ func (a *analyzer) pointerAssignment(s *ast.PointerAssignStmt) Stmt {
 	ptr := a.pointerObject(s.Pointer, true)
 	if ptr == nil {
 		return nil
+	}
+
+	// P => NULL() is NULLIFY (P) (null.go).
+	if app, ok := a.nullReference(s.Target); ok {
+		if a.nullValue(app, pointerName(ptr), ptr.Type(), targetRank(ptr)) == nil {
+			return nil
+		}
+
+		return &Nullify{stmtBase: stmtBase{s}, Pointers: []Expr{ptr}}
 	}
 
 	t := a.pointerTarget(ptr, s.Target)

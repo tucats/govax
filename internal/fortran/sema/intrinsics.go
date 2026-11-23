@@ -553,6 +553,9 @@ func readIntrinsics() ([]form, map[string]bool, map[string]bool) {
 	// Nor has ASSOCIATED, given a pointer itself (pointer.go).
 	newNames["ASSOCIATED"] = true
 
+	// Nor has NULL, whose type is its context's (null.go).
+	newNames["NULL"] = true
+
 	return append(forms, more...), names, newNames
 }
 

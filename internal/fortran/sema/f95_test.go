@@ -35,9 +35,6 @@ func TestF95Pending(t *testing.T) {
 			"    where (a(i,:) == 0) a(i,:) = -1",
 			"  end forall outer", "  a(1,1) = 0", "end program p"},
 			"NOTIMPL: the FORALL construct is not implemented yet"},
-		{"=> NULL()", []string{
-			"program p", "  integer, pointer :: q => null()", "end program p"},
-			"NOTIMPL: a pointer's initial value after => is not implemented yet"},
 		{"an unknown prefix", []string{
 			"module m", "contains",
 			"  impure subroutine s(a)", "    integer :: a", "    a = 1", "  end subroutine s",
@@ -152,5 +149,112 @@ func TestEmptyArrays(t *testing.T) {
 	if got := messageText(messages); got != "BOUNDORDER: the upper bound 0 is less than the lower bound 1; "+
 		"BOUNDORDER: the upper bound 4 is less than the lower bound 5" {
 		t.Errorf("without /F90: %s", got)
+	}
+}
+
+// TestNull holds Fortran 95's NULL() (Phase 112's subtask 4, null.go): read only
+// where a pointer's value goes, after =>, in a declaration or DATA, for a pointer
+// component in a structure constructor, and as a pointer dummy's argument, MOLD
+// agreeing with the pointer; refused anywhere else, NULLPLACE.
+func TestNull(t *testing.T) {
+	prog := func(lines ...string) []string {
+		return append(append([]string{"program prog", "  implicit none",
+			"  integer, pointer :: p, q", "  real, pointer :: r(:)", "  integer :: n",
+			"  type node", "    integer :: v", "    type(node), pointer :: next", "  end type"},
+			lines...), "end program prog")
+	}
+
+	// generic is a program calling TELL, a generic name for two subroutines of
+	// a scalar pointer dummy, and ONE, a generic name for one.
+	generic := func(lines ...string) []string {
+		return append(append([]string{"module g", "  interface tell", "    module procedure tell_i, tell_r",
+			"  end interface", "  interface one", "    module procedure tell_i", "  end interface", "contains",
+			"  subroutine tell_i(p)", "    integer, pointer :: p", "  end subroutine",
+			"  subroutine tell_r(p)", "    real, pointer :: p", "  end subroutine", "end module g",
+			"program gp", "  use g", "  integer, pointer :: ip", "  real, pointer :: rp, ra(:)", "  integer :: n"},
+			lines...), "end program gp")
+	}
+
+	cases := []struct {
+		name  string
+		lines []string
+		want  string
+	}{
+		{"pointer assignment", prog("p => null()", "p => null(q)", "p => null(mold=q)", "r => null(r)"), ""},
+		{"initial values", prog("integer, pointer :: a => null(), b(:) => null()", "real, pointer :: c => null(r(1))"),
+			"NOTPOINTER: R(1) is not a pointer"},
+		{"DATA", prog("integer, pointer :: d, e(:)", "data d, e /2*null()/"), ""},
+		{"a constructor", prog("type(node) :: x", "x = node(1, null())"), ""},
+		{"a MOLD of another type", prog("real, pointer :: s", "p => null(s)"),
+			"POINTERTYPE: the pointer P points at INTEGER, so its target can't be REAL"},
+		{"a MOLD of another rank", prog("r => null(q)"),
+			"POINTERTYPE: the pointer R points at an array of REAL, so its target can't be INTEGER"},
+		{"two arguments", prog("p => null(p, q)"), "INTRINARGS: the intrinsic function NULL takes 0 or 1 arguments, not 2"},
+		{"a wrong keyword", prog("p => null(target=q)"),
+			"KEYWORDNAME: the intrinsic function NULL has no argument TARGET; its arguments are MOLD"},
+		{"an expression", prog("n = null()"), "NULLPLACE: a reference to NULL() is a disassociated pointer, so it can stand " +
+			"only where a pointer's value goes: after =>, in DATA for a pointer, for a pointer component in a structure " +
+			"constructor, or as a pointer dummy's argument"},
+		{"DATA for no pointer", prog("data n /null()/"), "NULLPLACE: a reference to NULL() is a disassociated pointer, so it can stand " +
+			"only where a pointer's value goes: after =>, in DATA for a pointer, for a pointer component in a structure " +
+			"constructor, or as a pointer dummy's argument"},
+		{"=> for no pointer", prog("integer :: m => null()"), "NOTPOINTER: M is not a pointer"},
+		{"=> of a target", prog("integer, target :: t", "integer, pointer :: m => t"),
+			"POINTERINIT: a pointer's initial value after => can only be NULL(), not T"},
+		{"DATA of a constant", prog("data p /1/"), "POINTERATTR: the pointer P can't be given an initial value but NULL()"},
+		{"a function of the file's own", append(prog("integer, external :: null", "n = null()"),
+			"integer function null()", "null = 1", "end function"), ""},
+		{"an EXTERNAL NULL", prog("external null", "integer null", "p => null()"),
+			"POINTERFUNC: the target NULL() is a function reference, and only a function whose result is a pointer gives a target"},
+		{"a pointer dummy", []string{"program p", "  call s(null())", "contains", "  subroutine s(k)",
+			"    integer, pointer :: k", "  end subroutine", "end program"}, ""},
+		{"a pointer dummy of a MOLD of another type", []string{"program p", "  real, pointer :: x", "  call s(null(x))",
+			"contains", "  subroutine s(k)", "    integer, pointer :: k", "  end subroutine", "end program"},
+			"POINTERTYPE: the pointer K points at INTEGER, so its target can't be REAL"},
+		{"a dummy that isn't a pointer", []string{"program p", "  call s(null())", "contains", "  subroutine s(k)",
+			"    integer :: k", "  end subroutine", "end program"}, "NULLPLACE: a reference to NULL() is a disassociated " +
+			"pointer, so it can stand only where a pointer's value goes: after =>, in DATA for a pointer, for a pointer " +
+			"component in a structure constructor, or as a pointer dummy's argument"},
+		{"a generic name", generic("call tell(null(ip))", "call tell(null(rp))", "call tell(p=null(ip))", "call one(null())"), ""},
+		{"a generic name, no MOLD", generic("call tell(null())"),
+			"NULLMOLD: an argument NULL() of the generic name TELL fits both TELL_I and TELL_R, so it needs MOLD= to say which pointer it is"},
+		{"a generic name, a MOLD that fits none", generic("call tell(null(ra))"),
+			"GENERICNONE: no specific procedure of the generic name TELL takes a pointer to an array of REAL"},
+		{"a generic name's pointer dummy given no pointer", generic("call tell(n)"),
+			"POINTERARG: argument 1 of TELL_I, for the pointer dummy argument P, must be a pointer to INTEGER"},
+		{"AUTOMATIC", []string{"subroutine s", "  automatic x", "  integer, pointer :: x => null()", "end subroutine"},
+			"AUTOINIT: X has an initial value, so it can't be AUTOMATIC"},
+	}
+
+	for _, c := range cases {
+		if got := messageText(analyzeFree(t, c.lines...)); got != c.want {
+			t.Errorf("%s:\n got %q\nwant %q", c.name, got, c.want)
+		}
+	}
+
+	// A recursive unit's pointer given NULL() is static, as any initialized
+	// local is.
+	prog2, ms := analyzeFreeWith(t, Options{}, "recursive subroutine s(k)", "  integer :: k",
+		"  integer, pointer :: a => null(), b, c", "  data b /null()/", "end subroutine s")
+	if len(ms) != 0 {
+		t.Fatalf("messages: %s", messageText(ms))
+	}
+
+	for name, automatic := range map[string]bool{"A": false, "B": false, "C": true} {
+		if s := prog2.Units[0].Lookup(name); s.Automatic != automatic {
+			t.Errorf("%s: Automatic %v, want %v", name, s.Automatic, automatic)
+		}
+	}
+
+	// Without /F90, NULL() is the intrinsic's where a pointer's value goes,
+	// and anywhere else a function's of the program's.
+	_, ms = analyzeLines(t, "T.FOR",
+		"      INTEGER, POINTER :: P",
+		"      INTEGER N",
+		"      P => NULL()",
+		"      N = NULL()",
+		"      END")
+	if len(ms) != 0 {
+		t.Errorf("/NOF90: %s", messageText(ms))
 	}
 }

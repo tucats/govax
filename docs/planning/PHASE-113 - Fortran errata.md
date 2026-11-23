@@ -232,7 +232,8 @@ HP Fortran manual (`VMS-FORTRAN-LANGUAGE.txt`) describes every one (FORALL 69 ti
    `derived.go`): a variable of such a type is initialized at its storage's start (static:
    `$LOCAL`'s bytes; frame, automatic, allocated: at entry or ALLOCATE, as pointer components
    are cleared today, Phase 107's `clearRecords`); INTENT(OUT) dummies of such a type
-   initialized at entry. **Proposed: 112**, with A.3.2's module text.
+   initialized at entry. **Proposed: 112**, with A.3.2's module text. *(`NULL()` and `=>
+   NULL()` resolved in Phase 112, subtask 4; default initialization is its subtask 5.)*
 4. CPU_TIME (a subroutine; `$GETJPI`'s CPUTIM in FTNRTL). **Proposed: 112.**
 5. A WHERE inside a WHERE, and ELSEWHERE with a mask (F95ONLY, `sema/where.go`, three sites).
    **Proposed: 112.**

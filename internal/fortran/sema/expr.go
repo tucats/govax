@@ -280,6 +280,11 @@ func (a *analyzer) apply(e *ast.Apply) Expr {
 			return a.associatedRef(e)
 		}
 
+		// NULL() where no pointer's value goes (null.go).
+		if e.Name == "NULL" && a.intrinsicNamed(e.Name) {
+			return a.nullElsewhere(e.Pos)
+		}
+
 		_, selected := isInquiry(e.Name)
 		if _, ok := constFuncs[e.Name]; ok || (selected || arrayFunctions[e.Name]) && a.intrinsicNamed(e.Name) {
 			if v, ok := a.folded(e); ok {

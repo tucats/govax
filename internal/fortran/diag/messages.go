@@ -1659,6 +1659,20 @@ var messages = map[string]kind{
 	"POINTERFUNC":  {Error, "the target %s is a function reference, and only a function whose result is a pointer gives a target"},
 	"VECTORTARGET": {Error, "the target %s has a vector subscript, so no pointer may point at it"},
 
+	// NULLPLACE is a reference to Fortran 95's NULL where no pointer's value
+	// goes (docs/planning/PHASE-112 - Fortran 95.md, finding 3): its type is
+	// the pointer's, so it may stand only after =>, as a pointer's initial value
+	// in DATA, as a pointer component's value in a structure constructor, or as
+	// the actual argument of a pointer dummy.
+	// POINTERINIT is a declaration's => followed by anything but NULL()
+	// (Fortran 95's R505).
+	// NULLMOLD is NULL() with no MOLD as an argument of a generic name, two of
+	// whose specific procedures it lets fit (Fortran 95's 13.14.79: MOLD is
+	// then required).
+	"NULLMOLD":    {Error, "an argument NULL() of the generic name %s fits both %s and %s, so it needs MOLD= to say which pointer it is"},
+	"POINTERINIT": {Error, "a pointer's initial value after => can only be NULL(), not %s"},
+	"NULLPLACE":   {Error, "a reference to NULL() is a disassociated pointer, so it can stand only where a pointer's value goes: after =>, in DATA for a pointer, for a pointer component in a structure constructor, or as a pointer dummy's argument"},
+
 	// Pointer components (docs/planning/PHASE-107 - Fortran 90 pointers.md,
 	// finding 7). POINTERPART is an object of a type with a pointer component,
 	// at any depth, where 4.4.1, 5.5.1, 5.4, 9.4.2, and 5.2.10 forbid one: an

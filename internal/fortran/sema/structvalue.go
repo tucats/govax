@@ -342,6 +342,17 @@ func (a *analyzer) structConstructor(st *Structure, e *ast.Apply) Expr {
 			continue
 		}
 
+		if app, isNull := a.nullReference(arg); f.Pointer && isNull {
+			// NULL(), the component disassociated (null.go).
+			if n := a.nullValue(app, st.Name+"%"+f.Name, componentType(f), f.Rank); n != nil {
+				v.Values[i] = n
+			} else {
+				v.Values[i], ok = a.bad(arg.Position()), false
+			}
+
+			continue
+		}
+
 		if f.Pointer {
 			v.Values[i] = a.targetFor(st.Name+"%"+f.Name, componentType(f), f.Rank, arg)
 			if v.Values[i] == nil {

@@ -1,0 +1,24 @@
+start F F F F F F F
+q => n T
+q => null(q) F
+a => t T
+a => null() F
+first%next F
+list of 2
+list of 0
+no array
+size 3
+label F
+holder F F
+holder F T 3
+level 1 F
+level 2 T
+level 3 T
+level 1 T
+level 2 T
+level 3 T
+scalar  7
+array  1.0  2.0  3.0
+scalar, none
+array, none
+  $STATUS == "%X00000001"
