@@ -646,8 +646,9 @@ choices no fixture has confirmed yet.
   - `.ENABLE TRUNCATION` and `VECTOR` aren't supported: enabling one is
     the warning `VAX_IGNORED`, and assembly goes on.
   - The `MACRO` command has no `A+B` concatenation of several sources
-    into one module, nor VMS's `PROG+LIB/LIBRARY`; macro libraries come
-    from a govax-style `/LIBRARY=(file,...)` (Phase 28). (`/LIST`,
+    into one module *(resolved in Phase 86, subtask 1: `dclcmd.MacroList`,
+    `A,B` and `A+B`)*, nor VMS's `PROG+LIB/LIBRARY` (still open); macro
+    libraries come from a govax-style `/LIBRARY=(file,...)` (Phase 28). (`/LIST`,
     `/SHOW`, `/CROSS_REFERENCE`, `/DEBUG`, `/ENABLE`, and `/DISABLE`
     came with Phase 29.)
   - Error messages are govax's (`%CLI-E-ASSEMBLING, ... line N:
@@ -719,7 +720,11 @@ choices no fixture has confirmed yet.
     its own version but gets a new file ID and creation date (LIBRARIAN
     updates in place). A new library is allocated only the blocks it
     uses, where LIBRARIAN allocates 100, contiguous best try. No DCX data
-    reduction on writing, and no update history records.
+    reduction on writing, and no update history records. *(Resolved in
+    Phase 90, subtask 11e: an existing library is changed in place through
+    an `lbr.Updater`, with LIBRARIAN's history records, `/DATA=REDUCE` and
+    `/DATA=EXPAND`, and `/CREATE=BLOCKS` allocations. `/COMPRESS` is still
+    out.)*
   - **Index trees are built bottom-up** from the sorted keys, so a
     library is laid out as LIBRARIAN lays out one created in a single
     command (byte for byte on the fixtures). A library LIBRARIAN grew by

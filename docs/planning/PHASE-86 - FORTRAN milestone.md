@@ -108,11 +108,12 @@ FORTRAN program, Phases 74 to 86, is done; PLAN.md summarizes it.
 **What the language lacks, and could have.** Each fails cleanly today:
 
 - **Indexed files and keyed access.** RMS has no indexed organization, so this starts there: `$CREATE`'s RMS$_ORG, FTNRTL's
-  `FTN$READ_KF`/`_KU` waiting behind it, and OPEN's NOTIMP. The largest gap, and a program of its own.
+  `FTN$READ_KF`/`_KU` waiting behind it, and OPEN's NOTIMP. The largest gap, and a program of its own. *(Resolved in Phase 88.)*
 - **`CONVERT=`** other than NATIVE: FOR's NOTIMP.
-- **Routines really reentrant:** AUTOMATIC's frame is the groundwork; the compiler's temporaries are what stays in `$LOCAL`.
+- **Routines really reentrant:** AUTOMATIC's frame is the groundwork; the compiler's temporaries are what stays in `$LOCAL`. *(Resolved in Phase 89.)*
 - **Real FORTRAN debugger records** (Phase 85's review, level C), and SET SCOPE, a record's fields, and which of several active calls
-  a dummy means.
+  a dummy means. *(SET SCOPE and which call a dummy means resolved in Phase 89, a record's fields in Phase 110; real debugger records
+  are still not done.)*
 - **`/STANDARD`'s** meaning rather than form (`SEMANTIC`).
 - **Staying out, by decision:** DICTIONARY (no Common Data Dictionary), CDEC$ PACK, CPAR$ directives.
 
@@ -135,7 +136,7 @@ FORTRAN program, Phases 74 to 86, is done; PLAN.md summarizes it.
 - **Phase 80:** a `+` record after an ended line, on govax's line-at-a-time terminal; namelist input to arrays; which of units -1 and -2, and -3 and -4, each statement uses.
 - **Phase 81:** the current record after REWIND, BACKSPACE, ENDFILE, and UNLOCK; DELETE by number in odd cases; a relative file's growth beyond VMS's allocations.
 - **Phase 82:** LINK's C22, C23, C26, C27, and C29 differ from VMS (DEVIATIONS.md); an aligned block's layout difference across files gets no message.
-- **Phase 83:** STR$'s five arithmetic routines and STR$ELEMENT_R8 are NOTIMPL; LIB$DECODE_FAULT and its neighbors wait for Phase 61; LIBRARY edits by rebuilding; 191 of the service vector's entries
+- **Phase 83:** STR$'s five arithmetic routines and STR$ELEMENT_R8 are NOTIMPL; LIB$DECODE_FAULT and its neighbors wait for Phase 61; LIBRARY edits by rebuilding *(resolved in Phase 90)*; 191 of the service vector's entries
   signal NOTIMPL until a program needs them; one FORRTL difference stands (DEVIATIONS.md).
 - **Phase 84:** not done, by measurement: global CSE and PRE, autoincrement, a rotated test copied to its way in. FTNRTL's per-statement paths, about 170 instructions a record, are the next place to look for speed.
 - **Unconfirmed throughout,** there being no VAX FORTRAN: what MANUAL.md's 14.7 lists, `/CHECK`'s default among it.

@@ -939,7 +939,7 @@ the rest. Left for later:
 - **Indexed files** (Decision 13, the author's choice in Phase 74's review): ORGANIZATION=
   'INDEXED' and an indexed file found are FOR$_NOTIMP at OPEN, KEY= is taken and not used,
   and the keyed READ (`FTN$READ_KF`, `_KU`) is OPEDEFREQ or NOTIMP. RMS has no indexed
-  organization yet.
+  organization yet. *(Resolved in Phase 88: RMS's indexed files and FORTRAN's keyed statements.)*
 - **CONVERT=** other than NATIVE (the author's answer (a)): FOR$_NOTIMP.
 - **Host files:** FORTRAN's files are volume files (Answer 3); a host file comes in by COPY.
 - **Phase 83:** the system subroutines (EXIT, IDATE, RAN) and calling RTL routines and

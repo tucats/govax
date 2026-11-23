@@ -992,7 +992,7 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   the close-out: MANUAL.md's 6.7 "Batch queues" (6.7 to 6.9 now 6.8 to
   6.10), VAX-VMS-INTERNALS.md's 7.16, FORTRAN's `$QUIDEF`, `$SJCDEF`, and
   `$JBCMSGDEF` (`TestFortranQueues`).
-  Phases 99–111 (planned 2026-11-17, the plan accepted by the author the same day; Phase 112, Fortran 95, optional) are the
+  Phases 99–111 (planned 2026-11-17, the plan accepted by the author the same day; Phase 112, the Fortran errata, a go) are the
   Fortran 90 program: `PHASE-99 - Fortran 90.md`'s Part A is the survey,
   Part B the decisions, Part C the phases, each later phase a skeletal doc.
   Fortran 90 (ISO/IEC 1539:1991; `Fortran90.txt` and `Fortran 90
@@ -1431,6 +1431,28 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   `Fusable`/`FusableWhere`, `ir/lowerfuse.go`, `ir.LowerWith`; `optfuse.f90`,
   `optstride.f90`); 9 the close-out, FORTRAN-INTERNALS.md's section 35, and a
   name typing an implied DO's variable exempt from UNUSEDNAME (`typesEntity`).
+  Phase 111 (done 2026-11-22; its "Where things stand" is the Fortran 90
+  program's follow-up list, and PLAN.md summarizes it) is the milestone:
+  fcalc, a scientific calculator of 16 modules and 11,000 lines
+  (`internal/fcalc`, below; `testdata/fcalc` its scripts), built
+  `/G_FLOATING`; `TestFcalcMilestone` runs it in ten builds,
+  `TestFcalcTools` and `TestFcalcDebugger` the compiler's tools and the
+  debugger on it, `compare.py` on gfortran three ways; the VMS round,
+  `testdata/f90r` (fcalc and the whole Fortran 90 corpus built by VMS 7.1's
+  MACRO and LINK and run, `TestF90ROracle`, `TestF90RObjects`) and
+  `testdata/tir111` (VMS MACRO's object records, `TestTIR111Objects`); the
+  bugs it found fixed in subtasks 2a to 8a and the VAX's (a bare `.ASCII`,
+  MACRO's repetition factors and LINK's `STO_Rx`, INITIALIZE/CONTAINER's
+  `/HEADERS=` and `/DIRECTORIES=`); fcalc shipped (SYS$SYSTEM:FCALC.EXE,
+  SYLOGIN's `FCALC`, HELP FCALC); MANUAL.md's 14.13 and Appendix E and
+  FORTRAN-INTERNALS.md's section 36. At its close-out the author answered
+  Phase 99's question 2 with a go, then widened Phase 112: it is the
+  **Fortran errata** (`PHASE-112 - Fortran errata.md`, planned 2026-11-22),
+  a whole to-do list of every gap VAX FORTRAN, Fortran 90, FTNRTL, MACRO,
+  LINK, and the debugger left, Fortran 95's additions among it, not all of
+  which need be done there; its subtask 1 is the survey. An item an old
+  phase doc or DEVIATIONS.md still lists that a later phase did is marked
+  where it was written, "*(Resolved in Phase N.)*" (the author's direction).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

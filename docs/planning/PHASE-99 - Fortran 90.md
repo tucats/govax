@@ -522,7 +522,7 @@ SQUARES.$1:
 | **109** | I/O: nonadvancing I/O, the new OPEN and INQUIRE specifiers, B, EN, ES, and G for every type, Fortran 90's NAMELIST form, sections and derived types as I/O items by descriptor | 105 |
 | **110** | Usability: `/STANDARD=F90` and the obsolescent features, `/WARNINGS`, listings and cross references with scopes and modules, `/CHECK` on shapes and pointers, `/DEBUG` and the debugger on Fortran 90's data | 107–109 |
 | **111** | The milestone and close-out: a substantial Fortran 90 program in every mode, gfortran's witness, the optional VMS round, the manual's 14.13, FORTRAN-INTERNALS.md's sections finished | all |
-| *112* | *Optional, by question 2:* Fortran 95's additions | 111 |
+| 112 | The Fortran errata, a go at Phase 111's close-out: every gap of both Fortran programs and their tools, Fortran 95's additions among them (`PHASE-112 - Fortran errata.md`) | 111 |
 
 Each later phase has a skeletal planning doc of its own: its goal, what
 earlier phases leave in place, its design notes, its open questions, and its
@@ -672,7 +672,8 @@ The author read the plan and accepted every recommendation:
    only the three conflicts, on by default for free form; a file with no type
    looked for as `.FOR`, then `.F90`.
 2. Fortran 95's additions are an optional **Phase 112**, decided at Phase
-   111's close-out.
+   111's close-out. *(Decided 2026-11-22: a go, Phase 112 widened by the author
+   to the Fortran errata, Fortran 95's additions one group of its list.)*
 3. Module files are our own readable text, `name.F90$MOD` (Decision 10).
 4. Allocatable locals are deallocated at return (Decision 8).
 5. NCA descriptors for every run-time array (Decision 7).

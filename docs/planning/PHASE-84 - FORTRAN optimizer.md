@@ -61,8 +61,8 @@ Done: everything in the goal above, with `/OPTIMIZE` the default since the corpu
 - **Small waste seen and left:** `MOVL #1,S.I` then `MOVL S.I,R6` where a loop's copy follows the DO's own store, and a copy into a register before the loop sets it itself (subtask 9). These cost a move per loop entry. A `$H` used only to make a base, in memory for lack of a register (subtask 9).
 - **FTNRTL's per-statement paths** are as they were (subtask 11): about 170 instructions per record of DUNGEON's startup, in the format walk, `FTN$$UNIT_GET`, and the statement's begin and end. `astrace` parses formats 80,000 times, which wasn't looked into.
 - **Our choices, unconfirmed, there being no VAX FORTRAN:** dummies don't alias (answer 1); a subscript stays in its array (subtask 4); a limit of the largest integer known only at run time doesn't end (subtask 10); what a handler or an unwind can see of a loop's variables (subtask 9, not tested with an unwind); a function with a path that doesn't set its value goes on returning the last (subtask 5). MANUAL.md's 14.9 tells a programmer these.
-- **Real MACRO hasn't assembled `/OPTIMIZE`'s output;** the bounds are held to govax's MACRO (Phase 86's optional round). `testdata/opt84`'s hand versions, and every count here, are instruction counts, not time on a VAX.
-- **`/CHECK`, when Phase 85 adds it,** must keep its checks through these passes (Decision 8).
+- **Real MACRO hasn't assembled `/OPTIMIZE`'s output;** the bounds are held to govax's MACRO (Phase 86's optional round). *(Resolved in Phase 86, subtask 4: VMS 7.1's MACRO and LINK built every corpus program both `/NOOPTIMIZE` and `/OPTIMIZE`, `testdata/ftn86`.)* `testdata/opt84`'s hand versions, and every count here, are instruction counts, not time on a VAX.
+- **`/CHECK`, when Phase 85 adds it,** must keep its checks through these passes (Decision 8). *(Resolved in Phase 85, subtask 5: the optimizer's rules take the unit's checks, `mayFault`, `unsafeToMove`, `ir.FoldFor`.)*
 
 # Part A — the survey (2026-11-01)
 

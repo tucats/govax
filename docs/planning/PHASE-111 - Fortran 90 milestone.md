@@ -1,9 +1,12 @@
 # Phase 111 — Fortran 90: the milestone and close-out
 
-**Status:** planned 2026-11-17 with Phase 99 (`PHASE-99 - Fortran 90.md`,
-Part C). Subtask 1, the survey and the milestone program's design (Part A),
-done 2026-11-20 and accepted by the author the same day ("The author's
-answers"; A.8 adds vectors and matrices, A.6 the subtasks). Needs every phase from 99 to 110.
+**Status:** done 2026-11-22. "Where things stand", at the end, is what the
+phase and the Fortran 90 program left. Planned 2026-11-17 with Phase 99
+(`PHASE-99 - Fortran 90.md`, Part C). Subtask 1, the survey and the milestone
+program's design (Part A), done 2026-11-20 and accepted by the author the same
+day ("The author's answers"; A.8 adds vectors and matrices, A.6 the subtasks,
+all done). Phase 112, the Fortran errata with Fortran 95's additions, is a go
+(the author's answer at the close-out, below). Needed every phase from 99 to 110.
 
 ## Goal
 
@@ -281,7 +284,7 @@ As revised by the author's answers (below), with vectors and matrices added:
 14. **FORTRAN-INTERNALS.md** finished, with fcalc as its worked example of a
     whole program. (done 2026-11-22)
 15. **Close-out**: PLAN.md, CLAUDE.md, "Where things stand", and Phase 112's
-    go or no-go.
+    go or no-go. (done 2026-11-22: a go)
 
 ## A.7 Questions for the author
 
@@ -316,6 +319,22 @@ As revised by the author's answers (below), with vectors and matrices added:
 6. **The simh round** runs the whole Fortran 90 corpus beside fcalc: it will be
    the largest exercise yet of the VAX CPU and MTHRTL, and may find what the
    corpus alone hasn't.
+
+## The author's answer on Phase 112 (2026-11-22)
+
+Phase 99's question 2 left Fortran 95's additions to an optional Phase 112,
+decided here. Asked at the close-out, with the additions listed (FORALL, PURE
+and ELEMENTAL, `NULL()` and default initialization of components and pointers,
+CPU_TIME, WHERE inside WHERE and ELSEWHERE with a mask, MAXLOC's and MINLOC's
+`DIM=`, CEILING's and FLOOR's `KIND=`, zero widths) and what govax already has
+of Fortran 95 (allocatable locals deallocated at return, Phase 99's Decision 8;
+every pointer disassociated at the start, Phase 107's answer 2), the author
+chose **go**. The same day the author widened it: Phase 112 is the **Fortran
+errata** (`PHASE-112 - Fortran errata.md`), a review of every gap the VAX
+FORTRAN and Fortran 90 programs left, and their tools' (MACRO, LINK, the
+debugger), with Fortran 95's additions one group of its list; not all of it
+need be done there, but the to-do list is to be whole. Items an old phase doc
+still lists that a later phase did are marked there, naming the phase.
 
 ## A.8 Vectors and matrices
 
@@ -1062,3 +1081,73 @@ each script (a `SHOW MEMORY` command of fcalc's own) so a leak shows.
   so the request is answered with it and fcalc compiles, larger and slower. FCKINDS' comment
   (the same number of lines, so the committed image is unchanged, `TestCommittedImage`) and the
   manual are corrected; A.3 above stays as the survey wrote it.
+- **2026-11-22:** Subtask 15, the close-out. Phase 99's question 2 asked at last: the
+  author chose **go** for Phase 112, Fortran 95's additions ("The author's answer on Phase
+  112", above), then made it the Fortran errata: `PHASE-112 - Fortran errata.md` is its
+  skeletal doc, whose Part A is the to-do list as far as the close-out gathered it (VAX
+  FORTRAN, FTNRTL and the libraries, Fortran 90, Fortran 95, the optimizer, MACRO, LINK and
+  LIBRARY, the debugger, the VMS rounds' open items, unconfirmed choices), its subtask 1 the
+  survey that makes the list whole. Items the old docs still listed that later phases did are
+  marked there by the author's direction: Phases 81 to 86's "Where things stand" and
+  DEVIATIONS.md's Phase 27 and 28 entries (the errata doc's log names each). Phase 99's
+  table and log say so. PLAN.md: the phase table's rows for 111
+  (done) and 112 (planned), and the Fortran 90 section's summary of Phase 111 and of the
+  program as a whole. CLAUDE.md: Phase 111's paragraph and Phase 112's. "Where things
+  stand", below, is what Phase 111 left and, since it ends the program, what the program
+  left, gathered from Phases 99 to 110's own lists: each item is either Phase 112's,
+  measured and left for later, not planned, or an unconfirmed choice, and nothing is left
+  for a phase of the Fortran 90 program. Phase 111 is done.
+
+## Where things stand
+
+Phase 111 is done, and with it the Fortran 90 program (Phases 99 to 111): Fortran 90
+compiles beside VAX FORTRAN in one compiler; 117 corpus programs and 5 programs of modules
+print their hand-worked output in every mode, on gfortran, and on VMS 7.1's MACRO, LINK,
+and run-time libraries; fcalc, 11,000 lines of it, runs in ten builds, on gfortran three
+ways, and on the VAX in four, and ships as SYS$SYSTEM:FCALC.EXE with HELP FCALC; DUNGEON and
+the FORTRAN-77 corpus are unchanged under `/NOF90` (`TestNoF90Unchanged`). MANUAL.md's 14.13
+and Appendix E and FORTRAN-INTERNALS.md's sections 24 to 36 describe it. What it left, and
+where each goes:
+
+- **Phase 112, the Fortran errata (a go), whose list holds everything below; Fortran 95's
+  additions:** FORALL; PURE and ELEMENTAL procedures (module procedures
+  among them); `NULL()`, `=> NULL()`, and default initialization of components (today
+  NOTIMPL); CPU_TIME; a WHERE inside a WHERE and ELSEWHERE with a mask (F95ONLY); MAXLOC's
+  and MINLOC's `DIM=`; CEILING's and FLOOR's `KIND=`; zero widths, `I0` and `F0.d` (today
+  OUTCONERR); and `/STANDARD=F95` beside `F77` and `F90`.
+- **Measured, left for later (Phase 110's subtask 8, Phase 104's list):** a run-time test
+  of two sections' overlap choosing a loop's direction; `A = F(X)` of an explicit-shape
+  array-valued function computed into A; SPREAD and CSHIFT as elements where used; the
+  copies of sections to old dummies (one made for INTENT(OUT) too); a whole-array copy as
+  MOVC3; fusion of arrays whose extents only a run-time test can show equal; `caseForm`'s
+  thresholds, still unmeasured (Phase 101), fcalc's dispatch not hot enough to show them.
+- **Later, the debugger:** `SET BREAK %LINE n`, SHOW CALLS's line column, TYPE, and
+  EXAMINE/SOURCE count the MACRO file's lines (`UNIT.$LINEn` and a break's display are
+  FORTRAN's); a component after subscripts in an expression; the language stays MACRO.
+- **Later, if wanted:** govax's definition modules (`$SSDEF` and the rest) as module files
+  to USE, beside INCLUDE's (Phase 106).
+- **VMS's tools, open (DEVIATIONS.md):** VMS 7.1's XQP failing on an index file extension
+  header ods2 made (the round went round it with INITIALIZE/CONTAINER's `/HEADERS=` and
+  `/DIRECTORIES=`; the field VMS objects to unknown), and its ANALYZE/DISK_STRUCTURE
+  bug-checking on it too; VMS MACRO's occasional byte of a long immediate run stored through
+  the stack (`tir111Differences`, `f90rObjectDifferences`); govax's MACRO writing no object
+  for a module with errors; a register name in a data expression.
+- **Not planned, ours (NOTIMPL, named; MANUAL.md's "What Fortran 90 isn't here"):** the
+  DIM= of CSHIFT, EOSHIFT, and SPREAD and RESHAPE's ORDER= not constant; an assumed-shape
+  array to `%LOC`, `%REF`, `%DESCR`, or a system subroutine; a CHARACTER argument of run-time
+  length not made of names; a BACK= that is an array; TRANSFER to a CHARACTER MOLD of zero or
+  run-time length; a component or function value of CHARACTER length zero; COMPLEX(16) to SUM
+  and its kin; a statement function of a derived type; a name an internal procedure's
+  declarations use that its host uses only in executable statements; ENTRY in a module
+  procedure and Phase 106's other module limits; a CHARACTER pointer of run-time length but
+  as a `LEN=*` dummy; a NAMELIST object past FTNRTL's 8 levels or 15 dimensions.
+- **Not Fortran 90 or 95, not planned:** INTEGER(8); Fortran 2003's spellings (`[ ]`
+  constructors, ALLOCATABLE components and dummies, procedure pointers, bounds remapping,
+  `ISO_C_BINDING`, stream access, DECIMAL= and ROUND=); DEC's later extensions in the HP
+  manual; an object file writer of the compiler's own.
+- **Unconfirmed choices of ours:** each phase's own list (Phases 100 to 110's "Where things
+  stand"), the ones a user can see gathered in MANUAL.md's 14.7 "Choices"; and Phase 111's
+  one, LBR$OUTPUT_HELP with its library defaulted reading govax's built-in HELPLIB when
+  SYS$HELP has none.
+- **Awaiting a VMS round:** none. Round 2 of `testdata/f90r` ran the whole Fortran 90
+  corpus and fcalc on VMS 7.1 (`f90rAwaitingVMS` empty).

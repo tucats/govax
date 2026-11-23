@@ -160,7 +160,8 @@ questions, and a progress log extended as that phase is worked.
 | 108 | [PHASE-108 - Fortran 90 intrinsic procedures](PHASE-108%20-%20Fortran%2090%20intrinsic%20procedures.md) | The rest of Fortran 90's intrinsics: character, numeric, the model, bits, TRANSFER, date and time, random numbers — planned 2026-11-17; done 2026-11-19 |
 | 109 | [PHASE-109 - Fortran 90 IO](PHASE-109%20-%20Fortran%2090%20IO.md) | Nonadvancing I/O, OPEN's and INQUIRE's new specifiers, B, EN, ES, and G for every type, Fortran 90's NAMELIST form, items by descriptor — planned 2026-11-17; done 2026-11-20 |
 | 110 | [PHASE-110 - Fortran 90 compiler usability](PHASE-110%20-%20Fortran%2090%20compiler%20usability.md) | `/STANDARD=F90` and the obsolescent features, warnings, listings and cross references by scope, `/CHECK` on shapes and pointers, `/DEBUG` and the debugger on Fortran 90's data, traceback lines, stepped addresses and fused nests — planned 2026-11-17; done 2026-11-20 |
-| 111 | [PHASE-111 - Fortran 90 milestone](PHASE-111%20-%20Fortran%2090%20milestone.md) | A substantial Fortran 90 program in every mode, gfortran's witness, the optional VMS round, the documentation finished — planned 2026-11-17 |
+| 111 | [PHASE-111 - Fortran 90 milestone](PHASE-111%20-%20Fortran%2090%20milestone.md) | fcalc, a scientific calculator of 11,000 lines, as the Fortran 90 milestone: every mode, gfortran's witness, the VMS round (fcalc and the whole corpus on VMS 7.1), shipped as SYS$SYSTEM:FCALC.EXE with HELP FCALC; the manual's 14.13 and Appendix E and FORTRAN-INTERNALS.md finished — planned 2026-11-17; done 2026-11-22 |
+| 112 | [PHASE-112 - Fortran errata](PHASE-112%20-%20Fortran%20errata.md) | The errata of both Fortran programs and their tools: every gap VAX FORTRAN, Fortran 90, FTNRTL, MACRO, LINK, and the debugger left, sorted into a whole to-do list, Fortran 95's additions among it, and what the author chooses done — planned 2026-11-22 |
 
 Phase 13 was split out of Phase 10 once that phase's own investigation found that
 `console_run.c`'s `RUN` command (real `.exe` image activation: ICB/ISD/IHD/IHI struct
@@ -1167,3 +1168,39 @@ covering sections and descriptors, and assumed-shape loops three times as long a
 
 MANUAL.md's 14.3, 14.7, 14.9, 14.10, and 14.13 and FORTRAN-INTERNALS.md's section 35 describe it; the
 phase doc's "Where things stand" lists what it left. The next phase is 111, the Fortran 90 milestone.
+
+Phase 111 (done 2026-11-22) is the milestone and the close-out. With no Fortran 90 program at hand
+(Phase 99's answer 7), the milestone is our own: **fcalc**, a scientific calculator in sixteen
+modules and 11,000 lines (`internal/fcalc/src`), with expressions over a value type of every kind,
+complex numbers, vectors and matrices, user functions and recursion, SOLVE, INTEGRATE, DIFF, ROOTS,
+TABLE, PLOT, SAVE and LOAD, logs, and command files; built `/G_FLOATING` and written so three
+machines print the same digits.
+
+- **Every mode**: `TestFcalcMilestone`, ten builds (`/OPTIMIZE` and `/RECURSIVE` both ways, both
+  paging modes, `/CHECK=ALL`, `/DEBUG`), eleven scripts each, the same lines; the listing, cross
+  reference, `/STANDARD=F90`, `/WARNINGS=ALL`, and a debugger session on it.
+- **gfortran's witness**: `compare.py` builds fcalc three ways (`-O0`, `-O2`, and every check and
+  floating trap), all 13 comparisons the same.
+- **The VMS round** (`testdata/f90r`): VMS 7.1's MACRO and LINK built FTNRTL, fcalc four ways, and the
+  whole Fortran 90 corpus three ways from govax's `.MAR` files, and every run printed govax's output;
+  `testdata/tir111` probed VMS MACRO's object records.
+- **Bugs fixed on the way**, each with a corpus program or test: `REAL` and `AIMAG` of COMPLEX(8)
+  under `/F90`; an INTENT(IN) internal file; a component section under `/CHECK=BOUNDS`; `@(Rn)`'s
+  bound; a long host name's internal procedure; inquiries of an INTENT(OUT) dummy; an empty adjustable
+  array under `/CHECK`; a literal constant's substring; and from the VAX, a bare `.ASCII` for a
+  zero-length text, MACRO's repetition factors (`STA_UB`, `STO_RL`) and LINK's `STO_Rx`, and
+  INITIALIZE/CONTAINER's `/HEADERS=` and `/DIRECTORIES=` around VMS's XQP failing on an ods2 index
+  file extension header.
+- **A tool**: SYS$SYSTEM:FCALC.EXE built into govax and committed (`go generate ./internal/fcalc`),
+  its sources and BUILDFCALC.COM on the system volume, `FCALC` in SYLOGIN.COM, HELP FCALC read by
+  fcalc's own HELP through LBR$OUTPUT_HELP.
+- **Documentation**: MANUAL.md's 14.13 finished, with "What Fortran 90 isn't here", and Appendix E,
+  rebuilding the system's parts from source; FORTRAN-INTERNALS.md finished, with a contents list and
+  section 36, fcalc as a whole program.
+
+With Phase 111 the Fortran 90 program is done: Fortran 90 compiles in the same compiler as VAX
+FORTRAN, `/NOF90` leaving every old program's MACRO unchanged; 117 corpus programs and 5 of modules
+run in every mode, on gfortran, and on VMS. Its "Where things stand" is the program's follow-up
+list. At the close-out the author answered Phase 99's question 2 with a go, and widened Phase 112
+into the Fortran errata: a whole to-do list of what both Fortran programs and their tools left,
+Fortran 95's additions among it, with resolved items marked in the docs that still listed them.

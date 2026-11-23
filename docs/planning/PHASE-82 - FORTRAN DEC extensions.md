@@ -591,7 +591,7 @@ sections is VMS's (`testdata/link82`). Left for later:
   `/EXTEND_SOURCE`, and `/F77`, still NOTIMPL, where `/ALIGN` on OPTIONS also lands, refused by
   answer 3; the command's `/WARNINGS`, so `/WARN=ALIGNMENT` is only CDEC$ OPTIONS's.
 - **A later phase, not yet defined:** routines really reentrant (answer 1): AUTOMATIC's frame
-  is its groundwork, and the compiler's temporaries are what stays in `$LOCAL`.
+  is its groundwork, and the compiler's temporaries are what stays in `$LOCAL`. *(Resolved in Phase 89: RECURSIVE and `/RECURSIVE`, every compiler's cell in the frame.)*
 - **Staying out:** DICTIONARY (NOTIMPL, as govax has no Common Data Dictionary), CDEC$ PACK.
 - **Known limits:** LINK's C22, C23, C26, C27, and C29 differ from VMS (the entry below on
   `testdata/link82`, DEVIATIONS.md); an AUTOMATIC record of a natural structure is only on a
