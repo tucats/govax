@@ -6,7 +6,7 @@ done 2026-11-23; subtask 3, zero-sized arrays, done 2026-11-23; subtask 4, `NULL
 2026-11-23; subtask 5, default initialization, done 2026-11-23; subtask 6, PURE, done 2026-11-23;
 subtask 7, ELEMENTAL, done 2026-11-23; subtask 8, the FORALL statement, done 2026-11-23;
 subtask 9, the FORALL construct, done 2026-11-23; subtask 10, WHERE in WHERE, done 2026-11-23;
-subtask 11 is next. Phase 99's question 2 left Fortran 95's additions to an
+subtask 11, the intrinsics, done 2026-11-23; subtask 12 is next. Phase 99's question 2 left Fortran 95's additions to an
 optional Phase 112, the author chose go at Phase 111's close-out, and the phase was widened
 to the Fortran errata the same day. At the errata survey's review the author split it:
 Fortran 95 is this phase, and the errata, with the survey (its Part A), is Phase 113
@@ -303,7 +303,8 @@ way) and the HPF_LIBRARY routines. **Not planned.**
    (done 2026-11-23).
 10. **WHERE** in WHERE, masked ELSEWHERE, named WHERE (A.3's 9); F95ONLY retired (done
     2026-11-23).
-11. **The intrinsics** (A.3's 10): MAXLOC/MINLOC DIM=, CEILING/FLOOR KIND=, CPU_TIME.
+11. **The intrinsics** (A.3's 10): MAXLOC/MINLOC DIM=, CEILING/FLOOR KIND=, CPU_TIME (done
+    2026-11-23).
 12. **FTNRTL**: zero widths, namelist comments (A.3's 11).
 13. **`/STANDARD=F90`** widened, Fortran 95's deleted and obsolescent lists (A.3's 12,
     question 1); listings, cross references (FORALL indexes, PURE in the attributes
@@ -788,3 +789,37 @@ with every recommendation of A.5:
   "Arrays as values" describes the forms, with an example; HELP FORTRAN ARRAYS the same. Phase
   113's A.1's 5 is marked resolved, as are Phase 102's and 111's mentions of F95ONLY. Subtask 11,
   the intrinsics, is next.
+- **2026-11-23:** Subtask 11, the intrinsics. **MAXLOC and MINLOC with `DIM=`**: the table's
+  rows name ARRAY, DIM, and MASK (`sema/intrinsics.go`); `arrayFunction` reads a second
+  argument without a keyword once (`keywordAt`) and takes it for the MASK if it is LOGICAL and no
+  third is given, Fortran 90's form, else for DIM (`arrayDimOf` and `arrayMaskOf`, `arrayDim`'s and
+  `arrayMask`'s code on a value already analyzed). With DIM= the function is a reduction like
+  MAXVAL's: of the array's shape without DIM, its elements computed where they are used; of an
+  array of rank 1, a scalar (`Dim` 1, no shape); a DIM= not constant on a higher rank goes through
+  `reduceByDim` as the other reductions'. Lowering (`ir/lowerarrayfunc.go`'s `reduce`): the
+  accumulator is the place, 0 until an element is seen, and `best` the extreme so far, a later
+  element taking its place only if strictly greater (less), so the first of equals wins; the place
+  is the nest's one loop's index, counted from 1. KIND= stays KEYWORDNAME (answer 6).
+  **CEILING and FLOOR with `KIND=`**: the rows take `A,KIND?`, so the reference's KIND makes its
+  result that kind through `resultKind`, as INT's and NINT's; folded, the value is computed in the
+  kind asked for (`evaluator.wholeType`), so `CEILING(70000.5, KIND=4)` folds under `/NOI4` too.
+  **CPU_TIME**: a row of the subroutines' table, `cpuTime` (`sema/clocksubs.go`): TIME a REAL
+  scalar of any kind, a call of `FTN$CPU_TIME_F`, `_D`, `_G`, or `_H` by its format. FTNRTL's
+  routines (`ftn_system.mar`, transfer vector offsets 1120 to 1144, GSMATCH 1,33): `CPU_TICKS`
+  asks `$GETJPIW` for JPI$_CPUTIM with a one-item list on the stack, and each entry divides the
+  ticks by 100 in its own format; a failure is -1 second (answer 3). Like the other intrinsic
+  subroutines it is intrinsic under `/F90`, or by an INTRINSIC statement. Tests: `sema`'s
+  `TestArrayFunctions` (DIM=, a positional MASK, a run-time DIM, DIMRANGE, NOTSCALAR) and
+  `TestPhase112Intrinsics` (KIND= folded and not, under both `/I4` settings, NOSUCHKIND,
+  KINDNOTCONST; CPU_TIME's routines and SYSARG); `ftnrtl/build`'s `TestImage` the new entries;
+  `testdata/fortran90/intrins.f90` (DIM= on whole arrays, sections, vectors, with masks, a
+  positional MASK, a run-time DIM, in an expression; KIND=; CPU_TIME of two kinds; every mode,
+  paging too; gfortran `-std=f95` prints the same, `compare.py`). The survey's `intrin95.f90`
+  is INTRINS's start (but for `NULL(P)`, subtask 4's). CEILING in a PARAMETER is a remark under
+  `/STANDARD`, as Phase 108 left it, and gfortran refuses it under `-std=f95` (a REAL argument in
+  an initialization expression is Fortran 2003's), so INTRINS computes it in an assignment.
+  CPU_TIME isn't yet among `/STANDARD=F90`'s names (subtask 13). `testdata/f90r` regenerated,
+  INTRINS added to `f90rAwaitingVMS`. MANUAL.md's numeric functions, "Arrays as values", the
+  clock subroutines, and the FTNRTL table; HELP FORTRAN's Numeric, Subroutines, and arrays
+  topics. Phase 113's A.1's 4 and 6 and Phase 108's Phase 112 line are marked resolved.
+  Subtask 12, FTNRTL's zero widths and namelist comments, is next.

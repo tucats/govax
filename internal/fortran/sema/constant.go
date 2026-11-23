@@ -102,6 +102,10 @@ type evaluator struct {
 	// complexType is the type the CMPLX being computed is to have, its
 	// KIND='s, while constCmplx runs (evalIntrinsic).
 	complexType Type
+
+	// wholeType is the INTEGER type the CEILING or FLOOR being computed is
+	// to have when its KIND= asks for one (Fortran 95's), else no type.
+	wholeType Type
 }
 
 // declEval is the evaluator for declarations.

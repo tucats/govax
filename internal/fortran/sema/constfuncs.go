@@ -195,8 +195,15 @@ func (ev *evaluator) apply(e *ast.Apply) (*Const, *constErr) {
 		}
 	}
 
+	ev.wholeType = Type{}
+	if slots.kind != nil && (e.Name == "CEILING" || e.Name == "FLOOR") {
+		if ev.wholeType, err = ev.kindOf(Integer, slots.kind); err != nil {
+			return nil, err
+		}
+	}
+
 	c, err := fn.eval(ev, e, args)
-	ev.complexType = Type{}
+	ev.complexType, ev.wholeType = Type{}, Type{}
 
 	if err == nil {
 		ev.initRule(e, args, c)
@@ -446,7 +453,8 @@ func constMod(ev *evaluator, e *ast.Apply, args []*Const) (*Const, *constErr) {
 
 // wholeFunction makes CEILING (up) or FLOOR: the least integer not less
 // than a REAL, or the greatest not greater, of the unit's default integer
-// type (Fortran 90's 13.13.17 and 13.13.38).
+// type (Fortran 90's 13.13.17 and 13.13.38), or of the kind KIND= asks for
+// (Fortran 95's, ev.wholeType).
 func wholeFunction(up bool) func(ev *evaluator, e *ast.Apply, args []*Const) (*Const, *constErr) {
 	return func(ev *evaluator, e *ast.Apply, args []*Const) (*Const, *constErr) {
 		x := args[0]
@@ -455,6 +463,10 @@ func wholeFunction(up bool) func(ev *evaluator, e *ast.Apply, args []*Const) (*C
 		}
 
 		t := ev.a.defaultInt
+		if ev.wholeType.Kind == Integer {
+			t = ev.wholeType
+		}
+
 		lo, hi := t.intRange()
 
 		i := floorOf(x.Real.Rat())

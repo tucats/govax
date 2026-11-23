@@ -9,7 +9,8 @@ import (
 
 // Fortran 90's intrinsic subroutines (the standard's 13.11; docs/planning/
 // PHASE-108 - Fortran 90 intrinsic procedures.md, finding 2): MVBITS,
-// DATE_AND_TIME, SYSTEM_CLOCK, RANDOM_NUMBER, and RANDOM_SEED. Like the
+// DATE_AND_TIME, SYSTEM_CLOCK, RANDOM_NUMBER, and RANDOM_SEED, and Fortran
+// 95's CPU_TIME. Like the
 // intrinsic functions they take keyword arguments by their dummies' names
 // without an explicit interface, CALL DATE_AND_TIME(VALUES=V), so they have a
 // table of their own beside the functions', read by the same keyword code
@@ -29,6 +30,7 @@ DATE_AND_TIME - DATE?,TIME?,ZONE?,VALUES?
 SYSTEM_CLOCK  - COUNT?,COUNT_RATE?,COUNT_MAX?
 RANDOM_NUMBER - HARVEST
 RANDOM_SEED   - SIZE?,PUT?,GET?
+CPU_TIME      - TIME
 `
 
 // intrinsicSub is one of the table's subroutines.
@@ -64,6 +66,7 @@ func readIntrinsicSubroutines() map[string]*intrinsicSub {
 	subs["SYSTEM_CLOCK"].analyze = (*analyzer).systemClock
 	subs["RANDOM_NUMBER"].analyze = (*analyzer).randomNumber
 	subs["RANDOM_SEED"].analyze = (*analyzer).randomSeed
+	subs["CPU_TIME"].analyze = (*analyzer).cpuTime
 
 	return subs
 }

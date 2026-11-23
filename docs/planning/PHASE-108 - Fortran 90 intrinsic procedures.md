@@ -733,7 +733,7 @@ Phase 108 is done. What it left, and where each goes:
   CEILING, FLOOR, or MODULO in a PARAMETER, which VAX FORTRAN's rules allow and the standard's
   7.1.6.1 doesn't); the debugger's EXAMINE of their values. *(Resolved in Phase 110.)*
 - **Phase 112:** Fortran 95's additions: CEILING's and FLOOR's KIND, MAXLOC's and MINLOC's DIM,
-  NULL, CPU_TIME.
+  NULL, CPU_TIME. *(Resolved in Phase 112.)*
 - **Not planned, ours (NOTIMPL, named):** a BACK= that is an array; TRANSFER to a CHARACTER MOLD of
   zero or run-time length, or of a CHARACTER array SOURCE of a run-time length that isn't a name's
   or a section's; a derived type's component, or a function's value, of length zero; SUM,

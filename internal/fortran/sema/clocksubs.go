@@ -24,6 +24,9 @@ import (
 //	    array a call for each element, in array element order (as MVBITS's)
 //	CALL RANDOM_SEED(SIZE, PUT, GET)
 //	    FTN$RANDOM_SEED(size, put, get), or FTN$RANDOM_SEED_W
+//	CALL CPU_TIME(TIME)
+//	    FTN$CPU_TIME_F, _D, _G, or _H(time), by TIME's format (Fortran 95's
+//	    13.14.33; docs/planning/PHASE-112 - Fortran 95.md, the author's answer 3)
 //
 // The standard says each integer argument is of the default kind; govax
 // takes INTEGER*2 or INTEGER*4 under either /I4 setting, all of one length
@@ -38,6 +41,14 @@ var randomRoutines = map[vaxfloat.Format]string{
 	vaxfloat.D: "FTN$RANDOM_D",
 	vaxfloat.G: "FTN$RANDOM_G",
 	vaxfloat.H: "FTN$RANDOM_H",
+}
+
+// cpuTimeRoutines are CPU_TIME's routines, by TIME's format.
+var cpuTimeRoutines = map[vaxfloat.Format]string{
+	vaxfloat.F: "FTN$CPU_TIME_F",
+	vaxfloat.D: "FTN$CPU_TIME_D",
+	vaxfloat.G: "FTN$CPU_TIME_G",
+	vaxfloat.H: "FTN$CPU_TIME_H",
 }
 
 // dateValues is how many values DATE_AND_TIME's VALUES takes at least.
@@ -348,4 +359,40 @@ func (a *analyzer) randomSeed(s *ast.CallStmt, slots []ast.Expr) Stmt {
 	}
 
 	return systemCall(s, wordForm("FTN$RANDOM_SEED", size), args)
+}
+
+// cpuTime analyzes CALL CPU_TIME(TIME) (Fortran 95's 13.14.33): TIME, a REAL
+// scalar variable, array element, or component of any kind, is given the
+// process's CPU time in seconds (FTNRTL's routine for its format).
+func (a *analyzer) cpuTime(s *ast.CallStmt, slots []ast.Expr) Stmt {
+	const what = "a REAL scalar variable or array element where it says TIME"
+
+	switch a.substringForm(slots[0]).(type) {
+	case *ast.Name, *ast.Apply, *ast.FieldRef:
+	default:
+		a.report("SYSARG", slots[0].Position(), s.Name, what)
+
+		return nil
+	}
+
+	to := a.target(slots[0])
+	if to == nil {
+		return nil
+	}
+
+	t := to.Type()
+
+	switch {
+	case t.Kind == Invalid:
+		return nil
+
+	case t.Kind != Real || rankOf(to) > 0:
+		a.report("SYSARG", to.Position(), s.Name, what)
+
+		return nil
+	}
+
+	a.noteAssigned(to)
+
+	return systemCall(s, cpuTimeRoutines[a.format(t)], []Arg{{Expr: to}})
 }

@@ -215,7 +215,9 @@
 4 Numeric
 
    CEILING and FLOOR are compiled in line, and so is MODULO: MODULO(A,
-   P) is the remainder with P's sign, where MOD's has A's.
+   P) is the remainder with P's sign, where MOD's has A's.  Fortran
+   95's KIND= gives CEILING and FLOOR the kind it names:
+   CEILING(X, KIND=2) is an INTEGER*2.
 
    The model's functions EXPONENT, FRACTION, SCALE, SET_EXPONENT,
    SPACING, RRSPACING, and NEAREST are exact in each VAX format: TINY
@@ -235,7 +237,8 @@
    (COUNT_RATE 100).  RANDOM_NUMBER draws with MTH$RANDOM, so a seed
    gives the same numbers on every host; RANDOM_SEED's seed is one
    integer (two for INTEGER*2), and CALL RANDOM_SEED() sets it back to
-   the first.
+   the first.  CALL CPU_TIME(T) (Fortran 95) gives T the process's CPU
+   time in seconds, in steps of 10 ms; only differences mean anything.
 
    MVBITS takes any integer expression for FROM, and works on arrays an
    element at a time.
@@ -292,7 +295,8 @@
    PRODUCT, MAXVAL, MINVAL, ALL, ANY, and COUNT take MASK= and DIM=;
    MAXLOC, MINLOC, DOT_PRODUCT, MATMUL, TRANSPOSE, SIZE, SHAPE, LBOUND,
    UBOUND, SPREAD, CSHIFT, EOSHIFT, PACK, UNPACK, and RESHAPE take any
-   arrays.  WHERE is a statement, or a construct with ELSEWHERE; in
+   arrays.  MAXLOC and MINLOC take Fortran 95's DIM= too: MAXLOC(M,
+   DIM=1) is each column's place of its greatest.  WHERE is a statement, or a construct with ELSEWHERE; in
    Fortran 95 a WHERE may be inside another, ELSEWHERE may have a mask
    of its own (ELSEWHERE (A < 0.0)), and a construct may be named.
 

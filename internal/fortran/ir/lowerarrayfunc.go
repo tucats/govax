@@ -198,7 +198,7 @@ func (l *lowerer) accumulator(t sema.Type) (*Mem, sema.Expr) {
 }
 
 // reduce computes the reduction f (SUM, PRODUCT, MAXVAL, MINVAL, ALL, ANY,
-// COUNT) into a temporary: over every dimension of its argument, or with DIM=
+// COUNT, and MAXLOC and MINLOC with DIM=) into a temporary: over every dimension of its argument, or with DIM=
 // over that one, its others at the index variables outer (one per dimension
 // of f's value, the leftmost first).
 func (l *lowerer) reduce(f *sema.ArrayFunc, outer []*sema.Symbol) *Mem {
@@ -260,6 +260,14 @@ func (l *lowerer) reduce(f *sema.ArrayFunc, outer []*sema.Symbol) *Mem {
 	acc, accVar := l.accumulator(f.T)
 	t := acc.T
 
+	// MAXLOC and MINLOC with DIM= (Fortran 95's): the extreme so far in best,
+	// its place along DIM, counted from 1 (the nest's one loop's index), in
+	// the accumulator, which is 0 until an element is seen.
+	var best *Mem
+	if f.Name == "MAXLOC" || f.Name == "MINLOC" {
+		best = l.temp(l.typeOf(arr.Type()))
+	}
+
 	switch f.Name {
 	case "SUM":
 		l.assignScalar(accVar, sema.ZeroConst(f.T, f.Pos))
@@ -267,7 +275,7 @@ func (l *lowerer) reduce(f *sema.ArrayFunc, outer []*sema.Symbol) *Mem {
 		l.assignScalar(accVar, sema.OneConst(f.T, f.Pos))
 	case "MAXVAL", "MINVAL":
 		l.emit(&Assign{origin: l.origin(), Dst: acc, Src: extremeOf(t, f.Name == "MINVAL")})
-	case "COUNT", "ANY":
+	case "COUNT", "ANY", "MAXLOC", "MINLOC":
 		l.emit(&Assign{origin: l.origin(), Dst: acc, Src: IntConst(t, 0)})
 	case "ALL":
 		l.emit(&Assign{origin: l.origin(), Dst: acc, Src: l.logical(t, true)})
@@ -295,6 +303,24 @@ func (l *lowerer) reduce(f *sema.ArrayFunc, outer []*sema.Symbol) *Mem {
 			l.choose(l.cond(v), acc, l.logical(t, true))
 		case "ALL":
 			l.choose(arith(Not, l.typeOf(v.Type()), l.cond(v), nil), acc, l.logical(t, false))
+		case "MAXLOC", "MINLOC":
+			x := l.temp(best.T)
+			l.emit(&Assign{origin: l.origin(), Dst: x, Src: l.expr(v)})
+
+			op := Gt
+			if f.Name == "MINLOC" {
+				op = Lt
+			}
+
+			set, compare, next := l.newBlock(), l.newBlock(), l.newBlock()
+			l.branch(&Cmp{Eq, &Load{acc}, IntConst(t, 0)}, set, compare)
+			l.begin(compare)
+			l.branch(&Cmp{op, &Load{x}, &Load{best}}, set, next)
+			l.begin(set)
+			l.emit(&Assign{origin: l.origin(), Dst: best, Src: &Load{x}})
+			l.emit(&Assign{origin: l.origin(), Dst: acc, Src: &Load{l.symbolMem(n.index[0])}})
+			l.jump(next)
+			l.begin(next)
 		}
 	}
 

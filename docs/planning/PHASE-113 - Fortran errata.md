@@ -239,13 +239,15 @@ HP Fortran manual (`VMS-FORTRAN-LANGUAGE.txt`) describes every one (FORALL 69 ti
    initialized at entry. **Proposed: 112**, with A.3.2's module text. *(Resolved in Phase 112:
    `NULL()` and `=> NULL()` in subtask 4, default initialization and the module text in subtask
    5.)*
-4. CPU_TIME (a subroutine; `$GETJPI`'s CPUTIM in FTNRTL). **Proposed: 112.**
+4. CPU_TIME (a subroutine; `$GETJPI`'s CPUTIM in FTNRTL). **Proposed: 112.** *(Resolved in
+   Phase 112, subtask 11.)*
 5. A WHERE inside a WHERE, and ELSEWHERE with a mask (F95ONLY, `sema/where.go`, three sites).
    **Proposed: 112.** *(Resolved in Phase 112, subtask 10.)*
 6. MAXLOC's and MINLOC's `DIM=` (KEYWORDNAME today), CEILING's and FLOOR's `KIND=`
    (KEYWORDNAME today), and Fortran 95's other intrinsic changes: SIGN of a negative zero (no
    such thing on the VAX: nothing to do), `KIND=` on others the HP manual lists, and NULL's
-   MOLD=. **Proposed: 112.**
+   MOLD=. **Proposed: 112.** *(Resolved in Phase 112: MAXLOC's and MINLOC's `DIM=` and CEILING's
+   and FLOOR's `KIND=` in subtask 11, NULL's MOLD= in subtask 4.)*
 7. Zero widths in output, `I0`, `B0`, `O0`, `Z0`, `F0.d` (OUTCONERR today, FTNRTL's
    `ftn_edit.mar` and `ftn_float.mar`), under the F90 flag only. **Proposed: 112.**
 8. `/STANDARD=F95` beside `F77` and `F90`: F95's additions not flagged under it, the deleted

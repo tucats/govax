@@ -1482,7 +1482,10 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   done 2026-11-23, WHERE in WHERE and masked ELSEWHERE, `Where.Masked`'s `MaskedArm`s and nested
   `Where`s in a block's `Body`, a `General` construct's every mask in a temporary computed when
   reached under its control mask, a chain of `whereMask`s, `ir/lowerwhere.go`'s `generalWhere`;
-  F95ONLY retired),
+  F95ONLY retired; subtask 11, done 2026-11-23, the intrinsics: MAXLOC and MINLOC with DIM= as
+  reductions in `ir`'s `reduce`, a positional LOGICAL second argument still the MASK
+  (`keywordAt`), CEILING's and FLOOR's KIND= (`evaluator.wholeType` when folded), and CALL
+  CPU_TIME, FTNRTL's `FTN$CPU_TIME_F` to `_H` over JPI$_CPUTIM, GSMATCH 1,33),
   **Phase 113 is the errata** (its Part B the scope: the cheap
   Fortran 90 NOTIMPLs, LIB$INITIALIZE, STR$'s arithmetic, `USE
   STARLET_SSDEF`, MACRO's and LINK's gaps, housekeeping, and a VMS probe

@@ -7365,6 +7365,7 @@ It has these routines, which MACRO programs can call too:
 | `FTN$SYSTEM_CLOCK(count, rate, max)`, `FTN$SYSTEM_CLOCK_W(...)` | SYSTEM_CLOCK: the system time's hundredths modulo HUGE+1, 100, and HUGE, as longwords or words |
 | `FTN$RANDOM_F(x)`, `_D`, `_G`, `_H` | RANDOM_NUMBER of one element of that format: MTH$RANDOM's draws on FTNRTL's seed (one for F, three for D and G, five for H) |
 | `FTN$RANDOM_SEED(size, put, get)`, `FTN$RANDOM_SEED_W(...)` | RANDOM_SEED: the seed's size (1, or 2 words), set from `put`, given to `get`; with none of them the first seed, 1234567 |
+| `FTN$CPU_TIME_F(t)`, `_D`, `_G`, `_H` | Fortran 95's CPU_TIME of that format: the process's CPU time, `$GETJPIW`'s JPI$_CPUTIM in 10 ms ticks, divided by 100; -1 if `$GETJPIW` fails |
 | `FTN$JISHFTC(i, shift, size)` | The intrinsic function ISHFTC of INTEGER\*4s (by reference): the low `size` bits of `i` shifted `shift` places to the left (`-shift` to the right), circularly, the other bits as they were, in R0 |
 | `FTN$IISHFTC(i, shift, size)` | The same of INTEGER\*2s, its word sign-extended to an INTEGER\*4 in R0, as Table D-3 gives IISHFTC's result |
 | `FTN$LEN(s)`, `FTN$INDEX(s, t)`, `FTN$ICHAR(s)` | LEN, INDEX, and ICHAR of strings by descriptor, an INTEGER\*4 in R0 |
@@ -8811,7 +8812,8 @@ FTNRTL. All but `TRIM` and `REPEAT` work on arrays an element at a time. `ACHAR`
 
 **The numeric functions** (the standard's 13.13). `CEILING(A)` and `FLOOR(A)` are the
 least integer not less than a `REAL` `A` and the greatest not greater, of the default
-`INTEGER` kind, written in line (a truncation, then 1 added or taken away when that moved
+`INTEGER` kind, or with Fortran 95's `KIND=` of that kind (`CEILING(X, KIND=2)` an
+`INTEGER*2`; under `/NOF90` too), written in line (a truncation, then 1 added or taken away when that moved
 the value the wrong way). `MODULO(A, P)` is `A - FLOOR(A/P)*P`, the remainder with `P`'s
 sign where `MOD`'s has `A`'s: `MODULO(-8, 5)` is 2 and `MOD(-8, 5)` -3. It is `MOD`'s
 remainder with `P` added when the signs differ, in line for `INTEGER`s, through MTHRTL's
@@ -8880,6 +8882,12 @@ The integer arguments of all four are of the default kind by the standard; govax
 `INTEGER*2` or `INTEGER*4`, all of one length in a call. FTNRTL's routines are
 `FTN$DATE_AND_TIME`, `FTN$SYSTEM_CLOCK`, and `FTN$RANDOM_SEED` (each with a `_W` form for
 `INTEGER*2`), and `FTN$RANDOM_F` to `FTN$RANDOM_H`.
+
+`CALL CPU_TIME(TIME)` (Fortran 95's 13.14.33, a fifth subroutine under `/F90`) gives a
+`REAL` scalar of any kind the process's CPU time in seconds, VMS's JPI$\_CPUTIM: it counts
+in steps of 10 ms from the process's start, not the image's, so only the difference between
+two calls means anything, as the standard says. FTNRTL's routines are `FTN$CPU_TIME_F` to
+`FTN$CPU_TIME_H`, by `TIME`'s format.
 
 A substring whose upper bound is below its lower, `S(I:I-1)`, has no characters, whatever
 its bounds are, and `/CHECK=BOUNDS` checks a substring's bounds only when it isn't empty;
@@ -9093,8 +9101,12 @@ shifted:  72.0  72.0  85.0  52.0  91.0  49.0
   dimensions then, and under `/CHECK=BOUNDS` one out of range is `%FOR-F-NOTCONFOR`); an
   empty array's SUM is 0, its PRODUCT 1,
   its MAXVAL the most negative number, and its MINVAL the most positive. MAXLOC and MINLOC
-  give the first extreme's subscripts, each counted from 1, or zeros if none (Fortran 90 gives
-  them no `DIM=`). DOT_PRODUCT, MATMUL (matrix by matrix, vector by matrix, matrix by vector),
+  give the first extreme's subscripts, each counted from 1, or zeros if none. With Fortran
+  95's `DIM=` (under `/NOF90` too) each is a reduction along that dimension, of the rank
+  below the array's: `MAXLOC(M, DIM=1)` of `M(2, 3)` is three places, each column's
+  greatest's row (a scalar of an array of rank 1), and a `DIM=` known only at run time
+  chooses among the dimensions then; without a keyword, a second argument that is
+  `LOGICAL` is the `MASK`, as in Fortran 90 (`MAXLOC(M, M < 8)`). DOT_PRODUCT, MATMUL (matrix by matrix, vector by matrix, matrix by vector),
   and TRANSPOSE are written in line; SIZE, SHAPE, LBOUND, and UBOUND answer for any array.
   The transformational functions SPREAD, CSHIFT, EOSHIFT (with `BOUNDARY=`, or 0, `.FALSE.`, or
   blanks), PACK (with `VECTOR=`, and a scalar `MASK`), UNPACK, and RESHAPE (of any values,

@@ -9,9 +9,9 @@ import (
 // Fortran 90's array functions (13.10.13 to 13.10.19; docs/planning/PHASE-102 -
 // Fortran 90 array expressions.md, finding 12), computed in line: the
 // reductions SUM, PRODUCT, MAXVAL, MINVAL (ARRAY, DIM=, MASK=), ALL, ANY, and
-// COUNT (MASK, DIM=); DOT_PRODUCT; MAXLOC and MINLOC (ARRAY, MASK=; no DIM= in
-// Fortran 90), which count each subscript from 1, the first extreme winning,
-// and give zeros when there is none (the author's answer 5); the inquiries
+// COUNT (MASK, DIM=); DOT_PRODUCT; MAXLOC and MINLOC (ARRAY, DIM=, MASK=; DIM=
+// is Fortran 95's), which count each subscript from 1, the first extreme
+// winning, and give zeros when there is none (the author's answer 5); the inquiries
 // SIZE, LBOUND, UBOUND (DIM=), and SHAPE; MATMUL; and TRANSPOSE. Each is an
 // ArrayFunc.
 //
@@ -29,6 +29,11 @@ import (
 //   - MAXLOC, MINLOC, SHAPE, and LBOUND and UBOUND without DIM= are a small
 //     INTEGER array, one element per dimension of their argument, computed
 //     into a temporary before the statement's loops.
+//
+// MAXLOC and MINLOC with DIM= (Fortran 95's 13.14.65 and 13.14.70) are
+// reductions like MAXVAL's: each element the place along DIM of the first
+// extreme of its line, counted from 1, or 0 where MASK holds for none of it; of
+// an array of rank one, a scalar (Dim 1, no shape).
 //
 // DIM= that isn't constant on an ARRAY of rank above 1 makes a result whose
 // shape depends on its value, computed into a temporary when the program runs
@@ -167,13 +172,51 @@ func (a *analyzer) arrayFunction(e *ast.Apply, args []ast.Expr) Expr {
 			return a.bad(e.Pos)
 		}
 
-		if !a.arrayMask(f, arg(1)) {
+		dim, mask := arg(1), arg(2)
+		f.T = IntegerType
+
+		if dim != nil && mask == nil && !keywordAt(e, 1) {
+			// MAXLOC(A, M): Fortran 95 has two forms, (ARRAY, DIM, MASK) and
+			// Fortran 90's (ARRAY, MASK), told apart by the second argument's
+			// type when it has no keyword.
+			v := a.arrayValue(dim)
+
+			switch {
+			case v.Type().Kind == Invalid:
+				return a.bad(e.Pos)
+			case v.Type().Kind == Logical:
+				if !a.arrayMaskOf(f, v) {
+					return a.bad(e.Pos)
+				}
+
+				f.S = knownShape(rankOf(f.Array))
+
+				return f
+			}
+
+			if !a.arrayDimOf(f, a.scalarValue(v), dim, false) {
+				return a.bad(e.Pos)
+			}
+		} else if dim != nil && !a.arrayDim(f, dim, false) {
 			return a.bad(e.Pos)
 		}
 
-		f.T, f.S = IntegerType, knownShape(rankOf(f.Array))
+		if !a.arrayMask(f, mask) {
+			return a.bad(e.Pos)
+		}
 
-		return f
+		if dim == nil {
+			f.S = knownShape(rankOf(f.Array))
+
+			return f
+		}
+
+		if f.Dim == 0 && f.DimExpr == nil {
+			// DIM= of an array of rank one: the place, a scalar.
+			f.Dim = 1
+
+			return f
+		}
 
 	case "DOT_PRODUCT":
 		return a.dotProduct(e, array(0, "VECTOR_A"), array(1, "VECTOR_B"))
@@ -223,9 +266,14 @@ func (a *analyzer) arrayFunction(e *ast.Apply, args []ast.Expr) Expr {
 // INTEGER value. A DIM= of an array of rank one is no DIM= at all to a
 // reduction: its value is a scalar either way.
 func (a *analyzer) arrayDim(f *ArrayFunc, x ast.Expr, scalar bool) bool {
+	return a.arrayDimOf(f, a.value(x), x, scalar)
+}
+
+// arrayDimOf is arrayDim of DIM's value, dv, analyzed already, x its text.
+func (a *analyzer) arrayDimOf(f *ArrayFunc, dv Expr, x ast.Expr, scalar bool) bool {
 	rank := rankOf(f.Array)
 
-	d := a.convert(a.arithmetic(a.value(x)), IntegerType)
+	d := a.convert(a.arithmetic(dv), IntegerType)
 	if d.Type().Kind == Invalid {
 		return false
 	}
@@ -256,6 +304,17 @@ func (a *analyzer) arrayDim(f *ArrayFunc, x ast.Expr, scalar bool) bool {
 	return true
 }
 
+// keywordAt reports whether e's argument i (as written) has a keyword.
+func keywordAt(e *ast.Apply, i int) bool {
+	if i >= len(e.Args) {
+		return false
+	}
+
+	_, ok := e.Args[i].(*ast.KeywordArg)
+
+	return ok
+}
+
 // arrayMask analyzes MASK=, if there is one: a LOGICAL array that conforms
 // with ARRAY, or a LOGICAL scalar.
 func (a *analyzer) arrayMask(f *ArrayFunc, x ast.Expr) bool {
@@ -263,8 +322,11 @@ func (a *analyzer) arrayMask(f *ArrayFunc, x ast.Expr) bool {
 		return true
 	}
 
-	m := a.arrayValue(x)
+	return a.arrayMaskOf(f, a.arrayValue(x))
+}
 
+// arrayMaskOf is arrayMask of MASK's value, m, analyzed already.
+func (a *analyzer) arrayMaskOf(f *ArrayFunc, m Expr) bool {
 	switch {
 	case m.Type().Kind == Invalid:
 		return false
