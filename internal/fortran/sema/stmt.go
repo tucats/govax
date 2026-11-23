@@ -823,9 +823,10 @@ func (a *analyzer) doVariable(n *ast.Name) *Symbol {
 		return nil
 	case Integer:
 	case Real:
-		// Fortran 90's B.2.2: a REAL or DOUBLE PRECISION DO variable is
-		// obsolescent, its trip count at the mercy of rounding.
-		a.extensions.obsolete(n.Pos, "a DO variable of type "+v.Sym.Type.String())
+		// Fortran 95's B.1.1: a REAL or DOUBLE PRECISION DO variable is
+		// deleted (Fortran 90 called it obsolescent), its trip count at the
+		// mercy of rounding.
+		a.extensions.deleted(n.Pos, "a DO variable of type "+v.Sym.Type.String())
 	default:
 		a.report("DOVAR", n.Pos, n.Name, v.Sym.Type.String())
 

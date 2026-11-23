@@ -2,6 +2,7 @@ package debugger_test
 
 import (
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -545,5 +546,94 @@ func TestFortranEmptyArrays(t *testing.T) {
 		if _, err := sayErr(c, want.line); err == nil || !strings.Contains(err.Error(), want.says) {
 			t.Errorf("%s: %v, want %q", want.line, err, want.says)
 		}
+	}
+}
+
+// forms95Source has Fortran 95's forms (docs/planning/PHASE-112 - Fortran 95.md,
+// subtask 13): a FORALL statement calling a PURE function, a FORALL construct, and
+// objects of a type with default initialization, one the main program's and one a
+// subroutine's local, set at its every entry.
+const forms95Source = `      OPTIONS /F90
+      PROGRAM F95
+      TYPE T
+        INTEGER :: N = 7
+        REAL :: X = 2.5
+      END TYPE
+      INTEGER I, J, K(4), M(3,3)
+      TYPE(T) V
+      I = 99
+      FORALL (I = 1:4) K(I) = SQ(I)
+      CALL SHOW(K, V)
+      FORALL (I = 1:3)
+        FORALL (J = 1:3) M(I,J) = I*10 + J
+        M(I,I) = 0
+      END FORALL
+      PRINT *, M, I
+      CONTAINS
+      PURE INTEGER FUNCTION SQ(N)
+      INTEGER, INTENT(IN) :: N
+      SQ = N * N
+      END FUNCTION
+      SUBROUTINE SHOW(A, W)
+      INTEGER A(4)
+      TYPE(T) W, L
+      L%N = W%N + 1
+      PRINT *, A, L%N, I
+      END SUBROUTINE
+      END
+`
+
+// TestFortran95Forms: a FORALL's index has no storage of its own, so EXAMINE of its name
+// shows the unit's variable of that name, which the FORALL leaves alone, while a PURE
+// function called for each index sees the index's value through its dummy; an object of
+// a type with default initialization reads as any record, a local already set at a
+// routine's break, which comes after its entry code; and a STEP in a FORALL construct
+// goes a statement at a time, each done for every index before the next.
+func TestFortran95Forms(t *testing.T) {
+	c := fortranSessionOf(t, forms95Source, "F95.SQ")
+	noUserStep(c)
+
+	dispatch(t, c, "SET RADIX DECIMAL")
+
+	for _, step := range []struct{ line, output string }{
+		{"EXAMINE N", "F95\\F95.SQ.N:  1\n"},
+		{"EXAMINE I", "F95\\F95.I:  99\n"},
+		{"EXAMINE V", "F95\\F95.V%N:  7\nF95\\F95.V%X:  2.500000\n"},
+	} {
+		if got := variableOutput(t, c, step.line); got != step.output {
+			t.Errorf("%s: got %q, want %q", step.line, got, step.output)
+		}
+	}
+
+	dispatch(t, c, "CANCEL BREAK F95.SQ")
+	dispatch(t, c, "SET BREAK F95.SHOW")
+
+	if out := say(t, c, "GO"); !strings.Contains(out, "FORTRAN line 25:") {
+		t.Errorf("GO to SHOW: %q", out)
+	}
+
+	for _, step := range []struct{ line, output string }{
+		{"EXAMINE L", "F95\\F95.SHOW.L%N:  7\nF95\\F95.SHOW.L%X:  2.500000\n"},
+		{"EXAMINE A(4)", "F95\\F95.SHOW.A(4):  16\n"},
+	} {
+		if got := variableOutput(t, c, step.line); got != step.output {
+			t.Errorf("%s: got %q, want %q", step.line, got, step.output)
+		}
+	}
+
+	// Out of SHOW and into the FORALL construct, whose header has no code of its own:
+	// its bounds are constants, and each statement is a loop over every index.
+	for _, line := range []int{26, 27, 13, 14, 16} {
+		if out := say(t, c, "STEP"); !strings.Contains(out, "FORTRAN line "+strconv.Itoa(line)+":") {
+			t.Fatalf("a step should go to line %d: %q", line, out)
+		}
+	}
+
+	if got := variableOutput(t, c, "EXAMINE M(2,1)"); got != "F95\\F95.M(2,1):  21\n" {
+		t.Errorf("EXAMINE M(2,1) after the construct: %q", got)
+	}
+
+	if got := variableOutput(t, c, "EXAMINE I"); got != "F95\\F95.I:  99\n" {
+		t.Errorf("EXAMINE I after the construct: %q", got)
 	}
 }

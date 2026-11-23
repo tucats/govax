@@ -7,7 +7,8 @@ done 2026-11-23; subtask 3, zero-sized arrays, done 2026-11-23; subtask 4, `NULL
 subtask 7, ELEMENTAL, done 2026-11-23; subtask 8, the FORALL statement, done 2026-11-23;
 subtask 9, the FORALL construct, done 2026-11-23; subtask 10, WHERE in WHERE, done 2026-11-23;
 subtask 11, the intrinsics, done 2026-11-23; subtask 12, FTNRTL's zero widths and namelist
-comments, done 2026-11-23; subtask 13 is next. Phase 99's question 2 left Fortran 95's additions to an
+comments, done 2026-11-23; subtask 13, `/STANDARD=F90` widened with listings, cross references,
+and the debugger, done 2026-11-23; subtask 14 is next. Phase 99's question 2 left Fortran 95's additions to an
 optional Phase 112, the author chose go at Phase 111's close-out, and the phase was widened
 to the Fortran errata the same day. At the errata survey's review the author split it:
 Fortran 95 is this phase, and the errata, with the survey (its Part A), is Phase 113
@@ -115,7 +116,8 @@ Already Fortran 95's in govax: allocatable locals deallocated at return (Phase 9
 10. WHERE in WHERE and masked ELSEWHERE; F95ONLY retired.
 11. The intrinsic changes and CPU_TIME.
 12. Zero widths in FTNRTL.
-13. `/STANDARD=F90` widened; listings, cross references, and the debugger on the new forms.
+13. `/STANDARD=F90` widened; listings, cross references, and the debugger on the new forms
+    (done 2026-11-23).
 14. Programs end to end (`testdata/fortran90`, held to gfortran `-std=f95` by `compare.py`).
 15. The close-out: MANUAL.md's 14.13, FORTRAN-INTERNALS.md's section 37, HELP FORTRAN.
 
@@ -310,7 +312,8 @@ way) and the HPF_LIBRARY routines. **Not planned.**
 13. **`/STANDARD=F90`** widened, Fortran 95's deleted and obsolescent lists (A.3's 12,
     question 1); listings, cross references (FORALL indexes, PURE in the attributes
     column), and the debugger on the new forms (a FORALL index has no storage of its own
-    unless the temporaries give it one; a default-initialized object reads as any).
+    unless the temporaries give it one; a default-initialized object reads as any) (done
+    2026-11-23).
 14. **Programs end to end**: `testdata/f95`'s probes finished into `testdata/fortran90`,
     with outputs worked by hand, held to gfortran by `compare.py`'s `PROGRAMS90`; a program
     of some size using them together.
@@ -858,3 +861,50 @@ with every recommendation of A.5:
   IO topic, FORTRAN-INTERNALS.md's section 34 "What waits". Phase 113's A.1's 7 is marked
   resolved. Subtask 13, `/STANDARD=F90` widened with listings, cross references, and the
   debugger, is next.
+- **2026-11-23:** Subtask 13, `/STANDARD=F90` widened, with listings, cross references, and the
+  debugger on Fortran 95's forms. **What F90 judges by** is Fortran 90 with Fortran 95's additions
+  (Decision 2), so they are flagged only under FORTRAN-77 (`sema/standard.go`): `statementRows`
+  gains FORALL's statement and construct; the walk reads a FORALL's header and its statement, a
+  masked ELSEWHERE's mask, and PURE and ELEMENTAL with RECURSIVE (`prefixes`); `newIntrinsics`
+  gains CPU_TIME and NULL. Two gaps found on the way: an intrinsic subroutine's CALL was never
+  judged at all (DATE_AND_TIME, MVBITS, ... under F77; now `intrinsicProcedure`, "the intrinsic
+  subroutine", from `intrinsicCall`), and NULL was noted nowhere, in the cross reference or by
+  `/STANDARD` (now `nullReference` notes it, each place once). Zero widths in a FORMAT statement
+  (`zeroWidth`): I0, B0, O0, Z0, and F0.d Fortran 90's under F90 (Fortran 95's), any other
+  (E0, D0, G0, L0, A0, EN0, ES0) no standard's. A constant character format isn't looked at, as
+  before. **The obsolescent and deleted lists** are Fortran 95's (answer 1): a new message,
+  `DELETED` ("deleted in Fortran 95: %s", informational), for ASSIGN, the assigned GO TO, an
+  assigned format, PAUSE, H editing, a REAL DO variable, and a jump to END IF from outside
+  (`extensions.deleted`; a finding's `kind` says which message); OBSOLESCENT's text is
+  "obsolescent in Fortran 95", and it adds the computed GO TO (the walk), `CHARACTER*n` (the walk's
+  `typeSpec`; not `*(*)`, nor a length after a name, the author's answer), a statement function
+  (`defineStmtFunction`), DATA among the executable statements (`order`, by the unit's group), an
+  assumed-length CHARACTER function (`assumedLengthFunction`, before the report, since
+  `passedLengths` runs after it), and fixed source form, once per fixed-form file at its first
+  statement (`reportFixedForm`, in `ReportSourceExtensions`), if any of its statements is judged by
+  Fortran 90 with OBSOLESCENT on, so a file starting `OPTIONS /F90` counts, and an INCLUDE file of
+  fixed form is a file of its own. A fix: `/WARNINGS=NOGENERAL` held back OBSOLESCENT though the
+  manual says it doesn't hold back what `/STANDARD` asked for (Phase 110's slip; `diag`'s
+  `askedFor` now has OBSOLESCENT and DELETED). `TestStandardF90Witness`'s list gains what the
+  corpus does on purpose (`CHARACTER*n` in 14 programs, a statement function in PTRCARR, fixed form
+  in MIXED's and POLYS's `.for` and `.inc` files); fcalc draws nothing new. **Cross references**
+  (`sema/crossref.go`): a PURE or ELEMENTAL procedure says so after its type, through its explicit
+  interface (its module's, a USE's, an interface body's) or as the unit's own name (`describeCross`);
+  each FORALL index has a row of its own, `I  INTEGER FORALL index`, its mentions those of every
+  FORALL of the unit with an index of the name (`Unit.forallIndexes`, `forallRows`; the header noted
+  as an assignment, as a DO's variable is), after the unit's variable of the name (rows of one name
+  ordered by what they say). The storage map has nothing new: an index's cell is the compiler's
+  `$In`, not listed. **The debugger** needed nothing: a FORALL index has no storage of its own (a
+  pooled `$In` cell, absent from the `/DEBUG` table), so EXAMINE of its name shows the unit's
+  variable, which the FORALL leaves alone; a PURE function called for each index shows the index's
+  value through its dummy; an object with default initialization reads as any record, a local
+  already set at a routine's break (after the entry code, Phase 110's B line); a STEP goes a
+  construct's statement at a time, each done for every tuple, and a header whose bounds are
+  constants has no code of its own, so the first stop is the statement after it (ours, consistent
+  with the construct's meaning). Tests: `standard95_test.go` (`TestStandardFortran95Forms`,
+  `TestStandardZeroWidths`, `TestStandardFortran95Obsolescent`, `TestStandardFixedForm`,
+  `TestStandardDeletedKept`), `obsolescent_test.go`'s expectations in Fortran 95's words,
+  `listing90_test.go`'s `TestListing95`, `debugger`'s `TestFortran95Forms`. MANUAL.md's
+  "Conformance to a standard" table and 14.7's `/STANDARD` note, FORALL's and PURE's paragraphs in
+  14.13; HELP FORTRAN's /STANDARD and Compiler_Tools; FORTRAN-INTERNALS.md's section 35 "Obsolescent
+  features need what a program means". Subtask 14, programs end to end, is next.

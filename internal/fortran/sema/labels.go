@@ -141,7 +141,7 @@ func (a *analyzer) checkLabels() {
 			a.report("SHAREDTERM", r.pos, r.label)
 
 		case l.endIf != 0 && !r.assign && !inConstruct(r.path, l.endIf):
-			a.extensions.obsolete(r.pos, "a jump to END IF from outside its IF block")
+			a.extensions.deleted(r.pos, "a jump to END IF from outside its IF block")
 		}
 	}
 }

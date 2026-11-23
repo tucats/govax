@@ -705,7 +705,8 @@
 3 Compiler_Tools
 
    The compiler's tools know Fortran 90.  /STANDARD=F90 judges a
-   program by it, and reports its obsolescent features; /WARNINGS
+   program by it, with Fortran 95's additions, and reports Fortran
+   95's obsolescent and deleted features; /WARNINGS
    reports a host's name an internal procedure hides (HOSTHIDDEN) and a
    value nothing reads (UNREAD); listings and cross references go by
    scope, with attributes, generic names, and operators; /CHECK=POINTERS
@@ -991,18 +992,23 @@
    Flags what a standard doesn't have, each an informational message, so
    the program still compiles.  F77 judges by FORTRAN-77 and F90 by
    Fortran 90; with neither, each unit is judged by its /F90 setting
-   (Fortran 90 for free form and /F90, FORTRAN-77 for /NOF90).  What's
-   looked at: SYNTAX (statements, declarations, constants, operators,
+   (Fortran 90 for free form and /F90, FORTRAN-77 for /NOF90).  Fortran
+   90 takes in Fortran 95's FORALL, PURE, ELEMENTAL, NULL, CPU_TIME,
+   and zero widths, as /F90 does.  What's looked at: SYNTAX (statements, declarations, constants, operators,
    specifiers, edit descriptors, names, intrinsic functions),
    SOURCE_FORM (how lines are written: under FORTRAN-77 tabs, small
    letters, ! comments, debugging lines, past column 72, over 19
    continuation lines, free form; under Fortran 90 tabs, debugging
    lines, past column 72 or 132, over 19 or 39 continuation lines),
    OBSOLESCENT (under Fortran 90 only, on with SYNTAX unless named:
-   the arithmetic IF, ASSIGN, the assigned GO TO, an assigned format,
-   PAUSE, alternate returns, H editing, a REAL DO variable, shared DO
-   termination, a DO ending other than at END DO or CONTINUE, and a
-   jump to END IF from outside its block), ALL, NONE, and NOSYNTAX,
+   Fortran 95's obsolescent features, the arithmetic IF, the computed
+   GO TO, alternate returns, shared DO termination, a DO ending other
+   than at END DO or CONTINUE, statement functions, DATA among the
+   executable statements, CHARACTER*(*) functions, CHARACTER*n, and
+   fixed source form, once per file; and as DELETED the features
+   Fortran 95 deleted, ASSIGN, the assigned GO TO, an assigned format,
+   PAUSE, H editing, a REAL DO variable, and a jump to END IF from
+   outside its block, which govax still compiles), ALL, NONE, and NOSYNTAX,
    NOSOURCE_FORM, and NOOBSOLESCENT.  /STANDARD alone, or with only
    F77, F90, and NO keywords, starts from ALL.  SYNTAX also judges an
    intrinsic function in a constant expression: none in FORTRAN-77,

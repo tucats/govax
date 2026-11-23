@@ -94,6 +94,8 @@ func (a *analyzer) intrinsicSubroutine(name string, s *Symbol, altReturns bool) 
 
 // intrinsicCall analyzes CALL sub(list).
 func (a *analyzer) intrinsicCall(s *ast.CallStmt, sub *intrinsicSub, list []ast.Expr) Stmt {
+	a.extensions.intrinsicProcedure("the intrinsic subroutine", s.Name, s.NamePos)
+
 	if sub.name == "MVBITS" {
 		a.noteSystem(s.Name, s.NamePos)
 	} else {

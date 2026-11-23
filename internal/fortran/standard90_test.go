@@ -79,26 +79,86 @@ func (m memoryModules) Find(name string) ([]string, string, bool, []string) {
 // witnessExtensions are what /STANDARD=F90 flags in the corpus's programs that isn't
 // a mistake in its tables, each program's findings as "file:line message": the
 // obsolescent features programs use on purpose (the standard's own 8.1 examples share
-// terminal statements; alternate returns are tested), which gfortran -std=f95 accepts
-// as it must.
+// terminal statements; alternate returns are tested; CHARACTER*n, a statement function,
+// and fixed source form, Fortran 95's newly obsolescent features, are Fortran 90's
+// everyday forms), which gfortran -std=f95 accepts as it must. A file another
+// includes is named by the file compiled.
 var witnessExtensions = map[string][]string{
+	"autolen": {
+		"autolen.f90:75 obsolescent in Fortran 95: the CHARACTER*n form of a length",
+	},
+	"average": {
+		"average.f90:8 obsolescent in Fortran 95: the CHARACTER*n form of a length",
+	},
+	"declare": {
+		"declare.f90:13 obsolescent in Fortran 95: the CHARACTER*n form of a length",
+	},
+	"generics": {
+		"generics.f90:49 obsolescent in Fortran 95: the CHARACTER*n form of a length",
+		"generics.f90:110 obsolescent in Fortran 95: the CHARACTER*n form of a length",
+	},
+	"hosts": {
+		"hosts.f90:38 obsolescent in Fortran 95: the CHARACTER*n form of a length",
+		"hosts.f90:57 obsolescent in Fortran 95: the CHARACTER*n form of a length",
+	},
+	"interfaces": {
+		"interfaces.f90:31 obsolescent in Fortran 95: the CHARACTER*n form of a length",
+		"interfaces.f90:104 obsolescent in Fortran 95: the CHARACTER*n form of a length",
+	},
+	"internal": {
+		"internal.f90:68 obsolescent in Fortran 95: the CHARACTER*n form of a length",
+	},
+	"layout": {
+		"layout.f90:9 obsolescent in Fortran 95: the CHARACTER*n form of a length",
+	},
+	"mixed": {
+		"fill.for:3 obsolescent in Fortran 95: fixed source form",
+		"fill.for:2 obsolescent in Fortran 95: fixed source form",
+		"report.f90:2 obsolescent in Fortran 95: fixed source form",
+		"mixed.f90:2 obsolescent in Fortran 95: fixed source form",
+	},
+	"numbers": {
+		"numbers.f90:111 obsolescent in Fortran 95: the CHARACTER*n form of a length",
+		"numbers.f90:124 obsolescent in Fortran 95: the CHARACTER*n form of a length",
+	},
+	"operators": {
+		"operators.f90:77 obsolescent in Fortran 95: the CHARACTER*n form of a length",
+		"operators.f90:37 obsolescent in Fortran 95: the CHARACTER*n form of a length",
+		"operators.f90:58 obsolescent in Fortran 95: the CHARACTER*n form of a length",
+		"operators.f90:103 obsolescent in Fortran 95: the CHARACTER*n form of a length",
+	},
+	"optional": {
+		"optional.f90:77 obsolescent in Fortran 95: the CHARACTER*n form of a length",
+	},
+	"polys": {
+		"table.for:6 obsolescent in Fortran 95: fixed source form",
+	},
+	"ptrcarr": {
+		"ptrcarr.f90:62 obsolescent in Fortran 95: a statement function",
+	},
+	"spellings": {
+		"spellings.f90:9 obsolescent in Fortran 95: the CHARACTER*n form of a length",
+	},
+	"strings": {
+		"strings.f90:7 obsolescent in Fortran 95: the CHARACTER*n form of a length",
+	},
 	"allocstat": {
-		"allocstat.f90:54 obsolescent in Fortran 90: an alternate return",
-		"allocstat.f90:154 obsolescent in Fortran 90: an alternate return",
-		"allocstat.f90:159 obsolescent in Fortran 90: an alternate return",
+		"allocstat.f90:54 obsolescent in Fortran 95: an alternate return",
+		"allocstat.f90:154 obsolescent in Fortran 95: an alternate return",
+		"allocstat.f90:159 obsolescent in Fortran 95: an alternate return",
 	},
 	"examples": {
-		"examples.f90:167 obsolescent in Fortran 90: a DO loop ending at a CALL statement",
-		"examples.f90:208 obsolescent in Fortran 90: a terminal statement shared by DO loops",
-		"examples.f90:241 obsolescent in Fortran 90: a terminal statement shared by DO loops",
-		"examples.f90:241 obsolescent in Fortran 90: a DO loop ending at an assignment",
-		"examples.f90:250 obsolescent in Fortran 90: a terminal statement shared by DO loops",
-		"examples.f90:250 obsolescent in Fortran 90: a DO loop ending at an assignment",
+		"examples.f90:167 obsolescent in Fortran 95: a DO loop ending at a CALL statement",
+		"examples.f90:208 obsolescent in Fortran 95: a terminal statement shared by DO loops",
+		"examples.f90:241 obsolescent in Fortran 95: a terminal statement shared by DO loops",
+		"examples.f90:241 obsolescent in Fortran 95: a DO loop ending at an assignment",
+		"examples.f90:250 obsolescent in Fortran 95: a terminal statement shared by DO loops",
+		"examples.f90:250 obsolescent in Fortran 95: a DO loop ending at an assignment",
 	},
 	"seqargs": {
-		"seqargs.f90:82 obsolescent in Fortran 90: an alternate return",
-		"seqargs.f90:145 obsolescent in Fortran 90: an alternate return",
-		"seqargs.f90:148 obsolescent in Fortran 90: an alternate return",
+		"seqargs.f90:82 obsolescent in Fortran 95: an alternate return",
+		"seqargs.f90:145 obsolescent in Fortran 95: an alternate return",
+		"seqargs.f90:148 obsolescent in Fortran 95: an alternate return",
 	},
 }
 

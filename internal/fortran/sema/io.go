@@ -953,7 +953,7 @@ func (a *analyzer) ioFormat(io *IO, f *ast.FormatSpec) bool {
 	case t == IntegerType:
 		if _, ok := e.(*Var); ok {
 			io.FormatVar = e
-			a.extensions.obsolete(f.Expr.Position(), "an assigned format specifier")
+			a.extensions.deleted(f.Expr.Position(), "an assigned format specifier")
 
 			return true
 		}

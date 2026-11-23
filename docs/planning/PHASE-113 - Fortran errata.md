@@ -254,7 +254,9 @@ HP Fortran manual (`VMS-FORTRAN-LANGUAGE.txt`) describes every one (FORALL 69 ti
 8. `/STANDARD=F95` beside `F77` and `F90`: F95's additions not flagged under it, the deleted
    features (a REAL DO variable, branching to END IF from outside, PAUSE, ASSIGN and assigned
    GO TO, the H edit descriptor) flagged as deleted, Fortran 95's obsolescent list. Whether
-   `/F90` units are judged by F95 by default is question 9. **Proposed: 112.**
+   `/F90` units are judged by F95 by default is question 9. **Proposed: 112.** *(Resolved in
+   Phase 112, subtask 13, with no F95 keyword: `/STANDARD=F90` judges by Fortran 90 with Fortran
+   95's additions, and flags Fortran 95's deleted features as DELETED and its obsolescent ones.)*
 9. *(New.)* Automatic deallocation of allocatable arrays at a procedure's end and every
    pointer starting disassociated are already Fortran 95's in govax (Phase 99's Decision 8,
    Phase 107's answer 2): **resolved**, nothing to do.

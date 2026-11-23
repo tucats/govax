@@ -35,6 +35,10 @@ func (a *analyzer) defineStmtFunction(s *ast.AssignStmt, sym *Symbol) {
 	def := &StmtFuncDef{Sym: sym}
 	ok := true
 
+	// Fortran 95's B.2.5: a statement function is obsolescent, an internal
+	// function doing its work.
+	a.extensions.obsolete(s.Position(), "a statement function")
+
 	// The definition's scope, inside the unit's: its dummy arguments are its
 	// own names, and every other name in its expression is the unit's. Each
 	// dummy is defined as it is read, so a name given twice finds the first.

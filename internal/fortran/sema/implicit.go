@@ -220,6 +220,20 @@ func (a *analyzer) untyped() {
 	}
 }
 
+// assumedLengthFunction notes, for /STANDARD, a function whose own name has a passed
+// length, CHARACTER*(*): its length is its caller's, which Fortran 95 calls obsolescent
+// (its B.2.4).
+func (a *analyzer) assumedLengthFunction() {
+	if s := a.unit.Result; s != nil && s.PassedLength() && !s.broken {
+		pos := s.TypePos
+		if !s.Typed {
+			pos = s.Pos
+		}
+
+		a.extensions.obsolete(pos, "an assumed-length CHARACTER function")
+	}
+}
+
 // passedLengths reports each name given a passed length, CHARACTER*(*),
 // that may not have one (PASSEDLEN): only a dummy argument, a function's
 // own name, and a PARAMETER constant (sections 4.4.2, 6.2.2.2) take their

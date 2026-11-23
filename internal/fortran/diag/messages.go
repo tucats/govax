@@ -41,9 +41,15 @@ var messages = map[string]kind{
 	// (sema/standard.go): a remark, so a program flagged still compiles.
 	"EXTENSION": {Informational, "extension to %s: %s"},
 
-	// OBSOLESCENT is one of Fortran 90's obsolescent features (its B.2), as
-	// /STANDARD=OBSOLESCENT asks when judging by Fortran 90: a remark, as EXTENSION is.
-	"OBSOLESCENT": {Informational, "obsolescent in Fortran 90: %s"},
+	// OBSOLESCENT is one of Fortran 95's obsolescent features (its B.2), as
+	// /STANDARD=OBSOLESCENT asks when judging by Fortran 90, which govax's
+	// /STANDARD=F90 takes to include Fortran 95: a remark, as EXTENSION is.
+	"OBSOLESCENT": {Informational, "obsolescent in Fortran 95: %s"},
+
+	// DELETED is one of the features Fortran 95 deleted (its B.1), which were
+	// Fortran 90's obsolescent ones, flagged where OBSOLESCENT is. govax still
+	// compiles them, since VAX FORTRAN has them.
+	"DELETED": {Informational, "deleted in Fortran 95: %s"},
 
 	// DEBUGOPTIMIZE is /DEBUG with /OPTIMIZE, which is allowed but may surprise.
 	"DEBUGOPTIMIZE": {Informational, "under /OPTIMIZE the debugger may find a variable out of date, its value in a register; use /NOOPTIMIZE to debug"},

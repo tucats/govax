@@ -261,6 +261,10 @@ func (a *analyzer) forallIndex(x *ast.ForallIndex, f *Forall) (*ForallIndex, boo
 	sym.Pos = x.Pos
 	index := &ForallIndex{Sym: sym}
 
+	// The FORALL gives the index its values, as a DO does its variable.
+	a.note(&sym.refs, x.Pos, RefAssigned)
+	a.unit.forallIndexes = append(a.unit.forallIndexes, sym)
+
 	for _, other := range f.Indexes {
 		if other.Sym.Name == x.Name {
 			a.report("FORALLTWICE", x.Pos, x.Name)

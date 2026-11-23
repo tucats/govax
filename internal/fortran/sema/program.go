@@ -240,6 +240,10 @@ type Unit struct {
 	// and RANDOM's seed, MVBITS's TO (warnings.go's neverRead).
 	readsToo map[Reference]bool
 
+	// forallIndexes are the indexes of the unit's FORALLs, each a symbol of its
+	// statement's own (forall.go), which the cross reference lists by name.
+	forallIndexes []*Symbol
+
 	// calls are the unit's references to routines, which Analyze checks
 	// against the file's other units once every unit is analyzed.
 	calls []routineRef

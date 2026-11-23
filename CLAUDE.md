@@ -1488,7 +1488,13 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   CPU_TIME, FTNRTL's `FTN$CPU_TIME_F` to `_H` over JPI$_CPUTIM, GSMATCH 1,33; subtask 12, done
   2026-11-23, FTNRTL's zero widths, I0, B0, O0, Z0 (`ftn_edit.mar`'s `ZERO_WIDTH`) and F0.d laid
   out in the record's room (`ftn_float.mar`'s `L_ZERO`), and namelist input's `!` comments
-  (`FTN$$LI_SKIP` in a namelist READ), both only under the F90 flag),
+  (`FTN$$LI_SKIP` in a namelist READ), both only under the F90 flag; subtask 13, done 2026-11-23,
+  `/STANDARD=F90` judging Fortran 95: its additions flagged only under F77 (FORALL, PURE, ELEMENTAL,
+  NULL, CPU_TIME, zero widths, intrinsic subroutines' CALLs), Fortran 95's obsolescent list
+  (`OBSOLESCENT`, now "in Fortran 95": the computed GO TO, statement functions, DATA among
+  executables, CHARACTER*(*) functions, CHARACTER*n, fixed form once per file) and its deleted list
+  (`DELETED`, `extensions.deleted`); cross references with PURE/ELEMENTAL and a row per FORALL
+  index name (`forallRows`), NULL noted; the debugger unchanged, `TestFortran95Forms`),
   **Phase 113 is the errata** (its Part B the scope: the cheap
   Fortran 90 NOTIMPLs, LIB$INITIALIZE, STR$'s arithmetic, `USE
   STARLET_SSDEF`, MACRO's and LINK's gaps, housekeeping, and a VMS probe

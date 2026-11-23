@@ -764,6 +764,7 @@ func (a *analyzer) finishUnit() {
 	a.reportIntentOut()
 	a.checkPure()
 	a.checkElemental()
+	a.assumedLengthFunction()
 	a.reportExtensions(a.unit.AST)
 	a.checkLengths()
 	a.passedLengths()

@@ -6918,15 +6918,18 @@ gets a great many.
 
 **Conformance to a standard.** `/STANDARD` flags what a program does that a standard doesn't have, for a program
 meant to move to another compiler. `F77` judges by FORTRAN-77 and `F90` by Fortran 90; with neither, each unit is
-judged by its `/F90` setting: Fortran 90 for free form and `/F90`, FORTRAN-77 for `/NOF90`. Each finding is
+judged by its `/F90` setting: Fortran 90 for free form and `/F90`, FORTRAN-77 for `/NOF90`. Fortran 90 here takes
+in Fortran 95, as `/F90` does: `FORALL`, `PURE`, `ELEMENTAL`, `NULL`, `CPU_TIME`, a masked `ELSEWHERE`, and the
+`I0`, `B0`, `O0`, `Z0`, and `F0.d` edit descriptors are flagged only under FORTRAN-77, and the obsolescent and
+deleted features are Fortran 95's. Each finding is
 `%FORT-I-EXTENSION`, informational, naming the standard (`extension to Fortran 90: the BYTE statement`), so a flagged
 program still compiles with a good `$STATUS`, and its code is the same:
 
 | Keyword | What's flagged |
 | --- | --- |
-| `SYNTAX` | DEC's statements (`TYPE`, `STRUCTURE`, `BYTE`, ...), `*n` lengths on types other than `CHARACTER`, initial values in slashes in a type statement, Hollerith, DEC's octal and hexadecimal, and RADIX-50 constants, `Q` exponents, `.XOR.`, a sign straight after an operator, `%LOC` and its kin, record fields with `.`, null arguments, control list specifiers and word values the standard lacks, `READ (u'r)`, the `Q` and `$` edit descriptors, a descriptor with no width, variable format expressions, names with `$`, and DEC's intrinsic functions. Under FORTRAN-77, also everything Fortran 90 added (`::` and attributes, kinds, modules, `USE`, derived types and `%`, `ALLOCATE`, pointers, `WHERE`, `SELECT CASE`, `EXIT`, `CYCLE`, construct names, sections, constructors, keyword arguments, defined operators, `==` and its kin, `"…"` constants, the `B`, `O`, `Z`, `EN`, and `ES` edit descriptors, its specifiers and intrinsics) and what it adopted from DEC (`DO WHILE`, `END DO`, a `DO` without a label, `IMPLICIT NONE`, `INCLUDE`, `NAMELIST`, `RECURSIVE`, names over six characters or with `_`) |
+| `SYNTAX` | DEC's statements (`TYPE`, `STRUCTURE`, `BYTE`, ...), `*n` lengths on types other than `CHARACTER`, initial values in slashes in a type statement, Hollerith, DEC's octal and hexadecimal, and RADIX-50 constants, `Q` exponents, `.XOR.`, a sign straight after an operator, `%LOC` and its kin, record fields with `.`, null arguments, control list specifiers and word values the standard lacks, `READ (u'r)`, the `Q` and `$` edit descriptors, a descriptor with no width, a width of 0 on `E`, `D`, `G`, `L`, `A`, `EN`, or `ES`, variable format expressions, names with `$`, and DEC's intrinsic functions and subroutines. Under FORTRAN-77, also everything Fortran 90 added (`::` and attributes, kinds, modules, `USE`, derived types and `%`, `ALLOCATE`, pointers, `WHERE`, `SELECT CASE`, `EXIT`, `CYCLE`, construct names, sections, constructors, keyword arguments, defined operators, `==` and its kin, `"…"` constants, the `B`, `O`, `Z`, `EN`, and `ES` edit descriptors, its specifiers and intrinsics, and Fortran 95's `FORALL`, `PURE`, `ELEMENTAL`, `NULL`, `CPU_TIME`, and zero widths) and what it adopted from DEC (`DO WHILE`, `END DO`, a `DO` without a label, `IMPLICIT NONE`, `INCLUDE`, `NAMELIST`, `RECURSIVE`, names over six characters or with `_`) |
 | `SOURCE_FORM` | Under FORTRAN-77: tabs in the first six columns, small letters outside constants and comments, `!` comments, debugging lines, a statement past column 72 (under `/EXTEND_SOURCE`), more than 19 continuation lines, and free source form, once per file. Under Fortran 90: a tab anywhere, debugging lines, past column 72, more than 19 continuation lines in fixed form or 39 in free form, and a free-form comment line over 132 characters |
-| `OBSOLESCENT` | Under Fortran 90 only (on with `SYNTAX` unless named), the standard's obsolescent features (its B.2), each `%FORT-I-OBSOLESCENT`: the arithmetic `IF`, `ASSIGN`, the assigned `GO TO`, an assigned format (`PRINT K, X`), `PAUSE`, an alternate return (a `*` dummy, `*label` in a `CALL`, `RETURN i`), the `H` edit descriptor, a `REAL` or `DOUBLE PRECISION` `DO` variable, loops sharing a terminal statement, a loop ending anywhere but at `END DO` or `CONTINUE`, and a jump to `END IF` from outside its `IF` block |
+| `OBSOLESCENT` | Under Fortran 90 only (on with `SYNTAX` unless named), Fortran 95's obsolescent features (its B.2), each `%FORT-I-OBSOLESCENT`: the arithmetic `IF`, the computed `GO TO`, an alternate return (a `*` dummy, `*label` in a `CALL`, `RETURN i`), loops sharing a terminal statement, a loop ending anywhere but at `END DO` or `CONTINUE`, a statement function, `DATA` among the executable statements, a `CHARACTER*(*)` function, the `CHARACTER*n` form of a length (not `CHARACTER*(*)`, nor `C*n` after a name), and fixed source form, once per file at its first statement; and the features Fortran 95 deleted (its B.1), each `%FORT-I-DELETED`, which govax still compiles: `ASSIGN`, the assigned `GO TO`, an assigned format (`PRINT K, X`), `PAUSE`, the `H` edit descriptor, a `REAL` or `DOUBLE PRECISION` `DO` variable, and a jump to `END IF` from outside its `IF` block |
 
 The keywords also come as `NOSYNTAX`, `NOSOURCE_FORM`, and `NOOBSOLESCENT`, with `ALL` and `NONE`, cut short if you
 like. `/STANDARD` alone, or with only `F77`, `F90`, and `NO` keywords, starts from `ALL`, and the default is
@@ -7524,7 +7527,8 @@ FORTRAN run-time library, which could be run:
   `CDEC$ OPTIONS /WARN=ALIGNMENT` still gets its messages.
 - `/STANDARD`: the manuals at hand give `SYNTAX` and `SOURCE_FORM` and no more. What's flagged comes from the
   language manual's blue print, FORTRAN-77's own rules, and for `F90` the Fortran 90 standard (its numbered syntax
-  rules, section 3's source form, chapter 13's intrinsic procedures, and B.2's obsolescent features); `F77`, `F90`,
+  rules, section 3's source form, chapter 13's intrinsic procedures, and B.2's obsolescent features), with Fortran
+  95's additions and its obsolescent and deleted lists, as the HP Fortran manual gives them; `F77`, `F90`,
   `OBSOLESCENT`, the standard each unit gets by default, and the messages are govax's. No keyword covers what a
   program means but the few things `OBSOLESCENT` and a constant expression's intrinsic functions need it for, nor
   does any OPTIONS statement take it.
@@ -9207,6 +9211,13 @@ shifted:  72.0  72.0  85.0  52.0  91.0  49.0
     where (r(i,:) == 0.0) r(i,:) = -1.0
   end forall
   ```
+
+  A cross reference gives each FORALL index a row of its own, `I  INTEGER FORALL index`, after
+  the unit's variable of the name if it has one, with the mentions of every FORALL whose index
+  has that name. An index has no storage the debugger can name, so `EXAMINE I` shows the
+  unit's variable I, which the FORALL leaves alone. A STEP goes a statement of a construct at a
+  time, each done for every tuple; a header whose bounds are constants has no code of its own,
+  so the first stop is at the statement after it.
 - *I/O lists*: a section, an array expression, or a constructor in an output list is written,
   and a section in an input list read, in array element order. A section of a variable (with no
   vector subscript), an assumed-shape array, and an array pointer's target go to FTNRTL as one
@@ -9342,7 +9353,9 @@ internal procedure, an interface body, or itself. Every intrinsic function is PU
 the intrinsic subroutines MVBITS; the system routines (DATE, RAN, SECNDS, ...) aren't. An
 interface body that says PURE for a procedure the file defines without it is
 `INTERFACEDIFF`, and a procedure not declared PURE given to a dummy procedure whose
-interface says PURE is `PUREACTUAL`. A module's file carries PURE.
+interface says PURE is `PUREACTUAL`. A module's file carries PURE, and a cross reference
+says it after the procedure's type (`SQ  INTEGER function, PURE from OPS`), as it says
+ELEMENTAL for an elemental one.
 
 A PURE function with an explicit interface the declarations have already given (a module
 procedure, or an interface body before the declaration), neither internal nor a dummy, may

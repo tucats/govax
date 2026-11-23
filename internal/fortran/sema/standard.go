@@ -25,9 +25,12 @@ import (
 // This is mostly syntax, found by one walk over each unit's tree (extensions.unit).
 // Semantic analysis adds what only it can see, to the same list where it decides it: an
 // intrinsic function's reference (noteIntrinsic), an array section (sections.go), an
-// intrinsic function in a constant expression (initRule), and four of the obsolescent
-// features (a REAL DO variable and a DO's ending in stmt.go, a jump to END IF from
-// outside in labels.go, an assigned format in io.go). Otherwise what a program means
+// intrinsic function in a constant expression (initRule), an intrinsic subroutine's
+// CALL (intrinsicCall), a reference to NULL (nullReference), and the obsolescent and
+// deleted features only it can tell (a REAL DO variable and a DO's ending in stmt.go, a
+// jump to END IF from outside in labels.go, an assigned format in io.go, a statement
+// function in stmtfunc.go, DATA among the executable statements in order.go, an
+// assumed-length CHARACTER function in implicit.go). Otherwise what a program means
 // isn't looked at: a non-integer subscript, .AND. of integers, a character and a number
 // in one common block. VAX FORTRAN's own command kept those under a keyword of their
 // own, which the phase's goal leaves out.
@@ -44,9 +47,14 @@ type Conformance struct {
 	// /NOF90 (the author's answer 2).
 	Standard Judged
 
-	// Obsolescent flags Fortran 90's obsolescent features (the standard's B.2) when
-	// judging by Fortran 90, if ObsolescentGiven says a keyword set it; otherwise they
-	// are flagged with Syntax. FORTRAN-77 has no obsolescent features.
+	// Obsolescent flags Fortran 95's obsolescent and deleted features (its B.2 and
+	// B.1) when judging by Fortran 90, if ObsolescentGiven says a keyword set it;
+	// otherwise they are flagged with Syntax. FORTRAN-77 has no obsolescent features.
+	//
+	// govax's Fortran 90 takes in Fortran 95 (docs/planning/PHASE-112 - Fortran
+	// 95.md, Decision 2), so what /STANDARD=F90 judges by is Fortran 95: its new
+	// statements and forms aren't flagged, and its lists of obsolescent and deleted
+	// features are the ones flagged.
 	Obsolescent      bool
 	ObsolescentGiven bool
 }
@@ -165,6 +173,8 @@ func (s Conformance) With(keywords []string) (Conformance, error) {
 // mark judged by the standard where it is. A text library's lines aren't the program's
 // own to change, so they go unmentioned.
 func ReportSourceExtensions(p *source.Program, s Conformance, messages *diag.List) {
+	reportFixedForm(p, s, messages)
+
 	report := func(marks []source.Mark) {
 		for _, m := range marks {
 			if j := s.judging(m.F90); !m.Library && !m.In.Has(j.f90) {
@@ -181,6 +191,42 @@ func ReportSourceExtensions(p *source.Program, s Conformance, messages *diag.Lis
 
 	if s.Syntax {
 		report(p.Includes)
+	}
+}
+
+// reportFixedForm flags fixed source form, which Fortran 95 calls obsolescent (its
+// B.2.8), once for each fixed-form file at its first statement (the author's answer 1
+// of docs/planning/PHASE-112 - Fortran 95.md), if any of its statements is judged by
+// Fortran 90 with the obsolescent features asked for: a file whose first statement is
+// OPTIONS /F90 is judged by Fortran 90 from its next.
+func reportFixedForm(p *source.Program, s Conformance, messages *diag.List) {
+	var (
+		first   = map[*source.File]*source.Line{}
+		flagged = map[*source.File]bool{}
+		files   []*source.File
+	)
+
+	for _, line := range p.Lines {
+		if line.File.Free || line.Library || line.Kind != source.Initial {
+			continue
+		}
+
+		if first[line.File] == nil {
+			first[line.File] = line
+			files = append(files, line.File)
+		}
+
+		if s.judging(line.F90).obsolescent {
+			flagged[line.File] = true
+		}
+	}
+
+	for _, f := range files {
+		if line := first[f]; flagged[f] {
+			messages.Report("OBSOLESCENT", diag.Position{
+				File: f.Spec, Line: line.Number, Column: 1, Text: line.Text, Serial: line.Serial,
+			}, "fixed source form")
+		}
 	}
 }
 
@@ -211,8 +257,9 @@ type row struct {
 const f90 = source.InF90
 
 // statementRows are the statements FORTRAN-77 doesn't have, and which of them Fortran 90
-// has. A derived type's definition, a CASE construct, a WHERE construct, and an
-// interface block are each flagged at the statement that starts them.
+// (with Fortran 95, FORALL) has. A derived type's definition, a CASE construct, a WHERE
+// construct, a FORALL construct, and an interface block are each flagged at the
+// statement that starts them.
 var statementRows = map[lex.Kind]row{
 	lex.Accept:            {"the ACCEPT statement", 0},
 	lex.Automatic:         {"the AUTOMATIC statement", 0},
@@ -259,6 +306,8 @@ var statementRows = map[lex.Kind]row{
 	lex.Use:               {"the USE statement", f90},
 	lex.Where:             {"the WHERE statement", f90},
 	lex.WhereBlock:        {"the WHERE construct", f90},
+	lex.Forall:            {"the FORALL statement", f90},
+	lex.ForallBlock:       {"the FORALL construct", f90},
 }
 
 // standardWords makes a set of the words in text.
@@ -281,13 +330,14 @@ var standardIntrinsics = standardWords(`
 	SINH DSINH COSH DCOSH TANH DTANH LGE LGT LLE LLT`)
 
 // newIntrinsics are the intrinsic procedures Fortran 90 adds to FORTRAN-77's (its
-// chapter 13, 13.10 to 13.13). Every other name in Table D-3, and the rest of govax's, is
+// chapter 13, 13.10 to 13.13), with the two Fortran 95 adds, CPU_TIME and NULL (its
+// 13.14.24 and 13.14.79). Every other name in Table D-3, and the rest of govax's, is
 // DEC's, an extension to both.
 var newIntrinsics = standardWords(`
-	ACHAR ADJUSTL ADJUSTR ALL ALLOCATED ANY ASSOCIATED BIT_SIZE BTEST CEILING COUNT CSHIFT
+	ACHAR ADJUSTL ADJUSTR ALL ALLOCATED ANY ASSOCIATED BIT_SIZE BTEST CEILING COUNT CPU_TIME CSHIFT
 	DATE_AND_TIME DIGITS DOT_PRODUCT EOSHIFT EPSILON EXPONENT FLOOR FRACTION HUGE IACHAR IAND
 	IBCLR IBITS IBSET IEOR IOR ISHFT ISHFTC KIND LBOUND LEN_TRIM LOGICAL MATMUL MAXEXPONENT
-	MAXLOC MAXVAL MERGE MINEXPONENT MINLOC MINVAL MODULO MVBITS NEAREST NOT PACK PRECISION
+	MAXLOC MAXVAL MERGE MINEXPONENT MINLOC MINVAL MODULO MVBITS NEAREST NOT NULL PACK PRECISION
 	PRESENT PRODUCT RADIX RANDOM_NUMBER RANDOM_SEED RANGE REPEAT RESHAPE RRSPACING SCALE SCAN
 	SELECTED_INT_KIND SELECTED_REAL_KIND SET_EXPONENT SHAPE SIZE SPACING SPREAD SUM
 	SYSTEM_CLOCK TINY TRANSFER TRANSPOSE TRIM UBOUND UNPACK VERIFY`)
@@ -364,12 +414,29 @@ type extensions struct {
 	inData bool
 }
 
-// finding is one of /STANDARD's findings: an extension, or with obsolescent set one of
-// Fortran 90's obsolescent features.
+// finding is one of /STANDARD's findings: an extension, or one of Fortran 95's
+// obsolescent or deleted features.
 type finding struct {
 	source.Mark
-	obsolescent bool
+	kind findingKind
 }
+
+// findingKind is what a finding is, and so its message.
+type findingKind int
+
+// The kinds of finding.
+const (
+	// anExtension is something the standard judged by doesn't have, EXTENSION.
+	anExtension findingKind = iota
+
+	// obsolescentFeature is one of Fortran 95's obsolescent features (its B.2),
+	// OBSOLESCENT.
+	obsolescentFeature
+
+	// deletedFeature is one Fortran 95 deleted (its B.1), DELETED: each was
+	// obsolescent in Fortran 90.
+	deletedFeature
+)
 
 // newExtensions makes one for the setting, for a unit whose /F90 setting is f90.
 func newExtensions(s Conformance, f90 bool) *extensions {
@@ -383,10 +450,10 @@ func (x *extensions) add(pos diag.Position, what string, in source.Standards) {
 		return
 	}
 
-	x.note(pos, what, false)
+	x.note(pos, what, anExtension)
 }
 
-// obsolete notes one of Fortran 90's obsolescent features (the standard's B.2), which
+// obsolete notes one of Fortran 95's obsolescent features (the standard's B.2), which
 // is flagged only when judging by Fortran 90 with OBSOLESCENT on. FORTRAN-77 has no
 // obsolescent features: under it, each of these is simply part of the language.
 func (x *extensions) obsolete(pos diag.Position, what string) {
@@ -394,15 +461,26 @@ func (x *extensions) obsolete(pos diag.Position, what string) {
 		return
 	}
 
-	x.note(pos, what, true)
+	x.note(pos, what, obsolescentFeature)
+}
+
+// deleted notes one of the features Fortran 95 deleted (its B.1), flagged as the
+// obsolescent ones are: Fortran 90 had them, as obsolescent, and VAX FORTRAN has them,
+// so govax still compiles each.
+func (x *extensions) deleted(pos diag.Position, what string) {
+	if x == nil || !x.judge.obsolescent {
+		return
+	}
+
+	x.note(pos, what, deletedFeature)
 }
 
 // note keeps a finding, once.
-func (x *extensions) note(pos diag.Position, what string, obsolescent bool) {
-	key := fmt.Sprint(pos.Serial, ":", pos.Column, ":", what, ":", obsolescent)
+func (x *extensions) note(pos diag.Position, what string, kind findingKind) {
+	key := fmt.Sprint(pos.Serial, ":", pos.Column, ":", what, ":", kind)
 	if !x.seen[key] {
 		x.seen[key] = true
-		x.found = append(x.found, finding{Mark: source.Mark{Pos: pos, What: what}, obsolescent: obsolescent})
+		x.found = append(x.found, finding{Mark: source.Mark{Pos: pos, What: what}, kind: kind})
 	}
 }
 
@@ -418,9 +496,12 @@ func (x *extensions) report(messages *diag.List) {
 	})
 
 	for _, f := range x.found {
-		if f.obsolescent {
+		switch f.kind {
+		case obsolescentFeature:
 			messages.Report("OBSOLESCENT", f.Pos, f.What)
-		} else {
+		case deletedFeature:
+			messages.Report("DELETED", f.Pos, f.What)
+		default:
 			messages.Report("EXTENSION", f.Pos, x.judge.name(), f.What)
 		}
 	}
@@ -428,15 +509,22 @@ func (x *extensions) report(messages *diag.List) {
 	x.found = nil
 }
 
-// intrinsic notes a reference to an intrinsic procedure, if the standard doesn't have it.
-// Only semantic analysis can tell a reference from an array element, so it calls this.
+// intrinsic notes a reference to an intrinsic function, if the standard doesn't have
+// it. Only semantic analysis can tell a reference from an array element, so it calls
+// this.
 func (x *extensions) intrinsic(name string, pos diag.Position) {
+	x.intrinsicProcedure("the intrinsic function", name, pos)
+}
+
+// intrinsicProcedure notes a reference to an intrinsic procedure, what it is ("the
+// intrinsic function", "the intrinsic subroutine"), if the standard doesn't have it.
+func (x *extensions) intrinsicProcedure(what, name string, pos diag.Position) {
 	switch {
 	case standardIntrinsics[name]:
 	case newIntrinsics[name]:
-		x.add(pos, "the intrinsic function "+name, f90)
+		x.add(pos, what+" "+name, f90)
 	default:
-		x.add(pos, "the intrinsic function "+name, 0)
+		x.add(pos, what+" "+name, 0)
 	}
 }
 
@@ -519,6 +607,10 @@ func (x *extensions) statement(s ast.Stmt) {
 		x.obsolete(s.Position(), what)
 	}
 
+	if what, ok := deletedStatements[kind]; ok {
+		x.deleted(s.Position(), what)
+	}
+
 	switch s := s.(type) {
 	case *ast.ProgramStmt:
 		x.name(s.Name, s.Pos)
@@ -527,10 +619,7 @@ func (x *extensions) statement(s ast.Stmt) {
 	case *ast.SubroutineStmt:
 		x.name(s.Name, s.Pos)
 		x.altReturns(s.Params)
-
-		if s.Recursive {
-			x.add(s.Pos, "a RECURSIVE subprogram", f90)
-		}
+		x.prefixes(s.Pos, s.Recursive, s.Pure, s.Elemental)
 
 	case *ast.BlockDataStmt:
 		x.name(s.Name, s.Pos)
@@ -544,10 +633,7 @@ func (x *extensions) statement(s ast.Stmt) {
 
 	case *ast.FunctionStmt:
 		x.name(s.Name, s.Pos)
-
-		if s.Recursive {
-			x.add(s.Pos, "a RECURSIVE subprogram", f90)
-		}
+		x.prefixes(s.Pos, s.Recursive, s.Pure, s.Elemental)
 
 		if s.Result != nil {
 			x.add(s.Result.Pos, "RESULT", f90)
@@ -681,14 +767,25 @@ func (x *extensions) statement(s ast.Stmt) {
 	case *ast.WhereBlockStmt:
 		x.expr(s.Mask)
 
+	case *ast.ElseWhereStmt:
+		x.expr(s.Mask)
+
+	case *ast.ForallStmt:
+		x.forallHeader(s.Header)
+		x.statement(s.Then)
+
+	case *ast.ForallBlockStmt:
+		x.forallHeader(s.Header)
+
 	case *ast.CallStmt:
 		x.arguments(s.Args, s.Pos)
 
 	case *ast.ComputedGotoStmt:
+		x.obsolete(s.Pos, "the computed GO TO statement")
 		x.expr(s.Index)
 
 	case *ast.AssignedGotoStmt:
-		x.obsolete(s.Pos, "the assigned GO TO statement")
+		x.deleted(s.Pos, "the assigned GO TO statement")
 
 	case *ast.IfStmt:
 		x.expr(s.Cond)
@@ -750,15 +847,48 @@ func (x *extensions) statement(s ast.Stmt) {
 	}
 }
 
-// obsolescentStatements are the statements Fortran 90 calls obsolescent (its B.2), each
-// flagged wherever it is; the assigned GO TO, which shares GO TO's kind, is told by its
-// node. The rest of B.2's list is a statement's meaning, which semantic
-// analysis judges: a REAL DO variable and a DO's ending (stmt.go), a jump to END IF from
-// outside its IF (labels.go), an assigned format (io.go).
+// obsolescentStatements are the statements Fortran 95 calls obsolescent (its B.2), and
+// deletedStatements those it deleted (B.1), each flagged wherever it is; the assigned
+// GO TO and the computed GO TO, which share GO TO's kind, are told by their nodes. The
+// rest of the two lists is a statement's meaning or form, which the walk's other cases
+// and semantic analysis judge: an alternate return (the walk), a CHARACTER*n type (the
+// walk's typeSpec), the H edit descriptor (format), a REAL DO variable and a DO's
+// ending (stmt.go), a jump to END IF from outside its IF (labels.go), an assigned format
+// (io.go), a statement function (stmtfunc.go), DATA among the executable statements
+// (order.go), an assumed-length CHARACTER function (implicit.go), and fixed source
+// form (ReportSourceExtensions).
 var obsolescentStatements = map[lex.Kind]string{
 	lex.ArithmeticIf: "the arithmetic IF statement",
-	lex.Assign:       "the ASSIGN statement",
-	lex.Pause:        "the PAUSE statement",
+}
+
+var deletedStatements = map[lex.Kind]string{
+	lex.Assign: "the ASSIGN statement",
+	lex.Pause:  "the PAUSE statement",
+}
+
+// prefixes looks at a FUNCTION's or SUBROUTINE's prefixes: RECURSIVE, Fortran 90's,
+// and PURE and ELEMENTAL, Fortran 95's.
+func (x *extensions) prefixes(pos diag.Position, recursive, pure, elemental bool) {
+	if recursive {
+		x.add(pos, "a RECURSIVE subprogram", f90)
+	}
+
+	if pure {
+		x.add(pos, "a PURE subprogram", f90)
+	}
+
+	if elemental {
+		x.add(pos, "an ELEMENTAL subprogram", f90)
+	}
+}
+
+// forallHeader looks at a FORALL's header: its triplets and its mask.
+func (x *extensions) forallHeader(h ast.ForallHeader) {
+	for _, index := range h.Indexes {
+		x.exprs([]ast.Expr{index.Lower, index.Upper, index.Stride})
+	}
+
+	x.expr(h.Mask)
 }
 
 // altReturns looks at a subprogram's dummy arguments for an alternate return's place,
@@ -837,10 +967,16 @@ func (x *extensions) specifiers(specs []*ast.IOSpec, kind lex.Kind) {
 }
 
 // typeSpec looks at a type as a statement writes it: *n after any type but CHARACTER,
-// and Fortran 90's selectors in parentheses.
+// CHARACTER*n, and Fortran 90's selectors in parentheses.
 func (x *extensions) typeSpec(t ast.TypeSpec) {
 	if t.Type != ast.Character && t.HasLength() && !t.Selector {
 		x.add(t.Pos, "a length after "+t.Type.String(), 0)
+	}
+
+	// Fortran 95's B.2.7: CHARACTER*n, a length after the keyword, is obsolescent;
+	// the author's answer 1 leaves out CHARACTER*(*), a passed length.
+	if t.Type == ast.Character && t.Derived == "" && t.HasLength() && !t.Selector && !t.LenStar {
+		x.obsolete(t.Pos, "the CHARACTER*n form of a length")
 	}
 
 	if t.Selector {
@@ -916,6 +1052,8 @@ func (x *extensions) format(s *ast.FormatStmt) {
 
 	walk = func(items []*format.Item) {
 		for _, item := range items {
+			x.zeroWidth(item, at)
+
 			switch item.Code {
 			case format.O, format.Z, format.B, format.EN, format.ES:
 				x.add(at(item), "the "+item.Code.String()+" edit descriptor", f90)
@@ -931,7 +1069,7 @@ func (x *extensions) format(s *ast.FormatStmt) {
 				}
 			case format.Text:
 				if item.Quote == 0 {
-					x.obsolete(at(item), "the H edit descriptor")
+					x.deleted(at(item), "the H edit descriptor")
 				}
 
 			case format.Group:
@@ -941,6 +1079,23 @@ func (x *extensions) format(s *ast.FormatStmt) {
 	}
 
 	walk(f.Items)
+}
+
+// zeroWidth looks at a data edit descriptor written with a width of 0: Fortran 95's
+// I0, B0, O0, Z0, and F0.d (its 10.6.1, for output), and DEC's or no one's for any
+// other. Whether the statement writes is semantic analysis's question, which the walk
+// doesn't ask.
+func (x *extensions) zeroWidth(item *format.Item, at func(*format.Item) diag.Position) {
+	if !item.W.Set || item.W.N != 0 {
+		return
+	}
+
+	switch item.Code {
+	case format.I, format.B, format.O, format.Z, format.F:
+		x.add(at(item), "the "+item.Code.String()+" edit descriptor with a width of 0", f90)
+	case format.E, format.D, format.G, format.L, format.A, format.EN, format.ES:
+		x.add(at(item), "the "+item.Code.String()+" edit descriptor with a width of 0", 0)
+	}
 }
 
 // exprs looks at expressions.

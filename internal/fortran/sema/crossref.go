@@ -3,6 +3,7 @@ package sema
 import (
 	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/tucats/govax/internal/fortran/diag"
 )
@@ -306,6 +307,10 @@ func (u *Unit) CrossReference() []CrossName {
 		}
 	}
 
+	for _, r := range u.forallRows() {
+		rows = append(rows, row{group: r.group, name: r.name})
+	}
+
 	for label, list := range u.labelRefs {
 		if refs := settled(list); len(refs) > 0 {
 			rows = append(rows, row{crossLabels, label, CrossName{Name: strconv.Itoa(label), What: "label", Label: true, Refs: refs}})
@@ -324,7 +329,8 @@ func (u *Unit) CrossReference() []CrossName {
 			return 1
 		}
 
-		return 0
+		// A FORALL index's row after the unit's variable of its name.
+		return strings.Compare(x.name.What, y.name.What)
 	})
 
 	names := make([]CrossName, len(rows))
@@ -333,6 +339,36 @@ func (u *Unit) CrossReference() []CrossName {
 	}
 
 	return names
+}
+
+// forallRows are the rows for the unit's FORALL indexes: one for each name, its
+// mentions those of every FORALL with an index of that name. An index is a name of
+// its statement's own (forall.go), not the unit's variable of the name, which has a
+// row of its own if the unit mentions it elsewhere.
+func (u *Unit) forallRows() []crossRow {
+	var (
+		rows  []crossRow
+		named = map[string][]Reference{}
+		types = map[string]string{}
+		order []string
+	)
+
+	for _, s := range u.forallIndexes {
+		if _, seen := named[s.Name]; !seen {
+			order = append(order, s.Name)
+			types[s.Name] = s.TypeText()
+		}
+
+		named[s.Name] = append(named[s.Name], s.refs...)
+	}
+
+	for _, name := range order {
+		if refs := settled(named[name]); len(refs) > 0 {
+			rows = append(rows, crossRow{crossVariables, CrossName{Name: name, What: types[name] + " FORALL index", Refs: refs}})
+		}
+	}
+
+	return rows
 }
 
 // crossRow is a cross reference row and its group.
@@ -440,6 +476,21 @@ func (u *Unit) describeCross(s *Symbol) (int, string) {
 
 	for _, a := range s.Attributes() {
 		text += ", " + a
+	}
+
+	// A procedure's Fortran 95 prefix, as its explicit interface says it, or for
+	// the unit's own name its header: ELEMENTAL, which is PURE too, or PURE.
+	p := explicitInterface(s)
+	if p == nil && s.Result && s.Name == u.Name {
+		p = u
+	}
+
+	switch {
+	case p == nil:
+	case p.Elemental:
+		text += ", ELEMENTAL"
+	case p.Pure:
+		text += ", PURE"
 	}
 
 	return group, text

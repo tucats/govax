@@ -5935,8 +5935,10 @@ all; the same programs under `F77` draw about 9,000 findings, which is the other
 ### Obsolescent features need what a program means
 
 Fortran 90 deletes nothing from FORTRAN-77, but its appendix B.2 lists nine features that a later
-standard may delete. `/STANDARD=F90` reports them as `%FORT-I-OBSOLESCENT` (the `OBSOLESCENT`
-keyword, on with `SYNTAX` unless named):
+standard may delete. Fortran 95 deleted six of them (its B.1) and named others obsolescent in their
+place; since govax's Fortran 90 takes in Fortran 95 (Phase 112), `/STANDARD=F90` reports Fortran
+95's two lists, the deleted ones as `%FORT-I-DELETED` and the rest as `%FORT-I-OBSOLESCENT`, both
+under the `OBSOLESCENT` keyword, on with `SYNTAX` unless named:
 
 ```fortran
 subroutine old (x, n)
@@ -5950,11 +5952,11 @@ end subroutine old
 ```
 
 ```text
-%FORT-I-OBSOLESCENT, obsolescent in Fortran 90: a DO variable of type REAL
-%FORT-I-OBSOLESCENT, obsolescent in Fortran 90: the arithmetic IF statement
-%FORT-I-OBSOLESCENT, obsolescent in Fortran 90: a terminal statement shared by DO loops
-%FORT-I-OBSOLESCENT, obsolescent in Fortran 90: a DO loop ending at an assignment
-%FORT-I-OBSOLESCENT, obsolescent in Fortran 90: the PAUSE statement
+%FORT-I-DELETED, deleted in Fortran 95: a DO variable of type REAL
+%FORT-I-OBSOLESCENT, obsolescent in Fortran 95: the arithmetic IF statement
+%FORT-I-OBSOLESCENT, obsolescent in Fortran 95: a terminal statement shared by DO loops
+%FORT-I-OBSOLESCENT, obsolescent in Fortran 95: a DO loop ending at an assignment
+%FORT-I-DELETED, deleted in Fortran 95: the PAUSE statement
 ```
 
 The arithmetic IF and PAUSE are visible in the tree, and the walk reports them as it does any
@@ -5964,7 +5966,11 @@ loops end at label 10, and what label 10's statement is are facts semantic analy
 `endLoops`, and for a jump to END IF from outside its block `checkLabels`), and report to the same
 list. That bends section 7's rule of one walk for `/STANDARD`, as `noteIntrinsic` already had;
 the alternative, recomputing in the walk what sema already knows, would be two answers to one
-question, which is worse.
+question, which is worse. Fortran 95's newly obsolescent features follow the same rule: the computed
+GO TO and `CHARACTER*n` are the walk's, but a statement function (`defineStmtFunction`), DATA
+among the executable statements (`order`, which knows the unit's group), and a `CHARACTER*(*)`
+function (`assumedLengthFunction`) are sema's. Fixed source form belongs to the lines, so
+`ReportSourceExtensions` flags it, once per file at its first statement.
 
 The same is true of constant expressions. Fortran 90 lets an initialization expression call an
 elemental intrinsic only of INTEGER or CHARACTER arguments (its 7.1.6.1). govax's constant

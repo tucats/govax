@@ -59,10 +59,11 @@ func (a *analyzer) nullReference(x ast.Expr) (*ast.Apply, bool) {
 
 	s := a.scope.find("NULL")
 
-	switch {
-	case s == nil, s.Class == Intrinsic:
-		return app, true
-	case s.Class == Unclassified && s.Dummy == 0 && !s.External && s.Dims == nil:
+	if s == nil || s.Class == Intrinsic || s.Class == Unclassified && s.Dummy == 0 && !s.External && s.Dims == nil {
+		// A mention of the intrinsic function, for the cross reference and
+		// /STANDARD (each place once, however often it is asked about).
+		a.noteIntrinsic("NULL", app.Pos)
+
 		return app, true
 	}
 

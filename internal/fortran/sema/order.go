@@ -101,6 +101,11 @@ func (a *analyzer) order(s ast.Stmt, stmtFunc bool) {
 		return
 	}
 
+	// Fortran 95's B.2.6: DATA among the executable statements is obsolescent.
+	if _, isData := s.(*ast.DataStmt); isData && a.group == execGroup {
+		a.extensions.obsolete(s.Position(), "a DATA statement among the executable statements")
+	}
+
 	if a.group > p.latest {
 		// The first statement that took the unit past this one's
 		// place.

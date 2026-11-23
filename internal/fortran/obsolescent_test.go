@@ -48,7 +48,8 @@ func findingsOf(t *testing.T, keywords []string, free bool, idents []string, lin
 	return found
 }
 
-// obsolescentProgram has each of Fortran 90's obsolescent features (its B.2) once.
+// obsolescentProgram has each of Fortran 90's obsolescent features (its B.2) once: in
+// Fortran 95 some are still obsolescent, and the rest deleted (its B.1).
 var obsolescentProgram = []string{
 	"program t", // 1
 	"integer :: i, k, n",
@@ -84,26 +85,29 @@ var obsolescentProgram = []string{
 // procedure is analyzed, and its messages given, before its host's statements are
 // looked at, as for every message.
 var obsolescentFound = []string{
-	"25 obsolescent in Fortran 90: an alternate return",
-	"26 obsolescent in Fortran 90: an alternate return",
-	"6 obsolescent in Fortran 90: the arithmetic IF statement",
-	"7 obsolescent in Fortran 90: the ASSIGN statement",
-	"8 obsolescent in Fortran 90: the assigned GO TO statement",
-	"9 obsolescent in Fortran 90: the PAUSE statement",
-	"10 obsolescent in Fortran 90: a DO variable of type REAL",
-	"14 obsolescent in Fortran 90: a terminal statement shared by DO loops",
-	"14 obsolescent in Fortran 90: a DO loop ending at an assignment",
-	"15 obsolescent in Fortran 90: a jump to END IF from outside its IF block",
-	"19 obsolescent in Fortran 90: the ASSIGN statement",
-	"20 obsolescent in Fortran 90: an assigned format specifier",
-	"21 obsolescent in Fortran 90: the H edit descriptor",
-	"22 obsolescent in Fortran 90: an alternate return",
+	"25 obsolescent in Fortran 95: an alternate return",
+	"26 obsolescent in Fortran 95: an alternate return",
+	"6 obsolescent in Fortran 95: the arithmetic IF statement",
+	"7 deleted in Fortran 95: the ASSIGN statement",
+	"8 deleted in Fortran 95: the assigned GO TO statement",
+	"9 deleted in Fortran 95: the PAUSE statement",
+	"10 deleted in Fortran 95: a DO variable of type REAL",
+	"14 obsolescent in Fortran 95: a terminal statement shared by DO loops",
+	"14 obsolescent in Fortran 95: a DO loop ending at an assignment",
+	"15 deleted in Fortran 95: a jump to END IF from outside its IF block",
+	"19 deleted in Fortran 95: the ASSIGN statement",
+	"20 deleted in Fortran 95: an assigned format specifier",
+	"21 deleted in Fortran 95: the H edit descriptor",
+	"22 obsolescent in Fortran 95: an alternate return",
 }
 
-// TestStandardObsolescent holds each obsolescent feature to its message, the walk's and
-// semantic analysis's together in each unit's source order.
+// standardFindings are the messages /STANDARD gives.
+var standardFindings = []string{"OBSOLESCENT", "DELETED", "EXTENSION"}
+
+// TestStandardObsolescent holds each obsolescent and deleted feature to its message, the
+// walk's and semantic analysis's together in each unit's source order.
 func TestStandardObsolescent(t *testing.T) {
-	got := findingsOf(t, []string{"F90"}, true, []string{"OBSOLESCENT", "EXTENSION"}, obsolescentProgram...)
+	got := findingsOf(t, []string{"F90"}, true, standardFindings, obsolescentProgram...)
 	if !slices.Equal(got, obsolescentFound) {
 		t.Errorf("flags\n%q\nwant\n%q", got, obsolescentFound)
 	}
@@ -113,7 +117,7 @@ func TestStandardObsolescent(t *testing.T) {
 // its block, a loop ending at CONTINUE or END DO, an INTEGER DO variable, a quoted
 // edit descriptor, a FORMAT label as the format.
 func TestStandardObsolescentQuiet(t *testing.T) {
-	got := findingsOf(t, []string{"F90"}, true, []string{"OBSOLESCENT", "EXTENSION"},
+	got := findingsOf(t, []string{"F90"}, true, standardFindings,
 		"program t",
 		"integer :: i, n",
 		"logical :: l",
@@ -140,11 +144,11 @@ func TestStandardObsolescentQuiet(t *testing.T) {
 // Fortran 90's judgment with OBSOLESCENT on, by itself or with the rest, and nothing
 // else; never FORTRAN-77's, and nothing without /STANDARD.
 func TestStandardObsolescentSettings(t *testing.T) {
-	idents := []string{"OBSOLESCENT"}
+	idents := []string{"OBSOLESCENT", "DELETED"}
 	lines := []string{"program t", "integer :: i", "i = 1", "if (i) 10, 10, 10", "10 pause", "end program t"}
 	both := []string{
-		"4 obsolescent in Fortran 90: the arithmetic IF statement",
-		"5 obsolescent in Fortran 90: the PAUSE statement",
+		"4 obsolescent in Fortran 95: the arithmetic IF statement",
+		"5 deleted in Fortran 95: the PAUSE statement",
 	}
 
 	for _, c := range []struct {
