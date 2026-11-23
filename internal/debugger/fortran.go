@@ -508,6 +508,14 @@ func wholeArray(place fortranPlace, bounds []dbgtable.Bound) []fortranPlace {
 		}
 	}
 
+	// Fortran 90's zero-sized array (an empty dimension, 1:0, or an
+	// allocatable or automatic array's of no extent) has no element to show.
+	for _, b := range bounds {
+		if !b.Assumed && b.Upper < b.Lower {
+			return nil
+		}
+	}
+
 	var places []fortranPlace
 
 	for at := place.addr; ; at += place.size {

@@ -211,7 +211,7 @@ func (a *analyzer) dataBase(x ast.Expr, first string, vars map[string]int32) (*S
 			return s, []dataSlot{{0, s.Type, s.Name}}, true
 		}
 
-		if s.Size() == 0 {
+		if s.Size() == 0 && !s.Empty() {
 			a.report("DATASIZE", x.Pos, s.Name)
 
 			return s, nil, false

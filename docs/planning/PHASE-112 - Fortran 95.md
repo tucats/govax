@@ -2,7 +2,7 @@
 
 **Status:** planned 2026-11-22; subtask 1, the survey (Part A), done 2026-11-22 and
 accepted by the author the same day ("The author's answers"); subtask 2, recovery and syntax,
-done 2026-11-23; subtask 3 is next. Phase 99's question 2 left Fortran 95's additions to an
+done 2026-11-23; subtask 3, zero-sized arrays, done 2026-11-23; subtask 4 is next. Phase 99's question 2 left Fortran 95's additions to an
 optional Phase 112, the author chose go at Phase 111's close-out, and the phase was widened
 to the Fortran errata the same day. At the errata survey's review the author split it:
 Fortran 95 is this phase, and the errata, with the survey (its Part A), is Phase 113
@@ -100,7 +100,7 @@ Already Fortran 95's in govax: allocatable locals deallocated at return (Phase 9
 1. **The survey** (done 2026-11-22; Part A, revised list A.4): the HP manual's Fortran 95 additions read against govax and gfortran, a
    table of each and its subtask, a probe set of programs for gfortran; the open questions.
 2. Unrecognized statements recovered from; PURE, ELEMENTAL, and FORALL lexed and parsed.
-3. Zero-sized explicit-shape arrays under `/F90`.
+3. Zero-sized explicit-shape arrays under `/F90` (done 2026-11-23).
 4. `NULL()` and pointer initialization.
 5. Default initialization of components, the module text among it.
 6. PURE: the constraints.
@@ -286,7 +286,7 @@ way) and the HPF_LIBRARY routines. **Not planned.**
    `ast.FunctionStmt`/`SubroutineStmt`, interface bodies); FORALL's statement and construct
    parsed (`ast.ForallStmt`, END FORALL, names); END INTERFACE's generic name; WHERE's
    construct names parsed. Each new form NOTIMPL by name in sema until its subtask.
-3. **Zero-sized explicit-shape arrays** under `/F90` (A.3's 13).
+3. **Zero-sized explicit-shape arrays** under `/F90` (A.3's 13) (done 2026-11-23).
 4. **NULL()** (A.3's 3): every context of A.1's 6, pointer initialization (A.1's 8),
    DATA.
 5. **Default initialization** (A.3's 4), the module text with it.
@@ -417,4 +417,37 @@ with every recommendation of A.5:
   messages; `nullinit`'s NOTYPEDEFs follow from its module's NOTIMPL). Left for later: a
   module's text doesn't carry PURE or ELEMENTAL yet (subtask 6, when such a module first
   compiles); ELEMENTAL with RECURSIVE, which Fortran 95 forbids, is subtask 7's check.
-
+- **2026-11-23:** Subtask 3, zero-sized explicit-shape arrays. Under `/F90` a dimension
+  whose constant upper bound is below its lower is kept as **(1:0)** (`sema/arrays.go`'s
+  `emptyDimension`, called for variables by `dimensionBounds` and for components by
+  `structure.go`'s bounds; without `/F90` still BOUNDORDER): the bounds LBOUND and UBOUND
+  give a whole array's empty dimension (the standard's 13.13.52 and 13.13.111: 1 and 0), so
+  `Extent`, `Elements`, and `Size` are 0 with no other change, and every later pass sees an
+  ordinary array of no elements. Chosen over keeping the declared bounds with a clamped
+  extent, which would have needed LBOUND's and UBOUND's folding, descriptors, and the
+  debugger table told apart; the cost is that the storage map, the `/DEBUG` table, the
+  debugger's out-of-bounds message, and a module's text show (1:0), not `(5:1)`.
+  **`Elements() == 0` meant "not known"** in three places, now told apart by
+  `Symbol.Empty` (a known shape with an empty dimension): `tooLarge` (a divide by zero),
+  and DATASIZE in `data.go` and `datatypes.go` (so an empty array may take an initial value,
+  a PARAMETER's or `= 2.0`'s, as gfortran agrees). **The module text** wrote no empty
+  array constant ("an empty constructor would need its type"): `arrayConstText` now writes a
+  zero of the type, which the declared `(1:0)` shape takes for its no elements, as
+  `parameter.go` already reads a scalar value. **The debugger** showed an element of an
+  empty array (`wholeArray` stepped once before testing the bounds): no element now, for a
+  declared empty array and for an allocatable or automatic one of no extent, whose bounds
+  come from its descriptor. What already worked, found by the probes: automatic arrays of
+  a run-time extent of zero or less (size 0, LBOUND 1, UBOUND 0, as gfortran), empty
+  sections, the reductions of nothing, an empty array in an output list, an implied DO,
+  a list-directed READ, NAMELIST output, and unformatted I/O, PACK and constructors that
+  make nothing, MATMUL of an empty inner dimension, assumed-shape and explicit-shape
+  dummies given one, COMMON and records (no storage), EQUIVALENCE of the whole name (and
+  EQUIVRANGE for an element), and `/CHECK=BOUNDS` (SUBRNG for any subscript). Tests:
+  `sema`'s `TestEmptyArrays`, `fortran`'s `TestModuleEmptyArrays` (every type's empty
+  PARAMETER through a module file), `debugger`'s `TestFortranEmptyArrays`, and
+  `testdata/fortran90/zerosize.f90` (in every mode, with paging too; `compare.py` the same
+  on gfortran but NAMELIST's layout). MANUAL.md's 14.13 "Arrays as values" has a bullet
+  for them, and its table of what isn't there loses the row; Phase 113's A.1's 5 is marked
+  resolved. `testdata/f90r`'s procedure regenerated by its `gen.go` (the round's rehearsal
+  runs every corpus program), and ZEROSIZE added to `f90rAwaitingVMS`, for Phase 113's VMS
+  round to run. Subtask 4, `NULL()`, is next.

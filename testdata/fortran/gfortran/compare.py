@@ -164,6 +164,7 @@ PROGRAMS90 = {
     "journal": ["journal.f90"],
     "wordcount": ["wordcount.f90"],
     "gradebook": ["gradebook.f90"],
+    "zerosize": ["zerosize.f90"],
     "optfuse": ["optfuse.f90"],
     "optstride": ["optstride.f90"],
     "mixed": ["modules/mixed/mixed.f90", "modules/mixed/fill.for", "modules/mixed/report.f90"],
@@ -253,6 +254,12 @@ KNOWN = {
         " W       =": [],
         " (0.250000000000000000000000000000000,1000.00000000000000000000000000000)":
             " W=(0.250000000000000000000000000000000000,1000.00000000000000000000000000000000),",
+    },
+    "zerosize": {
+        # Namelist output's layout is the processor's (10.9.2): govax's is VMS's FORRTL's, a name
+        # padded to a column; an empty array's name is written with no values in both.
+        "X       =           1,": "X=1          ,",
+        "Z0      =": "Z0=",
     },
     "listnml": {
         # A list-directed record's length is the processor's (10.8.2): govax's is VMS's 81

@@ -690,6 +690,28 @@ func (s *Symbol) Elements() int {
 	return n
 }
 
+// Empty reports whether s is an array of zero size known when compiling, a
+// Fortran 90 array with a dimension declared empty (arrays.go's
+// emptyDimension), whose Elements and Size are 0 for that reason and not
+// because they aren't known yet.
+func (s *Symbol) Empty() bool {
+	if s.Dims == nil || s.Allocatable || s.AutomaticObject || s.Pointer {
+		return false
+	}
+
+	empty := false
+
+	for _, d := range s.Dims {
+		if !d.known() {
+			return false
+		}
+
+		empty = empty || d.Extent() == 0
+	}
+
+	return empty
+}
+
 // TypeText is the name's type as maps and dumps show it: its Type's, or
 // for a record its structure's name, /DATE/.
 func (s *Symbol) TypeText() string {

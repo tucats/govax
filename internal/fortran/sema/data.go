@@ -422,7 +422,7 @@ func (a *analyzer) dataItems(e ast.Expr, vars map[string]int32, vals *dataValues
 			return a.dataItem(s, 0, s.Type, s.Name, e.Pos, vals)
 		}
 
-		if s.Size() == 0 {
+		if s.Size() == 0 && !s.Empty() {
 			a.report("DATASIZE", e.Pos, s.Name)
 
 			return false

@@ -679,9 +679,10 @@ func (b *structBuilder) fieldDims(f *Field, d *ast.Declarator) bool {
 		dim.Upper = v
 
 		if dim.Upper < dim.Lower {
-			b.a.report("BOUNDORDER", bd.Upper.Position(), dim.Upper, dim.Lower)
-
-			return false
+			var ok bool
+			if dim, ok = b.a.emptyDimension(dim, bd.Upper.Position()); !ok {
+				return false
+			}
 		}
 
 		f.Dims[i] = dim

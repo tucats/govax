@@ -211,10 +211,27 @@ func (a *analyzer) dimensionBounds(adj *adjustableArray, b ast.Bound, last bool,
 	}
 
 	if dim.LowerExpr == nil && dim.UpperExpr == nil && dim.Upper < dim.Lower {
-		a.report("BOUNDORDER", b.Upper.Position(), dim.Upper, dim.Lower)
+		return a.emptyDimension(dim, b.Upper.Position())
+	}
+
+	return dim, true
+}
+
+// emptyDimension is a dimension whose constant upper bound is less than its
+// lower bound. VAX FORTRAN refuses it (BOUNDORDER), but Fortran 90 gives it no
+// elements (the standard's 5.1.2.4.1: "If the upper bound is less than the lower
+// bound, the range is empty, the extent in that dimension is zero, and the array
+// is of zero size"), so under /F90 it is kept as (1:0): the bounds LBOUND and
+// UBOUND give a whole array's empty dimension (13.13.52, 13.13.111), its Extent
+// 0, and so its array's Elements and Size 0, with no subscript in range.
+func (a *analyzer) emptyDimension(dim Dim, pos diag.Position) (Dim, bool) {
+	if !a.f90 {
+		a.report("BOUNDORDER", pos, dim.Upper, dim.Lower)
 
 		return dim, false
 	}
+
+	dim.Lower, dim.Upper = 1, 0
 
 	return dim, true
 }
@@ -608,6 +625,11 @@ func tooLarge(s *Symbol) bool {
 	for _, d := range s.Dims {
 		if !d.known() {
 			continue
+		}
+
+		if d.Extent() == 0 {
+			// Fortran 90's empty dimension: no elements at all.
+			return false
 		}
 
 		if d.Extent() > maxArrayBytes/n {

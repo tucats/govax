@@ -9078,6 +9078,14 @@ shifted:  72.0  72.0  85.0  52.0  91.0  49.0
   more by `RESHAPE` (`RESHAPE((/ 1, 2, 3, 4 /), (/ 2, 2 /))`), and an initial value given with
   `=` may be an array of the variable's shape. A vector subscript with a value twice may not
   be assigned to; if it is a constant, that is `MANYONE`.
+- *Zero-sized arrays*: under `/F90`, a dimension declared with its upper bound below its
+  lower, `REAL A(0)` or `B(5:1)`, is empty (the standard's 5.1.2.4.1), and so is its array:
+  SIZE is 0, LBOUND and UBOUND of the empty dimension are 1 and 0 (the compiler keeps it as
+  `(1:0)`, which its storage map and module files show), it takes no storage in `$LOCAL`,
+  COMMON, or a record, an assignment, output list, or implied DO over it does nothing, and no
+  subscript is in its bounds. It may be a PARAMETER, a component, or have an initial value.
+  Without `/F90` it is VAX FORTRAN's `%FORT-E-BOUNDORDER`. An automatic, adjustable, or
+  allocatable array may have no elements either way.
 - *Intrinsic functions*: every elemental function (all of FORTRAN-77's, as `SQRT(A)`,
   `MAX(A, 0.0)`, `ABS(A - B)`, and `MERGE(T, F, MASK)`) takes arrays, each element computed in
   turn. SUM, PRODUCT, MAXVAL, MINVAL, ALL, ANY, and COUNT reduce an array, with `MASK=` and a
@@ -10482,7 +10490,6 @@ naming what it is:
 | A module whose module file would give one type two names, an external procedure that is a specific of two of its generic names, or a COMMON block both it and a module it uses declare | `%FORT-E-NOTIMPL` when the module compiles |
 | govax's definition modules (`$SSDEF` and the rest) as modules to USE | `INCLUDE '($SSDEF)'`, as in VAX FORTRAN ([section 14.8](#148-calling-vms-from-fortran)) |
 | A module's defined operators in a fixed-form `/NOF90` unit | VAX FORTRAN reads `A.B.C` as a field; compile the unit `/F90` |
-| An array declared with no elements (`Z(0)`, `Y(5:1)`) | `%FORT-E-BOUNDORDER`, as VAX FORTRAN says; an adjustable or allocatable array may have no elements |
 | A CHARACTER array constructor whose first value's length is known only when the program runs and isn't a variable's, an array's, or a concatenation of them | Put the value in a variable first |
 | A CHARACTER array expression of a length known only when the program runs, not made of names, as an actual argument | The same |
 | A statement function of a derived type | An internal function |

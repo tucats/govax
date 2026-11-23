@@ -1,0 +1,21 @@
+sizes:  0  0  0  0  0  0
+shapes:  2  0  0  2
+e bounds:  1  1  0  2
+d bounds:  1  1  2  0
+b bounds:  1  0
+reduced:   0.0 F T  0  0
+product, dot:   1.0  0
+a and d:
+implied:
+whole:  0  1  0   0.0
+section:  0  1  0   0.0
+sized:  0  0
+made:  0  3
+stored:  1  2  0  4  5
+names:  0  4
+&NL
+X       =           1,
+Z0      =
+/
+read back:  1
+  $STATUS == "%X00000001"

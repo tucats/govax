@@ -505,3 +505,45 @@ func TestFortranRoutineBreak(t *testing.T) {
 		t.Errorf("EXAMINE N at OTHER: %q", got)
 	}
 }
+
+// emptySource has Fortran 90's zero-sized arrays (docs/planning/PHASE-112 - Fortran
+// 95.md, subtask 3): declared empty, each dimension kept as (1:0).
+const emptySource = `      OPTIONS /F90
+      PROGRAM EMPTY
+      REAL A(0), C(2)
+      INTEGER E(4:3, 2)
+      C = 1.5
+      CALL NEST
+      PRINT *, SIZE(A), SIZE(E), C
+      END
+
+      SUBROUTINE NEST
+      END
+`
+
+// TestFortranEmptyArrays: EXAMINE of a zero-sized array shows nothing, as an empty
+// section does, and an element of one is out of its bounds, 1:0.
+func TestFortranEmptyArrays(t *testing.T) {
+	c := fortranSessionOf(t, emptySource, "NEST")
+
+	dispatch(t, c, "SET RADIX DECIMAL")
+
+	for _, step := range []struct{ line, output string }{
+		{"EXAMINE EMPTY.A", ""},
+		{"EXAMINE EMPTY.E", ""},
+		{"EXAMINE EMPTY.C", "EMPTY\\EMPTY.C(1):  1.500000\nEMPTY\\EMPTY.C(2):  1.500000\n"},
+	} {
+		if got := variableOutput(t, c, step.line); got != step.output {
+			t.Errorf("%s: got %q, want %q", step.line, got, step.output)
+		}
+	}
+
+	for _, want := range []struct{ line, says string }{
+		{"EXAMINE EMPTY.A(1)", "subscript 1 is out of bounds, value is 1, bounds are 1:0"},
+		{"EXAMINE EMPTY.E(1,1)", "subscript 1 is out of bounds, value is 1, bounds are 1:0"},
+	} {
+		if _, err := sayErr(c, want.line); err == nil || !strings.Contains(err.Error(), want.says) {
+			t.Errorf("%s: %v, want %q", want.line, err, want.says)
+		}
+	}
+}

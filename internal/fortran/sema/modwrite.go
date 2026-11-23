@@ -1369,9 +1369,11 @@ func (w *moduleWriter) arrayConstText(c *ArrayConst, t Type, dims []Dim) (string
 	}
 
 	// An empty constructor would need its type, which Fortran 90 can't
-	// write.
+	// write; but a zero-sized constant's declared shape, dimsText's (1:0),
+	// takes a scalar of its type for its no elements (parameter.go), so the
+	// value is a zero of that type.
 	if len(elems) == 0 {
-		return "", false
+		return w.constText(ZeroConst(t, diag.Position{}), t)
 	}
 
 	text := "(/ " + strings.Join(elems, ", ") + " /)"

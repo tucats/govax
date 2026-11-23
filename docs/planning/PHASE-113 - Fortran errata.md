@@ -202,7 +202,8 @@ place is a *proposal* for the author's review (**proposed: 112**); nothing is im
 5. *(New.)* An explicit-shape array of no elements, `REAL A(0)` or `B(5:1)`, is BOUNDORDER
    under `/F90` too (checked 2026-11-22; MANUAL.md's table lists it). Fortran 90's 5.1.2.4.1
    makes its extent zero; VAX FORTRAN calls it an error. **Proposed: 112**, under `/F90`
-   only (question 8), so nothing old changes (`TestNoF90Unchanged`).
+   only (question 8), so nothing old changes (`TestNoF90Unchanged`). *(Resolved in Phase
+   112, subtask 3.)*
 6. *(New.)* A module's defined operators in a fixed-form `/NOF90` unit (MANUAL.md's table):
    VAX FORTRAN reads `A.B.C` as a field. **Not planned**, by design.
 7. Not planned, ours (Phase 104): a constructor of a substring's values. **Not planned.**

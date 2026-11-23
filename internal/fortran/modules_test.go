@@ -838,3 +838,67 @@ func TestModulePointerComponents(t *testing.T) {
 		t.Errorf("the user's code differs:\n%s\n----\n%s", routine(both.MACRO), routine(user.MACRO))
 	}
 }
+
+// TestModuleEmptyArrays: a module's zero-sized arrays (Phase 112's subtask 3) in
+// its text, each declared (1:0), an empty constant's value a zero of its type, which
+// that shape takes for its no elements; a user compiled apart sees what one
+// compiled with it does.
+func TestModuleEmptyArrays(t *testing.T) {
+	module := strings.Join([]string{
+		"module empties",
+		"  implicit none",
+		"  integer :: i0",
+		"  integer, parameter :: none(0) = (/ (1, i0 = 1, 0) /)",
+		"  real, parameter :: rn(0) = (/ (1.0, i0 = 1, 0) /)",
+		"  character(len=3), parameter :: cn(2:1) = (/ ('abc', i0 = 1, 0) /)",
+		"  logical, parameter :: ln(0, 2) = reshape((/ (.true., i0 = 1, 0) /), (/ 0, 2 /))",
+		"  complex, parameter :: zn(0) = (/ ((1.0, 2.0), i0 = 1, 0) /)",
+		"  real :: empty(5:4, 3)",
+		"  type rec",
+		"    integer :: a",
+		"    real :: z(0)",
+		"    integer :: b",
+		"  end type",
+		"end module empties",
+	}, "\n")
+	user := strings.Join([]string{
+		"program show",
+		"  use empties",
+		"  type(rec) :: r",
+		"  r%a = size(none) + size(rn) + size(cn) + len(cn) + size(ln) + size(zn) + size(empty)",
+		"  r%b = ubound(empty, 1) + lbound(cn, 1)",
+		"end program show",
+	}, "\n")
+
+	alone := compileFree("EMPTIES", module, nil)
+	text := strings.Join(moduleText(t, alone, "EMPTIES"), "\n")
+
+	for _, want := range []string{
+		"INTEGER(KIND=4), PARAMETER :: NONE(1:0) = 0_4",
+		"REAL(KIND=4), PARAMETER :: RN(1:0) = 0.0E+00_4",
+		"CHARACTER(LEN=3), PARAMETER :: CN(1:0) = ''",
+		"LOGICAL(KIND=4), PARAMETER :: LN(1:0, 1:2) = .FALSE._4",
+		"COMPLEX(KIND=4), PARAMETER :: ZN(1:0) = (0.0E+00_4, 0.0E+00_4)",
+		"!GOVAX$ AT EMPTY 4 0\n  REAL(KIND=4) :: EMPTY(1:0, 1:3)",
+		"REAL(KIND=4) :: Z(1:0)",
+	} {
+		if !strings.Contains(text, want) {
+			t.Errorf("no %q in\n%s", want, text)
+		}
+	}
+
+	both := compileFree("SHOW", module+"\n"+user, nil)
+	apart := compileFree("SHOW", user, moduleFiles{"EMPTIES": moduleText(t, alone, "EMPTIES")})
+
+	for _, r := range []fortran.Result{both, apart} {
+		if r.Errors != 0 {
+			t.Fatalf("messages: %v", messageList(r))
+		}
+	}
+
+	routine := func(lines []string) string { return routineCode(lines, "SHOW") }
+
+	if routine(both.MACRO) != routine(apart.MACRO) {
+		t.Errorf("the user's code differs:\n%s\n----\n%s", routine(both.MACRO), routine(apart.MACRO))
+	}
+}
