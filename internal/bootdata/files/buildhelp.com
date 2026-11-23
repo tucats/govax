@@ -2,11 +2,11 @@ $!  BUILDHELP.COM - builds govax's help libraries from their help files,
 $!  and installs them in SYS$HELP (docs/PHASE-90 - VMS help.md).
 $!
 $!  SYS$HELP:HELPLIB.HLB, DCL's HELP, is built from the help files in
-$!  SYS$HELP:[.SOURCES], a file for each topic. SYS$HELP:DBG$HELP.HLB, the
-$!  debugger's HELP, is built from SYS$HELP:[.SOURCES.DEBUG]DEBUG.HLP, one
+$!  SYS$SYSROOT:[SYSHLP.SOURCES], a file for each topic. SYS$HELP:DBG$HELP.HLB, the
+$!  debugger's HELP, is built from SYS$SYSROOT:[SYSHLP.SOURCES.DEBUG]DEBUG.HLP, one
 $!  module, DEBUG, with each debugger command a topic below it.
 $!  SYS$HELP:UAFHELP.HLB, AUTHORIZE's HELP, is built from
-$!  SYS$HELP:[.SOURCES.AUTHORIZE]AUTHORIZE.HLP, a module for each of its
+$!  SYS$SYSROOT:[SYSHLP.SOURCES.AUTHORIZE]AUTHORIZE.HLP, a module for each of its
 $!  commands. Each build is a new version of the library.
 $!
 $!  To change govax's help, edit a help file and run this procedure. To

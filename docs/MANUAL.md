@@ -1566,6 +1566,10 @@ unchanged, the macro library is byte for byte govax's own, but for its
 date. To go back to govax's, delete the versions you made. The comments
 in `BUILDFTN.COM` say how to add a module or an entry point.
 
+[Appendix E](#appendix-e-customizing-the-system-from-source) says more,
+with the help libraries and fcalc, and how to change the copies built into
+govax itself.
+
 The microkernel needs no build: STARTUP.COM assembles
 `SYS$SOURCES:KERNEL.ASM` each time govax starts, so an edited kernel is
 the one that boots at the next start.
@@ -2506,7 +2510,8 @@ inside fcalc `HELP` shows the same text (it calls `LBR$OUTPUT_HELP` on
 Fortran 90 and numerical programming, with `BUILDFCALC.COM`, which compiles,
 assembles, and links them (`@SYS$SYSROOT:[SYSHLP.EXAMPLES.FCALC]BUILDFCALC
 INSTALL` also copies the image to `SYS$SYSTEM`). [14.13](#1413-fortran-90)
-describes fcalc as a program.
+describes fcalc as a program, and [Appendix E](#appendix-e-customizing-the-system-from-source)
+how to change it.
 
 #### SPAWN, ATTACH, and LOGOUT
 
@@ -4661,7 +4666,7 @@ debugger's HELP reads the library the logical name `DBG$HELP` names, or
 `SYS$HELP:DBG$HELP.HLB`, the same way, and AUTHORIZE's HELP reads
 `SYS$HELP:UAFHELP.HLB`, a module for each of its commands.
 `@SYS$SOURCES:BUILDHELP` rebuilds all three from their help files in
-`SYS$HELP:[.SOURCES]`. `HELP GOVAX` says what govax is, and who wrote it. A module you add to `HELPLIB.HLB` with
+`SYS$SYSROOT:[SYSHLP.SOURCES]` ([Appendix E](#appendix-e-customizing-the-system-from-source)). `HELP GOVAX` says what govax is, and who wrote it. A module you add to `HELPLIB.HLB` with
 `LIBRARY/HELP`, or change there, is kept when a newer govax refreshes the
 library with its own modules; a changed one it would have replaced is
 reported once, with `%MOUNT-I-SYSKEPT` naming the module.
@@ -4723,9 +4728,9 @@ is what it does and its format, with `Parameters`, `Description`,
 with subcommands has a level-2 topic for each; and a verb whose qualifier
 chooses what it does (ANALYZE, INITIALIZE) has a level-2 topic keyed by
 each such qualifier (`2 /IMAGE`). Its sources are in
-`SYS$HELP:[.SOURCES]`, a file for each level-1 topic, so a module of your
+`SYS$SYSROOT:[SYSHLP.SOURCES]`, a file for each level-1 topic, so a module of your
 own can be written beside them and put in `HELPLIB.HLB` with
-`LIBRARY/HELP SYS$HELP:HELPLIB SYS$HELP:[.SOURCES]MINE.HLP` (a refresh by a
+`LIBRARY/HELP SYS$HELP:HELPLIB SYS$SYSROOT:[SYSHLP.SOURCES]MINE.HLP` (a refresh by a
 newer govax keeps it), or kept in a library of its own that `HLP$LIBRARY`
 names.
 
@@ -6159,14 +6164,16 @@ subroutines (section 14.8). The compiler optimizes what it writes by default
 (section 14.9), and has listings, cross references, run-time checks (section
 14.3), and the debugger (section 14.10). From a later DEC FORTRAN it adds
 recursive routines, which ASTs and handlers may also enter while they run (section
-14.12). The language's largest omission is DICTIONARY (section 14.7). Fortran 90 is being
-added to the same compiler, a part at a time; so far, programs in free source form with
-Fortran 90's spellings, declarations and kinds, control constructs, and arrays as values
-(section 14.13).
+14.12). The language's largest omission is DICTIONARY (section 14.7). The same compiler
+also compiles Fortran 90: free source form, kinds, array expressions, dynamic arrays,
+derived types, modules, pointers, interfaces, and Fortran 90's intrinsic procedures and
+I/O, in programs that may mix both languages (section 14.13).
 
 **How far it can be trusted.** A real program, DUNGEON, compiles and plays on
 govax, and the same game on another compiler and on VMS itself printed the
-same lines (section 14.11). `docs/FORTRAN-INTERNALS.md` is a tour of how the
+same lines (section 14.11). A Fortran 90 program of 11,000 lines, fcalc, the
+calculator govax ships, prints the same lines on govax, under gfortran, and
+on VMS 7.1 (section 14.13). `docs/FORTRAN-INTERNALS.md` is a tour of how the
 compiler works.
 
 | To learn about | See |
@@ -6183,7 +6190,7 @@ compiler works.
 | The debugger | [14.10](#1410-debugging-a-compiled-program) |
 | A large program, and a program on VMS | [14.11](#1411-a-large-program-and-a-real-vms) |
 | Recursive routines, and routines ASTs can enter | [14.12](#1412-recursive-and-reentrant-routines) |
-| Fortran 90: free source form, `/F90`, declarations and kinds, control constructs, arrays as values, what's there so far | [14.13](#1413-fortran-90) |
+| Fortran 90: the language, what isn't there, and fcalc, a whole program | [14.13](#1413-fortran-90) |
 
 ### 14.1 A first program
 
@@ -7494,7 +7501,7 @@ VAX> DEFINE FTNRTL DUA1:[WORK]FTNRTL.EXE
 | Parallel directives | `CPAR$` lines are comments, and `NWORKERS` is 1 |
 | Threads, HP Fortran's `/REENTRANCY` and `NON_RECURSIVE` | A RECURSIVE routine is safe under ASTs and handlers; there are no threads to be safe under, and `OPTIONS /NORECURSIVE` exempts a unit from `/RECURSIVE` |
 | Output identical to VAX FORTRAN's | Object code, messages, and listings are govax's own, by design |
-| Fortran 90, but for free form, its spellings, declarations and kinds, control constructs, and arrays as values | `%FORT-E-NOTIMPL` at each statement, until each part is added ([section 14.13](#1413-fortran-90)) |
+| A few corners of Fortran 90 | `%FORT-E-NOTIMPL` where each stands; [section 14.13](#1413-fortran-90)'s "What Fortran 90 isn't here" lists them |
 
 What a program can see of the optimizer is in [section 14.9](#149-what-optimize-does).
 
@@ -7778,6 +7785,35 @@ FORTRAN run-time library, which could be run:
   - In the debugger, a DEPOSIT to a register of an outer call level goes where the RET
     will restore it from (VMS's run didn't settle it); an outer level's SP and PSL can't
     be changed.
+- Fortran 90 ([section 14.13](#1413-fortran-90)). There was never a VAX Fortran 90 to ask,
+  so where the standard leaves a choice to the processor, govax chose, and its run-time
+  library's side of every choice is FTNRTL's own:
+  - Kinds are byte sizes (`REAL(8)`, `INTEGER(2)`), as DEC's later compilers numbered them.
+    INTEGER(1) and COMPLEX(16) are added types; REAL(8) is D or G by `/G_FLOATING`.
+  - Arrays at run time are VMS's class NCA descriptors, and a module file is Fortran text
+    of govax's own form (`NAME.F90$MOD`), with the search order and the stamp that ties a
+    module's users to the module they were compiled against. A module's variables are
+    static whatever SAVE says.
+  - Every pointer starts disassociated, and storage ALLOCATE makes with pointers in it is
+    cleared, as Fortran 95 has it (Fortran 90 says undefined). COMMON may be reached by any
+    pointer; ASSOCIATED of a zero-sized target is false.
+  - ALLOCATE and DEALLOCATE with STAT= stop at their first failing object. A zero-sized
+    allocation takes a block of 8 bytes. An unwind past a routine leaves its heap blocks
+    allocated until its next entry.
+  - FOR numbers 301 to 312 and their condition names (`ALREADYALLOC`, `NOTALLOC`,
+    `BADARRDESC`, `BADDEALLOC`, `BADREPEAT`, the I/O statement conditions 306 to 310,
+    `NOTASSOC`, `UNALLOCATED`) are govax's, as is `%DEBUG-W-NOTALLOC`.
+  - A null argument (`CALL S(A,,B)`) through an explicit interface passes 0, as an absent
+    OPTIONAL argument does.
+  - RANDOM_NUMBER's first seed is 1234567; DATE_AND_TIME's zone is the logical name
+    `SYS$TIMEZONE_DIFFERENTIAL`, a positive one written without a `+`.
+  - In I/O: BLANK= is 'NULL' under `/F90` for an internal file and a unit no OPEN
+    described, though INQUIRE answers 'ZERO' for such a unit; STATUS='REPLACE' gives the
+    new file the erased one's version when it was the highest; units 6 and `*` are
+    distinct, so a record left open on one isn't continued by the other; a record left
+    open on a unit other than a terminal stays open across a terminal READ.
+  - `/STANDARD=F90`, OBSOLESCENT, `/WARNINGS`' HOSTHIDDEN and UNREAD, and `/CHECK=POINTERS`
+    are govax's, with every message's text.
 - Directives: a file is one module, so the first IDENT is the file's, where VAX
   FORTRAN made a module per unit. `ALIGN=` takes a number as written, not a
   PARAMETER's name. Choosing a PSECT attribute two ways for one block is an error,
@@ -8476,28 +8512,52 @@ compiled `/RECURSIVE` print differently there, by reading what FORTRAN-77 leaves
 
 ### 14.13 Fortran 90
 
-Fortran 90 (ISO/IEC 1539:1991) is being added to govax's compiler, a part at a time.
-It joins VAX FORTRAN in the same compiler rather than replacing it: a Fortran 90 program
-may call VAX FORTRAN routines and the other way round, and an old program compiles as it
-always has. This section grows with each part; so far a program may be written in Fortran
-90's free source form and with its spellings, with its declarations and kinds, with
-its control constructs (construct names, EXIT, CYCLE, and SELECT CASE), with arrays as
-values (sections, array expressions and assignment, constructors, WHERE, and the array
-functions), with internal procedures, interface blocks, and keyword, optional, and generic
-arguments, with dynamic arrays (allocatable, automatic, and assumed-shape arrays,
-array-valued functions, and the transformational functions), with derived types, with
-modules, compiled together or apart, with pointers (scalar, CHARACTER, and array pointers,
-pointer components, dummies, and results), and with the rest of the standard's intrinsic
-procedures (the character, numeric, model, and bit functions, TRANSFER, and the subroutines
-for the clock and random numbers), and with Fortran 90's I/O (nonadvancing records, the new
-specifiers and edit descriptors, and Fortran 90's NAMELIST). The compiler's tools know them all:
-`/STANDARD=F90` judges a program by Fortran 90 and its obsolescent features, `/WARNINGS` reports
-a host's name hidden and a value never read, listings and cross references go by scope,
-`/CHECK=POINTERS` looks for a pointer not associated and an array not allocated
-([section 14.3](#143-the-fortran-command)), the debugger reads derived types, sections, and
-pointers ([section 14.10](#1410-debugging-a-compiled-program)), and `/OPTIMIZE` steps
-through assumed-shape arrays and fuses array assignments ([section 14.9](#149-what-optimize-does)).
-Everything else Fortran 90 adds is recognized and reported as not yet implemented.
+Fortran 90 (ISO/IEC 1539:1991) is compiled by the same compiler as VAX FORTRAN. It
+joins VAX FORTRAN rather than replacing it: a Fortran 90 program may call VAX FORTRAN
+routines and the other way round, DEC's extensions work in either, and an old program
+compiles as it always has, to the same MACRO file. A program may use free source form and
+Fortran 90's spellings, `::` declarations and kinds, the control constructs, arrays as values
+(sections, array expressions and assignment, constructors, WHERE), internal procedures,
+interface blocks, keyword, optional, and generic arguments and defined operators, derived
+types, the I/O statements' new forms (nonadvancing records, the new specifiers and edit
+descriptors, Fortran 90's NAMELIST), allocatable, automatic, and assumed-shape arrays and
+array-valued functions, modules compiled together or apart, pointers, and the standard's
+intrinsic procedures. The compiler's tools know them all: `/STANDARD=F90` judges a program by
+Fortran 90 and its obsolescent features, `/WARNINGS` reports a host's name hidden and a value
+never read, listings and cross references go by scope, `/CHECK=POINTERS` looks for a pointer
+not associated and an array not allocated ([section 14.3](#143-the-fortran-command)), the
+debugger reads derived types, sections, and pointers
+([section 14.10](#1410-debugging-a-compiled-program)), and `/OPTIMIZE` steps through
+assumed-shape arrays and fuses array assignments ([section 14.9](#149-what-optimize-does)).
+
+What a program compiled here does is checked three ways: by programs whose output was worked
+by hand from the standard (govax's `testdata/fortran90`, 117 programs and 5 of several files,
+each run in every mode the compiler has), by gfortran building the same sources and printing
+the same lines, and by VMS 7.1 assembling and linking the compiler's MACRO files and FTNRTL's
+on a real VAX and running them. The largest program, fcalc, the calculator govax ships, is
+described below as an example of a whole Fortran 90 program. A few corners of the language
+aren't there yet; the last part of this section lists them, and 14.7 lists the choices govax
+made where the standard leaves one to the processor.
+
+| To learn about | See |
+| --- | --- |
+| Free form, `/F90`, Fortran 90's spellings | [Source form and spellings](#source-form-and-spellings) |
+| `::`, attributes, kinds, INTEGER(1), COMPLEX(16) | [Declarations and kinds](#declarations-and-kinds) |
+| The new intrinsic functions and subroutines | [The intrinsic procedures](#the-intrinsic-procedures) |
+| Programs that print the same everywhere | [Writing for any processor](#writing-for-any-processor) |
+| Construct names, EXIT, CYCLE, SELECT CASE | [Control constructs](#control-constructs) |
+| Sections, array expressions, constructors, WHERE | [Arrays as values](#arrays-as-values) |
+| Internal procedures, interfaces, generics, operators | [Procedures and interfaces](#procedures-and-interfaces) |
+| TYPE, components, constructors | [Derived types](#derived-types) |
+| Edit descriptors, OPEN's specifiers, ADVANCE=, NAMELIST | [Input and output](#input-and-output) |
+| ALLOCATE, automatic and assumed-shape arrays | [Dynamic arrays](#dynamic-arrays) |
+| MODULE, USE, module files | [Modules](#modules) |
+| POINTER, TARGET, `=>` | [Pointers](#pointers) |
+| A whole program in modules | [fcalc, a whole program](#fcalc-a-whole-program) |
+| gfortran and a real VMS | [On gfortran and on VMS](#on-gfortran-and-on-vms) |
+| What isn't there | [What Fortran 90 isn't here](#what-fortran-90-isnt-here) |
+
+#### Source form and spellings
 
 **The source's form.** A file of type `.F90` is in *free form*; any other is in fixed form
 ([section 14.4](#144-source-lines)). `/SOURCE_FORM=FREE` or `FIXED` says which for the
@@ -8592,6 +8652,8 @@ can't tell that two names were meant.
 
 A program may be of both forms, each file compiled on its own and linked together, as
 any FORTRAN program of several files is ([section 14.2](#142-what-the-compiler-accepts)).
+
+#### Declarations and kinds
 
 **Declarations with `::`** (the standard's 5.1 and 5.2), in either form. A type
 statement may list attributes before a `::` and give each name a value after `=`:
@@ -8692,6 +8754,8 @@ blanks, a field of up to 86 bytes, which a record of its own holds whole, longer
 usual 81 (VMS's FORTRAN had no `COMPLEX*32`; govax's choice); in a NAMELIST group; and
 unformatted, its 32 bytes. The other intrinsic functions of one are not there yet
 (`%FORT-E-NOTIMPL`).
+
+#### The intrinsic procedures
 
 **The kind and inquiry functions** (the standard's 13.7.1 and 13.13). `KIND(X)` is the kind
 of `X`'s type, and `SELECTED_INT_KIND(R)` and `SELECTED_REAL_KIND(P, R)` the kind of least
@@ -8825,7 +8889,9 @@ constant (`C(2:4)`, `MONTHS(M)(1:3)`): with constant bounds it is itself a const
 where a constant is; it is never a variable, so it can't be assigned or given to an
 `INTENT(OUT)` dummy. Under `/NOF90` a constant can't have a substring, as in VAX FORTRAN.
 
-**Writing for any processor.** A program that names its kinds by what it needs rather than
+#### Writing for any processor
+
+A program that names its kinds by what it needs rather than
 by a size prints the same on govax and on an IEEE machine. Give each unit its kinds as
 PARAMETERs, put the kind on every constant, and say `KIND=` on every conversion:
 
@@ -8842,6 +8908,8 @@ Ask for precision only, as here, unless the program needs a range: a range past 
 `REAL(16)` without `/G_FLOATING` (above). `testdata/fortran90/precise.f90` is such a
 program, with Newton's method, Simpson's rule, and complex roots; it prints the same lines
 under gfortran.
+
+#### Control constructs
 
 **Control constructs** (the standard's 8.1): construct names, DO with no loop control,
 EXIT and CYCLE, and SELECT CASE, in either source form and under either `/F90` setting.
@@ -8945,6 +9013,8 @@ tests. Under `/DEBUG` the dispatch is the SELECT CASE line's code; a CASE line h
 its IF construct, and from outside it, where VAX FORTRAN allowed only the last block. This
 holds under `/NOF90` too: it accepts programs that were refused, and changes none that
 compiled.
+
+#### Arrays as values
 
 **Arrays as values** (the standard's 6.2, 7.1.4, 7.5.1.5, and 7.5.3). A whole array, or a
 *section* of one, may stand in an expression or an assignment wherever a scalar may, and
@@ -9068,6 +9138,8 @@ What the compiled loops look like is in FORTRAN-INTERNALS.md's section 27. Each 
 its own loop, the leftmost subscript varying fastest; `/OPTIMIZE` gives it registers and closes
 it with `SOBGTR` or `AOBLEQ`, as it does a DO loop.
 
+#### Procedures and interfaces
+
 **Internal procedures** (the standard's 12.1.2.2). A main program or a subprogram may end
 with CONTAINS and one or more FUNCTIONs or SUBROUTINEs, its *internal procedures*, each
 ending with `END FUNCTION` or `END SUBROUTINE`. An internal procedure uses its host's
@@ -9159,6 +9231,57 @@ block says, and is an error (`NODERIVEDOP`) without one; and an `INTERFACE ASSIG
 a derived type takes every assignment of that type, `P = POINT(1.0, 2.0)` too. An interface
 body has no host, so it defines the type again; only a SEQUENCE type's two definitions, with
 the same name and components, are one type.
+
+#### Derived types
+
+**Definitions, components, and constructors** (the standard's 4.4). A *derived type* is a
+type the program defines, a list of named components, each of any type, a derived type
+among them. `TYPE name ... END TYPE` defines it, `TYPE(name)` declares its objects, `%`
+selects a component, and the type's name used as a function, a *structure constructor*,
+makes a value from one value for each component in order:
+
+```fortran
+program shapes
+  implicit none
+  type point
+    real :: x, y
+  end type point
+  type circle
+    character(len=8) :: name
+    type(point) :: centre
+    real :: radius
+  end type circle
+  type(circle) :: c, rings(3)
+  integer :: i
+
+  c = circle('UNIT', point(0.0, 0.0), 1.0)
+  c%centre%x = 2.5
+  rings = c
+  do i = 1, 3
+    rings(i)%radius = i * c%radius
+  end do
+  print '(1x, a, 2f6.2, f6.2)', c%name, c%centre, c%radius
+  print '(1x, 3f6.2)', rings%radius
+end program shapes
+```
+
+prints
+
+```text
+ UNIT      2.50  0.00  1.00
+  1.00  2.00  3.00
+```
+
+Assignment copies a whole object, and an object in a formatted list is its components in
+turn (`c%centre` is two REALs). A derived type is laid out on DEC's STRUCTURE machinery
+([section 14.2](#142-what-the-compiler-accepts)). Unlike a STRUCTURE, its components are
+naturally aligned by default ([section 14.3](#143-the-fortran-command), "Layout"), packed
+only when `/NOALIGN` or an `/ALIGN=RECORDS=PACKED` is given; a `SEQUENCE` type is laid out
+as a STRUCTURE is, packed by default, as COMMON and EQUIVALENCE need, and two definitions of one SEQUENCE
+type with the same components, in two units, are one type. `PRIVATE` in a module's type hides
+its components outside the module (below). A type's name lives among a unit's other names, so
+a variable can't share it (`TYPECLASH`). Under `/NOF90` `TYPE name` alone is still the old
+output statement, and `A.B` is a RECORD's field; `%` works under both.
 
 **Derived types as arguments and values** (4.4.2, 12.5.2.2). An object of a derived type goes
 by reference to a dummy of its own type, and nowhere else: to another type, to a number, or
@@ -9309,6 +9432,8 @@ distance   3.0  2  1
 How a host is reached, how OPTIONAL arguments are passed, and how a generic reference is
 resolved are in FORTRAN-INTERNALS.md's section 28.
 
+#### Input and output
+
 **Edit descriptors** (the standard's 10.5). A format may have Fortran 90's B, EN, and ES:
 `Bw` and `Bw.m` edit an integer in binary as O and Z do in octal and hexadecimal; `ESw.d[Ee]` is
 scientific notation, one digit before the point, and `ENw.d[Ee]` engineering notation, an
@@ -9457,6 +9582,8 @@ after it in its array, so `K(5) = 1, 2` sets K(5) and K(6), and `VS(1)%V(2) = 2*
 of VS(1); but `VS%V(1) = 5, 6` is a section, every element's V(1). A section out of bounds or
 with a stride of 0 is `FOR-F-INVREFVAR`, and an empty one takes no value. A VAX FORTRAN unit's
 name can't have a section, as VMS's can't.
+
+#### Dynamic arrays
 
 **Allocatable arrays** (the standard's 5.1.2.4.3, 5.2.6, and 6.3). An array declared
 ALLOCATABLE, with a colon for each of its dimensions, has a rank and nothing more until
@@ -9780,6 +9907,8 @@ function up(n, k)
 end function
 ```
 
+#### Modules
+
 **Modules** (the standard's 11.3). A `MODULE` holds data, types, constants, interfaces, and
 procedures for the units that `USE` it. Its specification part may hold declarations, types,
 interface blocks, PARAMETERs, COMMON, EQUIVALENCE, DATA, NAMELIST, SAVE, IMPLICIT, USE, and
@@ -9985,6 +10114,8 @@ Cross reference for PROBE.SHOW              (D defined, A assigned, a blank is u
 ```
 
 The host's own cross reference also includes those lines, because they mention its names.
+
+#### Pointers
 
 **Pointers** (the standard's 5.1.2.7, 5.1.2.8, 6.3.2, 7.5.2, and 13.13.13). A variable with
 the POINTER attribute holds not a value but where one is: it *points at* a variable, its
@@ -10254,8 +10385,87 @@ end do
 A CHARACTER pointer may point at any length's text, so every CHARACTER TARGET is in
 reach of one. Any call may change any pointer's target.
 
-**Not there yet.** What Fortran 90 adds that the compiler doesn't compile yet draws
-`%FORT-E-NOTIMPL` where it stands, naming what it is:
+#### fcalc, a whole program
+
+fcalc, the calculator in [section 6.6](#fcalc-a-calculator), is govax's example of a whole
+Fortran 90 program: about 11,000 lines in 15 modules and a main program, each file one unit,
+written for a reader learning Fortran 90 and numerical programming, and commented so. Its
+sources are on the system volume in `SYS$SYSROOT:[SYSHLP.EXAMPLES.FCALC]`, with the procedure
+that builds it, `BUILDFCALC.COM` ([Appendix E](#appendix-e-customizing-the-system-from-source)).
+Each module is compiled before the modules that USE it, since compiling one writes the module
+file, `NAME.F90$MOD`, that a later one reads:
+
+| File | What it holds | What it shows of Fortran 90 |
+| --- | --- | --- |
+| `FCPLATFORM.F90` | What differs between systems: the foreign command's text, whether input is a terminal, carriage control, HELP | Calling LIBRTL and LBRSHR from Fortran 90; a module procedure passed as a dummy procedure |
+| `FCKINDS.F90` | The kinds and limits every module shares | `SELECTED_REAL_KIND`, `HUGE`, `TINY`, `EPSILON`; the note on modules and IMPLICIT NONE that starts the tour |
+| `FCMESSAGES.F90` | Output and the messages, in VMS's form | Module data, PRIVATE, CHARACTER constants, internal files |
+| `FCVALUES.F90` | A VALUE (a complex number and an error), its arithmetic, guarded so nothing traps | A derived type past 8 bytes, generic names, defined operators |
+| `FCARRAYS.F90` | Scalars, vectors, and matrices, an array through a POINTER component | Pointer components, ALLOCATE and DEALLOCATE, and a rule of ownership where Fortran 90 has no destructors |
+| `FCLEXER.F90` | The lexer: a line into tokens | The character intrinsics, SELECT CASE |
+| `FCTREE.F90` | Expressions as trees, and the recursive descent parser | Recursive types, RECURSIVE functions, pointer results |
+| `FCSYMBOLS.F90` | Variables and functions in binary search trees | Pointer dummies, USE ONLY and renames, LLT and LGT |
+| `FCFUNCS.F90` | The built-in functions: elementary, special (gamma, erf, Bessel), and of lists | MTHRTL through the intrinsics, array constructors, assumed-shape arrays, SUM, PACK |
+| `FCPOLY.F90` | Polynomials' roots (by the Durand-Kerner method), `poly`, `polyval` | RESULT variables, pointer arrays a callee allocates and its caller deallocates |
+| `FCMATRIX.F90` | The matrix functions: products, LU solve, inverse, determinant, eigenvalues | MATMUL, TRANSPOSE, sections with strides, CSHIFT, RESHAPE |
+| `FCEVAL.F90` | The evaluator, walking a tree to its value | RECURSIVE, automatic arrays, OPTIONAL and keyword arguments, INTENT |
+| `FCNUMERIC.F90` | SOLVE, INTEGRATE, DIFF, ROOTS | Allocatable arrays, internal procedures, construct names with EXIT and CYCLE |
+| `FCPLOT.F90` | TABLE and PLOT | Run-time CHARACTER lengths, REPEAT, MINVAL and MAXVAL with MASK= |
+| `FCSTATE.F90` | SAVE, LOAD, `@`, LOG | OPEN's STATUS='REPLACE', ACTION=, POSITION='APPEND', INQUIRE, IOSTAT=, DATE_AND_TIME |
+| `FCALC.F90` | The main program: the prompt, the command words | ADVANCE='NO', SIZE=, EOR= |
+
+The build is the three commands for each file, then one LINK:
+
+```text
+$ FORTRAN/G_FLOATING FCPLATFORM
+$ MACRO FCPLATFORM
+$ ...                              ! and so on, FCKINDS through FCALC
+$ LINK/EXECUTABLE=FCALC FCALC,FCPLATFORM,FCKINDS,FCMESSAGES,FCVALUES,-
+_$ FCARRAYS,FCLEXER,FCTREE,FCSYMBOLS,FCFUNCS,FCPOLY,FCMATRIX,FCEVAL,-
+_$ FCNUMERIC,FCPLOT,FCSTATE
+```
+
+`/G_FLOATING` is needed: fcalc's kind, `SELECTED_REAL_KIND(15, 300)`, has G_floating's range,
+which D_floating doesn't. Every operation and function checks its operands before the machine
+could overflow, divide by zero, or meet a reserved operand, and treats a value below the
+smallest as zero, so the VAX, which traps where an IEEE machine gives an infinity, and gfortran
+on an IEEE host compute the same values, shown to 12 digits by default.
+
+fcalc was built in every mode govax's compiler has (`/OPTIMIZE` both ways, `/RECURSIVE` both
+ways, both paging modes, `/CHECK=ALL`, and `/DEBUG`), and each build printed the same output
+for each of its eleven test scripts. `/LIST/CROSS_REFERENCE`, `/STANDARD=F90`, and
+`/WARNINGS=ALL` were run on every module; the few messages left are each deliberate: VMS
+extensions in `FCPLATFORM`, internal procedures declaring locals of their own that hide a
+host's name, and a variable read only to throw away the rest of a line too long. A debugger session breaks in
+its evaluator at each level of a user function's recursion, and examines expression trees
+through their pointers (`FN%BODY%KID%OP`).
+
+#### On gfortran and on VMS
+
+**gfortran.** A Fortran 90 program that keeps to the standard and names its kinds by what it
+needs ([Writing for any processor](#writing-for-any-processor)) compiles under gfortran too,
+`-std=f95`, and prints the same lines but where the standard leaves a choice to the processor.
+Every program of `testdata/fortran90` but govax's own (those calling VMS, or testing what only
+govax chooses) was built so, and so was fcalc, with only `FCPLATFORM.F90` changed (its twin for
+gfortran, which has no LIB$GET_FOREIGN, is `internal/fcalc/src/gfortran/fcplatform.f90`): every
+line of every script and every file it writes is the same, built plainly, optimized, and with
+every run-time check gfortran has and its traps on.
+
+**VMS.** A Fortran 90 program goes to a real VMS as a FORTRAN-77 one does
+([section 14.11](#1411-a-large-program-and-a-real-vms)): take its `.MAR` files and FTNRTL's
+sources, and build FTNRTL and the program with VMS's MACRO and LINK. No Fortran 90 compiler is
+needed there, and none existed for the VAX; module files stay behind, since they matter only to
+the compiler. VMS 7.1 did this for every program of `testdata/fortran90`, compiled with and
+without the optimizer and `/RECURSIVE`, and for fcalc in four builds, under VMS's own LIBRTL,
+MTHRTL, and RMS: every program built with no message, and every run printed what govax's prints,
+fcalc's eleven scripts and the files they wrote among them. fcalc was the first program to run
+all of FTNRTL's Fortran 90 code (ALLOCATE, pointers, nonadvancing and namelist I/O, the new
+intrinsics) on a real VAX. `testdata/f90r/README.md` has the procedure.
+
+#### What Fortran 90 isn't here
+
+What Fortran 90 has that the compiler doesn't compile draws `%FORT-E-NOTIMPL` where it stands,
+naming what it is:
 
 ```text
 %FORT-E-NOTIMPL, a CHARACTER pointer whose length isn't constant is not implemented yet
@@ -10264,30 +10474,32 @@ reach of one. Any call may change any pointer's target.
   -------------------------------^
 ```
 
-Of pointers, these are not there yet: a CHARACTER pointer whose length is known only when the
-program runs (but `CHARACTER(LEN=*)` pointer dummies, above); `NULL()` and initial values for
-pointers and pointer components, which are Fortran 95's. Without
-`/CHECK=POINTERS` ([section 14.3](#143-the-fortran-command)) a disassociated pointer's target
-is at address 0, and using it is an access violation.
-Procedure pointers and bounds remapping (`P(1:N) => A`) aren't Fortran 90 at all.
+| What | Instead |
+| --- | --- |
+| A CHARACTER pointer whose length is known only when the program runs | A `CHARACTER(LEN=*)` pointer dummy is there, or a constant length |
+| ENTRY in a module procedure | An internal or external procedure's ENTRY, or two module procedures |
+| A module whose module file would give one type two names, an external procedure that is a specific of two of its generic names, or a COMMON block both it and a module it uses declare | `%FORT-E-NOTIMPL` when the module compiles |
+| govax's definition modules (`$SSDEF` and the rest) as modules to USE | `INCLUDE '($SSDEF)'`, as in VAX FORTRAN ([section 14.8](#148-calling-vms-from-fortran)) |
+| A module's defined operators in a fixed-form `/NOF90` unit | VAX FORTRAN reads `A.B.C` as a field; compile the unit `/F90` |
+| An array declared with no elements (`Z(0)`, `Y(5:1)`) | `%FORT-E-BOUNDORDER`, as VAX FORTRAN says; an adjustable or allocatable array may have no elements |
+| A CHARACTER array constructor whose first value's length is known only when the program runs and isn't a variable's, an array's, or a concatenation of them | Put the value in a variable first |
+| A CHARACTER array expression of a length known only when the program runs, not made of names, as an actual argument | The same |
+| A statement function of a derived type | An internal function |
+| A name an internal procedure's declarations use that its host uses only in its executable statements | Declare the name in the host |
+| CSHIFT, EOSHIFT, or SPREAD with a `DIM=` not constant; RESHAPE with an `ORDER=` not constant | A constant, or a SELECT CASE of the few values |
+| An assumed-shape array as `%LOC`'s, `%REF`'s, or a system subroutine's argument | Pass an element, or an explicit-shape copy |
+| A `BACK=` that is an array (INDEX, SCAN, VERIFY) | A loop over the elements |
+| TRANSFER to a CHARACTER `MOLD` of length zero or of a length known only when the program runs, or of such a CHARACTER array expression | A MOLD of constant length |
+| A derived type's component, or a function's value, of CHARACTER length zero | A length of 1 |
+| A COMPLEX(16) argument to SUM, PRODUCT, and the other functions not named under "The intrinsic procedures" | A loop |
+| A NAMELIST object deeper than 8 levels of arrays and derived types, or with more than 15 dimensions in all | FTNRTL's limits; `%FORT-E-NOTIMPL` |
 
-Of modules, these are not there yet: ENTRY in a module procedure; a module whose text would have
-to give one type two names, or an external procedure that is a specific of two of its generic
-names, or a COMMON block it and a module it uses both declare (each `%FORT-E-NOTIMPL` when the
-module compiles); and govax's definition modules (`$SSDEF` and the rest) as modules to USE,
-which are still INCLUDE's. A fixed-form `/NOF90` unit may use a module, but VAX FORTRAN reads
-`A.B.C` as a field, so it can't use a module's defined operators. Of arrays as values, these are not there yet: an array declared with an upper bound below its lower one (`Z(0)`), which Fortran 90
-gives no elements but govax still calls `BOUNDORDER`; a CHARACTER constructor whose first value's length is known only when the program
-runs and isn't a variable's, an array's, or a concatenation of them; and sections of arrays of
-records. Of the intrinsic procedures,
-these are not there yet: a `BACK=` that is an array; `TRANSFER` to a `CHARACTER` `MOLD` of a
-length of zero or of one known only when the program runs; a derived type's component, or a
-function's value, of length zero; and `COMPLEX(16)` arguments to the functions not named above
-(`SUM`, `PRODUCT`, and the like). Of I/O, every Fortran 90 statement and
-specifier is there; a NAMELIST object deeper than 8 levels of arrays and derived types, or with
-more than 15 dimensions in all, is `%FORT-E-NOTIMPL` (FTNRTL's limits), and Fortran 95's zero
-widths (`I0`, `F0.2`), which Fortran 90 doesn't have, write `%FOR-E-OUTCONERR`, a field too
-narrow for any value.
+Without `/CHECK=POINTERS` ([section 14.3](#143-the-fortran-command)) a disassociated pointer's
+target is at address 0, and using it is an access violation. These are Fortran 95's or later's,
+and not Fortran 90 at all: `NULL()` and default initial values for components and pointers
+(`%FORT-E-NOTIMPL`); zero widths (`I0`, `F0.2`, which write `%FOR-E-OUTCONERR`, a field too
+narrow for any value); FORALL, PURE, and ELEMENTAL (`%FORT-E-UNRECSTMT`, statements the
+compiler doesn't know); and procedure pointers and bounds remapping (`P(1:N) => A`).
 
 ## 15. Appendices
 
@@ -10497,3 +10709,148 @@ difference in instruction behavior.
   manuals, and the *Debugger Manual*.
 - Kenah and Bate, *VAX/VMS Internals and Data Structures*: how VMS works
   inside, and the source of govax's scheduling and paging rules.
+
+### Appendix E: Customizing the system from source
+
+Three parts of govax that a VAX program uses are built from sources govax carries:
+FTNRTL, the FORTRAN run-time library (MACRO-32); the help libraries, DCL's, the debugger's,
+and AUTHORIZE's (VMS help files); and fcalc, the calculator (Fortran 90). The system macro
+library, STARLET.MLB, is a fourth. Each can be changed in two places:
+
+- **On the system volume**, where the sources are files with a DCL procedure that builds
+  them. A build there is a new version of the system's file, used from then on by every
+  session that mounts the volume, and kept when a newer govax starts
+  ([When govax is upgraded](#when-govax-is-upgraded)). Delete the versions you made to
+  go back to govax's, or start govax once with `--system-initialize`.
+- **In govax's own source tree**, where the same sources are built into the `govax`
+  program itself by `go generate`, for everyone who runs that build. This is the place to
+  change govax for good; the next start with a writable system volume gives the volume the
+  new copies, as new versions of the files you haven't changed.
+
+| Part | Sources on the system volume | Procedure | Sources in govax's tree | Rebuilt by |
+| --- | --- | --- | --- | --- |
+| FTNRTL | `SYS$SOURCES:FTN_*.MAR`, `FTNRTL.OPT` | `@SYS$SOURCES:BUILDFTN` | `internal/ftnrtl/mar/`, `ftnrtl.opt` | `go generate ./internal/ftnrtl` |
+| Help libraries | `SYS$SYSROOT:[SYSHLP.SOURCES]` and its `[.DEBUG]` and `[.AUTHORIZE]` | `@SYS$SOURCES:BUILDHELP` | `internal/bootdata/files/help/`, `dbghelp/`, `uafhelp/` | `go generate ./internal/bootdata` |
+| fcalc | `SYS$SYSROOT:[SYSHLP.EXAMPLES.FCALC]` | `BUILDFCALC.COM` there | `internal/fcalc/src/` | `go generate ./internal/fcalc` |
+| STARLET.MLB | `SYS$SOURCES:STARLET.MAR`, `STARLETDEF.MAR` | `@SYS$SOURCES:BUILDSTARLET` | `internal/bootdata/files/` | `go generate ./internal/bootdata` |
+
+#### FTNRTL
+
+Edit a module in `SYS$SOURCES` (`FTN_FORMAT.MAR`, say), then:
+
+```text
+VAX> @SYS$SOURCES:BUILDFTN
+%COPY-S-COPIED, FTNRTL.EXE;1 copied to DUA0:[SYSTEM.SYSLIB]FTNRTL.EXE;2
+FTNRTL.EXE built and installed in SYS$SHARE
+```
+
+RUN and LINK find `SYS$SHARE:FTNRTL.EXE` before the copy built into govax, so the new
+library is the one programs run with at once, programs linked earlier among them: FTNRTL is
+a shareable image, found each time a program starts. To add an entry point, add it at the end
+of `FTN_VECTOR.MAR`'s transfer vector, so the entries before it keep their offsets, and raise
+the minor number of `FTNRTL.OPT`'s `GSMATCH`; a program linked against the new entry then
+refuses to run with an older library. To add a module, add its `MACRO` line to `BUILDFTN.COM`
+and its object to `FTNRTL.OPT`. [Section 14.6](#146-ftnrtl-the-run-time-library) describes
+the modules and the calls the compiler makes, and how to build a library of your own
+elsewhere and point the logical name `FTNRTL` at it instead.
+
+In govax's tree the sources are `internal/ftnrtl/mar/*.mar`, linked in the order
+`internal/ftnrtl/ftnrtl.opt` names them (a new module needs its line there and in
+`internal/bootdata/files/buildftn.com`). `go generate ./internal/ftnrtl` assembles and links
+them with govax's own MACRO and LINK into `internal/ftnrtl/ftnrtl.exe`, which is committed and
+built into govax; `go test ./internal/ftnrtl` checks that the image is what the sources build.
+fcalc is linked against FTNRTL, so after a change to the transfer vector run
+`go generate ./internal/fcalc` too. Then rebuild govax (`go build ./cmd/govax`) and run the
+FORTRAN tests (`go test ./internal/console -run 'Fortran|FTNRTL|Fcalc'`).
+
+#### The help libraries
+
+A help file is a VMS one: key lines with their levels, and text
+([Writing help modules](#writing-help-modules)). DCL's library, `HELPLIB.HLB`, is built from
+`SYS$SYSROOT:[SYSHLP.SOURCES]`, a file for each level-1 topic (`COPY.HLP`, `FCALC.HLP`, ...);
+the debugger's, `DBG$HELP.HLB`, from `[.SOURCES.DEBUG]DEBUG.HLP`, one module with each command
+a topic below it; and AUTHORIZE's, `UAFHELP.HLB`, from `[.SOURCES.AUTHORIZE]AUTHORIZE.HLP`.
+Edit a file and rebuild all three, or replace only the module you changed:
+
+```text
+VAX> @SYS$SOURCES:BUILDHELP
+HELPLIB.HLB, DBG$HELP.HLB, and UAFHELP.HLB built in SYS$HELP
+VAX> LIBRARY/HELP/REPLACE SYS$HELP:HELPLIB SYS$SYSROOT:[SYSHLP.SOURCES]FCALC.HLP
+```
+
+For help of your own, a module you insert into `HELPLIB.HLB` with `LIBRARY/HELP/INSERT` is kept
+when a newer govax refreshes the library; or keep a library of your own and name it with the
+logical name `HLP$LIBRARY`, which HELP searches after the main library
+([section 10](#10-the-librarian)).
+
+In govax's tree the help files are `internal/bootdata/files/help/*.hlp` (DCL's),
+`dbghelp/debug.hlp`, and `uafhelp/authorize.hlp`. A new topic is a new file there; the system
+volume's sources follow the directory. `go generate ./internal/bootdata` rebuilds the three
+`.hlb` files beside them, which are committed and built into govax; `go test
+./internal/bootdata` checks they match their sources, and `go test ./internal/console -run
+Help` checks that every verb, qualifier, lexical function, and configuration key has a topic
+and every module is well formed. HELP FCALC's examples are fcalc's real output:
+`FCALC_HELP_WRITE=1 go test ./internal/console -run TestFcalcHelpExamples` writes them again
+after fcalc changes, and without the variable the test holds the text to what fcalc prints.
+
+#### fcalc
+
+fcalc's sources on the system volume belong to the system, and `BUILDFCALC.COM` builds in the
+directory it is in, so copy them to a directory of your own and build there:
+
+```text
+VAX> CREATE/DIRECTORY DUA1:[FCALC]
+VAX> COPY SYS$SYSROOT:[SYSHLP.EXAMPLES.FCALC]*.* DUA1:[FCALC]
+VAX> SET DEFAULT DUA1:[FCALC]
+VAX> @BUILDFCALC
+FCALC.EXE built
+VAX> MYCALC :== $DUA1:[FCALC]FCALC
+VAX> MYCALC 2^10 + 1
+1025
+```
+
+The procedure compiles each module `/G_FLOATING`, in the order it lists them, a module before
+those that USE it; assembles each; links the image; and deletes the `.MAR`, `.OBJ`, and
+`.F90$MOD` files. `@BUILDFCALC INSTALL` also copies the image to `SYS$SYSTEM:FCALC.EXE`, where
+the `FCALC` symbol finds it (writing `SYS$SYSTEM` takes the SYSTEM account, or SYSPRV).
+
+What to change for the usual additions:
+
+- **A built-in function** is a row in `FCFUNCS.F90`'s table `BUILTINS` (its name and how many
+  arguments it takes) and a `CASE` in `APPLY_BUILTIN`; a function of arrays is the same in
+  `FCMATRIX.F90`'s table and `APPLY_MATRIX`.
+- **A command** is a `CASE` in `FCALC.F90`'s dispatch (and its word in `IS_RESERVED` there, if
+  it may not also be a variable's name), and its work in the module it belongs to (`FCNUMERIC.F90`, `FCPLOT.F90`,
+  `FCSTATE.F90`).
+- **A message** is an entry in `FCMESSAGES.F90`'s table (its severity, identifier, and text),
+  with a named code for it there (`E_DIVZERO`).
+- **A module** goes in `BUILDFCALC.COM`'s list after every module it uses and before every
+  module that uses it, and on its `LINK` line.
+- **Its help** is `FCALC.HLP` in `SYS$SYSROOT:[SYSHLP.SOURCES]`, which both `HELP FCALC` and
+  fcalc's own HELP show; replace that module in `HELPLIB.HLB` (above) so both describe what you
+  changed.
+
+Each file begins with a comment on what the module does and how, written for a reader learning
+Fortran 90 and numerical methods; [section 14.13](#fcalc-a-whole-program) has a table of them.
+
+In govax's tree the sources are `internal/fcalc/src/*.f90`, compiled in the order
+`internal/fcalc/src/compiles.txt` gives (a new module needs its place there and in
+`internal/fcalc/buildfcalc.com`), with `src/gfortran/fcplatform.f90`, the one module gfortran
+builds instead of VMS's. `go generate ./internal/fcalc` compiles, assembles, and links them with
+govax's own compiler, MACRO, and LINK into `internal/fcalc/fcalc.exe`, which is committed and
+built into govax; `go test ./internal/fcalc` checks the image is what the sources build. Then
+rebuild govax, and run fcalc's tests: `go test ./internal/console -run Fcalc` runs every script
+in `testdata/fcalc` (each `name.in`, with the output it must print, `name.out`) in every mode the
+compiler has, and `testdata/fortran/gfortran/compare.py` runs them on gfortran's build of the same
+sources, which must print the same lines. A new behavior needs its lines in a script, worked out
+by hand.
+
+#### STARLET.MLB
+
+`@SYS$SOURCES:BUILDSTARLET` builds the system macro library from `STARLET.MAR` (the system
+service and RMS macros) and `STARLETDEF.MAR` (the `$xxxDEF` macros) into a new version of
+`SYS$LIBRARY:STARLET.MLB`, which the next `MACRO` uses
+([Rebuilding FTNRTL and the macro library](#rebuilding-ftnrtl-and-the-macro-library)). In
+govax's tree `internal/bootdata/files/starlet.mar` is written by hand from DIGITAL's manuals,
+`starletdef.mar` is generated from VMS's definitions in `internal/vmsdef`, and
+`go generate ./internal/bootdata` rebuilds both the generated file and the library.

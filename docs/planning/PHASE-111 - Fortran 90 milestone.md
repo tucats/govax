@@ -276,7 +276,8 @@ As revised by the author's answers (below), with vectors and matrices added:
     MACRO probe it led to)
 12. **fcalc as a tool**: the system volume, the built-in image, SYLOGIN's
     symbol, HELP FCALC, MANUAL.md's section. (done 2026-11-22)
-13. **The manual's 14.13** finished.
+13. **The manual's 14.13** finished. (done 2026-11-22; with Appendix E, by the author's
+    request)
 14. **FORTRAN-INTERNALS.md** finished, with fcalc as its worked example of a
     whole program.
 15. **Close-out**: PLAN.md, CLAUDE.md, "Where things stand", and Phase 112's
@@ -1002,3 +1003,36 @@ each script (a `SHOW MEMORY` command of fcalc's own) so a leak shows.
   + 1`, fcalc's HELP beside DCL's for four requests, and BUILDFCALC INSTALL,
   whose image runs `basics` as the milestone's build does. The fcalc tests,
   gfortran's witness (all three builds), and `TestF90R*` pass.
+- **2026-11-22:** Subtask 13, the manual's 14.13 finished. Its opening is no longer
+  "being added, a part at a time": it says what Fortran 90 compiles, how it was checked (the
+  corpus by hand, gfortran, VMS 7.1), and has a table of the section's parts. The section's
+  48 bold-led paragraphs, in phase order, are now under subheadings (Source form and
+  spellings, Declarations and kinds, The intrinsic procedures, Writing for any processor,
+  Control constructs, Arrays as values, Procedures and interfaces, Derived types, Input and
+  output, Dynamic arrays, Modules, Pointers). Derived types had never been introduced (no
+  TYPE ... END TYPE, `%`, or constructor before their arguments and arrays): a new opening
+  paragraph and example (`shapes`, run on govax for its output) do it. Three new parts end
+  the section: "fcalc, a whole program" (a table of its 16 files, what each holds and shows
+  of Fortran 90, from each file's own header comment, A.2's planned table having changed;
+  the build; why `/G_FLOATING` and nothing traps; the modes and tools run on it), "On
+  gfortran and on VMS" (subtasks 10 and 11), and "What Fortran 90 isn't here", a table
+  replacing "Not there yet", each row compiled to check it: off it, sections of arrays of
+  records (they compile since Phase 105); on it, newly listed, CSHIFT, EOSHIFT, and SPREAD
+  with a DIM= not constant and RESHAPE with an ORDER= not constant, a statement function of
+  a derived type, a name an internal procedure's declarations use that its host uses only in
+  executable statements, an assumed-shape array as `%LOC`'s or a system subroutine's
+  argument, a CHARACTER array expression of run-time length not made of names as an actual
+  argument; and FORALL, PURE, and ELEMENTAL, Fortran 95's, which are `UNRECSTMT`, not
+  NOTIMPL. 14.7's "What isn't there" row now points there, and its "Choices" gain a Fortran
+  90 bullet gathering Phases 99 to 110's unconfirmed choices a user can see. Chapter 14's
+  opening, "How far it can be trusted", and its table name the finished section and fcalc.
+  The author asked, while this was written, for a section on rebuilding the system's parts
+  from source, as an appendix: **Appendix E, "Customizing the system from source"**, on
+  FTNRTL, the help libraries, fcalc, and STARLET's macro library, each on the system volume
+  (its procedure) and in govax's tree (`go generate`, the tests that hold each); section 5's
+  "Rebuilding FTNRTL and the macro library", chapter 10's help paragraph, and 6.6's FCALC
+  point to it. Each volume procedure it shows was run on a scratch system volume (BUILDFTN,
+  BUILDHELP, a single module's LIBRARY/HELP/REPLACE, BUILDFCALC from a copy of the examples
+  directory, the image run as a foreign command). Found: chapter 10 named the help sources
+  `SYS$HELP:[.SOURCES]`, which RMS rightly refuses (SYS$HELP isn't rooted); now
+  `SYS$SYSROOT:[SYSHLP.SOURCES]`. Every `(#anchor)` link in MANUAL.md resolves.
