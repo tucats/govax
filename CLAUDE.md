@@ -1454,7 +1454,8 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   95.md`: FORALL, PURE and ELEMENTAL, `NULL()` and default initialization,
   nested WHERE, the intrinsic changes, zero widths, all under `/F90`; its
   subtask 1 a survey of the HP Fortran manual, gfortran `-std=f95` the
-  witness), **Phase 113 is the errata** (its Part B the scope: the cheap
+  witness, done 2026-11-22: its Part A, with the probes in `testdata/f95`,
+  awaiting the author's review), **Phase 113 is the errata** (its Part B the scope: the cheap
   Fortran 90 NOTIMPLs, LIB$INITIALIZE, STR$'s arithmetic, `USE
   STARLET_SSDEF`, MACRO's and LINK's gaps, housekeeping, and a VMS probe
   round at its end), and **Phase 114 is `CONVERT=`** (`PHASE-114 - FORTRAN
@@ -1774,6 +1775,9 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   corpus runs, and `modules/` by `TestFortran90Modules`; `testdata/fortran/
   gfortran/compare.py`'s `PROGRAMS90` builds them with `gfortran -std=f95` as a
   witness.
+- `testdata/f95/` — Phase 112's survey probes (README.md): a program per group of Fortran
+  95's additions, each with `name.gfortran`, gfortran `-std=f95`'s output; survey material,
+  not a corpus.
 - `testdata/for83/` — Phase 83's probe (README.md; `vax/` is VMS V7.1's run): `gen.go` writes `for83.mar`
   (FORRTL's system subroutines), `for83b.mar` and `for83c.mar` (conditions on FORRTL and LIBRTL, a case per
   image), `lnk83.mar`, `def_opc.mar`, and `for83.com` (which also runs LIBRARY/TEXT); `for83e.mar` (what a handler can go on from, run on FORRTL over govax); `for83g.mar` (what's left of an unwound statement, on FORRTL over govax); `for83x.for`, `for83y.for`, and `for83t.for` (the same on FTNRTL, by hand); `decode.go` turns
