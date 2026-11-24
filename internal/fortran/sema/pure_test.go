@@ -67,6 +67,36 @@ func TestPure(t *testing.T) {
 				"NOTPURE: G, a variable of the module M, can't be given a value in a PURE procedure; " +
 				"NOTPURE: G, a variable of the module M, can't be passed to an INTENT(OUT) dummy argument in a PURE procedure; " +
 				"NOTPURE: H, a variable of its host P, can't be given a value in a PURE procedure"},
+		{"pointers and storage association (Phase 113)", []string{
+			"module m",
+			"  type node", "    integer :: v", "    integer, pointer :: p", "  end type",
+			"  integer, target :: g", "  type(node) :: gn",
+			"contains",
+			"  pure subroutine s(x, y, k, t)", "    type(node), intent(in) :: x", "    type(node), intent(inout) :: y",
+			"    integer, intent(in) :: k", "    integer, intent(in), target :: t", "    type(node) :: loc",
+			"    integer, pointer :: lp", "    real :: c, l", "    common /blk/ c", "    equivalence (l, c)",
+			"    x%p = 1", "    gn%p = 2", "    y%p = 3", "    loc = node(1, g)", "    loc = gn", "    loc = x",
+			"    loc = y", "    y = node(k, gn%p)", "    lp => t", "    l = 1.0",
+			"  end subroutine s",
+			"  pure integer function f(q)", "    integer, pointer :: q", "    q = 5", "    f = q", "  end function f",
+			"end module m"},
+			"NOTPURE: X, a dummy argument with INTENT(IN), can't be given a value through a pointer component in a PURE procedure; " +
+				"NOTPURE: GN, a variable of the module M, can't be given a value through a pointer component in a PURE procedure; " +
+				"NOTPURE: G, a variable of the module M, can't be a pointer's target in a PURE procedure; " +
+				"NOTPURE: GN, a variable of the module M, can't be assigned to a variable of a type with a pointer component in a PURE procedure; " +
+				"NOTPURE: X, a dummy argument with INTENT(IN), can't be assigned to a variable of a type with a pointer component in a PURE procedure; " +
+				"NOTPURE: T, a dummy argument with INTENT(IN), can't be a pointer's target in a PURE procedure; " +
+				"NOTPURE: L, a variable in common block /BLK/, can't be given a value in a PURE procedure; " +
+				"NOTPURE: Q, a dummy argument of a PURE function, can't be given a value through the pointer in a PURE procedure"},
+		{"an internal procedure not declared PURE (Phase 113)", []string{
+			"module m", "contains",
+			"  pure subroutine s(a)", "    integer, intent(inout) :: a", "    a = 1",
+			"  contains",
+			"    subroutine inner()", "    end subroutine inner",
+			"    pure subroutine fine()", "    end subroutine fine",
+			"  end subroutine s",
+			"end module m"},
+			"NOTPURE: INNER, an internal procedure not declared PURE, can't be contained in a PURE procedure"},
 		{"statements", []string{
 			"module m", "contains",
 			"  pure subroutine s(a, text)", "    integer, intent(inout) :: a", "    character(len=*), intent(out) :: text", "    logical :: l",

@@ -166,15 +166,17 @@ place is a *proposal* for the author's review (**proposed: 112**); nothing is im
    2026-11-22). Proposed places, cheapest first:
    - CSHIFT, EOSHIFT, SPREAD with a `DIM=` not constant; RESHAPE's `ORDER=` not constant
      (`sema/transform.go`). The reductions already take a run-time DIM= (Phase 104, subtask
-     8), so the machinery is there. **Proposed: 112.**
+     8), so the machinery is there. **Proposed: 112.** *(Done in subtask 2.)*
    - A `BACK=` that is an array (`sema/charfuncs.go`): an elemental argument. **Proposed: 112.**
+     *(Done in subtask 2.)*
    - COMPLEX(16) to SUM, PRODUCT, and their kin (`complex32Intrinsic`, three sites).
-     **Proposed: 112.**
+     **Proposed: 112.** *(Done in subtask 2.)*
    - A component or function value of CHARACTER length zero (`decl.go`'s "a CHARACTER length
-     of zero here"). **Proposed: 112.**
-   - A statement function of a derived type (`decl.go`). **Proposed: 112**, small.
+     of zero here"). **Proposed: 112.** *(Done in subtask 2.)*
+   - A statement function of a derived type (`decl.go`). **Proposed: 112**, small. *(Done in
+     subtask 2.)*
    - TRANSFER to a CHARACTER MOLD of zero or run-time length, or of such an array
-     (`sema/transfer.go`). **Proposed: 112.**
+     (`sema/transfer.go`). **Proposed: 112.** *(Done in subtask 2.)*
    - An assumed-shape array to `%LOC`, `%REF`, `%DESCR`, or a system subroutine
      (`arguments.go`): `%LOC` and `%REF` of a contiguous one could take its first element.
      **Not planned** beyond a better message; the rule is ours.
@@ -193,13 +195,14 @@ place is a *proposal* for the author's review (**proposed: 112**); nothing is im
    module's text (`modwrite.go`). **Not planned**, ours, but for structures with initial values
    in a module's text, which default initialization (D.3) brings to every module with a
    derived type: **proposed: 112** with D.3. *(A derived type's default values in a module's
-   text resolved in Phase 112, subtask 5; a STRUCTURE with initial values still isn't written.)*
+   text resolved in Phase 112, subtask 5; a STRUCTURE with initial values in subtask 2 here.)*
 3. govax's definition modules (`$SSDEF` and the rest) as module files to USE (Phase 106,
    "later, if wanted"). **Proposed: 112**, small (`sysdef` already writes them as text;
    `USE $SSDEF` is not a legal name, so the spelling is question 8).
 4. **Noticed, not changed**: NOTRECORD's wording for `F(A)%N`; `Y(D(1)%N)` in a bound
    BADBOUND (Phase 107); EXPONENT and FRACTION faulting on a reserved operand in their MOVF;
    TRANSFER to a derived type never a constant (Phase 108). **Proposed: 112**, each small.
+   *(Done in subtask 2: FUNCPART for the first.)*
 5. *(New.)* An explicit-shape array of no elements, `REAL A(0)` or `B(5:1)`, is BOUNDORDER
    under `/F90` too (checked 2026-11-22; MANUAL.md's table lists it). Fortran 90's 5.1.2.4.1
    makes its extent zero; VAX FORTRAN calls it an error. **Proposed: 112**, under `/F90`
@@ -687,7 +690,8 @@ A.8.1 is not planned.
 1. **The survey** (done 2026-11-22): Part A; the author's answers the same day. Refreshed
    after Phase 112 (done 2026-11-23): A.15.
 2. Fortran 90's NOTIMPLs and noticed items (A.3.1, A.3.4), a STRUCTURE with initial values in
-   a module's text (A.15.4), and PURE's and ELEMENTAL's unchecked rules (A.15.6, answer B).
+   a module's text (A.15.4), and PURE's and ELEMENTAL's unchecked rules (A.15.6, answer B)
+   (done 2026-11-23).
 3. FORALL's remaining NOTIMPLs (A.15.5, answer A).
 4. The compiler's small things and `STARLET_` modules (A.1.4, A.1.5, A.1.10, A.3.3).
 5. MACRO (A.6.1, 2, 5).
@@ -754,3 +758,72 @@ Each subtask may begin with a survey of its own, as earlier phases' did.
   seven to nine subtasks together. By the author's choice they are Phase 115
   (`PHASE-115 - Fortran 90 NOTIMPLs.md`, new), but for the dead hooks, which subtask 11 removes.
   Subtask 2 is next.
+- **2026-11-23, subtask 2 (done):** Fortran 90's NOTIMPLs and noticed items, a STRUCTURE's
+  initial values in a module's text, and PURE's and ELEMENTAL's rules.
+  - *A DIM= not constant* of SPREAD, CSHIFT, and EOSHIFT (`sema/transform.go`'s `dimArg`; the
+    `ArrayFunc`'s `DimExpr`, `Dim` 0, but 1 when the rank allows nothing else) is lowered as a
+    reduction's is: a branch on DIM's value to each constant DIM's code (`ir/lowertransform.go`'s
+    `fillByDim`), SPREAD's extents chosen when the program runs (`spreadExtents`), DIM out of
+    range FOR's NOTCONFOR under `/CHECK=BOUNDS` (`keepDim`); a SHIFT or BOUNDARY array then has
+    its rank checked, not its extents. *RESHAPE's ORDER= not constant* is `ArrayFunc.OrderExpr`
+    (`orderValues`, its size SHAPE's if known): the walk's extents and each result subscript's loop
+    are chosen from ORDER's values when the program runs (`reshapeInto`, `orderValues`).
+  - *An array BACK=* is an elemental argument like the others (the refusal was all there was).
+  - *COMPLEX(16) to SUM, PRODUCT, DOT_PRODUCT, and MATMUL*: the reductions' code was already
+    general; the NOTIMPLs went, and with them `complex32Intrinsic`. The intrinsic reference's site
+    caught only specific names of other COMPLEX types (CSIN, DREAL), now BADARG as any other
+    wrong type: every generic that takes a COMPLEX has COMPLEX(16)'s row.
+  - *CHARACTER of length zero*: a FUNCTION statement's (`functionType`, kept as a type
+    statement's, `runtimeLength`), IMPLICIT's (`implicitRules.zero`, given each name `newName`
+    makes; a type statement for the name takes it away), and a derived type's component
+    (`Field.Empty`: CHARACTER of length 0, no storage). A reference to such a component is an
+    empty substring, (1:0), of its place taken as CHARACTER\*1 (`record.go`'s `emptyComponent`,
+    `derivedio.go`'s `fieldOf` for I/O), so nothing is ever read or written there and every use of
+    a value takes it; a substring of it is `emptyComponentSubstring`'s; the module text writes
+    `CHARACTER(LEN=0)`, the map `CHARACTER*0`. A pointer component of length zero stays NOTIMPL.
+    Found on the way and fixed: a passed-length dummy's `C(1:0)` was SUBLOW under `/F90`, not
+    empty (`passedSubstring`).
+  - *A statement function of a derived type*: its dummies take the type's structure
+    (`stmtFuncDummy`), its value and actuals are aggregates (`aggregateValue`), and a reference
+    is built or moved into a temporary of the type's size (`ir/lowerstmtfunc.go`'s
+    `stmtFuncRecord`; an actual not a variable of the type copied, `actualPlace`).
+  - *TRANSFER to a CHARACTER MOLD of zero or run-time length*: the scalar keeps MOLD as its
+    second argument and is a dynamic string of MOLD's length (`transferText`); the array keeps
+    MOLD as `Pad`, its elements' length read from it (`moldLength`: a name, a section, a
+    substring, or a constructor's first value; another expression NOTIMPL, Phase 115's), its
+    temporary of run-time length. With no SIZE, a MOLD of elements of length zero is BADARG
+    when the compiler can see it (`knownEmpty`) and no elements when it can't (ours,
+    unconfirmed). `valueLength` takes a substring (`substringLength`).
+  - *A.3.4*: `F(2)%N` is the new **FUNCPART** ("F(...) is a function's value, which has no field
+    N to select: assign the value to a variable first"; `functionName`); a component of an
+    element, `Y(D(1)%N)`, is a bound (`boundComponent` takes `ast.Apply`, its subscripts bound
+    expressions); TRANSFER to a derived type folds (`foldable`; `bytesConst`, now a function the
+    module writer shares, makes a record's constant with `Parts` from its bytes,
+    `componentFromBytes`), but not a type with a pointer component or one of length zero; and
+    EXPONENT and FRACTION move a variable, element, or field into their temporary as an integer
+    of its size (`lowermodel.go`'s `modelPlace`, TRANSFER's `storeSource`), so a reserved operand
+    no longer faults there (another expression's value is still moved as REAL).
+  - *A STRUCTURE with initial values in a module's text*: each field's values after its name,
+    VAX FORTRAN's `/v1, v2/`, each the constant its bytes hold (`modwrite.go`'s
+    `fieldInitials`); a value whose bytes don't give it back (a reserved operand's) still fails.
+  - *PURE* (with the HP manual's 8.5.1.2): a global, an INTENT(IN) dummy, or any dummy of a PURE
+    function (`restrictedWhy`) is not given a value through a pointer component, nor a PURE
+    function's pointer dummy through itself (`pureThroughPointer`); is not a pointer's target,
+    in a pointer assignment (INTENT(IN) dummies too now) or as a structure constructor's pointer
+    component; and is not assigned whole to a variable of a type with a pointer component
+    (`pureAggregate`). An internal procedure of a PURE one must be PURE (`pureInternals`). An
+    EQUIVALENCE partner of a variable in a common block was already in the block, a global:
+    tested, nothing to add. NULLPLACE stays as it was (answer B). *ELEMENTAL's 12.7.1*: a dummy
+    in a local's bound or CHARACTER length other than as an inquiry's argument is the new
+    **ELEMBOUND** (`elementalBounds`, over `adjustableArray.inquired`).
+  - Tests: `sema`'s `TestTransform`, `TestComplex16Reductions` (was `TestComplex16NotImpl`),
+    `TestPure`'s two new cases, `TestElementalProcedures`' 12.7.1 case, `TestBoundFromComponent`,
+    `TestPhase108ZeroLengths`, `TestPhase108Transfer`, `TestDerivedArguments`; `fortran`'s
+    `TestErrataModuleText` (`errata_test.go`); and `testdata/fortran90`'s `rundims.f90`,
+    `errata.f90`, and `zerolen.f90` (each the same on gfortran, `compare.py`), `modelraw.f90`
+    (VMS's own), and `modules/stamps` (the STRUCTURE and the type with a component of length zero
+    through a module file), the new programs added to `testdata/f90r`'s procedure (`gen.go`) and to
+    `f90rAwaitingVMS` for subtask 12's round. MANUAL.md's 14.13 (length zero, PURE's and ELEMENTAL's rules, the
+    statement function, and "What Fortran 90 isn't here" six rows shorter) and
+    FORTRAN-INTERNALS.md's section 33 follow; the items are marked resolved in Phases 104 to 108,
+    111, and 112. Subtask 3 is next.

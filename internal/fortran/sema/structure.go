@@ -184,6 +184,14 @@ type FieldInitial struct {
 	Pos          diag.Position
 }
 
+// Empty reports whether f is a derived type's CHARACTER component of length
+// zero (Phase 113): of type CHARACTER of length 0, as a passed length is, but
+// no other field has such a type (FIELDLEN), and it takes no storage. A
+// reference to it is emptyComponent's.
+func (f *Field) Empty() bool {
+	return f.Struct == nil && f.Type.Kind == Character && f.Type.Size == 0
+}
+
 // Field returns the structure's field named name, or nil. A %FILL field
 // has no name to find it by.
 func (s *Structure) Field(name string) *Field {
@@ -275,6 +283,8 @@ func (f *Field) TypeText() string {
 	text := f.Type.String()
 
 	switch {
+	case f.Empty():
+		text = "CHARACTER*0"
 	case f.Struct != nil && f.Struct.Name == "":
 		text = "(structure " + f.Struct.Display() + ")"
 	case f.Struct != nil:

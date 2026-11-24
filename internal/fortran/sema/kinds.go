@@ -48,21 +48,6 @@ type kindInfo struct {
 	pending map[int]string
 }
 
-// complex32 is COMPLEX*32, Fortran 90's COMPLEX(16): two H_floating parts
-// (subtask 7). VAX FORTRAN has no such type, and neither MTHRTL nor the OTS$
-// routines have H complex routines, so by the author's answer 1 to the
-// survey its declarations, moves, sums, differences, products, comparisons,
-// and conversions are compiled in line, its quotient is FTNRTL's FTN$DIVCH,
-// its powers and ABS, SQRT, EXP, LOG, SIN, and COS are FTNRTL's too (Phase
-// 108), its I/O is FTNRTL's (Phase 109), and SUM, PRODUCT, DOT_PRODUCT, and
-// MATMUL of one, and an intrinsic function with no COMPLEX(16) row, are NOTIMPL.
-var complex32 = Type{Kind: Complex, Size: 32}
-
-// The forms of COMPLEX(16) that are NOTIMPL, as the messages name them.
-const (
-	complex32Intrinsic = "an intrinsic function of a COMPLEX(16) argument"
-)
-
 // typeKinds are the type keywords that take a kind, and their kinds.
 // DOUBLE PRECISION, DOUBLE COMPLEX, and BYTE name one type already
 // (NOKIND).

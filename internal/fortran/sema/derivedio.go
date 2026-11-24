@@ -120,7 +120,12 @@ func fieldOf(base Expr, f *Field) Expr {
 
 	ref.Path = append(ref.Path, FieldStep{Field: f})
 
-	if f.Struct != nil && f.Dims != nil {
+	switch {
+	case f.Empty() && f.Dims != nil:
+		return emptyComponent(ref.wholeRanked())
+	case f.Empty():
+		return emptyComponent(ref)
+	case f.Struct != nil && f.Dims != nil:
 		return ref.wholeRanked()
 	}
 

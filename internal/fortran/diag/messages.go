@@ -459,6 +459,11 @@ var messages = map[string]kind{
 	// NOTRECORD is a field reference to a name that isn't a record.
 	"NOTRECORD": {Error, "%s is %s, not a record, so it has no field %s"},
 
+	// FUNCPART is a component selected from a function's value, F(2)%N: a
+	// function reference is no variable, so no part of its value can be
+	// named (the Fortran 90 standard's R612 and R613; Phase 113).
+	"FUNCPART": {Error, "%s(...) is a function's value, which has no field %s to select: assign the value to a variable first"},
+
 	// NOFIELD is a field reference naming a field its structure doesn't
 	// have.
 	"NOFIELD": {Error, "%s has no %s named %s"},
@@ -1740,6 +1745,7 @@ var messages = map[string]kind{
 	// procedure of the file that is ELEMENTAL (12.3.1.1).
 	"ELEMDUMMY":         {Error, "%s, a dummy argument of the ELEMENTAL %s %s, can't be %s"},
 	"ELEMRESULT":        {Error, "the value of the ELEMENTAL function %s can't be %s"},
+	"ELEMBOUND":         {Error, "%s, a dummy argument of the ELEMENTAL %s %s, can be in %s only as an inquiry function's argument"},
 	"ELEMRETURN":        {Error, "the ELEMENTAL subroutine %s can't have an alternate return"},
 	"ELEMRECURSIVE":     {Error, "%s can't be both ELEMENTAL and RECURSIVE"},
 	"ELEMOUT":           {Error, "argument %d of %s must be an array, since another is and its dummy argument %s is INTENT(%s)"},

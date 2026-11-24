@@ -129,12 +129,6 @@ func (a *analyzer) arrayFunction(e *ast.Apply, args []ast.Expr) Expr {
 			return a.bad(e.Pos)
 		}
 
-		if t == complex32 {
-			a.notImplForm(e.Pos, complex32Intrinsic)
-
-			return a.bad(e.Pos)
-		}
-
 		f.T = t
 
 		if !a.arrayMask(f, arg(2)) || arg(1) != nil && !a.arrayDim(f, arg(1), false) {
@@ -387,11 +381,6 @@ func (a *analyzer) dotProduct(e *ast.Apply, x, y Expr) Expr {
 
 	default:
 		t := operationType(tx, ty)
-		if t == complex32 {
-			a.notImplForm(e.Pos, complex32Intrinsic)
-
-			return a.bad(e.Pos)
-		}
 
 		xs := a.convert(x, t)
 		if t.Kind == Complex {
@@ -449,11 +438,7 @@ func (a *analyzer) matmul(f *ArrayFunc, x, y Expr) Expr {
 		return a.bad(f.Pos)
 
 	default:
-		if f.T = operationType(tx, ty); f.T == complex32 {
-			a.notImplForm(f.Pos, complex32Intrinsic)
-
-			return a.bad(f.Pos)
-		}
+		f.T = operationType(tx, ty)
 	}
 
 	f.Array, f.Other = a.convert(x, f.T), a.convert(y, f.T)

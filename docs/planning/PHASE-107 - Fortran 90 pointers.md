@@ -1041,7 +1041,7 @@ The plan's open question 1 is settled by answer 1.
     is (BOUNDVAR for a local's); subscripts along the way are bound expressions; the
     component's type is checked once analyzed (`boundValue`, BADBOUND for CHARACTER).
     A CHARACTER length reads the same way. A component of an array element, `D(1)%N`,
-    is still BADBOUND: nothing has asked for it.
+    is still BADBOUND: nothing has asked for it. *(Resolved in Phase 113.)*
   - *A defined operation's array operands*, `D * (/ 1.0, 1.0, 1.0 /)`, panicked in
     lowering: `operandArgs` didn't mark an array section or expression as `argValue`
     does, and nothing ran the operands through `shaped` or `sequenced` against the
@@ -1096,7 +1096,7 @@ Phase 107 is done. What it left, and where each goes:
   allocatable components.
 - **Noticed, not changed:** NOTRECORD calls a module function whose value's component is
   referenced, `F(A)%N`, "a procedure with an interface body"; a component of an array
-  element in a bound, `Y(D(1)%N)`, is still BADBOUND.
+  element in a bound, `Y(D(1)%N)`, is still BADBOUND. *(Resolved in Phase 113.)*
 - **Unconfirmed choices of ours:** every pointer starting disassociated, and new storage with
   pointers in it cleared (the author's answer 2; Fortran 90 says undefined); BADDEALLOC, FOR
   number 304, and its header (the author's answer 1); a scalar pointer to the one element of

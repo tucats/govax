@@ -556,7 +556,7 @@ func (a *analyzer) pointerAssignment(s *ast.PointerAssignStmt) Stmt {
 	}
 
 	if _, function := t.(*FuncRef); !function {
-		a.pureDefines(targetBase(t), s.Target.Position(), "be a pointer's target")
+		a.pureRestricted(targetBase(t), s.Target.Position(), "be a pointer's target")
 	}
 
 	return &PointerAssign{stmtBase: stmtBase{s}, Pointer: ptr, Target: t}

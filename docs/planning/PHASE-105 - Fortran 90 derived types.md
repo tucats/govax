@@ -973,7 +973,8 @@ Phase 105 is done. What it left, and where each goes:
   record's longwords until then), with the rest of the `/DEBUG` table's growth;
   `/STANDARD` for the phase's forms. *(Resolved in Phase 110.)*
 - **Phase 112:** default initialization of components (NOTIMPL), Fortran 95's.
-- **Not planned, ours:** a statement function of a derived type (NOTIMPL); a section
+- **Not planned, ours:** a statement function of a derived type (NOTIMPL; *resolved in
+  Phase 113*); a section
   in DATA's component designators (NOTIMPL, as for an array); RECORDIOSIZE for a
   whole array of records whose elements pass 65,535 bytes.
 - **Unconfirmed choices of ours:** EQUIVALENCE's storage classes are by size, not

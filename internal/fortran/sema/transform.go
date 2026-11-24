@@ -134,35 +134,38 @@ func (a *analyzer) transform(e *ast.Apply, args []ast.Expr) Expr {
 	return f
 }
 
-// constantDim is DIM= of a function whose result's shape depends on it,
-// SPREAD's, CSHIFT's, or EOSHIFT's, from 1 to rank: its value, or 0 after a
+// dimArg is DIM= of a function whose result's shape depends on it, SPREAD's,
+// CSHIFT's, or EOSHIFT's, from 1 to rank: its value, or 0 and the expression
+// for one not constant (1 if rank is 1, its only value); ok is false after a
 // message.
-func (a *analyzer) constantDim(f *ArrayFunc, x ast.Expr, rank int) int {
+func (a *analyzer) dimArg(f *ArrayFunc, x ast.Expr, rank int) (int, Expr, bool) {
 	d := a.convert(a.arithmetic(a.value(x)), IntegerType)
 	if d.Type().Kind == Invalid {
-		return 0
+		return 0, nil, false
 	}
 
 	v, ok := constantInt(d)
 
 	switch {
-	case !ok:
-		a.notImplForm(d.Position(), f.Name+" with a DIM= not constant")
+	case !ok && rank == 1:
+		return 1, nil, true
 
-		return 0
+	case !ok:
+		return 0, d, true
 
 	case v < 1 || v > rank:
 		a.report("DIMRANGE", d.Position(), f.Name, ast.DumpExpr(x), rank)
 
-		return 0
+		return 0, nil, false
 	}
 
-	return v
+	return v, nil, true
 }
 
 // lineArg checks that x, SHIFT or BOUNDARY, is a scalar or an
 // array of rank one less than array's, conforming with array's shape without
-// dimension dim, and returns it (of type t, converted, when t is given).
+// dimension dim (0, a DIM= not constant: its rank alone is checked), and
+// returns it (of type t, converted, when t is given).
 func (a *analyzer) lineArg(f *ArrayFunc, x Expr, what string, array Expr, dim int, t Type) (Expr, bool) {
 	if x == nil || x.Type().Kind == Invalid {
 		return nil, false
@@ -177,14 +180,22 @@ func (a *analyzer) lineArg(f *ArrayFunc, x Expr, what string, array Expr, dim in
 			}
 		}
 
+		if dim == 0 {
+			line = line[1:]
+		}
+
 		if rankOf(x) != len(line) {
 			a.report("ARRAYRANK", x.Position(), f.Name, what, "0 or "+strconv.Itoa(len(line)), rankOf(x))
 
 			return nil, false
 		}
 
-		if _, ok := a.conform(x.Position(), line, x.Shape()); !ok {
-			return nil, false
+		// With dim 0, which extents x must match is known only when the
+		// program runs.
+		if dim != 0 {
+			if _, ok := a.conform(x.Position(), line, x.Shape()); !ok {
+				return nil, false
+			}
 		}
 	}
 
@@ -204,7 +215,8 @@ func (a *analyzer) spread(f *ArrayFunc, source Expr, dim ast.Expr, ncopies Expr)
 
 	rank := rankOf(source)
 
-	if f.Dim = a.constantDim(f, dim, rank+1); f.Dim == 0 {
+	var ok bool
+	if f.Dim, f.DimExpr, ok = a.dimArg(f, dim, rank+1); !ok {
 		return false
 	}
 
@@ -219,6 +231,14 @@ func (a *analyzer) spread(f *ArrayFunc, source Expr, dim ast.Expr, ncopies Expr)
 	copies := Extent{}
 	if n, ok := constantInt(f.Other); ok {
 		copies = Extent{Size: max(n, 0), Known: true}
+	}
+
+	if f.DimExpr != nil {
+		// Where the copies go is known only when the program runs, and so is
+		// each extent.
+		f.S = make(Shape, rank+1)
+
+		return true
 	}
 
 	shape := source.Shape()
@@ -242,7 +262,8 @@ func (a *analyzer) shift(f *ArrayFunc, array Expr, arg func(int) ast.Expr, value
 
 	f.Dim = 1
 	if arg(dimArg) != nil {
-		if f.Dim = a.constantDim(f, arg(dimArg), rankOf(array)); f.Dim == 0 {
+		var ok bool
+		if f.Dim, f.DimExpr, ok = a.dimArg(f, arg(dimArg), rankOf(array)); !ok {
 			return false
 		}
 	}
@@ -403,7 +424,8 @@ func (a *analyzer) unpack(f *ArrayFunc, vector, mask, field Expr) bool {
 // reshapeValues is RESHAPE(SOURCE, SHAPE, PAD, ORDER) of values that aren't all
 // constants (13.13.84): SHAPE an INTEGER array of rank one and a size known when
 // compiling, its values the result's extents (known if they are constants); PAD
-// of SOURCE's type; ORDER a constant permutation (ours: NOTIMPL otherwise).
+// of SOURCE's type; ORDER a permutation of 1 to the rank, checked here if it is
+// constant, else an INTEGER array of rank one kept as OrderExpr.
 func (a *analyzer) reshapeValues(f *ArrayFunc, e *ast.Apply, source, shape, pad Expr, order ast.Expr) bool {
 	if source == nil || shape == nil || shape.Type().Kind == Invalid {
 		return false
@@ -473,9 +495,7 @@ func (a *analyzer) reshapeValues(f *ArrayFunc, e *ast.Apply, source, shape, pad 
 
 	o, err := ev.intVector(e, order, "ORDER")
 	if err != nil {
-		a.notImplForm(order.Position(), "RESHAPE with an ORDER= not constant")
-
-		return false
+		return a.orderValues(f, e, order, rank)
 	}
 
 	seen := make([]bool, rank)
@@ -494,6 +514,33 @@ func (a *analyzer) reshapeValues(f *ArrayFunc, e *ast.Apply, source, shape, pad 
 
 		return false
 	}
+
+	return true
+}
+
+// orderValues is RESHAPE's ORDER= that isn't constant: an INTEGER array of rank
+// one whose size, if known, is the result's rank, kept as f.OrderExpr for
+// lowering to read (that it is a permutation is the program's to see to, as
+// the standard says).
+func (a *analyzer) orderValues(f *ArrayFunc, e *ast.Apply, order ast.Expr, rank int) bool {
+	x := a.operand(order)
+	if x.Type().Kind == Invalid {
+		return false
+	}
+
+	if x.Type().Kind != Integer || rankOf(x) != 1 {
+		a.report("ARRAYARG", x.Position(), f.Name, "ORDER, an INTEGER array of rank one,")
+
+		return false
+	}
+
+	if n := x.Shape()[0]; n.Known && n.Size != rank {
+		a.report("BADRESHAPE", e.Pos, "ORDER's size isn't SHAPE's")
+
+		return false
+	}
+
+	f.Order, f.OrderExpr = nil, a.convert(x, IntegerType)
 
 	return true
 }

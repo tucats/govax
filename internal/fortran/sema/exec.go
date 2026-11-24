@@ -198,6 +198,8 @@ func (a *analyzer) assignOperands(s *ast.AssignStmt) (Expr, Expr) {
 		return nil, nil
 	}
 
+	a.pureAggregate(target, value)
+
 	return target, value
 }
 
@@ -395,11 +397,13 @@ func (a *analyzer) target(e ast.Expr) Expr {
 	switch t := t.(type) {
 	case *Var:
 		a.checkLoopVariable(t.Sym, t.Pos)
+		a.pureThroughPointer(t, t.Pos, "be given a value")
 
 		return t
 
 	case *Elem, *Substring, *FieldRef, *ArrayRef, *Section:
 		a.checkIntentIn(definedSymbol(t), t.Position())
+		a.pureThroughPointer(t, t.Position(), "be given a value")
 
 		return t
 	}

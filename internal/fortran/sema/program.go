@@ -1250,9 +1250,13 @@ type (
 
 		// Pad is EOSHIFT's BOUNDARY or RESHAPE's PAD, and Order RESHAPE's
 		// ORDER, from 0, each dimension's place in the order its subscripts
-		// vary (transform.go).
-		Pad   Expr
-		Order []int
+		// vary (transform.go); OrderExpr is an ORDER not constant, Order then
+		// nil. DimExpr is also a DIM= not constant of SPREAD, CSHIFT, or
+		// EOSHIFT. Pad is also TRANSFER's MOLD when its elements' length is
+		// known only when the program runs (transfer.go).
+		Pad       Expr
+		Order     []int
+		OrderExpr Expr
 	}
 
 	// ArrayFuncAt is F's element at the indexes Index, the index variables of

@@ -64,6 +64,14 @@ func (l *lowerer) actualPlace(d *sema.Symbol, actual sema.Expr) *Mem {
 		}
 	}
 
+	if d.Type.Kind == sema.Record {
+		// An object of a derived type (Phase 113): its bytes copied.
+		place := l.textTemp(d.Type.Size)
+		l.moveBytes(place, l.mem(actual), d.Type.Size)
+
+		return place
+	}
+
 	if char {
 		place := Text{l.textTemp(d.Type.Size), LongConst(int32(d.Type.Size))}
 		l.emit(&CharMove{l.origin(), place, l.chars(actual)})
@@ -73,6 +81,24 @@ func (l *lowerer) actualPlace(d *sema.Symbol, actual sema.Expr) *Mem {
 
 	place := l.temp(l.typeOf(d.Type))
 	l.store(place, actual)
+
+	return place
+}
+
+// stmtFuncRecord is the value of a statement function of a derived type
+// (Phase 113), built or moved into a temporary of the type's size.
+func (l *lowerer) stmtFuncRecord(e *sema.StmtFuncRef) *Mem {
+	defer l.bindDummies(e)()
+
+	place := l.textTemp(e.T.Size)
+
+	if v, ok := e.Def.Value.(*sema.StructValue); ok {
+		l.buildRecord(place, v)
+
+		return place
+	}
+
+	l.moveBytes(place, l.mem(e.Def.Value), e.T.Size)
 
 	return place
 }

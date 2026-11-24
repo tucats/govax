@@ -1256,7 +1256,7 @@ Phase 104 is done. What it left, and where each goes:
   must be constants; a CHARACTER argument to them, or to an assumed-shape or old
   dummy, of a run-time length must be made of names (`lengthFromNames`); `%REF`,
   `%DESCR`, and `%LOC` of a section, an expression, or an assumed-shape array; a
-  constructor of a substring's values.
+  constructor of a substring's values. *(The DIM= and ORDER= resolved in Phase 113.)*
 - **Unconfirmed choices of ours:** a statement with STAT= stops at its first failing
   object; a zero-sized array takes an 8-byte block; ALREADYALLOC (301), NOTALLOC
   (302), BADARRDESC (303), and DBG-W-NOTALLOC are govax's own; a class A descriptor is

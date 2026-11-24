@@ -99,14 +99,6 @@ func (a *analyzer) intrinsicRef(e *ast.Apply) Expr {
 		}
 
 		array = array || rankOf(args[i]) > 0
-
-		if args[i].Type() == complex32 && !takesComplex32(forms) && takesComplex(forms) {
-			// A function of other COMPLEX kinds without COMPLEX(16)'s rows
-			// (complex32); one of no COMPLEX is BADARG, below.
-			a.notImplForm(e.Pos, complex32Intrinsic)
-
-			return a.bad(e.Pos)
-		}
 	}
 
 	if forms[0].how == "LEN" {
@@ -287,29 +279,6 @@ func (a *analyzer) merge(e *ast.Apply, args []Expr, shape Shape) Expr {
 	}
 
 	return &IntrinsicRef{exprBase{T: ts.Type(), Pos: e.Pos, S: shape}, "MERGE", MergeOp, args, ""}
-}
-
-// takesComplex32 reports whether any of the rows takes a COMPLEX*32: MERGE
-// takes values of any type.
-func takesComplex32(forms []form) bool {
-	for _, f := range forms {
-		if f.arg == complex32 || f.how == "MERGE" {
-			return true
-		}
-	}
-
-	return false
-}
-
-// takesComplex reports whether any of the rows takes a COMPLEX value.
-func takesComplex(forms []form) bool {
-	for _, f := range forms {
-		if f.arg.Kind == Complex || f.arg.Kind == Invalid {
-			return true
-		}
-	}
-
-	return false
 }
 
 // byteType is INTEGER*1, Fortran 90's INTEGER(1).

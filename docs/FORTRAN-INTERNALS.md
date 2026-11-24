@@ -5435,9 +5435,12 @@ constant (`MONTHS(11)(1:8)`), which the standard allows and sema refused. Each i
 its own.
 
 What waits: nothing of Fortran 95's (CEILING's and FLOOR's KIND=, NULL, and CPU_TIME came
-with it, section 37). Not there, and in no phase yet: a BACK= that is an array, a TRANSFER to
-a CHARACTER MOLD of zero or run-time length, and a component or function value of length zero, each
-`%FORT-E-NOTIMPL`, named.
+with it, section 37). A BACK= that is an array, a TRANSFER to a CHARACTER MOLD of zero or
+run-time length, and a component or function value of length zero came with Phase 113's errata:
+BACK= is one more elemental argument; such a MOLD's length is read from the MOLD itself, the
+value a dynamic string (`ir/lowertransfer.go`'s `transferText`) or a run-time temporary; and a
+component of length zero is `Field.Empty`, a reference to it an empty substring, (1:0), of its
+place taken as CHARACTER\*1 (sema's `emptyComponent`), so nothing is ever read or written there.
 
 ## 34. Fortran 90: I/O (Phase 109)
 

@@ -239,7 +239,7 @@ func (b *structBuilder) componentStatement(s *ast.TypeStmt) {
 		if s.Type.Derived != "" {
 			f.Struct, ok = b.componentType(s.Type, d, pointer)
 		} else {
-			f.Type, ok = b.componentIntrinsic(s, d)
+			f.Type, ok = b.componentIntrinsic(s, d, pointer)
 		}
 
 		decl := d
@@ -359,13 +359,28 @@ func (b *structBuilder) pointerDims(f *Field, d *ast.Declarator) bool {
 
 // componentIntrinsic is the type of the component d of an intrinsic type, as a
 // structure's field's: a CHARACTER one's length must be constant, and not *.
-func (b *structBuilder) componentIntrinsic(s *ast.TypeStmt, d *ast.Declarator) (Type, bool) {
+// It may be zero (Phase 113): the component is then CHARACTER of length 0, a
+// length not known anywhere else (Field.Empty), with no storage; but not a
+// pointer component's.
+func (b *structBuilder) componentIntrinsic(s *ast.TypeStmt, d *ast.Declarator, pointer bool) (Type, bool) {
 	l, pos := s.Type.Len, s.Type.Pos
 	if d.HasLength() {
 		l, pos = d.Len, d.Pos
 	}
 
-	t, ok := b.a.typeOf(s.Type, l, pos)
+	t, length, ok := b.a.entityType(s.Type, l, pos)
+
+	switch {
+	case length != nil && b.a.zeroLengthExpr(length) && !pointer:
+		return t, ok
+	case length != nil && b.a.zeroLengthExpr(length):
+		b.a.notImplForm(length.Position(), "a CHARACTER length of zero here")
+
+		return invalid, false
+	case length != nil:
+		return b.a.refuseLength(s.Type, l, length)
+	}
+
 	if ok && t.Kind == Character && t.Size == 0 {
 		b.a.report("FIELDLEN", d.Pos, d.Name)
 

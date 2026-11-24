@@ -99,17 +99,14 @@ func (a *analyzer) characterFunction(e *ast.Apply, how string, args []Expr, shap
 		return a.repeat(e, s, args[1])
 	}
 
-	// SCAN, VERIFY, or INDEX: a BACK, if given, is a LOGICAL scalar, made the
-	// default LOGICAL for FTNRTL; left out, it is .FALSE..
+	// SCAN, VERIFY, or INDEX: a BACK, if given, is LOGICAL, made the default
+	// LOGICAL for FTNRTL; left out, it is .FALSE.. An array BACK is an
+	// elemental argument like the others, its element taken with theirs.
 	back := Expr(logicalConst(false, e.Pos))
 	if len(args) == 3 && args[2] != nil {
 		switch b := args[2]; {
 		case b.Type().Kind != Logical:
 			a.report("BADARG", b.Position(), e.Name, "a LOGICAL BACK", b.Type().String())
-
-			return a.bad(e.Pos)
-		case rankOf(b) > 0:
-			a.notImplForm(b.Position(), "an array BACK to the intrinsic function "+e.Name)
 
 			return a.bad(e.Pos)
 		default:

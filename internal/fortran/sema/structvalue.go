@@ -357,6 +357,13 @@ func (a *analyzer) structConstructor(st *Structure, e *ast.Apply) Expr {
 			v.Values[i] = a.targetFor(st.Name+"%"+f.Name, componentType(f), f.Rank, arg)
 			if v.Values[i] == nil {
 				v.Values[i], ok = a.bad(arg.Position()), false
+
+				continue
+			}
+
+			// A PURE procedure's restricted variable can't be one (pure.go).
+			if _, function := v.Values[i].(*FuncRef); !function {
+				a.pureRestricted(targetBase(v.Values[i]), arg.Position(), "be a pointer's target")
 			}
 
 			continue

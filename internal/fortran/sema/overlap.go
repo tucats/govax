@@ -364,7 +364,7 @@ func leafReads(leaf Expr, ts *Symbol) bool {
 func funcReads(f *ArrayFunc, ts *Symbol) bool {
 	found := false
 
-	for _, x := range []Expr{f.Array, f.Other, f.Mask, f.DimExpr, f.Pad} {
+	for _, x := range []Expr{f.Array, f.Other, f.Mask, f.DimExpr, f.Pad, f.OrderExpr} {
 		if x != nil {
 			found = found || arrayReads(x, ts)
 		}

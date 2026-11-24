@@ -55,6 +55,8 @@ func (l *lowerer) transformed(f *sema.ArrayFunc) *sema.ArrayRef {
 	temp := l.extentsTempOf(f.T, extents, length)
 
 	switch {
+	case f.DimExpr != nil && shapedByDim(f):
+		l.fillByDim(f, temp, extents, dim)
 	case f.DimExpr != nil:
 		l.reduceByDim(f, temp, dim)
 	case f.Name == "SPREAD":
@@ -70,6 +72,62 @@ func (l *lowerer) transformed(f *sema.ArrayFunc) *sema.ArrayRef {
 	}
 
 	return l.keepTransformed(f, temp)
+}
+
+// shapedByDim reports whether f is SPREAD, CSHIFT, or EOSHIFT, whose DIM= says
+// how its value is laid out rather than which dimension a reduction takes.
+func shapedByDim(f *sema.ArrayFunc) bool {
+	switch f.Name {
+	case "SPREAD", "CSHIFT", "EOSHIFT":
+		return true
+	}
+
+	return false
+}
+
+// fillByDim fills temp with SPREAD, CSHIFT, or EOSHIFT for a DIM= not
+// constant, whose value is in dim: for each value from 1 to the result's rank,
+// a branch to that constant DIM's code; any other leaves temp as it was (the
+// standard calls that program wrong; /CHECK=BOUNDS stops it first).
+func (l *lowerer) fillByDim(f *sema.ArrayFunc, temp *sema.ArrayRef, extents []Expr, dim *Mem) {
+	next := l.newBlock()
+
+	for d := 1; d <= len(extents); d++ {
+		this, other := l.newBlock(), l.newBlock()
+		l.branch(&Cmp{Eq, &Load{dim}, LongConst(int32(d))}, this, other)
+
+		l.begin(this)
+
+		g := *f
+		g.Dim, g.DimExpr = d, nil
+
+		if f.Name == "SPREAD" {
+			l.spreadInto(&g, temp, extents)
+		} else {
+			l.shiftInto(&g, temp, extents)
+		}
+
+		l.jump(next)
+
+		l.begin(other)
+	}
+
+	l.jump(next)
+	l.begin(next)
+}
+
+// keepDim is DIM='s value, computed now into a temporary, for a result of rank
+// rank; under /CHECK=BOUNDS one outside 1 to rank stops the program (FOR's
+// NOTCONFOR).
+func (l *lowerer) keepDim(f *sema.ArrayFunc, rank int) *Mem {
+	dim := l.keepLong(l.expr(f.DimExpr))
+
+	if l.unit.Checks.Bounds {
+		l.notConforming(&Cmp{Lt, &Load{dim}, LongConst(1)})
+		l.notConforming(&Cmp{Gt, &Load{dim}, LongConst(int32(rank))})
+	}
+
+	return dim
 }
 
 // keepTransformed records temp as the statement's value of f, and returns it.
@@ -88,6 +146,14 @@ func (l *lowerer) keepTransformed(f *sema.ArrayFunc, temp *sema.ArrayRef) *sema.
 // constant, the temporary DIM's value is in.
 func (l *lowerer) transformExtents(f *sema.ArrayFunc) ([]Expr, *Mem) {
 	switch {
+	case f.DimExpr != nil && f.Name == "SPREAD":
+		return l.spreadExtents(f)
+
+	case f.DimExpr != nil && shapedByDim(f):
+		list := l.extentsOf(f.Array.Shape())
+
+		return list, l.keepDim(f, len(list))
+
 	case f.DimExpr != nil:
 		return l.dimExtents(f)
 
@@ -122,6 +188,42 @@ func (l *lowerer) transformExtents(f *sema.ArrayFunc) ([]Expr, *Mem) {
 
 	// CSHIFT and EOSHIFT.
 	return l.extentsOf(f.Array.Shape()), nil
+}
+
+// spreadExtents is the extents of SPREAD with a DIM= not constant, and DIM's
+// temporary: SOURCE's, with NCOPIES at the place DIM's value names, chosen when
+// the program runs (all 0 for a DIM out of range).
+func (l *lowerer) spreadExtents(f *sema.ArrayFunc) ([]Expr, *Mem) {
+	all := l.extentsOf(f.Array.Shape())
+	copies := l.keepLong(l.expr(f.Other))
+	l.notNegative(copies)
+
+	rank := len(all) + 1
+	dim := l.keepDim(f, rank)
+	list := make([]Expr, rank)
+
+	for j := range list {
+		m := l.keepLong(LongConst(0))
+
+		for d := 1; d <= rank; d++ {
+			var src Expr
+
+			switch {
+			case j == d-1:
+				src = &Load{copies}
+			case j < d-1:
+				src = all[j]
+			default:
+				src = all[j-1]
+			}
+
+			l.choose(&Cmp{Eq, &Load{dim}, LongConst(int32(d))}, m, src)
+		}
+
+		list[j] = &Load{m}
+	}
+
+	return list, dim
 }
 
 // keepLong is a Long temporary holding x, computed now.
@@ -465,9 +567,26 @@ func (l *lowerer) reshapeInto(f *sema.ArrayFunc, temp *sema.ArrayRef, extents []
 	}
 
 	// The walk's loop L is the result's dimension Order[L], loop 0 innermost.
+	var order []*Mem
+	if f.OrderExpr != nil {
+		order = l.orderValues(f, len(extents))
+	}
+
 	ordered := make([]Expr, len(extents))
-	for L, d := range f.Order {
-		ordered[L] = extents[d]
+
+	for L := range ordered {
+		if order == nil {
+			ordered[L] = extents[f.Order[L]]
+
+			continue
+		}
+
+		m := l.keepLong(LongConst(0))
+		for d, x := range extents {
+			l.choose(&Cmp{Eq, &Load{order[L]}, LongConst(int32(d))}, m, x)
+		}
+
+		ordered[L] = &Load{m}
 	}
 
 	k := l.keepLong(LongConst(0))
@@ -476,10 +595,29 @@ func (l *lowerer) reshapeInto(f *sema.ArrayFunc, temp *sema.ArrayRef, extents []
 	w := l.newWalk(ordered)
 	at, padAt := w.value(k), w.value(j)
 
+	// With ORDER known only now, dimension d's subscript is in a temporary
+	// of its own, the index of the loop whose ORDER value is d.
+	var held []*Mem
+
+	var heldAt []sema.Expr
+
+	for range order {
+		m := l.temp(Long)
+		held, heldAt = append(held, m), append(heldAt, w.value(m))
+	}
+
 	w.run(func() {
 		subs := make([]sema.Expr, len(extents))
 		for L, d := range f.Order {
 			subs[d] = w.index(L)
+		}
+
+		for d, m := range held {
+			for L, o := range order {
+				l.choose(&Cmp{Eq, &Load{o}, LongConst(int32(d))}, m, &Load{l.symbolMem(w.n.index[L])})
+			}
+
+			subs[d] = heldAt[d]
 		}
 
 		l.emit(&Assign{origin: l.origin(), Dst: k, Src: arith(Add, Long, &Load{k}, LongConst(1))})
@@ -510,18 +648,36 @@ func (l *lowerer) reshapeInto(f *sema.ArrayFunc, temp *sema.ArrayRef, extents []
 	})
 }
 
+// orderValues is RESHAPE's ORDER= not constant, each value computed now into a
+// temporary less 1, so from 0; under /CHECK=BOUNDS one outside 1 to rank stops
+// the program (FOR's NOTCONFOR). Repeated values are the program's error, as
+// the standard says: a subscript some loop doesn't set is left as it was.
+func (l *lowerer) orderValues(f *sema.ArrayFunc, rank int) []*Mem {
+	values := l.arrayTemp(sema.IntegerType, []int{rank})
+	l.arrayNest(values, f.OrderExpr, nil, nil)
+
+	list := make([]*Mem, rank)
+
+	for i := range list {
+		at := sema.NewElem(values.Sym, []sema.Expr{sema.IntConstAt(i+1, f.Pos)}, []bool{false}, f.Pos)
+		list[i] = l.keepLong(arith(Sub, Long, l.expr(at), LongConst(1)))
+
+		if l.unit.Checks.Bounds {
+			l.notConforming(&Cmp{Lt, &Load{list[i]}, LongConst(0)})
+			l.notConforming(&Cmp{Ge, &Load{list[i]}, LongConst(int32(rank))})
+		}
+	}
+
+	return list
+}
+
 // dimExtents is the extents of a reduction with a DIM= not constant: ARRAY's but
 // the one DIM's value names, chosen when the program runs, all 0 for a DIM out
 // of range (under /CHECK=BOUNDS, FOR's NOTCONFOR); and DIM's temporary.
 func (l *lowerer) dimExtents(f *sema.ArrayFunc) ([]Expr, *Mem) {
-	dim := l.keepLong(l.expr(f.DimExpr))
+	dim := l.keepDim(f, len(f.Array.Shape()))
 	all := l.extentsOf(f.Array.Shape())
 	rank := len(all)
-
-	if l.unit.Checks.Bounds {
-		l.notConforming(&Cmp{Lt, &Load{dim}, LongConst(1)})
-		l.notConforming(&Cmp{Gt, &Load{dim}, LongConst(int32(rank))})
-	}
 
 	list := make([]Expr, rank-1)
 

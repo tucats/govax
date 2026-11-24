@@ -451,6 +451,12 @@ func (l *lowerer) mem(e sema.Expr) *Mem {
 			return l.text(string(e.Raw))
 		}
 
+	case *sema.StmtFuncRef:
+		// A statement function's value of a derived type (lowerstmtfunc.go).
+		if e.T.Kind == sema.Record {
+			return l.stmtFuncRecord(e)
+		}
+
 	case *sema.StructValue:
 		// A structure constructor's value, built in a temporary.
 		t := l.textTemp(e.T.Size)

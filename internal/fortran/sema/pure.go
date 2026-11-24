@@ -40,6 +40,21 @@ import (
 //     the intrinsic subroutines only MVBITS; the system subroutines and
 //     functions (DATE, RAN, ...) aren't.
 //
+// Since Phase 113, with the HP manual's list (8.5.1.2) and the standard's 12.6:
+//
+//   - a variable a PURE procedure may not change (a global, or a dummy
+//     argument with INTENT(IN), or any dummy of a PURE function) is also not
+//     changed through a pointer component (X%P = 1 changes no part of X, but
+//     what X reaches: pureThroughPointer), and a PURE function's pointer dummy
+//     not through itself;
+//   - such a variable is neither a pointer's target, in a pointer assignment
+//     or as a structure constructor's pointer component, nor the value of an
+//     assignment to a derived type with a pointer component at any level,
+//     which would copy its pointers (pureAggregate);
+//   - an internal procedure of a PURE procedure is PURE itself (pureInternals);
+//   - an object storage associated with a global, by EQUIVALENCE with a
+//     variable in a common block, is in that block, and so a global already.
+//
 // An interface body that says PURE gets the first check alone: it has no
 // statements. An ELEMENTAL procedure is PURE too.
 //
@@ -65,6 +80,106 @@ func (a *analyzer) checkPure() {
 
 	a.pureLocals()
 	a.pureReferences()
+	a.pureInternals()
+}
+
+// pureInternals reports each internal procedure of the PURE unit that isn't
+// declared PURE itself (NOTPURE; the HP manual's 8.5.1.2 puts every internal
+// procedure under its host's rules, and the standard's later editions say
+// so: an internal subprogram of a pure subprogram is pure).
+func (a *analyzer) pureInternals() {
+	for _, s := range a.unit.Symbols {
+		if s.Internal == nil || isModuleProcedure(s) || s.Internal.Pure || s.broken {
+			continue
+		}
+
+		a.report("NOTPURE", s.Internal.AST.Header.Position(), s.Name+", an internal procedure not declared PURE,", "be contained")
+	}
+}
+
+// restrictedWhy says what makes s a variable a PURE procedure may neither
+// change nor let a pointer reach ("a dummy argument with INTENT(IN)"), or ""
+// for one it may: a global (globalWhy), a dummy argument with INTENT(IN), or
+// any dummy of a PURE function but a dummy procedure.
+func (a *analyzer) restrictedWhy(s *Symbol) string {
+	if why := a.globalWhy(s); why != "" {
+		return why
+	}
+
+	switch {
+	case s.Dummy == 0 || s.DummyProcedure():
+		return ""
+	case s.Intent == "IN":
+		return "a dummy argument with INTENT(IN)"
+	case a.unit.Kind == ast.FunctionUnit:
+		return "a dummy argument of a PURE function"
+	}
+
+	return ""
+}
+
+// pureRestricted reports NOTPURE if the unit is PURE and s, which the
+// statement at pos uses as verb says, is restrictedWhy's.
+func (a *analyzer) pureRestricted(s *Symbol, pos diag.Position, verb string) {
+	if s == nil || s.broken || !a.unit.Pure || a.readFrom {
+		return
+	}
+
+	if why := a.restrictedWhy(s); why != "" {
+		a.report("NOTPURE", pos, s.Name+", "+why+",", verb)
+	}
+}
+
+// pureThroughPointer reports NOTPURE if the unit is PURE and the place e, which
+// the statement at pos gives a value as verb says, is reached through a
+// pointer: a pointer component of a restricted variable (restrictedWhy), or a
+// PURE function's pointer dummy itself. A global's own pointer is pureDefines'.
+func (a *analyzer) pureThroughPointer(e Expr, pos diag.Position, verb string) {
+	if !a.unit.Pure || a.readFrom {
+		return
+	}
+
+	if s, ok := e.(*Substring); ok {
+		e = s.X
+	}
+
+	if f, ok := e.(*FieldRef); ok && f.ThroughPointer() && f.Sym != nil {
+		a.pureRestricted(f.Sym, pos, verb+" through a pointer component")
+
+		return
+	}
+
+	if s := definedSymbol(e); s != nil && s.Pointer && s.Dummy != 0 && a.globalWhy(s) == "" {
+		a.pureRestricted(s, pos, verb+" through the pointer")
+	}
+}
+
+// pureAggregate reports NOTPURE if the unit is PURE and value, assigned to
+// target, is a restricted variable (or a part of one) of a derived type with a
+// pointer component at any level, which the assignment would copy, letting
+// the target's pointers reach what the variable's do.
+func (a *analyzer) pureAggregate(target, value Expr) {
+	if !a.unit.Pure || target.Type().Kind != Record || target.Type().Struct == nil ||
+		!target.Type().Struct.HasPointers() {
+		return
+	}
+
+	var s *Symbol
+
+	switch v := value.(type) {
+	case *Var:
+		s = v.Sym
+	case *Elem:
+		s = v.Sym
+	case *ArrayRef:
+		s = v.Sym
+	case *Section:
+		s = v.Sym
+	case *FieldRef:
+		s = v.Sym
+	}
+
+	a.pureRestricted(s, value.Position(), "be assigned to a variable of a type with a pointer component")
 }
 
 // pureDummies reports each dummy argument without the INTENT a PURE procedure

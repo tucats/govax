@@ -396,7 +396,40 @@ func (a *analyzer) field(e *ast.FieldRef, whole bool) Expr {
 		ref.T = recordType(prev.Struct)
 	}
 
+	if prev.Empty() {
+		if ref.WholeArray() {
+			ref = ref.wholeRanked()
+		}
+
+		return emptyComponent(ref)
+	}
+
 	return ref
+}
+
+// emptyComponent is ref, a reference to a component of length zero
+// (Field.Empty), as the value it is: an empty substring, (1:0), of the
+// component's place taken as CHARACTER*1. No character of it is in the
+// substring, so nothing is read or written there (where the component would
+// start, in the record or just past its end), and the value's length is the
+// constant 0, as any empty substring's is (emptySubstring).
+func emptyComponent(ref *FieldRef) Expr {
+	ref.T = Type{Kind: Character, Size: 1}
+
+	return &Substring{exprBase{T: Type{Kind: Character}, Pos: ref.Pos, S: ref.S}, ref,
+		IntConstAt(1, ref.Pos), IntConstAt(0, ref.Pos)}
+}
+
+// emptyView is x's component place if x is emptyComponent's value, for a
+// substring of it, else nil.
+func emptyView(x Expr) *FieldRef {
+	if s, ok := x.(*Substring); ok {
+		if f, ok := s.X.(*FieldRef); ok && f.Field().Empty() {
+			return f
+		}
+	}
+
+	return nil
 }
 
 // recordBase analyzes the record a field reference starts from, x: a
@@ -424,6 +457,19 @@ func (a *analyzer) recordBase(ref *FieldRef, x ast.Expr, first string) bool {
 	return a.recordBaseOf(ref, a.lookup(name, pos), name, pos, args, first)
 }
 
+// functionName reports whether s names a function, or any procedure, whose
+// reference a field reference might start with: F(2)%N.
+func functionName(s *Symbol) bool {
+	switch {
+	case s.Class == Function, s.Class == StmtFunction, s.Class == Intrinsic:
+		return true
+	case s.Internal != nil, s.Interface != nil, s.Generic != nil, s.External:
+		return true
+	}
+
+	return false
+}
+
 // recordBaseOf is recordBase's work, the record named name being s.
 func (a *analyzer) recordBaseOf(ref *FieldRef, s *Symbol, name string, pos diag.Position, args []ast.Expr,
 	first string) bool {
@@ -433,6 +479,11 @@ func (a *analyzer) recordBaseOf(ref *FieldRef, s *Symbol, name string, pos diag.
 
 	switch {
 	case s.broken:
+		return false
+
+	case args != nil && functionName(s):
+		a.report("FUNCPART", pos, name, first)
+
 		return false
 
 	case s.Struct == nil:

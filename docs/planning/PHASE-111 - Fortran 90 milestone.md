@@ -1141,6 +1141,8 @@ where each goes:
   declarations use that its host uses only in executable statements; ENTRY in a module
   procedure and Phase 106's other module limits; a CHARACTER pointer of run-time length but
   as a `LEN=*` dummy; a NAMELIST object past FTNRTL's 8 levels or 15 dimensions.
+  *(The DIM= and ORDER=, the array BACK=, the MOLD, the length zero, COMPLEX(16), and the
+  statement function resolved in Phase 113; the rest are Phase 115's.)*
 - **Not Fortran 90 or 95, not planned:** INTEGER(8); Fortran 2003's spellings (`[ ]`
   constructors, ALLOCATABLE components and dummies, procedure pointers, bounds remapping,
   `ISO_C_BINDING`, stream access, DECIMAL= and ROUND=); DEC's later extensions in the HP

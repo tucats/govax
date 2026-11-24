@@ -502,6 +502,8 @@ func callsProcedure(e Expr) bool {
 			walk(e.Other)
 			walk(e.Mask)
 			walk(e.DimExpr)
+			walk(e.Pad)
+			walk(e.OrderExpr)
 		case *Constructor:
 			// Its values are any expressions: taken to call one.
 			found = true

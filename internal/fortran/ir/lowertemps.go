@@ -522,6 +522,13 @@ func (l *lowerer) valueLength(e sema.Expr) Expr {
 		return l.charLength(e.Sym)
 	case *sema.Section:
 		return l.charLength(e.Sym)
+	case *sema.Substring:
+		if e.Upper != nil {
+			return l.substringLength(e)
+		}
+
+		return l.valueLength(e.X)
+
 	case *sema.Concat:
 		var sum Expr
 
@@ -537,6 +544,20 @@ func (l *lowerer) valueLength(e sema.Expr) Expr {
 	}
 
 	panic("ir: a CHARACTER length lowering can't find")
+}
+
+// substringLength is the length of the substring e, whose upper bound is
+// given: Upper - Lower + 1, never below 0.
+func (l *lowerer) substringLength(e *sema.Substring) Expr {
+	n := arith(Add, Long, arith(Sub, Long, l.expr(e.Upper), l.expr(e.Lower)), LongConst(1))
+	if c, ok := n.(*Const); ok {
+		return LongConst(max(c.Int(), 0))
+	}
+
+	m := l.keepLong(n)
+	l.notNegative(m)
+
+	return &Load{m}
 }
 
 // stmtExpr is expr for the value a statement's own branch goes by (an

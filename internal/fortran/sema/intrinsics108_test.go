@@ -149,15 +149,14 @@ func TestPhase108Characters(t *testing.T) {
 	}
 
 	bad := map[string]string{
-		"TRIM(A)":           "BADARG",
-		"REPEAT(A, 2)":      "BADARG",
-		"REPEAT(T, -1)":     "BADARG",
-		"REPEAT(T, 9000)":   "BADARG",
-		"REPEAT(T, X)":      "BADARG",
-		"LEN_TRIM(I)":       "BADARG",
-		"SCAN(T, 1)":        "BADARG",
-		"SCAN(T, 'A', 1)":   "BADARG",
-		"INDEX(T, 'A', LA)": "NOTIMPL",
+		"TRIM(A)":         "BADARG",
+		"REPEAT(A, 2)":    "BADARG",
+		"REPEAT(T, -1)":   "BADARG",
+		"REPEAT(T, 9000)": "BADARG",
+		"REPEAT(T, X)":    "BADARG",
+		"LEN_TRIM(I)":     "BADARG",
+		"SCAN(T, 1)":      "BADARG",
+		"SCAN(T, 'A', 1)": "BADARG",
 	}
 
 	for text, want := range bad {
@@ -284,7 +283,7 @@ func TestPhase108ZeroLengths(t *testing.T) {
 		{true, []string{"CHARACTER*8 S", "PRINT *, S(5:4)"}, "", "S(5:4)"},
 		{true, []string{"CHARACTER*8 S", "PRINT *, S(20:3)"}, "", "S(20:19)"},
 		{false, []string{"CHARACTER*8 S", "PRINT *, S(5:4)"}, "SUBRANGE", ""},
-		{true, []string{"CHARACTER(LEN=0) FUNCTION F()", "F = ''"}, "NOTIMPL", ""},
+		{true, []string{"CHARACTER(LEN=0) FUNCTION F()", "F = ''"}, "", ""},
 	} {
 		_, ms := analyzeOpts(t, Options{F90: c.f90}, fixed(append(c.lines, "END")...)...)
 
@@ -500,14 +499,17 @@ func TestPhase108Transfer(t *testing.T) {
 	}
 
 	bad := map[string]string{
-		"TRANSFER(X)":         "INTRINARGS",
-		"TRANSFER(X, 0, 1.0)": "BADARG",
-		"TRANSFER(X, C)":      "NOTIMPL",
-		"TRANSFER(X, 0, N)":   "",
+		"TRANSFER(X)":          "INTRINARGS",
+		"TRANSFER(X, 0, 1.0)":  "BADARG",
+		"TRANSFER(X, C)":       "",
+		"TRANSFER(X, (/ C /))": "",
+		"TRANSFER(X, C(1:0))":  "",
+		"TRANSFER(X, Z)":       "BADARG",
+		"TRANSFER(X, 0, N)":    "",
 	}
 
 	for text, want := range bad {
-		_, ms := analyzeOpts(t, Options{F90: true}, fixed("SUBROUTINE S(C)", "CHARACTER*(*) C", "REAL X",
+		_, ms := analyzeOpts(t, Options{F90: true}, fixed("SUBROUTINE S(C)", "CHARACTER*(*) C", "CHARACTER*0 Z(2)", "REAL X",
 			"INTEGER N", "PRINT *, "+text, "END")...)
 
 		got := ""

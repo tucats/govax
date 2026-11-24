@@ -420,6 +420,10 @@ func (a *analyzer) substring(e *ast.Substring) Expr {
 			name = "the field " + f.Text()
 		}
 
+		if f := emptyView(x); f != nil {
+			return a.emptyComponentSubstring(e, f)
+		}
+
 	case *ast.CharConst, *ast.KindConst:
 		// A literal constant's substring, 'ABC'(K:K): the parser makes one
 		// only under /F90.
@@ -516,6 +520,41 @@ func (a *analyzer) substring(e *ast.Substring) Expr {
 	return &Substring{exprBase{T: Type{Kind: Character, Size: 0}, Pos: e.Pos, S: x.Shape()}, x, lower, upper}
 }
 
+// emptyComponentSubstring is a substring of a component of length zero
+// (record.go's emptyComponent), whose place view is: one whose constant
+// bounds aren't empty is SUBRANGE, an upper bound left out is 0, and bounds
+// that aren't constant are the program's to keep in range, as the standard
+// says (a nonempty one would read the byte where the component starts).
+func (a *analyzer) emptyComponentSubstring(e *ast.Substring, view *FieldRef) Expr {
+	lower := Expr(IntConstAt(1, e.Pos))
+	if e.Lower != nil {
+		lower = a.convert(a.arithmetic(a.value(e.Lower)), IntegerType)
+	}
+
+	upper := Expr(IntConstAt(0, e.Pos))
+	if e.Upper != nil {
+		upper = a.convert(a.arithmetic(a.value(e.Upper)), IntegerType)
+	}
+
+	if lower.Type().Kind == Invalid || upper.Type().Kind == Invalid {
+		return a.bad(e.Pos)
+	}
+
+	first, firstKnown := constantInt(lower)
+	last, lastKnown := constantInt(upper)
+
+	switch {
+	case firstKnown && lastKnown && first > last:
+		return a.emptySubstring(e, view, lower)
+	case firstKnown && lastKnown:
+		a.report("SUBRANGE", e.Pos, first, last, "the field "+view.Text(), 0)
+
+		return a.bad(e.Pos)
+	}
+
+	return &Substring{exprBase{T: Type{Kind: Character}, Pos: e.Pos, S: view.Shape()}, view, lower, upper}
+}
+
 // emptySubstring is X(Lower:Upper) with constant bounds, Lower past Upper:
 // under /F90 a substring of length zero (the standard's 6.1.1), whatever the
 // bounds are, no character of X being in it. Its Upper is Lower less 1, so its
@@ -541,6 +580,12 @@ func (a *analyzer) passedSubstring(e *ast.Substring, x, lower, upper Expr) Expr 
 	}
 
 	switch {
+	case firstKnown && lastKnown && first > last && a.f90:
+		// Empty, whatever the bounds are (6.1.1), as of any other name; the
+		// bounds' checks are for one with characters (Phase 113: C(1:0) was
+		// SUBLOW).
+		return a.emptySubstring(e, x, lower)
+
 	case firstKnown && first < 1:
 		a.report("SUBLOW", e.Pos, first)
 
@@ -550,9 +595,6 @@ func (a *analyzer) passedSubstring(e *ast.Substring, x, lower, upper Expr) Expr 
 		a.report("SUBLOW", e.Pos, last)
 
 		return a.bad(e.Pos)
-
-	case firstKnown && lastKnown && first > last && a.f90:
-		return a.emptySubstring(e, x, lower)
 
 	case firstKnown && lastKnown && first > last:
 		a.report("SUBORDER", e.Pos, first, last)

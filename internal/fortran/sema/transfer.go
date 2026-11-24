@@ -41,15 +41,11 @@ func (a *analyzer) transfer(e *ast.Apply, args []ast.Expr) Expr {
 
 	t := mold.Type()
 
-	// A MOLD whose length is known only when the program runs (a passed-length
-	// dummy) would make the result's length that, which only a few of the
-	// expressions that take CHARACTER values could have; and one of length
-	// zero makes a value of none, or (with no SIZE) an array of no size.
-	if t.Kind == Character && t.Size == 0 {
-		a.notImplForm(mold.Position(), "TRANSFER with a MOLD whose length is zero or known only when the program runs")
-
-		return a.bad(e.Pos)
-	}
+	// A CHARACTER MOLD whose length is known only when the program runs (a
+	// passed-length dummy, an automatic object), or is zero (Phase 113), makes
+	// the result's elements as long as MOLD's, which lowering finds from MOLD
+	// itself: kept as the scalar's second argument, or the array's Pad.
+	runtime := t.Kind == Character && t.Size == 0
 
 	var size Expr
 
@@ -69,6 +65,27 @@ func (a *analyzer) transfer(e *ast.Apply, args []ast.Expr) Expr {
 	}
 
 	array := rankOf(mold) > 0 || size != nil
+
+	// An array MOLD of such elements: lowering finds their length only from a
+	// name's, a substring's bounds, or a constructor's first value (as
+	// transform.go's).
+	if runtime && rankOf(mold) > 0 {
+		switch mold.(type) {
+		case *ArrayRef, *Section, *Substring, *Constructor:
+		default:
+			a.notImplForm(mold.Position(), "TRANSFER with a MOLD that is a CHARACTER array expression whose length is known only when the program runs")
+
+			return a.bad(e.Pos)
+		}
+	}
+
+	// An array of elements of no length, and no SIZE: no number of them holds
+	// SOURCE's bytes (13.13.108's rule for the result's size can't be met).
+	if runtime && array && size == nil && knownEmpty(mold) {
+		a.report("BADARG", mold.Position(), e.Name, "a SIZE with a MOLD of length zero", "none")
+
+		return a.bad(e.Pos)
+	}
 
 	// A CHARACTER array SOURCE of a length known only when the program runs:
 	// lowering finds the length only of a name's (as transform.go's).
@@ -92,7 +109,7 @@ func (a *analyzer) transfer(e *ast.Apply, args []ast.Expr) Expr {
 			}
 		}
 
-		if ok && foldable(t) {
+		if ok && foldable(t) && !runtime {
 			c, arr := a.transferValue(src, t, array, n, e.Pos)
 			if arr != nil {
 				return arr
@@ -103,10 +120,18 @@ func (a *analyzer) transfer(e *ast.Apply, args []ast.Expr) Expr {
 	}
 
 	if !array {
-		return &IntrinsicRef{exprBase: exprBase{T: t, Pos: e.Pos}, Name: e.Name, Op: TransferOp, Args: []Expr{source}}
+		args := []Expr{source}
+		if runtime {
+			args = append(args, mold)
+		}
+
+		return &IntrinsicRef{exprBase: exprBase{T: t, Pos: e.Pos}, Name: e.Name, Op: TransferOp, Args: args}
 	}
 
 	f := &ArrayFunc{exprBase: exprBase{T: t, Pos: e.Pos}, Name: e.Name, Array: source, Other: size}
+	if runtime {
+		f.Pad = mold
+	}
 
 	// The extent: SIZE's, if it is a constant; else, with no SIZE, as many
 	// elements as hold SOURCE's bytes, if their number is known.
@@ -114,13 +139,34 @@ func (a *analyzer) transfer(e *ast.Apply, args []ast.Expr) Expr {
 
 	if n, ok := constantInt(size); ok {
 		extent = Extent{Size: max(n, 0), Known: true}
-	} else if bytes, ok := knownBytes(source); ok && size == nil {
+	} else if bytes, ok := knownBytes(source); ok && size == nil && !runtime {
 		extent = Extent{Size: (bytes + t.Size - 1) / t.Size, Known: true}
 	}
 
 	f.S = Shape{extent}
 
 	return f
+}
+
+// knownEmpty reports whether the CHARACTER value e's length is known to be
+// zero when compiling: an entity declared so, a component of length zero, or
+// an empty substring or constant.
+func knownEmpty(e Expr) bool {
+	switch x := e.(type) {
+	case *Const:
+		return x.T.Kind == Character && x.Text == ""
+	case *Substring:
+		if x.Upper == nil {
+			return false
+		}
+
+		first, ok1 := constantInt(x.Lower)
+		last, ok2 := constantInt(x.Upper)
+
+		return ok1 && ok2 && last < first
+	}
+
+	return zeroLength(e)
 }
 
 // zeroLength reports whether e is a CHARACTER entity whose length is the
@@ -162,13 +208,29 @@ func knownBytes(e Expr) (int, bool) {
 }
 
 // foldable reports whether TRANSFER's value of type t is folded when SOURCE
-// is a constant: a number, a LOGICAL, or a CHARACTER value. A derived type's
-// value is computed when the program runs, its component values being what a
-// constant of it needs (Const.Parts).
+// is a constant: a number, a LOGICAL, a CHARACTER value, or since Phase 113 a
+// derived type's value, its components' values read from its bytes
+// (bytesConst), but not one of a type with a pointer component, whose value
+// holds an address, or with a component of length zero. A VAX structure's
+// record has no constants.
 func foldable(t Type) bool {
 	switch t.Kind {
 	case Integer, Logical, Real, Complex, Character:
 		return true
+	case Record:
+		return t.Struct != nil && t.Struct.Derived && !t.Struct.HasPointers() && !hasEmpty(t.Struct)
+	}
+
+	return false
+}
+
+// hasEmpty reports whether st, or a type of one of its components, has a
+// CHARACTER component of length zero.
+func hasEmpty(st *Structure) bool {
+	for _, f := range st.Fields {
+		if f.Empty() || f.Struct != nil && hasEmpty(f.Struct) {
+			return true
+		}
 	}
 
 	return false
@@ -253,6 +315,13 @@ func (a *analyzer) transferValue(src []byte, t Type, array bool, n int, pos diag
 // that it is moved as they are (ir's RawConst); its value is what the VAX's
 // arithmetic would take it as, 0 for both.
 func (a *analyzer) constFromBytes(t Type, b []byte, pos diag.Position) *Const {
+	return bytesConst(t, b, pos, a.gFloating)
+}
+
+// bytesConst is constFromBytes for a unit whose REAL*8 is G_floating if
+// gFloating is set, else D_floating.
+func bytesConst(t Type, b []byte, pos diag.Position, gFloating bool) *Const {
+	a := &analyzer{gFloating: gFloating}
 	c := &Const{exprBase: exprBase{T: t, Pos: pos}}
 
 	switch t.Kind {
@@ -292,9 +361,44 @@ func (a *analyzer) constFromBytes(t Type, b []byte, pos diag.Position) *Const {
 
 	case Character:
 		c.Text = string(b)
+
+	case Record:
+		// A derived type's value: its bytes whole, and each component's
+		// value from its own (structvalue.go's form of a constant).
+		st := t.Struct
+		c.Raw = append([]byte(nil), b...)
+		c.Parts = make([]Expr, len(st.Fields))
+
+		for i, f := range st.Fields {
+			c.Parts[i] = componentFromBytes(f, b[f.Offset:f.Offset+f.Size()], pos, gFloating)
+		}
 	}
 
 	return c
+}
+
+// componentFromBytes is the value of the component f whose bytes are b: a
+// scalar's constant, or an array component's array constant of its shape.
+func componentFromBytes(f *Field, b []byte, pos diag.Position, gFloating bool) Expr {
+	t := componentType(f)
+
+	if f.Dims == nil {
+		return bytesConst(t, b, pos, gFloating)
+	}
+
+	m := f.ElementSize()
+	elems := make([]*Const, f.Elements())
+
+	for i := range elems {
+		elems[i] = bytesConst(t, b[i*m:(i+1)*m], pos, gFloating)
+	}
+
+	extents := make([]int, len(f.Dims))
+	for i, d := range f.Dims {
+		extents[i] = d.Extent()
+	}
+
+	return newArrayConst(t, elems, pos, extents...)
 }
 
 // unpackBytes is the floating value in format f whose memory holds b, and

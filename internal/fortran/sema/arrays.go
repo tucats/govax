@@ -380,6 +380,17 @@ func (a *analyzer) boundComponent(adj *adjustableArray, e *ast.FieldRef) bool {
 	}
 
 	n, named := x.(*ast.Name)
+
+	// D(1)%N: an element of an array of a derived type (Phase 113), its
+	// subscripts a bound's expressions too, and its array the name.
+	if ap, element := x.(*ast.Apply); element {
+		for _, sub := range ap.Args {
+			ok = a.boundOperands(adj, sub) && ok
+		}
+
+		n, named = &ast.Name{ExprBase: ap.ExprBase, Name: ap.Name}, true
+	}
+
 	if !named {
 		a.report("BADBOUND", e.Position(), adj.whereOne())
 

@@ -857,8 +857,12 @@ func (w *moduleWriter) structure(st *Structure) {
 
 		for _, f := range st.Fields {
 			spec := w.typeSpec(f.Type)
-			if f.Struct != nil {
+
+			switch {
+			case f.Struct != nil:
 				spec = w.typeSpec(recordType(f.Struct))
+			case f.Empty():
+				spec = "CHARACTER(LEN=0)"
 			}
 
 			if f.Pointer {
@@ -873,12 +877,6 @@ func (w *moduleWriter) structure(st *Structure) {
 		}
 
 		w.put(1, "END TYPE "+name)
-
-		return
-	}
-
-	if len(st.Initials) > 0 {
-		w.fail(st.Pos, "a structure with initial values in a module")
 
 		return
 	}
@@ -923,7 +921,7 @@ func (w *moduleWriter) structure(st *Structure) {
 		case f.Struct != nil:
 			w.put(depth, "RECORD /"+w.typeName(f.Struct)+"/ "+f.Name+dimsText(f.Dims))
 		default:
-			w.put(depth, oldTypeText(f.Type)+" "+f.Name+dimsText(f.Dims))
+			w.put(depth, oldTypeText(f.Type)+" "+f.Name+dimsText(f.Dims)+w.fieldInitials(st, f))
 		}
 	}
 
@@ -933,6 +931,40 @@ func (w *moduleWriter) structure(st *Structure) {
 	}
 
 	w.put(1, "END STRUCTURE")
+}
+
+// fieldInitials is the text after a VAX structure's field's name that gives its
+// initial values, if it has any (Phase 113): " /v1, v2/", one for each element,
+// each the constant its bytes hold (FieldInitial). A value its bytes don't
+// give back, a reserved operand's, fails, as a constant's does.
+func (w *moduleWriter) fieldInitials(st *Structure, f *Field) string {
+	var values []string
+
+	for _, k := range st.Initials {
+		if k.Item != f.Name && !strings.HasPrefix(k.Item, f.Name+"(") {
+			continue
+		}
+
+		text, ok := w.constText(bytesConst(k.Type, k.Bytes, k.Pos, w.u.GFloating), k.Type)
+		if !ok {
+			w.fail(f.Pos, "the initial value of the field "+f.Name+" of /"+st.Name+"/ in a module's text")
+
+			return ""
+		}
+
+		values = append(values, text)
+	}
+
+	switch {
+	case len(values) == 0:
+		return ""
+	case len(values) != f.Elements():
+		w.fail(f.Pos, "the initial value of the field "+f.Name+" of /"+st.Name+"/ in a module's text")
+
+		return ""
+	}
+
+	return " /" + strings.Join(values, ", ") + "/"
 }
 
 // componentDefault is the text after a component's name that gives its

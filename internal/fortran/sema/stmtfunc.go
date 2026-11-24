@@ -55,7 +55,17 @@ func (a *analyzer) defineStmtFunction(s *ast.AssignStmt, sym *Symbol) {
 	}
 
 	a.defining = sym
-	value := a.scalarValue(a.assignedExpr(s.Value, sym.Type))
+
+	var value Expr
+
+	if sym.Type.Kind == Record {
+		// A function of a derived type (Phase 113): its value an object of
+		// the type, as an assignment's to one is.
+		value = a.aggregateValue(s.Value, false)
+	} else {
+		value = a.scalarValue(a.assignedExpr(s.Value, sym.Type))
+	}
+
 	a.defining = nil
 	a.scope = unitScope
 
@@ -92,6 +102,13 @@ func (a *analyzer) stmtFuncDummy(n *ast.Name) *Symbol {
 
 	if s := a.scope.find(n.Name); s != nil {
 		d.Type, d.broken = s.Type, s.broken
+
+		// A dummy of a derived type (Phase 113) is an object of it, whose
+		// components its expression may name.
+		if s.Type.Kind == Record && s.Class != Constant {
+			d.Struct = s.Type.Struct
+		}
+
 		s.typesEntity = true
 		untyped = s.untyped && !s.Typed
 	} else {
@@ -171,11 +188,21 @@ func (a *analyzer) stmtFuncRef(s *Symbol, e *ast.Apply) Expr {
 // (section 2.2.1.1), and a LOGICAL constant is any LOGICAL.
 func (a *analyzer) actualFor(s *Symbol, i int, arg ast.Expr, pos diag.Position) Expr {
 	d := s.StmtFunc.Dummies[i]
-	x := a.value(arg)
+
+	var x Expr
+	if d.Type.Kind == Record {
+		// An object of a derived type, of the dummy's own type.
+		x = a.aggregateValue(arg, false)
+	} else {
+		x = a.value(arg)
+	}
+
 	t := x.Type()
 
 	switch {
 	case t.Kind == Invalid, t == d.Type, t.Kind == Character && d.Type.Kind == Character:
+		return x
+	case t.Kind == Record && d.Type.Kind == Record && sameType(t.Struct, d.Type.Struct):
 		return x
 	}
 

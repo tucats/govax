@@ -73,23 +73,27 @@ func TestComplex16(t *testing.T) {
 	}
 }
 
-// TestComplex16NotImpl checks what COMPLEX(16) hasn't yet: the intrinsic
-// functions but ABS, SQRT, EXP, LOG, SIN, and COS (Phase 108). Its I/O
-// came in Phase 109 (subtask 3).
-func TestComplex16NotImpl(t *testing.T) {
+// TestComplex16Reductions checks that SUM, PRODUCT, DOT_PRODUCT, and MATMUL
+// take COMPLEX(16) values (Phase 113, subtask 2), and that a specific name of
+// another COMPLEX type refuses one as any other wrong type (BADARG).
+func TestComplex16Reductions(t *testing.T) {
 	cases := map[string]string{
-		"      H = SUM((/ Q, Q /))": "an intrinsic function of a COMPLEX(16) argument",
+		"      H = SUM((/ Q, Q /))":                                   "",
+		"      R = PRODUCT((/ Q, R /), MASK=(/ .TRUE., .FALSE. /))":   "",
+		"      R = DOT_PRODUCT((/ Q, Q /), (/ Z, Z /))":               "",
+		"      CALL S(MATMUL(RESHAPE((/ Q /), (/ 1, 1 /)), (/ Q /)))": "",
+		"      H = DREAL(Q)":                                          "BADARG",
+		"      R = CSIN(Q)":                                           "BADARG",
 	}
 
 	for text, want := range cases {
 		lines := append(append([]string{}, complex16Unit...), text, "      END")
 		_, ms := analyzeOpts(t, Options{F90: true}, lines...)
 
-		if len(ms) != 1 || ms[0].Ident != "NOTIMPL" || !strings.Contains(ms[0].Text, want) {
-			t.Errorf("%s: got %v, want NOTIMPL: %s", text, ms, want)
+		if want == "" && len(ms) != 0 || want != "" && (len(ms) != 1 || ms[0].Ident != want) {
+			t.Errorf("%s: got %v, want %q", text, ms, want)
 		}
 	}
-
 }
 
 // TestComplex16IO checks that COMPLEX(16) items and namelist entities are

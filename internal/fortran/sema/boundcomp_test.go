@@ -34,9 +34,11 @@ func TestBoundFromComponent(t *testing.T) {
 			"BADBOUND: an array's bound must be an INTEGER or REAL expression"},
 		{"a local's component", sub("type(shape) :: e", "real :: a(e%n)", "a = 0.0"),
 			"BOUNDVAR: E can't be used in an array's bounds: it isn't a dummy argument or in a common block"},
-		{"a component of an element", []string{"subroutine s(d)", "type shape", "integer :: n", "end type shape",
-			"type(shape) :: d(3)", "real :: a(d(1)%n)", "a = 0.0", "end subroutine"},
-			"BADBOUND: an array's bound must be an INTEGER or REAL expression"},
+		{"a component of an element (Phase 113)", []string{"subroutine s(d, k)", "type shape", "integer :: n", "end type shape",
+			"type(shape) :: d(3)", "integer :: k", "real :: a(d(1)%n, d(k)%n)", "a = 0.0", "end subroutine"}, ""},
+		{"a component of a local's element", []string{"subroutine s(d)", "type shape", "integer :: n", "end type shape",
+			"type(shape) :: d(3), e(2)", "real :: a(e(1)%n)", "a = 0.0", "end subroutine"},
+			"BOUNDVAR: E can't be used in an array's bounds: it isn't a dummy argument or in a common block"},
 	}
 
 	for _, c := range cases {

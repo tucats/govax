@@ -1,0 +1,4 @@
+reserved:   0   0   0
+exponent:   3  -1  11
+fraction:  0.7500 -0.7500  0.5000
+  $STATUS == "%X00000001"

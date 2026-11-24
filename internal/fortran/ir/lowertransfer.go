@@ -62,11 +62,31 @@ func (l *lowerer) transferPlace(e *sema.IntrinsicRef) *Mem {
 	return &v
 }
 
+// transferText is the scalar TRANSFER e of a CHARACTER MOLD whose length is
+// known only when the program runs, or is zero (Phase 113): a dynamic string as
+// long as MOLD, e's second argument, SOURCE's bytes moved in and the rest
+// cleared.
+func (l *lowerer) transferText(e *sema.IntrinsicRef) Text {
+	n := l.keepLong(l.chars(e.Args[1]).Len)
+	place := Text{l.dynamicText(&Load{n}), &Load{n}}
+	l.moveFilled(place, l.sourceText(e.Args[0]))
+
+	return place
+}
+
 // transferArray computes the array TRANSFER f's value into a temporary of the
 // statement's, of SIZE elements (never below 0), or as many as hold SOURCE's
 // bytes.
 func (l *lowerer) transferArray(f *sema.ArrayFunc) *sema.ArrayRef {
-	m := LongConst(int32(f.T.Size))
+	var m, length Expr = LongConst(int32(f.T.Size)), nil
+
+	if f.Pad != nil {
+		// A CHARACTER MOLD whose elements' length is known only now (sema's
+		// Pad): that length, from MOLD itself.
+		length = &Load{l.keepLong(l.moldLength(f.Pad))}
+		m = length
+	}
+
 	src := l.sourceText(f.Array)
 
 	var n Expr
@@ -81,6 +101,20 @@ func (l *lowerer) transferArray(f *sema.ArrayFunc) *sema.ArrayRef {
 			l.notNegative(k)
 			n = &Load{k}
 		}
+	} else if length != nil {
+		// As many as hold SOURCE's bytes; none if MOLD's elements have no
+		// length (ours: the standard's rule can't be met).
+		k := l.keepLong(LongConst(0))
+		some := l.newBlock()
+		next := l.newBlock()
+		l.branch(&Cmp{Gt, length, LongConst(0)}, some, next)
+		l.begin(some)
+		l.emit(&Assign{origin: l.origin(), Dst: k,
+			Src: arith(Div, Long, arith(Add, Long, src.Len, arith(Sub, Long, m, LongConst(1))), m)})
+		l.jump(next)
+		l.begin(next)
+
+		n = &Load{k}
 	} else {
 		n = arith(Div, Long, arith(Add, Long, src.Len, arith(Sub, Long, m, LongConst(1))), m)
 		if _, ok := n.(*Const); !ok {
@@ -88,7 +122,7 @@ func (l *lowerer) transferArray(f *sema.ArrayFunc) *sema.ArrayRef {
 		}
 	}
 
-	temp := l.extentsTemp(f.T, []Expr{n})
+	temp := l.extentsTempOf(f.T, []Expr{n}, length)
 
 	base := *l.symbolMem(temp.Sym)
 	base.T = Byte
@@ -96,6 +130,20 @@ func (l *lowerer) transferArray(f *sema.ArrayFunc) *sema.ArrayRef {
 	l.moveFilled(Text{&base, arith(Mul, Long, n, m)}, src)
 
 	return temp
+}
+
+// moldLength is the length of the CHARACTER MOLD's elements: a scalar's
+// length, or an array's (a name's, as valueLength finds it).
+func (l *lowerer) moldLength(mold sema.Expr) Expr {
+	if c, ok := mold.(*sema.Constructor); ok && c.LengthOf != nil {
+		return l.moldLength(c.LengthOf)
+	}
+
+	if len(mold.Shape()) > 0 {
+		return l.valueLength(mold)
+	}
+
+	return l.chars(mold).Len
 }
 
 // sourceText is TRANSFER's SOURCE as bytes in memory: where they are, and how

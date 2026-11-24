@@ -738,9 +738,11 @@ Phase 108 is done. What it left, and where each goes:
   zero or run-time length, or of a CHARACTER array SOURCE of a run-time length that isn't a name's
   or a section's; a derived type's component, or a function's value, of length zero; SUM,
   PRODUCT, and the other functions with COMPLEX rows but not COMPLEX(16)'s, of a COMPLEX(16).
+  *(Resolved in Phase 113, but for a CHARACTER array SOURCE of a run-time length not a name's,
+  which is Phase 115's.)*
 - **Noticed, not changed:** EXPONENT and FRACTION move X with MOVF into their temporary, so a
   reserved operand faults there; TRANSFER to a derived type is computed when running even of
-  constants, so it can't give a PARAMETER its value.
+  constants, so it can't give a PARAMETER its value. *(Resolved in Phase 113.)*
 - **Unconfirmed choices of ours:** the first seed, 1234567; a positive
   `SYS$TIMEZONE_DIFFERENTIAL` without a `+`; DATE_AND_TIME reading the name through LNM$FILE_DEV
   rather than the system table alone; SELECTED_INT_KIND and SELECTED_REAL_KIND of values reading

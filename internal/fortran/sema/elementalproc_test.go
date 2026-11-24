@@ -29,6 +29,15 @@ func TestElementalProcedures(t *testing.T) {
 			"  print *, sum(clip(r, 0.0, 1.0))", "  call swap(i, j)", "  call swap(i(1), j(2))", "  call swap(k(1, :), j)",
 			"end program p"},
 			""},
+		{"a dummy in a bound (12.7.1, Phase 113)", []string{
+			"module m", "contains",
+			"  elemental real function e(a, n, c)", "    real, intent(in) :: a", "    integer, intent(in) :: n",
+			"    character(len=*), intent(in) :: c",
+			"    real :: w(n)", "    character(len=len(c)) :: t", "    integer :: b(bit_size(n))", "    character(len=n) :: u",
+			"    e = a", "  end function e",
+			"end module m"},
+			"ELEMBOUND: N, a dummy argument of the ELEMENTAL function E, can be in an array's bounds only as an inquiry function's argument; " +
+				"ELEMBOUND: N, a dummy argument of the ELEMENTAL function E, can be in a CHARACTER length only as an inquiry function's argument"},
 		{"definitions", []string{
 			"module m", "contains",
 			"  elemental integer function f(a, p, g)", "    integer, intent(in) :: a(3)", "    integer, pointer :: p",

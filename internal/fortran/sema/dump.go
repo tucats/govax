@@ -711,6 +711,10 @@ func DumpExpr(e Expr) string {
 			text += ", ORDER=" + fmt.Sprint(e.Order)
 		}
 
+		if e.OrderExpr != nil {
+			text += ", ORDER=" + DumpExpr(e.OrderExpr)
+		}
+
 		return text + ")"
 	case *ArrayFuncAt:
 		names := make([]string, len(e.Index))

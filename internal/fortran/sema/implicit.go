@@ -43,6 +43,13 @@ type implicitRules struct {
 	// is given only once the type is known (derived.go's implicitObject).
 	derived    [26]string
 	derivedPos [26]diag.Position
+
+	// zero is, for a letter IMPLICIT made CHARACTER of length zero, the
+	// length's expression, which each name given the letter's type keeps
+	// (newName) as a type statement's entity would (charlength.go); its type
+	// is CHARACTER of length 0, a length not known when compiling, and nil
+	// for any other letter.
+	zero [26]ast.Expr
 }
 
 // inherit is an internal procedure's rules before its own IMPLICIT
@@ -54,7 +61,7 @@ type implicitRules struct {
 // the procedure's may still give one. The procedure's own IMPLICIT NONE
 // takes every letter's type away, as it does anywhere.
 func (r *implicitRules) inherit() *implicitRules {
-	in := &implicitRules{types: r.types, derived: r.derived, derivedPos: r.derivedPos}
+	in := &implicitRules{types: r.types, derived: r.derived, derivedPos: r.derivedPos, zero: r.zero}
 
 	for c := range in.noType {
 		in.noType[c] = r.none || r.noType[c]
@@ -153,14 +160,27 @@ func (a *analyzer) implicits(body []ast.Stmt) {
 			// IMPLICIT TYPE(POSN) (A-B): the type may be defined later in
 			// the unit, so the letters hold its name (derived).
 			t, ok := Type{Kind: Record}, true
+
+			var zero ast.Expr
+
 			if rule.Type.Derived == "" {
-				t, ok = a.typeOf(rule.Type, rule.Type.Len, rule.Type.Pos)
+				var length ast.Expr
+
+				t, length, ok = a.entityType(rule.Type, rule.Type.Len, rule.Type.Pos)
+
+				switch {
+				case length != nil && a.zeroLengthExpr(length):
+					zero = length
+				case length != nil:
+					t, ok = a.refuseLength(rule.Type, rule.Type.Len, length)
+				}
 			}
 
 			for _, l := range rule.Letters {
 				if a.implicitLetters(t, ok, l, st.Pos.Line) {
 					for c := l.First; c <= l.Last; c++ {
 						r.derived[c-'A'], r.derivedPos[c-'A'] = rule.Type.Derived, rule.Type.DerivedPos
+						r.zero[c-'A'] = zero
 					}
 				}
 			}

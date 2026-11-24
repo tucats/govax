@@ -909,6 +909,12 @@ func (a *analyzer) newName(name string, pos diag.Position) *Symbol {
 	a.scope.enter(s)
 	a.note(&s.refs, pos, RefUsed)
 
+	// IMPLICIT CHARACTER*0's letter: a length of zero, kept as a type
+	// statement's is (charlength.go's runtimeLength).
+	if r := a.scope.rules(); !untyped && name[0] >= 'A' && name[0] <= 'Z' && r.zero[name[0]-'A'] != nil {
+		a.runtimeLength(s, r.zero[name[0]-'A'])
+	}
+
 	// IMPLICIT TYPE(t)'s letter: the type may not be defined yet.
 	if t.Kind == Record && t.Struct == nil {
 		a.implicitObject(s)

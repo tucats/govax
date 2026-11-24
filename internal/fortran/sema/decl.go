@@ -142,13 +142,6 @@ func (a *analyzer) statementFunction(s *ast.AssignStmt) bool {
 		a.badUse(sym, ap.Pos, "be a statement function")
 		a.stmtFuncs[s] = nil
 
-	case sym.Type.Kind == Record:
-		// Allowed, but rare, and each reference's expansion in line would need
-		// a constructor's temporary (docs/planning/PHASE-105 - Fortran 90
-		// derived types.md, finding 11).
-		a.notImplForm(ap.Pos, "a statement function of a derived type")
-		a.stmtFuncs[s] = nil
-
 	default:
 		sym.Class, sym.defPos = StmtFunction, ap.Pos
 		a.stmtFuncs[s] = sym
@@ -228,6 +221,9 @@ func (a *analyzer) typeStatement(s *ast.TypeStmt) {
 		case sym.Typed:
 			a.report("DUPDECL", d.Pos, d.Name, sym.TypePos.Line)
 		default:
+			// A length of zero from an IMPLICIT rule (newName) is the
+			// letter's, which this type replaces.
+			sym.LengthExpr, sym.LengthValue = nil, nil
 			sym.Type, sym.Typed, sym.TypePos, sym.broken = t, true, d.Pos, sym.broken || !ok
 
 			// TYPE(POINT) P: an object of a derived type, which is compiled
@@ -343,28 +339,44 @@ const maxCharLength = 65535
 // entity, A*5, replaces; for a numeric type such a length replaces the kind.
 //
 // Only a type statement's entity may have a CHARACTER length that isn't
-// constant (entityType); anywhere else (IMPLICIT, a structure's field, a
-// FUNCTION statement) it is still BADCHARLEN, or for a selector's NOTIMPL.
+// constant (entityType); anywhere else (a structure's field) it is still
+// BADCHARLEN, or for a selector's NOTIMPL. A FUNCTION statement's and an
+// IMPLICIT rule's may be zero (functionType, implicits), as an entity's may.
 func (a *analyzer) typeOf(spec ast.TypeSpec, l ast.Len, pos diag.Position) (Type, bool) {
 	t, length, ok := a.entityType(spec, l, pos)
 	if length != nil {
-		if _, kind := a.constInt(length); kind == constOK {
-			// A length of zero, which only a type statement's entity takes.
+		if a.zeroLengthExpr(length) {
+			// A length of zero, which only a type statement's entity, a
+			// FUNCTION statement, and IMPLICIT take.
 			a.notImplForm(length.Position(), "a CHARACTER length of zero here")
 
 			return invalid, false
 		}
 
-		if spec.Selector && l == spec.Len {
-			a.notImplForm(length.Position(), "a CHARACTER length that isn't constant")
-		} else {
-			a.report("BADCHARLEN", length.Position())
-		}
-
-		return invalid, false
+		return a.refuseLength(spec, l, length)
 	}
 
 	return t, ok
+}
+
+// zeroLengthExpr reports whether length, entityType's length expression, is a
+// constant, which entityType gives only for a length of zero (or less).
+func (a *analyzer) zeroLengthExpr(length ast.Expr) bool {
+	_, kind := a.constInt(length)
+
+	return kind == constOK
+}
+
+// refuseLength reports a CHARACTER length that isn't constant where only a
+// constant may be: BADCHARLEN, or for a selector's NOTIMPL.
+func (a *analyzer) refuseLength(spec ast.TypeSpec, l ast.Len, length ast.Expr) (Type, bool) {
+	if spec.Selector && l == spec.Len {
+		a.notImplForm(length.Position(), "a CHARACTER length that isn't constant")
+	} else {
+		a.report("BADCHARLEN", length.Position())
+	}
+
+	return invalid, false
 }
 
 // entityType is typeOf for an entity of a type statement, whose CHARACTER
@@ -511,7 +523,20 @@ func (a *analyzer) functionType(spec ast.TypeSpec, s *Symbol) (Type, bool) {
 		spec.Type = baseTypes[s.Type.Kind]
 	}
 
-	return a.typeOf(spec, spec.Len, spec.Pos)
+	t, length, ok := a.entityType(spec, spec.Len, spec.Pos)
+
+	switch {
+	case length == nil:
+		return t, ok
+	case a.zeroLengthExpr(length):
+		// CHARACTER(LEN=0) FUNCTION F: the value's length, zero, is kept as
+		// a type statement's would be (charlength.go's runtimeLength).
+		a.runtimeLength(s, length)
+
+		return t, ok
+	}
+
+	return a.refuseLength(spec, spec.Len, length)
 }
 
 // article is text with "a" or "an" before it: "an INTEGER*2 function".

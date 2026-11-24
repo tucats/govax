@@ -8726,7 +8726,9 @@ and a length after an entity's name replaces the statement's kind or length (`RE
 X*4`). A `CHARACTER` length of zero (`CHARACTER(LEN=0)`, `CHARACTER*0`, or any length
 less than 1) is a string with no characters and no storage: assigning to it does nothing,
 and it prints, joins, and compares as `''`. A `PARAMETER` of length zero takes none of its
-value; a derived type's component of length zero, and a function's value, are not there yet.
+value. A derived type's component may have length zero too, taking no room in the record,
+and so may a function's value, by its FUNCTION statement or a type statement, and IMPLICIT
+`CHARACTER*0`'s names.
 Under `/NOF90` such a length is still `BADCHARLEN`, as in VAX FORTRAN. A length that isn't
 constant (`CHARACTER(LEN=N)` with `N` a dummy argument) is described below, under
 "Automatic arrays".
@@ -9350,7 +9352,12 @@ not do is `NOTPURE`, which says what and why:
 A PURE procedure saves no local and gives none an initial value (by `=`, `=> NULL()`, or
 DATA), and has no SAVE without a list. It never gives a value to, allocates, nullifies, or
 points at a variable of a common block, a module, or its host, nor passes one to an
-INTENT(OUT), INTENT(INOUT), or pointer dummy. It has no STOP, PAUSE, or external I/O (READ or
+INTENT(OUT), INTENT(INOUT), or pointer dummy. Neither such a variable nor an INTENT(IN) dummy
+(any dummy, for a PURE function) is changed through a pointer component (`X%P = 1`), made a
+pointer's target (a structure constructor's pointer component's too), or assigned whole to a
+variable of a type with a pointer component, which would copy its pointers; a variable
+EQUIVALENCEd with one in a common block is in the block, a global too. Its internal
+procedures are PURE themselves. It has no STOP, PAUSE, or external I/O (READ or
 WRITE of a unit, PRINT, TYPE, ACCEPT, OPEN, CLOSE, INQUIRE, and the positioning statements);
 an internal file, ENCODE, and DECODE are its own. Every procedure it references must be
 declared PURE by an explicit interface: one of its module's or a module's it uses, an
@@ -9381,7 +9388,9 @@ FUNCTION or SUBROUTINE says the procedure is written for scalars and may be refe
 arrays, as the elemental intrinsic functions are. It is PURE too, and held to PURE's rules.
 Its dummy arguments are scalars, not pointers or dummy procedures, with no alternate return,
 and a function's value is a scalar, not a pointer (`ELEMDUMMY`, `ELEMRESULT`,
-`ELEMRETURN`); it can't also be RECURSIVE (`ELEMRECURSIVE`). A reference needs an explicit
+`ELEMRETURN`); it can't also be RECURSIVE (`ELEMRECURSIVE`). A dummy argument may be in a
+local's bound or CHARACTER length only as an inquiry function's argument (`LEN(C)`,
+`BIT_SIZE(N)`), since the procedure runs once per element (`ELEMBOUND`). A reference needs an explicit
 interface (`EXPLICITELEMENTAL` without one). Through one, any argument may be an array, a
 section, or an array expression; the arrays must conform, and the reference is made once for
 each element, each array argument's element there and each scalar argument as it is:
@@ -9470,8 +9479,9 @@ derived type, by `TYPE(POINT) FUNCTION F`, a type statement, RESULT, or IMPLICIT
 may name a type its own body defines. A value of up to 8 bytes comes back in R0, or R0 and
 R1, as the Calling Standard returns any value that size, so a MACRO routine can return one
 too; a longer value goes through a hidden first argument, the address of a place for it, as
-a COMPLEX\*16's does. An entry point of such a function has its type (`ENTRYDERIVED`), and a
-statement function of a derived type isn't there yet.
+a COMPLEX\*16's does. An entry point of such a function has its type (`ENTRYDERIVED`). A
+statement function may be of a derived type, its dummies too: `MID(P, Q) = POINT((P%X + Q%X) /
+2, (P%Y + Q%Y) / 2)`.
 
 **Arrays of derived types and components with rank** (6.1.2, 7.5.1.5). With `PATH` an array
 of POINTs, `PATH%X` is the X of every element, an array of PATH's shape; `PATH(2:9:2)%Y` takes
@@ -10800,14 +10810,9 @@ naming what it is:
 | A module's defined operators in a fixed-form `/NOF90` unit | VAX FORTRAN reads `A.B.C` as a field; compile the unit `/F90` |
 | A CHARACTER array constructor whose first value's length is known only when the program runs and isn't a variable's, an array's, or a concatenation of them | Put the value in a variable first |
 | A CHARACTER array expression of a length known only when the program runs, not made of names, as an actual argument | The same |
-| A statement function of a derived type | An internal function |
 | A name an internal procedure's declarations use that its host uses only in its executable statements | Declare the name in the host |
-| CSHIFT, EOSHIFT, or SPREAD with a `DIM=` not constant; RESHAPE with an `ORDER=` not constant | A constant, or a SELECT CASE of the few values |
 | An assumed-shape array as `%LOC`'s, `%REF`'s, or a system subroutine's argument | Pass an element, or an explicit-shape copy |
-| A `BACK=` that is an array (INDEX, SCAN, VERIFY) | A loop over the elements |
-| TRANSFER to a CHARACTER `MOLD` of length zero or of a length known only when the program runs, or of such a CHARACTER array expression | A MOLD of constant length |
-| A derived type's component, or a function's value, of CHARACTER length zero | A length of 1 |
-| A COMPLEX(16) argument to SUM, PRODUCT, and the other functions not named under "The intrinsic procedures" | A loop |
+| TRANSFER to a `MOLD` that is a CHARACTER array expression of a length known only when the program runs, not a name, a section, a substring, or a constructor | A MOLD of constant length, or a name |
 | A NAMELIST object deeper than 8 levels of arrays and derived types, or with more than 15 dimensions in all | FTNRTL's limits; `%FORT-E-NOTIMPL` |
 | In a FORALL, a statement whose value overlaps what it assigns (so it needs temporaries) when it is a pointer assignment, a defined assignment, a WHERE, or an assignment to an array or to a CHARACTER target of run-time length; any such statement, or a mask its statements change, inside a FORALL whose bounds use an outer index; a target whose subscripts read its own storage (`V(V(I)) = 0`); a nested FORALL's bound that its own statements may change | A DO loop, or the value computed into an array of its own first |
 | An elemental defined assignment of a CHARACTER array expression of run-time length that overlaps its target | Put the value in a variable first |

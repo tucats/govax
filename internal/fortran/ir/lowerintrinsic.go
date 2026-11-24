@@ -515,6 +515,10 @@ func (l *lowerer) char(e *sema.IntrinsicRef) Text {
 	case sema.AdjustLOp, sema.AdjustROp, sema.RepeatOp:
 		return l.madeByRoutine(e)
 	case sema.TransferOp:
+		if e.T.Size == 0 {
+			return l.transferText(e)
+		}
+
 		return Text{l.transferPlace(e), LongConst(int32(e.T.Size))}
 	}
 

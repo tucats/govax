@@ -92,6 +92,28 @@ func (a *analyzer) checkElemental() {
 			a.report("ELEMRESULT", r.Pos, u.Name, "an array")
 		}
 	}
+
+	a.elementalBounds(kind)
+}
+
+// elementalBounds reports each dummy argument an ELEMENTAL procedure's bounds
+// and CHARACTER lengths name other than as an inquiry function's argument
+// (ELEMBOUND; 12.7.1: a dummy may appear in a specification expression only as
+// the argument of BIT_SIZE, KIND, LEN, or a numeric inquiry function, since a
+// reference with arrays calls the procedure for each element in turn, and a
+// local's size mustn't change with them). So W(N) is refused, and
+// CHARACTER(LEN=LEN(C)) :: T taken (Phase 113).
+func (a *analyzer) elementalBounds(kind string) {
+	for _, adj := range a.adjustable {
+		for _, n := range adj.names {
+			s := a.scope.find(n.Name)
+			if s == nil || s.Dummy == 0 || s.broken || adj.inquired[n] {
+				continue
+			}
+
+			a.report("ELEMBOUND", n.Pos, s.Name, kind, a.unit.Name, adj.where())
+		}
+	}
 }
 
 // elementalPrefixes reports ELEMENTAL given with RECURSIVE (12.5.2.2's

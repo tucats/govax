@@ -970,7 +970,7 @@ and where each goes:
   `f90rAwaitingVMS`: ZEROSIZE, NULLS, DEFAULTS, PURES, ELEMENTALS, FORALLS, FORALLC, WHERES,
   INTRINS, ZEROWID, ZEROWIDVMS, M_COLONY; `testdata/ftn86`'s ZEROVAX), and what VMS's FORRTL does
   with a zero width, if anything wants the answer (Decision 4); a STRUCTURE with initial values in
-  a module's text (its A.3.2).
+  a module's text (its A.3.2). *(The STRUCTURE resolved in Phase 113, subtask 2.)*
 - **NOTIMPL, named, in no phase yet:** in a FORALL, a statement through temporaries that is a
   pointer assignment, a defined assignment, a WHERE, or an assignment to an array or to a CHARACTER
   target of run-time length; any statement through temporaries, or a mask its statements change,
@@ -982,7 +982,8 @@ and where each goes:
   component's target reached through a global or an INTENT(IN) dummy, a structure constructor's
   pointer component given a global, and an internal procedure of a PURE one being PURE (its
   references are checked); ELEMENTAL's rule that a dummy appear in specification expressions only
-  as an inquiry's argument (12.7.1). `ASSOCIATED(P, NULL())` is NULLPLACE.
+  as an inquiry's argument (12.7.1). `ASSOCIATED(P, NULL())` is NULLPLACE. *(Resolved in Phase
+  113, but NULLPLACE, which stays.)*
 - **Unconfirmed choices (ours, logged above):** an empty dimension shown as (1:0) in maps, module
   files, and the debugger; a specification function may be recursive; DATA of a default-initialized
   object is DEFAULTINIT; CPU_TIME's -1 on failure; `I0` of zero one blank; a negative `F0.d` showing

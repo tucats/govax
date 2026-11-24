@@ -749,7 +749,7 @@ Phase 106 is done. What it left, and where each goes:
   hidden entity whose name the module has for something else; a COMMON block both
   a module and a module it uses declare; a structure with initial values, an
   unnamed nested structure, and a constant whose bits are no number, in a module's
-  text.
+  text. *(A structure with initial values resolved in Phase 113.)*
 - **Unconfirmed choices of ours:** the module file's form (Fortran 90 text with
   `!GOVAX$` lines; the author's answer 1); the stamp, checked from object to
   object, a user referring only to the modules it USEs; a module always defining
