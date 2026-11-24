@@ -7906,9 +7906,26 @@ fixed string, padded with blanks or cut, and cutting it is the warning `STR$_TRU
 that give a string a new length, `STR$APPEND` and `STR$PREFIX`, can't use a fixed string
 at all, and signal `STR$_ILLSTRCLA`. A position off the string is no failure: the
 routine uses the nearest that makes sense and returns the success `STR$_ILLSTRPOS` or
-`STR$_ILLSTRSPE`. A character passed to `STR$DUPL_CHAR` goes by `%REF`. All are in place
-but `STR$ADD`, `DIVIDE`, `MUL`, `RECIP`, and `ROUND`, and the undocumented
-`STR$ELEMENT_R8`.
+`STR$_ILLSTRSPE`. A character passed to `STR$DUPL_CHAR` goes by `%REF`.
+
+The arithmetic routines, `STR$ADD`, `MUL`, `DIVIDE`, `RECIP`, and `ROUND`, work on
+decimal numbers of any length, each passed as three arguments: a sign (0 or 1), the power
+of ten its digits are multiplied by, and the digits, a string. A result comes back the same
+way, its digits without leading zeros, so -1000 plus .0002 is sign 1, exponent -4, and
+digits `9999998`. `STR$DIVIDE`'s seventh argument is the digits wanted after the decimal
+point and its eighth 1 to round or 0 to truncate; `STR$ROUND` keeps a number of significant
+digits. Digits that aren't digits signal `LIB$_INVARG`, and a zero divisor
+`STR$_DIVBY_ZER`:
+
+```fortran
+      CHARACTER*20 C
+      INTEGER CSIGN, CEXP, STATUS, STR$DIVIDE
+C     22 / 7 to six places, rounded: 3142857 times 10**-6.
+      STATUS = STR$DIVIDE(0, 0, '22', 0, 0, '7', 6, 1, CSIGN, CEXP, C)
+```
+
+What the manuals leave open (a zero result's sign, how `STR$RECIP` reads its precision) is
+govax's choice until a VMS run settles it.
 
 **Condition handlers.** A handler is an INTEGER\*4 function of the signal array and the
 mechanism array, set with `CALL LIB$ESTABLISH(name)` and an `EXTERNAL name`. It's for the
@@ -10898,7 +10915,7 @@ and run, but signals `GOVAX-E-NOTIMPL` if called.
 | Area | Routines |
 | --- | --- |
 | Output and input | `LIB$PUT_OUTPUT`, `LIB$GET_INPUT`, `LIB$GET_COMMAND`, `LIB$GET_FOREIGN` |
-| Strings and descriptors | `STR$` (all but `ADD`, `DIVIDE`, `MUL`, `RECIP`, `ROUND`, and `ELEMENT_R8`), `LIB$SCOPY_DXDX`, `LIB$SCOPY_R_DX`, `LIB$SGET1_DD`, `LIB$SFREE1_DD`, `LIB$SFREEN_DD`, `LIB$ANALYZE_SDESC`, `LIB$LEN`, `LIB$CHAR`, `LIB$ICHAR`, `LIB$INDEX`, `LIB$LOCC`, `LIB$SKPC`, `LIB$SCANC`, `LIB$SPANC`, `LIB$MATCHC`, `LIB$MOVC3`, `LIB$MOVC5`, `LIB$MOVTC`, `LIB$MOVTUC`, `LIB$TRA_ASC_EBC`, `LIB$TRA_EBC_ASC`, `LIB$LOOKUP_KEY`, `LIB$CVT_DX_DX` |
+| Strings and descriptors | `STR$` (all of them, the arithmetic routines too), `LIB$SCOPY_DXDX`, `LIB$SCOPY_R_DX`, `LIB$SGET1_DD`, `LIB$SFREE1_DD`, `LIB$SFREEN_DD`, `LIB$ANALYZE_SDESC`, `LIB$LEN`, `LIB$CHAR`, `LIB$ICHAR`, `LIB$INDEX`, `LIB$LOCC`, `LIB$SKPC`, `LIB$SCANC`, `LIB$SPANC`, `LIB$MATCHC`, `LIB$MOVC3`, `LIB$MOVC5`, `LIB$MOVTC`, `LIB$MOVTUC`, `LIB$TRA_ASC_EBC`, `LIB$TRA_EBC_ASC`, `LIB$LOOKUP_KEY`, `LIB$CVT_DX_DX` |
 | Conversion | `LIB$CVT_DTB`, `LIB$CVT_HTB`, `LIB$CVT_OTB` |
 | Arithmetic and bits | `LIB$ADDX`, `LIB$SUBX`, `LIB$EMUL`, `LIB$EDIV`, `LIB$ADAWI`, `LIB$EMODF`/`D`/`G`/`H`, `LIB$POLYF`/`D`/`G`/`H`, `LIB$EXTV`, `LIB$EXTZV`, `LIB$INSV`, `LIB$FFC`, `LIB$FFS`, `LIB$BBSSI`, `LIB$BBCCI`, `LIB$CRC`, `LIB$CRC_TABLE` |
 | Queues | `LIB$INSQHI`, `LIB$INSQTI`, `LIB$REMQHI`, `LIB$REMQTI` |

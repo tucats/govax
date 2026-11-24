@@ -117,6 +117,7 @@ var JSBRoutines = []JSBRoutine{
 	{"STR$GET1_DX_R4", 238, strGet1DxR4},
 	{"STR$FREE1_DX_R4", 239, strFree1DxR4},
 	{"STR$ANALYZE_SDESC_R1", 240, strAnalyzeSdescR1},
+	{"STR$ELEMENT_R8", 267, strElementR8},
 }
 
 // Routines are the LIBRTL routines govax provides. The codes of the ones
@@ -334,6 +335,11 @@ var Routines = []Routine{
 	{"STR$ANALYZE_SDESC", 264, strAnalyzeSdesc},
 	{"STR$GET1_DX", 265, strGet1Dx},
 	{"STR$FREE1_DX", 266, strFree1Dx},
+	{"STR$ADD", 268, strAdd},
+	{"STR$MUL", 269, strMul},
+	{"STR$DIVIDE", 270, strDivide},
+	{"STR$RECIP", 271, strRecip},
+	{"STR$ROUND", 272, strRound},
 }
 
 // callsBack names the routines that call back into the program (a

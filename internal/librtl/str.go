@@ -19,8 +19,7 @@ import (
 //
 // This file has what they share and the routines that build a string; strparts.go
 // the routines that take part of one, and strsearch.go those that compare and
-// search. The arithmetic routines (STR$ADD and so on) aren't here: they stay
-// NOTIMPL (missing.go), by the author's answer 2.
+// search; strmath.go the arithmetic routines (STR$ADD and the rest, Phase 113).
 
 var (
 	strIllStrCla = vmsdef.LibrarySymbols["STR$_ILLSTRCLA"]
@@ -421,12 +420,27 @@ func strElement(env *corevms.Environment, argv []uint32) (uint32, error) {
 		return strFailure(env, err)
 	}
 
-	delimiter, _, err := strSource(env, strArg(env, argv, 2))
+	return element(env, strArg(env, argv, 0), int32(number), strArg(env, argv, 2), strArg(env, argv, 3))
+}
+
+// strElementR8 is STR$ELEMENT_R8, which neither manual describes: R0 the
+// destination, R1 the element number by value, R2 the delimiter, and R3 the
+// source, as STR$LEFT_R8 takes its position (Phase 113's guess, unconfirmed:
+// testdata/str113's probe asks VMS).
+func strElementR8(env *corevms.Environment, regs *corevms.JSBRegisters) error {
+	status, err := element(env, regs[registers.R0], int32(regs[registers.R1]), regs[registers.R2], regs[registers.R3])
+
+	return jsbStatus(regs, status, err)
+}
+
+// element is STR$ELEMENT's work.
+func element(env *corevms.Environment, dst uint32, number int32, delim, src uint32) (uint32, error) {
+	delimiter, _, err := strSource(env, delim)
 	if err != nil {
 		return strFailure(env, err)
 	}
 
-	s, _, err := strSource(env, strArg(env, argv, 3))
+	s, _, err := strSource(env, src)
 	if err != nil {
 		return strFailure(env, err)
 	}
@@ -436,13 +450,13 @@ func strElement(env *corevms.Environment, argv []uint32) (uint32, error) {
 	}
 
 	elements := strings.Split(s, delimiter)
-	n := max(int32(number), 0)
+	n := max(number, 0)
 
 	if int(n) >= len(elements) {
 		return strNoElem, nil
 	}
 
-	return strPut(env, strArg(env, argv, 0), elements[n])
+	return strPut(env, dst, elements[n])
 }
 
 // analyzeStr is STR$ANALYZE_SDESC's work: the length and the text's address.

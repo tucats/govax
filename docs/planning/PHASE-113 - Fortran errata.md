@@ -124,7 +124,7 @@ place is a *proposal* for the author's review (**proposed: 112**); nothing is im
 1. STR$'s ADD, DIVIDE, MUL, RECIP, ROUND, and STR$ELEMENT_R8 NOTIMPL (Phase 83's answer 2;
    `librtl/str.go`). Still NOTIMPL. Decimal string arithmetic, documented in the manual,
    checkable on VMS. **Proposed: 112** (question 7), with a **probe** for VMS's answers, or
-   left.
+   left. *(Done in subtask 7, its probe `testdata/str113` for subtask 12's round.)*
 2. LIB$DECODE_FAULT, SIM_TRAP, FIND_IMAGE_SYMBOL, GET_OPCODE, and LIB$INITIALIZE (Phase 83's
    answer 4; Phase 92 also notes no LIB$INITIALIZE), and Phase 60's balanced trees
    (INSERT_TREE, LOOKUP_TREE, TRAVERSE_TREE). **Own phase**: Phases 60 and 61, still planned
@@ -416,7 +416,7 @@ sees in MANUAL.md's 14.7 "Choices". Sorted:
 Gathered from the **probe** places above, for one simh session after this phase's
 implementation (so the round also checks what this phase does): the index file extension
 header (A.9.1); `ftn86.com` again (A.9.5); RECURAST with a longer timer (A.9.3); STR$'s
-arithmetic and MATCH_WILD with `%` (A.2.1, A.11.2); a FORRTL round on Phase 80's and 81's
+arithmetic (`testdata/str113`, written in subtask 7) and MATCH_WILD with `%` (A.2.1, A.11.2); a FORRTL round on Phase 80's and 81's
 choices and Fortran 95's zero widths on output, which FORRTL may not take (A.10, D.7); MACRO's
 `.LONG R1`, `<A;B>`, `.ERROR`/`.WARN`, `A+B` numbering, and an object with errors (A.6); a
 debugger round (A.8.6); TYPE after a record with no carriage control (A.11.2); `CONVERT=`'s
@@ -696,7 +696,7 @@ A.8.1 is not planned.
 4. The compiler's small things and `STARLET_` modules (A.1.4, A.1.5, A.1.10, A.3.3) (done 2026-11-23).
 5. MACRO (A.6.1, 2, 5) (done 2026-11-23).
 6. LINK and LIB$INITIALIZE (A.7.1, A.7.3, A.2.2; answer C: the old call removed) (done 2026-11-24).
-7. STR$'s arithmetic (A.2.1).
+7. STR$'s arithmetic (A.2.1) (done 2026-11-24).
 8. Services and FTNRTL's format parses (A.2.3, A.2.5).
 9. The debugger (A.8.2, 3).
 10. The SHARE$LIBRTL fault (A.9.2), after subtask 6.
@@ -966,3 +966,30 @@ Each subtask may begin with a survey of its own, as earlier phases' did.
     `TestLibInitializeShareable`, `machine`'s `TestMainTransferLegacy`.
   - MANUAL.md's RUN, HELP RUN /INIT, HELP SET DEBUG and CONFIGURATION, VAX-VMS-INTERNALS.md's driver
     paragraph, and Phases 61 and 83 follow. Subtask 7 is next.
+- **2026-11-24, subtask 7 (done):** STR$'s arithmetic.
+  - *The routines* (`librtl/strmath.go`), from the VMS 5.0 and OpenVMS 7.3 STR$ manuals: STR$ADD,
+    STR$MUL, STR$DIVIDE, STR$RECIP, and STR$ROUND, each number a sign, an exponent, and a digit
+    string, exact in `math/big` (a `decimal`). ADD aligns on the smaller exponent, MUL adds them,
+    DIVIDE's quotient has total-digits places (its exponent -total-digits), rounded half away
+    from zero when the indicator's bit 0 is set, ROUND keeps places significant digits, a carry
+    past them dropping a zero into the exponent (the manual's 999.9998 to 3 is `100` times 10).
+    Every manual example gives its printed answer (`TestStrMathManualExamples`). The digits go to
+    the destination as every STR$ routine writes (STR$_TRU when cut), then the exponent and sign.
+  - *Unconfirmed choices*, each a case of the probe: a result has no leading zeros and keeps its
+    trailing ones; zero is `0`, exponent 0, sign 0; an empty digit string is zero; anything but
+    digits, a sign other than 0 or 1, places below 1, or an exponent past a longword is
+    LIB$_INVARG; a result past 65,535 digits STR$_STRTOOLON; too few arguments STR$_WRONUMARG;
+    a zero divisor STR$_DIVBY_ZER. STR$RECIP's "precision limit specified by the second decimal
+    string" is read as B's exponent alone: 1 / A truncated at that place, its trailing zeros
+    moved into the exponent, which is what makes the manual's `1 -3 1` from 1 / -1000 at .0002's
+    place (`trimZeros`).
+  - *STR$ELEMENT_R8*, in the vector and in neither manual: R0 the destination, R1 the element
+    number by value, R2 the delimiter, R3 the source, as STR$LEFT_R8 takes its position
+    (`strElementR8`, STR$ELEMENT's code, `element`); a guess the probe tests both ways.
+  - *The probe*, `testdata/str113` (`gen.go`, str83's framework, 106 cases; README), for subtask
+    12's round. `TestStr113Probe` runs it on govax and holds the manuals' examples until VMS's
+    output is in `vax/str113-vax.txt`, then the whole of it. `testdata/fortran/strmath.for` calls
+    the routines from FORTRAN (in `TestNoF90Unchanged`'s baseline, and in `testdata/ftn86`,
+    regenerated with STRMATH in `ftn86AwaitingVMS`).
+  - MANUAL.md's FORTRAN strings paragraph (with an example) and Appendix B follow; Phase 83's
+    items are marked resolved. Subtask 8 is next.
