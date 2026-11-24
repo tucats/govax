@@ -12,18 +12,53 @@ import (
 
 // The Phase 113 probe of the services subtask 8 added (docs/planning/PHASE-113,
 // subtask 8): testdata/svc113's svc113.mar calls $GETUTC, $ASCUTC, $BINUTC,
-// $NUMUTC, $TIMCON, $GETCHN, and $GETDEV case by case. Until subtask 12 runs
-// it on VMS, govax's run is held to what the manuals settle (svc113Manual);
-// with vax/svc113-vax.txt in place, it is held to VMS's output line for line,
-// but for expectedSvc113Differences.
+// $NUMUTC, $TIMCON, $GETCHN, and $GETDEV case by case. govax's run is held to
+// VMS 7.1's, vax/svc113-vax.txt (subtask 12d), line for line, but for
+// expectedSvc113Differences and the device's operation count (svc113Masked).
 
 // svc113Compared turns on the comparison with VMS's run, as str113Compared
-// does: off until Phase 113's subtask 13 makes govax's services VMS's.
-const svc113Compared = false
+// does; subtask 13b made govax's services VMS's.
+const svc113Compared = true
+
+// svc113NoDevice is why the terminal's and the default disk's cases differ:
+// the test console has neither, and VMS's describe its own OPA0: and the
+// round's volume.
+const svc113NoDevice = "the test console has no terminal or disk; VMS's lines are its own OPA0: and volume"
 
 // expectedSvc113Differences are the lines of VMS's output govax doesn't
 // reproduce, by the case's name and the line's first word, each with why.
-var expectedSvc113Differences = map[string]string{}
+var expectedSvc113Differences = map[string]string{
+	"GETDEV TT/GETDEV":       svc113NoDevice,
+	"GETDEV TT/PL:":          svc113NoDevice,
+	"GETDEV TT/PB:":          svc113NoDevice,
+	"GETDEV TT/PB+32:":       svc113NoDevice,
+	"GETDEV TT/PB+96:":       svc113NoDevice,
+	"GETDEV TT/SB:":          svc113NoDevice,
+	"GETDEV TT/SB+32:":       svc113NoDevice,
+	"GETDEV TT/SB+96:":       svc113NoDevice,
+	"GETDEV SYS$DISK/GETDEV": svc113NoDevice,
+	"GETDEV SYS$DISK/PL:":    svc113NoDevice,
+	"GETDEV SYS$DISK/PB:":    svc113NoDevice,
+	"GETDEV SYS$DISK/PB+32:": svc113NoDevice,
+	"GETDEV SYS$DISK/PB+96:": svc113NoDevice,
+	"GETDEV SYS$DISK/SB:":    svc113NoDevice,
+	"GETDEV SYS$DISK/SB+32:": svc113NoDevice,
+	"GETDEV SYS$DISK/SB+96:": svc113NoDevice,
+}
+
+// svc113Masked is a line as both sides are compared: a buffer's first line
+// without its eighth longword, DIB$L_OPCNT, the operations the device has
+// done, which are each system's own (NLA0:'s were 13 on the VAX).
+func svc113Masked(line string) string {
+	f := strings.Fields(line)
+	if len(f) >= 9 && (f[0] == "PB:" || f[0] == "SB:") {
+		f[8] = "(OPCNT)"
+
+		return "  " + strings.Join(f, " ")
+	}
+
+	return line
+}
 
 // svc113Manual is what the manuals settle: each case's lines from its first,
 // the case's name and R0, on.
@@ -35,7 +70,7 @@ var svc113Manual = map[string][]string{
 	"ASCUTC eastern":      {"ASCUTC eastern R0=00000001", "  L: 5A5A0017", `  D: 23 " 4-MAR-1999 13:30:15.25"`},
 	"ASCUTC eastern time": {"ASCUTC eastern time R0=00000001", "  L: 5A5A000B", `  D: 11 "13:30:15.25"`},
 	"ASCUTC plus hour":    {"ASCUTC plus hour R0=00000001", "  L: 5A5A0017", `  D: 23 " 4-MAR-1999 13:30:15.25"`},
-	"ASCUTC short 12":     {"ASCUTC short 12 R0=00000601", "  L: 5A5A000C", `  D: 12 " 4-MAR-1999 "`},
+	"ASCUTC short 12":     {"ASCUTC short 12 R0=00000001", "  L: 5A5A000C", `  D: 12 " 4-MAR-1999 "`},
 	// $TIMCON 0 of an octaword made from the local time: that time.
 	"TIMCON 0 eastern":   {"TIMCON 0 eastern R0=00000001", "  S: 99E23320 009D49CB"},
 	"TIMCON 0 plus hour": {"TIMCON 0 plus hour R0=00000001", "  S: 99E23320 009D49CB"},
@@ -159,7 +194,7 @@ func compareSvc113(t *testing.T, gotLines, wantLines []string) {
 	seen := map[string]bool{}
 
 	for i := range max(len(gotLines), len(wantLines)) {
-		g, w := at(gotLines, i), at(wantLines, i)
+		g, w := svc113Masked(at(gotLines, i)), svc113Masked(at(wantLines, i))
 
 		if name, _, ok := strings.Cut(w, " R0="); ok && !strings.HasPrefix(w, " ") {
 			caseName = name

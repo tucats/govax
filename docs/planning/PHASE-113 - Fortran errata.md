@@ -723,7 +723,7 @@ A.8.1 is not planned.
       `testdata/f90r` (round 3), with 12b's and 12c's; the results copied back (done 2026-11-24).
 13. Its fixes, the ods2 header among them. In parts (2026-11-24), each a subtask's size:
     - 13a. STR$'s arithmetic to VMS's run (`testdata/str113`, `str113Compared`) (done 2026-11-24).
-    - 13b. The services to VMS's run (`testdata/svc113`, `svc113Compared`).
+    - 13b. The services to VMS's run (`testdata/svc113`, `svc113Compared`) (done 2026-11-24).
     - 13c. ERR113's sections: LIB$INITIALIZE's arguments, MACRO's register names and
       `.WARN`/`.ERROR`/`.PRINT`, DCL's messages, TYPE without carriage control, a full volume;
       `TestErr113Procedure` held to `vax/err113.log`.
@@ -1393,3 +1393,23 @@ Each subtask may begin with a survey of its own, as earlier phases' did.
   - VMS's `DEFINE/USER SYS$OUTPUT` of an existing file appending (12d's note) is not STR$'s;
     it goes with ERR113's sections, 13c.
   - Subtask 13b, the services, is next.
+- **2026-11-24, subtask 13b (done):** the services made VMS 7.1's (`testdata/svc113`'s README
+  lists what the run settled).
+  - *The device information buffer* (`internal/corevms/getchn.go`): `$DIBDEF`, decoded from the
+    round's `def_dib.obj`, put the names in DIB$T_DEVNAME's 76 bytes at 36 and DIB$L_MAXBLOCK at
+    112, where govax had MAXBLOCK at 36, a DEVDEPND2 at 40, and the names after the 116 bytes.
+    VMS writes only the fixed fields, the names (the label blank-padded to 12), and MAXBLOCK; the
+    returned length is the buffer's, at most 116. Fewer than five arguments is SS$_INSFARG.
+  - *`$ASSIGN`'s owner* (`devices.go`'s `newChannel`): VMS's NLA0: kept PID 0 and [1,1] after the
+    program's `$ASSIGN`; govax made every assigner a device's owner (eVAX's rule). Now only a
+    device without DEV$M_SHR becomes the assigner's, VMS's implicit allocation; a mailbox stays
+    its creator's.
+  - *The UTC services* (`utc.go`): `$TIMCON` takes any flag but 0 as 1 (govax's BADPARAM gone)
+    and signals an access violation at an address it can't reach, its write bit for the store,
+    as VMS's did for an address of 0; `$ASCUTC` into a buffer that holds the date and its blank
+    succeeds; `$BINUTC` of a delta time writes the infinite inaccuracy before SS$_IVTIME;
+    `$NUMUTC` of an inaccuracy of 0 gives days 17.
+  - `TestSvc113Probe` now holds govax to VMS's output (`svc113Compared`), DIB$L_OPCNT masked
+    (`svc113Masked`), the TT and SYS$DISK cases explained differences (the test console has
+    neither device); `TestUTCServices` and `TestGetchnGetdev` follow the new rules.
+  - Subtask 13c, ERR113's sections, is next.

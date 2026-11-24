@@ -35,8 +35,25 @@ UTC service's arguments and statuses but not the octaword's layout, and names `$
 The probe runs with the simh VAX's time zone, US Eastern (SYS$TIMEZONE_DIFFERENTIAL -18000):
 the cases' octawords are made for a TDF of -300, and `GETUTC now` should show `1ED4`.
 
-It runs in Phase 113's probe round (subtask 12, `testdata/err113`), with the round's other programs. Until then
-`TestSvc113Probe` (`internal/console/svc113_test.go`) runs it on govax and holds it to what
-the manuals settle; with VMS's output in `vax/svc113-vax.txt`, it holds govax to that line for
-line, but for `expectedSvc113Differences`. The terminal and disk cases fail on govax's test
-console, which has neither device; VMS's run will have both.
+It ran in Phase 113's probe round (subtask 12, `testdata/err113`); `vax/svc113-vax.txt` is
+VMS 7.1's output. `TestSvc113Probe` (`internal/console/svc113_test.go`) holds govax's run to it
+line for line, with each device buffer's DIB$L_OPCNT masked, but for `expectedSvc113Differences`:
+the terminal and disk cases, which describe the VAX's own OPA0: and volume (govax's test console
+has neither).
+
+What the run settled (Phase 113's subtask 13b; `internal/corevms/utc.go` and `getchn.go`):
+
+- The octaword is as govax took it: every `BINUTC` and `TIMCON 1` octaword matched.
+- `$BINUTC` of a delta time writes the infinite inaccuracy before SS$_IVTIME; text it can't
+  read writes nothing.
+- `$TIMCON` takes any flag but 0 as 1, and an address of 0 is an access violation *signaled*
+  at that address (write reason for the one it stores to), not a status.
+- `$ASCUTC` into 12 bytes, the date and its blank, is SS$_NORMAL; 5 bytes is SS$_BUFFEROVF.
+- `$NUMUTC`'s layout is govax's; an inaccuracy of 0 gives days 17 (a zero quadword read as
+  17-NOV-1858) and the rest 0.
+- The DIB is `$DIBDEF`'s (decoded from `vax/def_dib.obj`): the fixed fields to 36, then
+  DIB$T_DEVNAME's 76 bytes for the counted names (the controller's, then the volume label
+  blank-padded to 12), then DIB$L_MAXBLOCK at 112; 116 bytes in all. VMS writes the fixed
+  fields, the names, and MAXBLOCK, leaving the rest of the names' room as it was.
+- `$GETDEV` with fewer than five arguments is SS$_INSFARG; `$ASSIGN` to NLA0: leaves its owner
+  (PID 0, [1,1]): a shareable device isn't the assigner's.

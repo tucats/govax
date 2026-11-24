@@ -218,8 +218,11 @@ func serviceSysGetutc(env *Environment, argv []uint32) (uint32, error) {
 //
 // $ASCTIM for a UTC time: the text of the local time the octaword at utcadr
 // stands for in its own zone (the current time when utcadr is 0), with
-// $ASCTIM's forms, truncation (SS$_BUFFEROVF), and cvtflg. A time a system
-// time can't hold is SS$_IVTIME.
+// $ASCTIM's forms and cvtflg. A time a system time can't hold is
+// SS$_IVTIME. A buffer too short for the text gets as much as fits, with
+// SS$_BUFFEROVF if the date is cut; a buffer that holds the date and the
+// blank after it is a success (VMS 7.1's 12 bytes; its 5 were BUFFEROVF;
+// between them unconfirmed).
 func serviceSysAscutc(env *Environment, argv []uint32) (uint32, error) {
 	timlen, timbuf, utcadr := optArg(argv, 0), optArg(argv, 1), optArg(argv, 2)
 	timeOnly := optArg(argv, 3)&1 != 0
@@ -254,12 +257,15 @@ func serviceSysAscutc(env *Environment, argv []uint32) (uint32, error) {
 		}
 	}
 
-	if truncated {
+	if truncated && (timeOnly || n < ascutcDate) {
 		return ssBufferOvf, nil
 	}
 
 	return ssNormal, nil
 }
+
+// ascutcDate is the date's length in $ASCUTC's text, with the blank after it.
+const ascutcDate = 12
 
 // serviceSysBinutc is SYS$BINUTC:
 //
@@ -267,7 +273,8 @@ func serviceSysAscutc(env *Environment, argv []uint32) (uint32, error) {
 //
 // $BINTIM for a UTC time: the text is a local absolute time, with $BINTIM's
 // rules for omitted fields, made a UTC time in the local zone. A delta time
-// is SS$_IVTIME, as is text $BINTIM refuses.
+// is SS$_IVTIME, after the octaword's inaccuracy is written (infinite, as
+// VMS 7.1's), and so is text $BINTIM refuses, nothing written.
 func serviceSysBinutc(env *Environment, argv []uint32) (uint32, error) {
 	timbuf, utcadr := optArg(argv, 0), optArg(argv, 1)
 	if timbuf == 0 || utcadr == 0 {
@@ -285,6 +292,15 @@ func serviceSysBinutc(env *Environment, argv []uint32) (uint32, error) {
 
 	v, ok := parseVMSTime(text, env.Clock())
 	if !ok {
+		return ssIvTime, nil
+	}
+
+	if int64(v) < 0 {
+		infinite := []byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}
+		if err := env.mem.Store(env.cpu, utcadr+8, infinite); err != nil {
+			return ssAccVio, nil
+		}
+
 		return ssIvTime, nil
 	}
 
@@ -312,8 +328,9 @@ const numutcWords = 13
 // as $NUMTIM's), then its inaccuracy (days, hours, minutes, seconds,
 // hundredths; each -1 for an infinite one, the manual's "negative values"),
 // then the TDF in minutes. The time is the current one when utcadr is 0.
-// The order of the inaccuracy's words and the TDF's place are the
-// manual's figure, which VSI's text lost: unconfirmed.
+// The layout is VMS 7.1's (testdata/svc113). An inaccuracy of 0 is days 17
+// and the rest 0, as VMS's: it converts the inaccuracy as a delta time, and
+// a zero quadword is the absolute time 17-NOV-1858.
 func serviceSysNumutc(env *Environment, argv []uint32) (uint32, error) {
 	timbuf, utcadr := optArg(argv, 0), optArg(argv, 1)
 
@@ -336,11 +353,14 @@ func serviceSysNumutc(env *Environment, argv []uint32) (uint32, error) {
 
 	copy(words[:], fields[:])
 
-	if u.inacc == utcInfinite {
+	switch u.inacc {
+	case utcInfinite:
 		for i := 7; i < 12; i++ {
 			words[i] = 0xFFFF
 		}
-	} else {
+	case 0:
+		words[7] = 17
+	default:
 		ticks := u.inacc
 		words[7] = uint16(ticks / ticksPerDay)
 		ticks %= ticksPerDay
@@ -374,24 +394,19 @@ func serviceSysNumutc(env *Environment, argv []uint32) (uint32, error) {
 //	SYS$TIMCON [smnadr] ,[utcadr] ,cvtflg
 //
 // With cvtflg 0 it converts the UTC octaword at utcadr to the system time
-// in its own zone, stored in the quadword at smnadr; with cvtflg 1 the
-// system time at smnadr to UTC in the local zone, stored at utcadr. A delta
-// time, or a UTC time a system time can't hold, is SS$_IVTIME. The manual
-// gives no status for another cvtflg: govax's is SS$_BADPARAM
-// (unconfirmed), and for an address the direction needs that is 0,
-// SS$_ACCVIO.
+// in its own zone, stored in the quadword at smnadr; with any other cvtflg
+// (VMS 7.1's 2 and 3 as its 1) the system time at smnadr to UTC in the local
+// zone, stored at utcadr. A delta time, or a UTC time a system time can't
+// hold, is SS$_IVTIME. An address it can't reach, 0 included, is an access
+// violation signaled at that address, as VMS's (its $TIMCON reaches them
+// from the caller's mode): the read first, then the write.
 func serviceSysTimcon(env *Environment, argv []uint32) (uint32, error) {
 	smnadr, utcadr, cvtflg := optArg(argv, 0), optArg(argv, 1), optArg(argv, 2)
 
-	switch cvtflg {
-	case 0:
-		if utcadr == 0 || smnadr == 0 {
-			return ssAccVio, nil
-		}
-
+	if cvtflg == 0 {
 		u, ok := env.loadUTC(utcadr)
-		if !ok {
-			return ssAccVio, nil
+		if !ok || utcadr == 0 {
+			return env.timconFault(utcadr, 0)
 		}
 
 		v, ok := u.system()
@@ -399,34 +414,34 @@ func serviceSysTimcon(env *Environment, argv []uint32) (uint32, error) {
 			return ssIvTime, nil
 		}
 
-		if !env.storeQuad(smnadr, v) {
-			return ssAccVio, nil
+		if smnadr == 0 || !env.storeQuad(smnadr, v) {
+			return env.timconFault(smnadr, uint32(vm.MaskWrite))
 		}
 
-	case 1:
-		if utcadr == 0 || smnadr == 0 {
-			return ssAccVio, nil
-		}
+		return ssNormal, nil
+	}
 
-		v, ok := env.loadQuad(smnadr)
-		if !ok {
-			return ssAccVio, nil
-		}
+	v, ok := env.loadQuad(smnadr)
+	if !ok || smnadr == 0 {
+		return env.timconFault(smnadr, 0)
+	}
 
-		u, ok := utcFromSystem(v, env.localTDF())
-		if !ok {
-			return ssIvTime, nil
-		}
+	u, ok := utcFromSystem(v, env.localTDF())
+	if !ok {
+		return ssIvTime, nil
+	}
 
-		if !env.storeUTC(utcadr, u) {
-			return ssAccVio, nil
-		}
-
-	default:
-		return ssBadParam, nil
+	if utcadr == 0 || !env.storeUTC(utcadr, u) {
+		return env.timconFault(utcadr, uint32(vm.MaskWrite))
 	}
 
 	return ssNormal, nil
+}
+
+// timconFault signals the access violation $TIMCON's own access of va would
+// have, its reason mask's write bit set for a write.
+func (env *Environment) timconFault(va, reason uint32) (uint32, error) {
+	return env.SignalFailure([]uint32{ssAccVio, reason, va}, ssAccVio)
 }
 
 // utcBaseCheck is the base date's distance worked out by the calendar, for

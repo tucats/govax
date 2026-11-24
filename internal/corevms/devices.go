@@ -134,11 +134,13 @@ func serviceSysAssign(env *Environment, argv []uint32) (uint32, error) {
 }
 
 // newChannel assigns a new channel to dp from access mode mode: $ASSIGN's
-// work, shared with $CREMBX. Channel numbers count up by 8 from 8, as
-// eVAX's find_device numbered them. The device's reference count goes up,
-// and its owner becomes this process, except a mailbox's: that stays the
-// process that created it (mailbox.go), whose UIC its protection is
-// checked against.
+// work, shared with $CREMBX. Channel numbers count up by 8 from 8. The
+// device's reference count goes up, and a device that isn't shareable
+// (DEV$M_SHR clear) becomes this process's, as VMS's $ASSIGN allocates one
+// implicitly. A shareable device (NLA0:, a disk) keeps its owner, as VMS
+// 7.1's NLA0: did (testdata/svc113's GETCHN NLA0), and so does a mailbox:
+// that stays the process that created it (mailbox.go), whose UIC its
+// protection is checked against.
 func (env *Environment) newChannel(name string, dp *iodev.Device, mode uint32) *channel {
 	env.nextChannel += 8
 	c := &channel{
@@ -152,7 +154,7 @@ func (env *Environment) newChannel(name string, dp *iodev.Device, mode uint32) *
 	env.channels = append(env.channels, c)
 	dp.RefCnt++
 
-	if _, isMailbox := env.Mailboxes.For(dp); !isMailbox {
+	if _, isMailbox := env.Mailboxes.For(dp); !isMailbox && dp.DevChar&devShareable == 0 {
 		dp.PID = env.Process.PID
 		dp.OwnUIC = env.Process.UIC
 	}
@@ -172,6 +174,8 @@ var (
 
 	devMounted = vmsdef.Symbols["DEV$M_MNT"]
 	devMailbox = vmsdef.Symbols["DEV$M_MBX"]
+
+	devShareable = vmsdef.Symbols["DEV$M_SHR"]
 )
 
 // allocGeneric is $ALLOC's one flags bit: devnam names a device type

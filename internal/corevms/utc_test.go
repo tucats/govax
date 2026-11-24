@@ -83,7 +83,7 @@ func TestUTCServices(t *testing.T) {
 		t.Errorf("$TIMCON 1: %+v, want %+v", got, u)
 	}
 
-	wantR0(t, callLNM(t, env, serviceSysTimcon, smn, back, 2), ssBadParam)
+	wantR0(t, callLNM(t, env, serviceSysTimcon, smn, back, 2), ssNormal) // as 1, VMS 7.1's
 	wantR0(t, callLNM(t, env, serviceSysTimcon, a.quad(-10_000_000), back, 1), ssIvTime)
 
 	// A UTC time in another zone keeps its own: 15 o'clock UTC (18:30 less
@@ -129,6 +129,17 @@ func TestUTCServices(t *testing.T) {
 		}
 	}
 
+	// An inaccuracy of 0 is VMS's days 17.
+	other.inacc = 0
+	env.storeUTC(a2, other)
+	wantR0(t, callLNM(t, env, serviceSysNumutc, words, a2), ssNormal)
+
+	for i, w := range []uint16{17, 0, 0, 0, 0} {
+		if got, _ := env.mem.LoadWord(env.cpu, words+uint32(14+2*i)); got != w {
+			t.Errorf("$NUMUTC zero inaccuracy word %d = %d, want %d", 7+i, got, w)
+		}
+	}
+
 	// Times a system time can't hold: before 17-Nov-1858, or version 2.
 	early := utcTime{ticks: utcBaseTicks - 1, inacc: utcInfinite, vers: 1}
 	env.storeUTC(a2, early)
@@ -141,7 +152,7 @@ func TestUTCServices(t *testing.T) {
 
 	// Addresses.
 	wantR0(t, callLNM(t, env, serviceSysGetutc, 0), ssAccVio)
-	wantR0(t, callLNM(t, env, serviceSysTimcon, 0, utc, 0), ssAccVio)
+	// (A $TIMCON address it can't reach is signaled: testdata/svc113's probe.)
 	wantR0(t, callLNM(t, env, serviceSysNumutc, 0, utc), ssAccVio)
 }
 
@@ -178,8 +189,8 @@ func TestGetchnGetdev(t *testing.T) {
 		t.Helper()
 
 		n, _ := env.mem.LoadWord(env.cpu, length)
-		if n != dibLength+4 {
-			t.Fatalf("%s: length %d, want %d", what, n, dibLength+4)
+		if n != dibLength {
+			t.Fatalf("%s: length %d, want %d", what, n, dibLength)
 		}
 
 		b := []byte(a.readString(a.readLong(buf+4), n))
@@ -188,14 +199,14 @@ func TestGetchnGetdev(t *testing.T) {
 
 		if lng(dibDevChar) != tt.DevChar || b[dibDevClass] != byte(iodev.DeviceClassTT) || b[dibDevType] != 96 ||
 			word(dibDevBufSiz) != 80 || lng(dibDevDepend) != tt.DevDepend || word(dibUnit) != 3 ||
-			lng(dibPID) != env.Process.PID || word(dibRecSiz) != 33 || lng(dibDevDepnd2) != 9 ||
+			lng(dibPID) != env.Process.PID || word(dibRecSiz) != 33 ||
 			word(dibVolNamOff) != 0 {
 			t.Errorf("%s: block % X", what, b[:44])
 		}
 
 		off := word(dibDevNamOff)
-		if off != dibLength || string(b[off+1:off+1+uint32(b[off])]) != "TTA" {
-			t.Errorf("%s: name at %d, % X", what, off, b[dibLength:])
+		if off != dibDevName || string(b[off+1:off+1+uint32(b[off])]) != "TTA" {
+			t.Errorf("%s: name at %d, % X", what, off, b[dibDevName:])
 		}
 	}
 
@@ -208,6 +219,9 @@ func TestGetchnGetdev(t *testing.T) {
 
 	wantR0(t, callLNM(t, env, serviceSysGetdev, a.desc("TTA3:"), plen, pri, 0, 0), ssNormal)
 	check("$GETDEV", pri, plen)
+
+	// Fewer than five arguments.
+	wantR0(t, callLNM(t, env, serviceSysGetdev, a.desc("TTA3:"), plen, pri), ssInsfArg)
 
 	// A short buffer, and the failures.
 	short, _ := a.outDesc(10)
