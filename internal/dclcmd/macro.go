@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -177,6 +178,10 @@ type MacroSource struct {
 
 	// Joined says a + follows it, so the next element is in the same assembly.
 	Joined bool
+
+	// Library says it is a macro library the assembly searches, not a
+	// source: VMS's PROG+LIB/LIBRARY (Phase 113, subtask 5).
+	Library bool
 }
 
 // macroAssemblies groups the command's list: each assembly's elements, from one
@@ -206,12 +211,28 @@ func macroAssemblies(list []MacroSource) [][]MacroSource {
 func (c *Context) MacroList(sources []MacroSource, opts MacroOptions) error {
 	groups := macroAssemblies(sources)
 
-	assemble := func(group []MacroSource) error {
-		opts.Source, opts.Joined = group[0].Name, nil
+	libraries := opts.Libraries
 
-		for _, source := range group[1:] {
-			opts.Joined = append(opts.Joined, source.Name)
+	assemble := func(group []MacroSource) error {
+		// The assembly's library elements join /LIBRARY's libraries, in
+		// the order written; the rest are its sources.
+		var sources []string
+
+		opts.Libraries = slices.Clone(libraries)
+
+		for _, element := range group {
+			if element.Library {
+				opts.Libraries = append(opts.Libraries, element.Name)
+			} else {
+				sources = append(sources, element.Name)
+			}
 		}
+
+		if len(sources) == 0 {
+			return vmserrors.New(vmserrors.CLI_INSFPRM)
+		}
+
+		opts.Source, opts.Joined = sources[0], sources[1:]
 
 		return c.Macro(opts)
 	}
@@ -350,10 +371,12 @@ func (c *Context) Macro(opts MacroOptions) (err error) {
 		c.Printf("%%%s\n", vmserrors.Wrap(vmserrors.CLI_ASMWARNING, w, found.Name))
 	}
 
-	// The object is written only when the assembly succeeds; the listing
-	// is written either way, as real MACRO writes it, after the object so
-	// that it can count the object's records. A failure writing the
-	// listing is reported only if nothing failed before it.
+	// The object is written whether or not the assembly succeeds, as VMS's
+	// MACRO writes it, its end record's severity saying it had errors (which
+	// LINK refuses); the listing is written either way, as real MACRO writes
+	// it, after the object so that it can count the object's records. A
+	// failure writing the listing is reported only if nothing failed before
+	// it.
 	var status error
 
 	switch {
@@ -370,6 +393,12 @@ func (c *Context) Macro(opts MacroOptions) (err error) {
 		}
 
 		status = vmserrors.New(vmserrors.CLI_ASMERRORS, len(all), found.Name)
+
+		if !opts.NoObject {
+			if err := c.writeObject(a, opts, found); err != nil {
+				c.Printf("%%%s\n", err)
+			}
+		}
 	case !opts.NoObject:
 		status = c.writeObject(a, opts, found)
 	}

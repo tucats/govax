@@ -3564,17 +3564,19 @@ qualifiers.
 | `/CROSS_REFERENCE[=(...)]` | End the listing with a cross reference of `SYMBOLS`, `MACROS`, `OPCODES`, `DIRECTIVES`, `REGISTERS`, or `ALL` (default: symbols and macros). |
 | `/DEBUG[=(...)]`, `/NODEBUG` | What the object carries for the debugger: `TRACEBACK` (the default), `SYMBOLS`, `ALL` (what `/DEBUG` alone means), or `NONE`. Use `/DEBUG` for source-line debugging. |
 | `/ENABLE=(...)`, `/DISABLE=(...)` | Assembler functions, as `.ENABLE`/`.DISABLE`: `ABSOLUTE`, `DEBUG`, `GLOBAL`, `SUPPRESSION`, `TRACEBACK`, `TRUNCATION`, `VECTOR`. |
-| `/LIBRARY=(...)` | Macro libraries (`.MLB`) to search before the system macro library (VMS writes this as `MACRO PROG+LIB/LIBRARY`). |
+| `/LIBRARY` | After a file in the list, that file is a macro library (`.MLB`) to search before the system macro library: `MACRO PROG+MYMAC/LIBRARY`, VMS's form. With a value, `/LIBRARY=(...)`, after the verb or a file, govax's form: the libraries it names. |
 
-Every error in the source is reported, with its line, and then no object
-is written, so a failed assembly never replaces a good object:
+Every error in the source is reported, with its line (each undefined symbol
+by name), and the object is still written, as VMS's MACRO writes it, its end
+record saying the module had errors; LINK refuses it with
+`%LINK-E-ERRORS, compilation errors` and makes no image:
 
 ```text
 %DCL-E-ASSEMBLING, Assembling lines.mar: line 27: VAX-E-BRANCHRANGE, Branch displacement 135 out of range
-govax: DCL-E-ASMERRORS, 1 error(s) assembling lines.mar; no object file written
+govax: DCL-E-ASMERRORS, 1 error(s) assembling lines.mar
 ```
 
-Warnings are reported, and the object is still written.
+Warnings are reported, and the object is written as for no message at all.
 
 ### Example 1: Hello, world, explained
 
@@ -3894,7 +3896,8 @@ Hello, Ada Lovelace!
 ```
 
 Instead of `.LIBRARY` in the source, you can name the library on the
-command line: `MACRO GREET/LIBRARY=MYMAC`. For a one-off macro, just
+command line, as VMS does: `MACRO GREET+MYMAC/LIBRARY` (or govax's
+`MACRO GREET/LIBRARY=MYMAC`). For a one-off macro, just
 define it in the source with `.MACRO` ... `.ENDM`.
 
 `$DSCDEF` comes from the system macro library (see
@@ -4627,7 +4630,7 @@ A macro library:
 ```text
 VAX> LIBRARY/CREATE/MACRO MYMAC MYMAC.MAR
 VAX> LIBRARY/REPLACE/MACRO MYMAC NEWMACS.MAR      ! update some macros
-VAX> MACRO PROG/LIBRARY=MYMAC
+VAX> MACRO PROG+MYMAC/LIBRARY
 ```
 
 A text library, for FORTRAN ([section 14.4](#144-source-lines)):

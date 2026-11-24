@@ -496,10 +496,17 @@ func (a *Assembler) finish() error {
 		s.flags = s.flags&^SymUndefined | SymExternal
 	}
 
+	// Every undeclared symbol is an error, each named, as VMS's MACRO names
+	// each (Phase 113, subtask 5; govax named only the first).
 	if len(undeclared) > 0 {
 		sort.Strings(undeclared)
 
-		return vmserrors.New(vmserrors.VAX_UNDEFSYM, undeclared[0])
+		list := make([]error, len(undeclared))
+		for i, name := range undeclared {
+			list[i] = vmserrors.New(vmserrors.VAX_UNDEFSYM, name)
+		}
+
+		return &Errors{List: list}
 	}
 
 	fixups := make([]*fixup, 0, len(waiting))
@@ -507,9 +514,32 @@ func (a *Assembler) finish() error {
 		fixups = append(fixups, f)
 	}
 
+	// In statement order, so that errors come in the source's order.
+	sort.SliceStable(fixups, func(i, j int) bool {
+		if fixups[i].stmt != fixups[j].stmt {
+			return fixups[i].stmt < fixups[j].stmt
+		}
+
+		return fixups[i].location < fixups[j].location
+	})
+
+	// A fixup that fails is an error at its line; the others are still made,
+	// so that the module is whole for the object VMS's MACRO writes even after
+	// errors (Phase 113, subtask 5).
+	var failed []error
+
+	failedStatement := map[int]bool{}
+
 	for _, f := range fixups {
 		if err := a.completeFixup(f); err != nil {
-			return err
+			// A repeated value's copies fail together: one error for the
+			// statement, as VMS's MACRO gives (TIRR).
+			if f.repeated && failedStatement[f.stmt] {
+				continue
+			}
+
+			failedStatement[f.stmt] = true
+			failed = append(failed, err)
 		}
 	}
 
@@ -522,7 +552,14 @@ func (a *Assembler) finish() error {
 		return ri.offset < rj.offset
 	})
 
-	return nil
+	switch len(failed) {
+	case 0:
+		return nil
+	case 1:
+		return failed[0]
+	}
+
+	return &Errors{List: failed}
 }
 
 // externals returns the names of the symbols finish found undefined.

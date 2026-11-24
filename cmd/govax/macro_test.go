@@ -177,8 +177,10 @@ func TestRun_failedOneShotEndsWithItsError(t *testing.T) {
 		t.Fatalf("run error = %v, want the MACRO failure", err)
 	}
 
-	if _, err := os.Stat(filepath.Join(dir, "bad.obj")); err == nil {
-		t.Error("an object was written despite the error")
+	// The object is written all the same, as VMS's MACRO writes one, its end
+	// record saying the module had errors (Phase 113, subtask 5).
+	if _, err := os.Stat(filepath.Join(dir, "bad.obj")); err != nil {
+		t.Errorf("no object for the module with errors: %v", err)
 	}
 }
 

@@ -351,4 +351,33 @@ func TestDispatch_macroLibraryQualifier(t *testing.T) {
 	if err := d.Dispatch(`MACRO "` + src + `"/LIBRARY="none"`); !errors.Is(err, vmserrors.New(vmserrors.SS_NOSUCHFILE)) {
 		t.Errorf("a missing library: %v", err)
 	}
+
+	// VMS's form, a library among the sources (Phase 113, subtask 5), and
+	// /LIBRARY= after the verb; libraries searched as /LIBRARY's are, the last
+	// first.
+	a, b := filepath.Join(dir, "a.mlb"), filepath.Join(dir, "b.mlb")
+
+	for _, tc := range []struct {
+		line string
+		want uint32
+	}{
+		{`MACRO "` + src + `"+"` + a + `"/LIBRARY`, 1},
+		{`MACRO "` + src + `"+"` + a + `"/LIBRARY+"` + b + `"/LIBRARY`, 2},
+		{`MACRO "` + a + `"/LIBRARY+"` + src + `"`, 1},
+		{`MACRO/LIBRARY=("` + b + `") "` + src + `"`, 2},
+	} {
+		if err := d.Dispatch(tc.line); err != nil {
+			t.Errorf("%s: %v", tc.line, err)
+
+			continue
+		}
+
+		if v, _ := symbolValue(t, d.Console, filepath.Join(dir, "prog.obj"), "WHICH"); v != tc.want {
+			t.Errorf("%s: WHICH = %d, want %d", tc.line, v, tc.want)
+		}
+	}
+
+	if err := d.Dispatch(`MACRO "` + a + `"/LIBRARY`); !errors.Is(err, vmserrors.New(vmserrors.CLI_INSFPRM)) {
+		t.Errorf("only a library: %v", err)
+	}
 }

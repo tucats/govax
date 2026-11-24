@@ -79,9 +79,15 @@ func (a *Assembler) Object(opts ObjectOptions) (*obj.Module, error) {
 		b.Created = time.Now()
 	}
 
-	if len(a.warnings) > 0 {
+	// An assembly with errors still has its object, as VMS's MACRO writes
+	// one, its end record saying so (testdata/tir111's TIRR and TIRX), which
+	// LINK then refuses, LINK-E-ERRORS (Phase 113, subtask 5).
+	switch {
+	case len(a.errs) > 0:
+		b.Severity = obj.SeverityError
+	case len(a.warnings) > 0:
 		b.Severity = obj.SeverityWarning
-	} else {
+	default:
 		b.Severity = obj.SeveritySuccess
 	}
 

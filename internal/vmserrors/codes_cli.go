@@ -757,7 +757,7 @@ func init() {
 	DefineMessage(CLI_NEEDVERSION, CLIFacility, "NEEDVERSION", "!Q requires a specific version, e.g. ;3 or ;* (DELETE never defaults to a version)")
 	DefineMessage(CLI_INITFAIL, CLIFacility, "INITFAIL", "Unable to complete INITIALIZE operation on !S")
 	DefineMessage(CLI_EMPTYELEMENT, CLIFacility, "EMPTYELEMENT", "Empty element in list !Q")
-	DefineMessage(CLI_ASMERRORS, CLIFacility, "ASMERRORS", "!D error(s) assembling !S; no object file written")
+	DefineMessage(CLI_ASMERRORS, CLIFacility, "ASMERRORS", "!D error(s) assembling !S")
 	DefineMessage(CLI_ASMWARNING, CLIFacility, "ASMWARNING", "Assembling !S")
 	DefineMessage(CLI_OBJWRITE, CLIFacility, "OBJWRITE", "Writing object file !S")
 	DefineMessage(CLI_LISWRITE, CLIFacility, "LISWRITE", "Writing listing file !S")

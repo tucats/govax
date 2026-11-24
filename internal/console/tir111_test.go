@@ -37,7 +37,7 @@ func TestTIR111Objects(t *testing.T) {
 	for _, source := range sources {
 		name := strings.ToUpper(strings.TrimSuffix(filepath.Base(source), ".mar"))
 		if name == "TIRX" {
-			continue
+			continue // TestTIR111ErrorObjects's
 		}
 
 		t.Run(name, func(t *testing.T) {
@@ -203,6 +203,61 @@ func TestTIR111Errors(t *testing.T) {
 
 		if n := strings.Count(buf.String(), "DIRSYNX"); n != len(want) {
 			t.Errorf("MACRO %s gave %d DIRSYNX, VMS's %d:\n%s", name, n, len(want), buf.String())
+		}
+	}
+}
+
+// TestTIR111ErrorObjects holds govax's objects of the modules with errors, TIRX and
+// TIRR, to VMS's (Phase 113, subtask 5): VMS's MACRO writes an object for one, its
+// end record's severity 2 (an error), a line with an error assembled as it could be:
+// a string directive with nothing after it as an empty string. TIRR's object is only
+// held to having severity 2: VMS took R1 in .LONG R1[2] for a register, an error,
+// and stored one longword of 0, where govax takes it for an external symbol, which the
+// repetition can't use; whether VMS refuses a register name in every data expression
+// is the probe round's question (the phase doc's A.6.3).
+func TestTIR111ErrorObjects(t *testing.T) {
+	dir := filepath.Join("..", "..", "testdata", "tir111")
+	d, c, buf := dungeonConsole(t, false)
+
+	for _, name := range []string{"TIRX", "TIRR"} {
+		abs, err := filepath.Abs(filepath.Join(dir, strings.ToLower(name)+".mar"))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		shareFindRun(t, d, `COPY/QUIET "`+abs+`"/HOST `+name+`.MAR`)
+		buf.Reset()
+
+		_ = d.Dispatch("MACRO/NOLIST " + name)
+
+		records, _, err := c.ContainerSession.ReadRecordFile(rms.FileLocation{Name: name + ".OBJ"}, rms.VariableRecords)
+		if err != nil {
+			t.Fatalf("%s: no object: %v", name, err)
+		}
+
+		vmsObj, err := filepath.Abs(filepath.Join(dir, "vax", strings.ToLower(name)+".obj"))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		vmsRecords, _, err := c.ContainerSession.ReadRecordFile(rms.FileLocation{Host: true, Name: vmsObj}, rms.VariableRecords)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		got, want := comparedRecords(records), comparedRecords(vmsRecords)
+
+		if name == "TIRR" {
+			end := got[len(got)-1]
+			if end[0] != 3 || end[1] != 2 {
+				t.Errorf("TIRR: end record % x, want severity 2", end)
+			}
+
+			continue
+		}
+
+		if diff := firstRecordDifference(got, want); diff != "" {
+			t.Errorf("%s: %s", name, diff)
 		}
 	}
 }

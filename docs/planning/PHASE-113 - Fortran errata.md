@@ -694,7 +694,7 @@ A.8.1 is not planned.
    (done 2026-11-23).
 3. FORALL's remaining NOTIMPLs (A.15.5, answer A) (done 2026-11-23).
 4. The compiler's small things and `STARLET_` modules (A.1.4, A.1.5, A.1.10, A.3.3) (done 2026-11-23).
-5. MACRO (A.6.1, 2, 5).
+5. MACRO (A.6.1, 2, 5) (done 2026-11-23).
 6. LINK and LIB$INITIALIZE (A.7.1, A.7.3, A.2.2; answer C: the old call removed).
 7. STR$'s arithmetic (A.2.1).
 8. Services and FTNRTL's format parses (A.2.3, A.2.5).
@@ -896,3 +896,32 @@ Each subtask may begin with a survey of its own, as earlier phases' did.
     spellings, a row gone from "What Fortran 90 isn't here") and FORTRAN-INTERNALS.md (short
     literals, sections 9 and 11's listings) follow; the items are marked resolved in Phases 85, 86,
     and 106. Subtask 5 is next.
+- **2026-11-23, subtask 5 (done):** MACRO.
+  - *A.6.1, the positional `/LIBRARY`*: MACRO's `/LIBRARY` is a positional qualifier with an
+    optional value (`console.dcl`): after a list element with no value the element is a macro
+    library (`dclcmd.MacroSource.Library`), VMS's `PROG+LIB/LIBRARY`, joining `/LIBRARY`'s for
+    its assembly in the order written (searched the last first, as before); with a value, after an
+    element or after the verb, govax's older form names the libraries. A list of libraries alone is
+    CLI-W-INSFPRM. Two changes to the grammar engine (`internal/dcl`) made it work: a positional
+    qualifier after the verb is the whole command's, as DCL has it (`Entry.positionalQualifiers`),
+    and in a joinable list a `+` ends a positional qualifier's name (`LIB/LIBRARY+PROG`).
+    `TestDispatch_macroLibraryQualifier`'s new cases.
+  - *A.6.2, an object for a module with errors*: govax's MACRO writes the object after errors,
+    as VMS's does, its end record's severity 2 (`asm.Object`, `obj.SeverityError`); ASMERRORS
+    no longer says "no object file written". To make the object whole, `finish` goes on past a
+    fixup that fails (each one's error kept, a repeated value's once per statement, in statement
+    order), and a directive may report an error and go on (`Assembler.continuingError`): `.ASCIZ`,
+    `.ASCIC`, and `.ASCID` with nothing after them are DIRSYNX and assembled as the empty
+    string, as VMS's are, so TIRX's object is VMS's record for record
+    (`TestTIR111ErrorObjects`). TIRR's isn't: VMS took `R1` in `.LONG R1[2]` for a register and
+    stored a longword of 0, govax an external symbol (A.6.3, the probe round's). LINK refuses a
+    module whose severity is 2 or more as VMS 7.1's did in f90r's round 1 (`link`'s
+    `compilationErrors`: ERRORS with the module and file, NOIMGFIL after the first, ERRORS for each
+    later one; `TestLinkCompilationErrors`, on VMS's own TIRX and TIRR objects).
+    `cmd/govax`'s `TestRun_failedOneShotEndsWithItsError` now expects the object.
+  - *A.6.5, every undefined symbol*: with `.DISABLE GLOBAL`, each undeclared symbol is its own
+    UNDEFSYM, sorted, where govax gave only the first. `.ENABLE TRUNCATION` and `VECTOR`, and
+    the messages' form, stay as designed.
+  - DEVIATIONS.md's entry for the object moves to DEVIATIONS-RESOLVED.md, and its Phase 27
+    entry's positional `/LIBRARY` and first undefined symbol are marked resolved; MANUAL.md's
+    MACRO table and examples, HELP MACRO, and Phases 86 and 111 follow. Subtask 6 is next.

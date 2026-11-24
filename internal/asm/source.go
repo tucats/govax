@@ -164,6 +164,21 @@ func (a *Assembler) located(err error) error {
 	return err
 }
 
+// continuingError reports err at the line being assembled and lets the
+// statement go on, as VMS's MACRO assembles what it can of a statement with an
+// error (pseudoAscii); nil then. In the console's dialect, which stops at an
+// error, it is err.
+func (a *Assembler) continuingError(err error) error {
+	if a.dialect != DialectMACRO {
+		return err
+	}
+
+	a.listError(err)
+	a.errs = append(a.errs, a.located(err))
+
+	return nil
+}
+
 // where returns a function that locates an error, as located does, at
 // the line being assembled now, for an error found about it later (see
 // outOfPhase).

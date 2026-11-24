@@ -247,6 +247,10 @@ func Link(inputs []Input, opts Options) (*Image, error) {
 		}
 	}
 
+	if err := l.compilationErrors(); err != nil {
+		return nil, err
+	}
+
 	// With traceback, the image refers to SYS$IMGSTA, which real LINK
 	// finds in STARLET.OLB like any other symbol.
 	if opts.Traceback {
@@ -376,6 +380,9 @@ type module struct {
 	// messages are the messages about the module, such as each
 	// reference it makes to an undefined symbol.
 	messages []Message
+	// severity is its end record's: 2 or more for a module compiled with
+	// errors (compilationErrors).
+	severity byte
 	// conflicts are its MULPSC messages, from pass 1 (conflictingAttributes).
 	conflicts []Message
 	// deferred are a selectively searched module's definitions of symbols
@@ -513,6 +520,8 @@ func (l *linker) pass1(in *Input, library bool) (*module, error) {
 			}
 
 		case *obj.EOM:
+			m.severity = r.Severity
+
 			if r.HasTransfer {
 				if err := l.noteTransfer(m, r); err != nil {
 					return nil, err
@@ -875,4 +884,31 @@ func (l *linker) sharedImage(name string) SharedImage {
 	}
 
 	return SharedImage{Name: name, Match: MatchAlways}
+}
+
+// compilationErrors is the link's end, with no image, if a module its files
+// supplied was compiled with errors (its end record's severity 2 or more), as
+// VMS 7.1's LINK ends it (testdata/f90r's round 1): ERRORS for the first such
+// module, NOIMGFIL, then ERRORS for each after it. nil if none was.
+func (l *linker) compilationErrors() error {
+	var messages []Message
+
+	for _, m := range l.modules {
+		if m.severity < 2 {
+			continue
+		}
+
+		messages = append(messages, Message{'E', "ERRORS",
+			fmt.Sprintf("compilation errors\n\tin module %s file %s", m.name, m.input.File)})
+
+		if len(messages) == 1 {
+			messages = append(messages, Message{'E', "NOIMGFIL", "image file not created"})
+		}
+	}
+
+	if messages == nil {
+		return nil
+	}
+
+	return &FatalError{Messages: append(l.messagesSoFar(), messages...)}
 }

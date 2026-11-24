@@ -430,16 +430,19 @@ const (
 // a leading VMS string descriptor whose address field points at the string
 // data immediately following it (.ASCID).
 //
-// A directive with nothing after it is a syntax error, DIRSYNX, before
-// anything is stored: VMS 7.1's MACRO says so of a bare .ASCII
-// (docs/planning/PHASE-111 - Fortran 90 milestone.md, subtask 11, where the
-// FORTRAN compiler wrote one for an empty text). The other three share its
-// operand grammar, and are taken to say the same (unconfirmed).
+// A directive with nothing after it is a syntax error, DIRSYNX: VMS 7.1's
+// MACRO says so of a bare .ASCII (docs/planning/PHASE-111 - Fortran 90
+// milestone.md, subtask 11, where the FORTRAN compiler wrote one for an empty
+// text), and of .ASCIZ, .ASCIC, and .ASCID (testdata/tir111's TIRX). It then
+// assembles the directive as an empty string, the object it writes holding
+// what .ASCIZ // would (TIRX; Phase 113, subtask 5).
 func (a *Assembler) pseudoAscii(c *cursor, kind asciiKind) error {
 	c.skipBlanks()
 
 	if c.atEnd() {
-		return vmserrors.New(vmserrors.VAX_DIRSYNX)
+		if err := a.continuingError(vmserrors.New(vmserrors.VAX_DIRSYNX)); err != nil {
+			return err
+		}
 	}
 
 	if err := a.output(); err != nil {

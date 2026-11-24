@@ -176,8 +176,10 @@ func TestMacro_headers(t *testing.T) {
 	}
 }
 
-// TestMacro_errorsWriteNothing checks that every error is reported and no
-// object is written, so an existing object survives.
+// TestMacro_errorsWriteNothing checks that every error is reported, and that
+// the object is still written, as VMS's MACRO writes it, its end record's
+// severity an error's (Phase 113, subtask 5; it was once not written, whence
+// the name).
 func TestMacro_errorsWriteNothing(t *testing.T) {
 	c, buf := newTestConsole(t)
 	dir := t.TempDir()
@@ -201,9 +203,37 @@ func TestMacro_errorsWriteNothing(t *testing.T) {
 		t.Errorf("output = %q, want both errors reported", out)
 	}
 
-	if data, _ := os.ReadFile(objPath); string(data) != "old object" {
-		t.Errorf("the old object became %q", data)
+	if severity := objectSeverity(t, objPath); severity != obj.SeverityError {
+		t.Errorf("the object's severity is %d, want an error's", severity)
 	}
+}
+
+// objectSeverity is the end record's severity of the host object file path.
+func objectSeverity(t *testing.T, path string) byte {
+	t.Helper()
+
+	f, err := os.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+
+	records, err := obj.ReadRecords(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	m, err := obj.Decode(records)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	end, ok := m.Records[len(m.Records)-1].(*obj.EOM)
+	if !ok {
+		t.Fatalf("%s doesn't end with an end of module record", path)
+	}
+
+	return end.Severity
 }
 
 // TestMacro_warningsStillWrite checks that a warning is reported and the
@@ -469,7 +499,7 @@ func TestMacro_include(t *testing.T) {
 		t.Errorf("symbols = %v, want HOSTSYM and VOLSYM from the included files", names)
 	}
 
-	// A missing include is an error, and nothing is written.
+	// A missing include is an error, and the object says so.
 	writeHostFile(t, src, "\t.INCLUDE \"none.inc\"\n")
 
 	_ = os.Remove(filepath.Join(dir, "main.obj"))
@@ -478,8 +508,8 @@ func TestMacro_include(t *testing.T) {
 		t.Error("Macro with a missing include succeeded")
 	}
 
-	if _, err := os.Stat(filepath.Join(dir, "main.obj")); err == nil {
-		t.Error("an object was written despite the missing include")
+	if severity := objectSeverity(t, filepath.Join(dir, "main.obj")); severity != obj.SeverityError {
+		t.Errorf("the object's severity is %d, want an error's", severity)
 	}
 }
 

@@ -121,7 +121,7 @@ FORTRAN program, Phases 74 to 86, is done; PLAN.md summarizes it.
 
 - **LINK doesn't translate a logical name for an options file** (`LINK X/OPTIONS` with X defined), as VMS's does, which caught `ftn86.com`
   (subtask 4). So `TestFTN86Procedure` can't catch that mistake.
-- **MACRO's positional `/LIBRARY`** (`MACRO LIB/LIBRARY+SRC`) isn't done; govax keeps `/LIBRARY=(...)` (subtask 1).
+- **MACRO's positional `/LIBRARY`** (`MACRO LIB/LIBRARY+SRC`) isn't done; govax keeps `/LIBRARY=(...)` (subtask 1). *(Resolved in Phase 113, subtask 5.)*
 - **Small things from subtask 1:** a typed name that's a system or intrinsic function (`REAL SQRT`) still gets a `$LOCAL` cell and a line in the map, harmless *(resolved in Phase 113, subtask 4)*; a
   full volume is `%DCL-E-BADFILESPEC` with the reason at its end, where VMS says the device is full.
 - **The Ctrl/Y level's prompt** doesn't take `-` continuation (subtask 2).
@@ -186,7 +186,7 @@ FORTRAN program, Phases 74 to 86, is done; PLAN.md summarizes it.
     `/DEBUG`'s source file is the first: **unconfirmed** against VMS, as is what a `.END` in
     a file before the last does (govax's assembler stops at it, so what follows is unread).
     VMS's positional `/LIBRARY` (`MACRO LIB/LIBRARY+SRC`) isn't done; govax keeps its
-    `/LIBRARY=(...)`.
+    `/LIBRARY=(...)`. *(Resolved in Phase 113, subtask 5: both forms.)*
   - **A false warning fixed.** `/WARNINGS=UNUSED` said `REAL RAN` was never used in a unit
     calling RAN: a system function's reference was noted under the routine, not the declared
     name (`sema`'s `noteSystem`, as `noteIntrinsic`). Of DUNGEON's 14 findings the other 13

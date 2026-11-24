@@ -4,6 +4,7 @@ package asm
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -499,7 +500,12 @@ func (a *Assembler) Assemble(source string) ([]byte, error) {
 		pass = StartPhase()
 
 		if err := a.finish(); err != nil {
-			a.endErrors = append(a.endErrors, err)
+			var list *Errors
+			if errors.As(err, &list) {
+				a.endErrors = append(a.endErrors, list.List...)
+			} else {
+				a.endErrors = append(a.endErrors, err)
+			}
 		}
 
 		a.phases[phasePass2] = pass.Elapsed()

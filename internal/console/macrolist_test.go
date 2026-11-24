@@ -136,7 +136,7 @@ func TestMacro_listNamed(t *testing.T) {
 }
 
 // TestMacro_listAfterErrors checks the listing is written when assembly
-// fails, though the object isn't, and the command still fails.
+// fails, as the object is (an error's), and the command still fails.
 func TestMacro_listAfterErrors(t *testing.T) {
 	c, _ := newTestConsole(t)
 	dir := t.TempDir()
@@ -149,8 +149,8 @@ func TestMacro_listAfterErrors(t *testing.T) {
 		t.Fatalf("Macro error = %v, want CLI_ASMERRORS", err)
 	}
 
-	if names := dirNames(t, dir); contains(names, "bad.obj") || !contains(names, "bad.lis") {
-		t.Fatalf("files = %v, want bad.lis and no bad.obj", names)
+	if names := dirNames(t, dir); !contains(names, "bad.obj") || !contains(names, "bad.lis") {
+		t.Fatalf("files = %v, want bad.lis and bad.obj", names)
 	}
 
 	lines := listingLines(t, c, rms.FileLocation{Host: true, Name: filepath.Join(dir, "bad.lis")})

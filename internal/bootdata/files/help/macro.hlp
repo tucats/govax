@@ -36,9 +36,11 @@
 
 2 Description
 
-   Every error in the source is reported, and then no object module is
-   written, so a failed assembly never replaces a good object.  Warnings
-   are reported, and the object is still written.  .INCLUDE and .LIBRARY
+   Every error in the source is reported, each undefined symbol by name,
+   and the object module is still written, as VMS's MACRO writes it, its
+   end record saying the module had errors: LINK refuses it
+   (%LINK-E-ERRORS) and makes no image.  Warnings are reported, and the
+   object is written as for no message at all.  .INCLUDE and .LIBRARY
    file names follow the same rules as the source's, and a bare name is
    found beside the source.
 
@@ -124,12 +126,15 @@
 
 /LIBRARY
 
+      file/LIBRARY
       /LIBRARY=(library[,...])
 
-   Macro libraries (.MLB, the default type) to search for macros the
-   source calls but doesn't define, ahead of STARLET.MLB.  A bare name
-   is found beside the source.  This takes the place of VMS's "MACRO
-   PROG+LIB/LIBRARY".
+   After a file in the list, with no value, makes that file a macro
+   library (.MLB, the default type) to search for macros the source
+   calls but doesn't define, ahead of STARLET.MLB: VMS's "MACRO
+   PROG+LIB/LIBRARY".  With a value, after the verb or a file, it names
+   the libraries itself, govax's form.  A bare name is found beside the
+   source.
 
 /LIST
 
@@ -184,9 +189,10 @@
 
      Assembles a host file into a volume's object, with a listing.
 
-   4.$ MACRO PROG /LIBRARY=(MYMACROS,COMMON.MLB)
+   4.$ MACRO PROG+MYMACROS/LIBRARY+COMMON/LIBRARY
 
-     Assembles PROG.MAR, searching two macro libraries.
+     Assembles PROG.MAR, searching two macro libraries, COMMON.MLB
+     first.  $ MACRO PROG /LIBRARY=(MYMACROS,COMMON) is the same.
 
    5.% govax --mount-write DUA1=work.dsk macro DUA1:[000000]HELLO.MAR
 

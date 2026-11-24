@@ -118,7 +118,8 @@ func TestMacroListVolume(t *testing.T) {
 			t.Errorf("no ASMERRORS for BAD:\n%s", out)
 		}
 
-		if !exists("AA.OBJ") || !exists("BB.OBJ") || exists("BAD.OBJ") {
+		// BAD's object too, its end record saying it had errors.
+		if !exists("AA.OBJ") || !exists("BB.OBJ") || !exists("BAD.OBJ") {
 			t.Errorf("AA.OBJ %v, BB.OBJ %v, BAD.OBJ %v", exists("AA.OBJ"), exists("BB.OBJ"), exists("BAD.OBJ"))
 		}
 

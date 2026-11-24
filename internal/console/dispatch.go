@@ -892,12 +892,19 @@ func (d *Dispatcher) bindGrammar() {
 			show = r.List("SHOW")
 		}
 
+		// /LIBRARY is positional (VMS's PROG+LIB/LIBRARY: the element is a
+		// library), or with a value govax's own list of libraries, after an
+		// element or after the verb (Phase 113, subtask 5).
 		names := r.List("SOURCE")
 		items := r.Items("SOURCE")
 		sources := make([]dclcmd.MacroSource, len(names))
+		libraries := withoutEmpty(r.List("LIBRARY"))
 
 		for i, name := range names {
-			sources[i] = dclcmd.MacroSource{Name: name, Joined: items[i].Joined()}
+			named := withoutEmpty(items[i].List("LIBRARY"))
+			library := items[i].Present("LIBRARY") && len(named) == 0
+			libraries = append(libraries, named...)
+			sources[i] = dclcmd.MacroSource{Name: name, Joined: items[i].Joined(), Library: library}
 		}
 
 		return d.Console.cmd().MacroList(sources, dclcmd.MacroOptions{
@@ -915,7 +922,7 @@ func (d *Dispatcher) bindGrammar() {
 			Debug:       r.Present("DEBUG") && !r.Negated("DEBUG") && !r.Defaulted("DEBUG"),
 			DebugKinds:  r.List("DEBUG"),
 			NoDebug:     r.Present("DEBUG") && r.Negated("DEBUG"),
-			Libraries:   r.List("LIBRARY"),
+			Libraries:   libraries,
 			CommandLine: d.Console.Line(),
 		})
 	})
@@ -1141,3 +1148,17 @@ func entryOptions(r *dcl.Result) dclcmd.EntryOptions {
 }
 
 func given(r *dcl.Result, name string) bool { return r.Present(name) && !r.Defaulted(name) }
+
+// withoutEmpty is list without its empty values: a list qualifier given with no
+// value has one.
+func withoutEmpty(list []string) []string {
+	var out []string
+
+	for _, v := range list {
+		if v != "" {
+			out = append(out, v)
+		}
+	}
+
+	return out
+}

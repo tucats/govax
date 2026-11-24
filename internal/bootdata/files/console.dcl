@@ -851,7 +851,10 @@ grammar console
     ! /[NO]OBJECT[=file]: with no value (the empty default), or no
     ! qualifier at all, the object is the source's name with type OBJ.
     ! LIBRARY (docs/PHASE-28.md subtask 9) names macro libraries to search
-    ! ahead of STARLET.MLB: govax's form of VMS's "PROG+LIB/LIBRARY".
+    ! ahead of STARLET.MLB. It is positional (Phase 113, subtask 5): after
+    ! an element with no value it makes that element a library, VMS's
+    ! "PROG+LIB/LIBRARY"; with a value, after the verb or an element, it
+    ! names the libraries itself, govax's older form.
     ! LIST (docs/PHASE-29.md subtask 5) is VMS MACRO's /[NO]LIST[=file]:
     ! off unless given, and with no value (the empty default) the listing
     ! is the source's name with type LIS. SHOW (subtask 7) is VMS MACRO's
@@ -876,7 +879,10 @@ grammar console
                     /type=$string               -
                     /default=""
         qualifier   library/id=1304             -
-                    /type=$string/list
+                    /parameter=source           -
+                    /placement=positional       -
+                    /type=$string/list          -
+                    /default=""
         qualifier   list/id=1305                -
                     /type=$string               -
                     /default=""

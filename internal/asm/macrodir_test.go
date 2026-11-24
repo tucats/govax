@@ -302,6 +302,24 @@ func TestEnableGlobal(t *testing.T) {
 	macroAssemble(t, ".DISABLE GLOBAL\n.ENABLE GLOBAL\n.PSECT DATA\n.LONG EXT")
 }
 
+// TestEveryUndefinedSymbol checks that each symbol .DISABLE GLOBAL leaves
+// undefined is an error of its own, in name order, as VMS's MACRO names each
+// (Phase 113, subtask 5).
+func TestEveryUndefinedSymbol(t *testing.T) {
+	err := macroErr(t, ".DISABLE GLOBAL\n.PSECT DATA\n.LONG ZED, ALPHA, MID, ALPHA")
+
+	var list *Errors
+	if !errors.As(err, &list) || len(list.List) != 3 {
+		t.Fatalf("error %v, want three", err)
+	}
+
+	for i, name := range []string{"ALPHA", "MID", "ZED"} {
+		if !errors.Is(list.List[i], vmserrors.New(vmserrors.VAX_UNDEFSYM, name)) || !strings.Contains(list.List[i].Error(), name) {
+			t.Errorf("error %d is %v, want UNDEFSYM %s", i, list.List[i], name)
+		}
+	}
+}
+
 // TestEnableArguments checks .ENABLE and .DISABLE's argument lists, in
 // long and short forms, and the warning for a function govax lacks.
 func TestEnableArguments(t *testing.T) {

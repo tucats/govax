@@ -647,7 +647,8 @@ choices no fixture has confirmed yet.
     the warning `VAX_IGNORED`, and assembly goes on.
   - The `MACRO` command has no `A+B` concatenation of several sources
     into one module *(resolved in Phase 86, subtask 1: `dclcmd.MacroList`,
-    `A,B` and `A+B`)*, nor VMS's `PROG+LIB/LIBRARY` (still open); macro
+    `A,B` and `A+B`)*, nor VMS's `PROG+LIB/LIBRARY` *(resolved in Phase 113,
+    subtask 5: `/LIBRARY` is positional, and with a value govax's list)*; macro
     libraries come from a govax-style `/LIBRARY=(file,...)` (Phase 28). (`/LIST`,
     `/SHOW`, `/CROSS_REFERENCE`, `/DEBUG`, `/ENABLE`, and `/DISABLE`
     came with Phase 29.)
@@ -655,7 +656,7 @@ choices no fixture has confirmed yet.
     VAX-E-...`), not MACRO's. After an error, assembly goes on to the
     next statement, so a later message can follow from an earlier
     error, as in real MACRO. At the end, only the first undefined
-    symbol is reported.
+    symbol is reported *(resolved in Phase 113, subtask 5: each is)*.
   - `.INCLUDE` isn't MACRO-32. It's kept as an extension, and resolves
     names across host and ODS-2 files.
   - The object's language processor header is `GOVAX MACRO V<build>`,
@@ -2107,14 +2108,6 @@ nothing is changed until a program needs it. `TestLink82Oracle` lists the case.
   no rule fits. The bytes stored are the same, so the linked image is.
 - **Status**: open; such objects differ from VMS's in that record alone (`tir111Differences`,
   `f90rObjectDifferences`).
-
-### [Phase 111] MACRO writes no object for a module with errors
-
-- **Where**: `internal/dclcmd`'s MACRO, `internal/asm`.
-- **What**: VMS 7.1's MACRO writes an object for a module with errors, its end record's severity
-  saying so (2, testdata/tir111's TIRR and TIRX; LINK then names "compilation errors" in it, as
-  testdata/f90r's round 1 showed); govax's MACRO writes none ("no object file written").
-- **Status**: open.
 
 ### [Phase 111] A register name in a data expression
 

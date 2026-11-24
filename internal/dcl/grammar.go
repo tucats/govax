@@ -176,6 +176,18 @@ func (p *Parameter) positional() []*Qualifier {
 	return out
 }
 
+// positionalQualifiers are every positional qualifier of the entry's
+// parameters, which may also be given after the verb for the whole command.
+func (e *Entry) positionalQualifiers() []*Qualifier {
+	var out []*Qualifier
+
+	for _, p := range e.Parameters {
+		out = append(out, p.positional()...)
+	}
+
+	return out
+}
+
 // Qualifier is one /-prefixed switch of an Entry, matching a grammar
 // "qualifier" statement.
 type Qualifier struct {

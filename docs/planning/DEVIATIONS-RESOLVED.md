@@ -1437,6 +1437,17 @@ sub-phase 2.
   OPCCUS, RADRMOD, ARTRES, and the floating, decimal, and subscript
   conditions follow them, unconfirmed.
 
+### [Phase 111] MACRO writes no object for a module with errors
+
+- **Where**: `internal/dclcmd`'s MACRO, `internal/asm`.
+- **What**: VMS 7.1's MACRO writes an object for a module with errors, its end record's severity
+  saying so (2, testdata/tir111's TIRR and TIRX; LINK then names "compilation errors" in it, as
+  testdata/f90r's round 1 showed); govax's MACRO writes none ("no object file written").
+- **Status**: resolved in Phase 113, subtask 5: govax's MACRO writes the object, its end
+  record's severity 2, a string directive with nothing after it assembled as the empty string as
+  VMS's is (TIRX's object VMS's record for record, `TestTIR111ErrorObjects`), and LINK refuses
+  it as VMS's does (LINK-E-ERRORS, then NOIMGFIL; `TestLinkCompilationErrors`).
+
 ## Open questions carried forward (not yet findings)
 
 ### [Phase 03/04, noticed in Phase 06] PC-relative Immediate mode isn't rejected for an `AccessAddress` operand

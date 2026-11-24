@@ -679,7 +679,15 @@ func (g *Grammar) parseQualifier(r *Result, active *Entry, nextParam int, lastPa
 
 	if q == nil {
 		if q, negated, err = matchQualifier(active.Qualifiers, name); err != nil {
-			return nil, 0, nil, "", err
+			// A positional qualifier placed after the verb, not after one of
+			// its parameter's elements, is the whole command's, as DCL has it
+			// (MACRO/LIBRARY=(A,B) PROG): filed as an entry-level qualifier.
+			pq, pn, perr := matchQualifier(active.positionalQualifiers(), name)
+			if perr != nil {
+				return nil, 0, nil, "", err
+			}
+
+			q, negated = pq, pn
 		}
 	}
 
@@ -1300,6 +1308,12 @@ func (g *Grammar) readItems(r *Result, active *Entry, nextParam int, p *Paramete
 			}
 
 			name, _ := readBareToken(after[1:])
+
+			// In a /joinable list a + ends the qualifier and joins the next
+			// element: MACRO LIB/LIBRARY+PROG.
+			if plus := strings.IndexByte(name, '+'); p.Joinable && plus >= 0 {
+				name = name[:plus]
+			}
 
 			if q, negated, err := matchQualifier(positional, name); err == nil {
 				if rem, err = g.itemQualifier(item, q, negated, after[1+len(name):]); err != nil {
