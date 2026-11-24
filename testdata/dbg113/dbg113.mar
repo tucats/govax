@@ -1,0 +1,192 @@
+	.TITLE	DBG113	Phase 113 probe: the debugger's open questions
+	.IDENT	/01/
+; DBG113.MAR - the program behind Phase 113's debugger round (README.md). Each
+; routine is the stage for one group of questions; the sessions (DBG113*.DBG)
+; stop in it. START declares an exit handler (EXIT and QUIT), then calls:
+;
+;   REC(3)      a recursion to LEAF, as testdata/dbg89's: REC(n) writes
+;               n*^X100 + k in Rk (R1 to R5) and saves R2 to R4, not R5, with
+;               IV set by its entry mask; LEAF saves R6, not R7, sets DV, and
+;               leaves the condition codes N set at INLEAF (the scope round)
+;   FLOATS      short literals in F, D, G, and H instructions
+;   REGINS      registers holding an instruction's bytes (EXAMINE/INSTRUCTION
+;               of a register)
+;   LOOP twice  three passes over LOOPTOP each, writing WATCHL and COUNT
+;               (tracepoints and watchpoints)
+;   SUBA, SUBD, SUBE   each calls one of SUBB1 to SUBB3 (STEP/RETURN and
+;               STEP/OVER interrupted by a break)
+;   TWICE       a macro: one source line, two calls of SUBC (a line step
+;               that ends at a RET in the middle of the caller's line)
+;   SIGNAL      two unhandled warnings (exception breaks)
+;
+; and prints "DBG113: done". The exit handler prints "DBG113: the exit
+; handler ran".
+
+	.PSECT	DATA113, WRT, NOEXE, LONG
+WATCHL:	.LONG	0			; LOOP adds 2 each pass
+COUNT:	.LONG	0			; LOOP's pass
+DEPTH:	.LONG	0			; REC's activations
+EXITST:	.LONG	0			; the exit handler's status
+EXHBLK:	.LONG	0			; $DCLEXH's block: the link,
+	.ADDRESS EXH			; the handler,
+	.LONG	1			; one argument,
+	.ADDRESS EXITST			; the status's address
+GVAL:	.G_FLOATING	2.5		; EXAMINE/G_FLOAT
+HVAL:	.H_FLOATING	2.5		; EXAMINE/H_FLOAT
+EXMSG:	.ASCID	/DBG113: the exit handler ran/
+DONE:	.ASCID	/DBG113: done/
+
+	.PSECT	CODE113, NOWRT, EXE, LONG
+
+	.MACRO	TWICE			; one source line, two calls of SUBC
+	CALLS	#0, SUBC
+	CALLS	#0, SUBC
+	.ENDM	TWICE
+
+	.ENTRY	START, ^M<R2,R3,R4,R5>
+	$DCLEXH_S DESBLK=EXHBLK		; for EXIT and QUIT
+	MOVL	#^X1002, R2
+	MOVL	#^X1003, R3
+	MOVL	#^X1004, R4
+	MOVL	#^X1005, R5
+	PUSHL	#3
+	CALLS	#1, REC			; REC(3), recursively
+	CALLS	#0, FLOATS		; short literals
+	CALLS	#0, REGINS		; instructions in registers
+	PUSHAL	WATCHL
+	CALLS	#1, LOOP		; LOOP's first run
+	PUSHAL	WATCHL
+	CALLS	#1, LOOP		; and its second
+	CALLS	#0, SUBA		; STEP/RETURN interrupted
+	CALLS	#0, SUBD		; a second STEP/RETURN
+	CALLS	#0, SUBE		; STEP/OVER interrupted
+	TWICE				; a line two calls long
+AFTERT:	CALLS	#0, SIGNAL		; exception breaks
+	PUSHAQ	DONE
+	CALLS	#1, G^LIB$PUT_OUTPUT
+	MOVL	#1, R0
+	RET
+
+; The recursion. REC's mask sets IV, so the PSW its callers' frames save has IV
+; clear and REC's own has it set; LEAF's sets DV, and LEAF leaves N set.
+	.ENTRY	REC, ^M<R2,R3,R4,IV>	; R5 is written but not saved
+	MULL3	#^X100, 4(AP), R1	; n*^X100
+	ADDL3	#2, R1, R2
+	ADDL3	#3, R1, R3
+	ADDL3	#4, R1, R4
+	ADDL3	#5, R1, R5
+	INCL	DEPTH
+	CMPL	4(AP), #1
+	BGTR	RECUR
+	CALLS	#0, LEAF		; REC(1) calls LEAF
+DEEP:	MOVL	#1, R0
+	RET
+RECUR:	SUBL3	#1, 4(AP), -(SP)
+	CALLS	#1, REC
+BACK:	MULL2	4(AP), R0		; each inner REC returns here
+	RET
+
+	.ENTRY	LEAF, ^M<R6,DV>		; R7 is written but not saved
+	MOVL	#^X6006, R6
+	MOVL	#^X0F00, R0
+	MOVL	#^X0F01, R1
+	MNEGL	#1, R7			; N set: the live condition codes
+INLEAF:	NOP
+	RET
+
+; Short literals in each floating format: how the debugger writes their
+; values (govax: F's seven digits for all four).
+	.ENTRY	FLOATS, ^M<R2,R3>
+	MOVF	S^#1.5, R0
+	MOVD	S^#3.75, R0
+	MOVG	S^#0.5, R0
+	MOVG	S^#120.0, R0
+	MOVH	S^#3.75, R0
+	MOVH	S^#0.5625, R0
+	ADDG3	S^#1.5, S^#2.0, R0
+	ADDH3	S^#0.625, S^#7.5, R0
+INFLT:	RET
+
+; Registers holding an instruction's bytes. R5 and R6 hold MOVL #^X12345678,R0
+; (D0 8F 78 56 34 12 50), which runs past R5's four bytes; R7 holds a short
+; one; R11's runs into AP.
+	.ENTRY	REGINS, ^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVL	#^X56788FD0, R5		; D0 8F 78 56
+	MOVL	#^X01501234, R6		; 34 12 50 01
+	MOVL	#^X0000046D, R7		; 6D 04 00 00: CVTWD S^#4, S^#0.5
+	MOVL	#^X12348FD0, R11	; D0 8F 34 12, then AP's bytes
+INREG:	NOP
+	RET
+
+; LOOP(A): three passes. LOOPTOP is a line start and the branch's target, so
+; an address trace, a line trace, and a branch trace all meet there. Its
+; operands are of many kinds, for EXAMINE/OPERANDS.
+	.ENTRY	LOOP, ^M<R2,R3>
+	CLRL	COUNT
+	CLRL	WATCHL
+	MOVAL	WATCHL, R2
+	CLRL	R3
+LOOPTOP: INCL	COUNT			; the pass, 1 to 3
+LOOPADD: ADDL2	#2, WATCHL		; watched: 2, 4, 6
+	MOVL	@4(AP), R0		; deferred: WATCHL again
+	MOVAL	DEPTH[R3], R1		; indexed
+	MOVL	(R2)+, R0		; autoincrement
+	MOVL	-(R2), R0		; autodecrement
+	CMPL	COUNT, #3		; a literal
+	BLSS	LOOPTOP			; a branch
+ENDLP:	RET
+
+; STEP/RETURN and STEP/OVER. Each caller calls its own SUBBn, so a session's
+; breaks in one don't stop another.
+	.ENTRY	SUBA, ^M<>
+INA:	CALLS	#0, SUBB1
+AFTERA:	NOP
+ENDA:	RET
+
+	.ENTRY	SUBD, ^M<>
+IND:	CALLS	#0, SUBB2
+AFTERD:	NOP
+ENDD:	RET
+
+	.ENTRY	SUBE, ^M<>
+INE:	CALLS	#0, SUBB3
+AFTERE:	NOP
+ENDE:	RET
+
+	.ENTRY	SUBB1, ^M<>
+	NOP
+MID1:	NOP
+END1:	RET
+
+	.ENTRY	SUBB2, ^M<>
+	NOP
+MID2:	NOP
+END2:	RET
+
+	.ENTRY	SUBB3, ^M<>
+	NOP
+MID3:	NOP
+END3:	RET
+
+	.ENTRY	SUBC, ^M<>
+	NOP
+ENDC:	RET
+
+; Two unhandled warnings, SS$_ENDOFFILE: the debugger's exception breaks.
+	.ENTRY	SIGNAL, ^M<>
+	PUSHL	#^X870			; SS$_ENDOFFILE
+	CALLS	#1, G^LIB$SIGNAL
+SIG1:	PUSHL	#^X870
+	CALLS	#1, G^LIB$SIGNAL
+SIG2:	RET
+
+; A source record longer than 144 columns (its comment), on an instruction never run.
+LONGLN:	NOP		; 0000000001111111111222222222233333333334444444444555555555566666666667777777777888888888899999999990000000000111111111122222222223333333333444444444455555555556666666666
+
+; The exit handler.
+	.ENTRY	EXH, ^M<>
+	PUSHAQ	EXMSG
+	CALLS	#1, G^LIB$PUT_OUTPUT
+	RET
+
+	.END	START

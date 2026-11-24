@@ -718,7 +718,7 @@ A.8.1 is not planned.
       without carriage control, a full volume, and the index file past its header (A.9.1);
       RECURAST's longer timer (A.9.3) (done 2026-11-24).
     - 12b. The FORRTL round (A.10's FORRTL items, Fortran 95's zero widths on output) (done 2026-11-24).
-    - 12c. The debugger round (A.8.6).
+    - 12c. The debugger round (A.8.6) (done 2026-11-24).
     - 12d. The session on VMS 7.1: `testdata/err113`, `testdata/ftn86` (round 6), and
       `testdata/f90r` (round 3), with 12b's and 12c's; the results copied back.
 13. Its fixes, the ods2 header among them.
@@ -1256,3 +1256,50 @@ Each subtask may begin with a survey of its own, as earlier phases' did.
     unformatted and direct); the relative files' allocations (govax: 3, 3, 21, 93, 51, 603, and 9
     blocks); an implicit READ's FAC (govax: 1F); the terminal's limits.
   - Subtask 12c, the debugger round, is next.
+- **2026-11-24, subtask 12c (done):** the debugger round, `testdata/dbg113` (its README), on
+  the round's volume in `[DBG113]` (`err113`'s `exchange.cmd`, `copyout.cmd`, and README's
+  session).
+  - *What it asks* (A.8.6): one program, `dbg113.mar`, a stage per question, and eleven
+    sessions. DBG113S: an outer scope's PSL (IV set by REC's mask, DV by LEAF's, N live), so
+    whether VMS shows the live PSL, the frame's saved PSW, or neither; `%NEXT_SCOPE_ENTRY` at
+    the last levels; EXAMINE with no location after PC, PSL, SP, and R11; TYPE with none
+    shown; and dbg89's lost DEPOSITs again in `%HEX`, to an outer scope's R2 (in a frame), R5
+    (in none), R6, R0, SP, PSL, and PC, then where each value is after the RETs. DBG113A:
+    dbg85's `@(AP+N)`, which read memory at FFFF0038, as if AP's address were FFFF0030 (Rn's
+    FFFF0000+4n?): registers in EVALUATE, EVALUATE/ADDRESS, `@(AP+4)`, `R2:R4`, and EXAMINE
+    and DEPOSIT of FFFF0008 to FFFF0044. DBG113I: G and H short literals; EXAMINE/INSTRUCTION
+    of a register past its bytes; an entry mask's next location; EXAMINE/OPERANDS brief and
+    FULL of every operand kind. DBG113T: CANCEL of nothing, SHOW BREAK's and SHOW TRACE's
+    order, tracepoints by address, line, and branch at one PC, `/AFTER` and WHEN on
+    tracepoints and watchpoints. DBG113R, N, and O: STEP/RETURN and STEP/OVER interrupted by
+    a break, then GO (and a second STEP/RETURN). DBG113L: a line step from a RET into the
+    middle of the caller's line (a macro's two CALLS). DBG113X: exception breaks' locations
+    under SET STEP LINE and INSTRUCTION, SHOW LANGUAGE with the PC in no module, and the
+    program's normal end (its exit handler's line in the log). DBG113M: SHOW SYMBOL with
+    `/ADDRESS` and `/TYPE`, SHOW LANGUAGE and SET LANGUAGE UNKNOWN, SET, SHOW, and CANCEL
+    SOURCE with `/MODULE`, NOSUCHMODULE, a 184-column source record, and EXIT at a break.
+    DBG113Q: QUIT at a break. DBG113S runs again on GVDBG113, govax's image, DUA5 (where
+    govax's MACRO named the source) a logical name for the round's device. Not asked: Phase
+    42's multi-dimension bounds (MACRO describes no array), and dbg85's `SHOW SYMBOL *` and
+    `dbg85c.dlg` (VMS's own images).
+  - *The rehearsal*, `TestDbg113Procedure` (`internal/console/dbg113_test.go`), runs
+    DBG113.COM on govax and logs each session (each compared with VMS's once `vax/` is
+    here). It found two mistakes in the sessions, fixed: `LOOPTOP+2` was the middle of an
+    instruction (LOOPADD is a label now), and govax read `%HEX FFFF0030` as a symbol (a
+    leading 0 now). What govax does now, for subtask 13 to compare:
+    - TYPE with none shown is CLI MISSINGPARAMETER; scope 5 (below START) isn't there
+      (SYMNOTACT), so `%NEXT_SCOPE_ENTRY` stops at 4; an outer scope's PSL has the frame's
+      PSW with its condition codes clear; after PC, EXAMINE goes to PSL, and stays there.
+    - The DEPOSITs go where the value is kept (the frame, or the live register) and come
+      back after the RETs; R0 is SYMNOTACT, SP and PSL OPTNOTALLOW, PC taken.
+    - A register's name in an address expression is its value: FFFF00xx is no read access.
+    - EXAMINE with no location after EXAMINE/INSTRUCTION R5 went to LOOP's line 126, an
+      address that seems to come from nowhere: probably a govax bug, whatever VMS says.
+    - OPERANDS=FULL is brief; an immediate or branch operand gets no line.
+    - CANCEL TRACE and WATCH of nothing say NOTRACES and NOWATCHES; the interrupted
+      STEP/RETURN's stop comes at the GO, a second STEP/RETURN replaces the first, and an
+      interrupted STEP/OVER's end is dropped; a line step from SUBC's RET stops at
+      `%LINE 63+7`.
+    - SET and CANCEL SOURCE have no `/MODULE` (SYNTAX); EXIT and QUIT at a break run no
+      exit handler, and QUIT isn't logged.
+  - Subtask 12d, the session on VMS 7.1, is next.

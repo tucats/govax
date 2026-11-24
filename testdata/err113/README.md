@@ -28,6 +28,8 @@ Each part is a section of the log, `==== NAME`:
 
 The volume's `[FOR81G]` is subtask 12b's FORRTL round, round 3 of `testdata/for81` (its
 README), run by a procedure of its own, `FOR81G.COM`, and a program at the terminal by hand.
+Its `[DBG113]` is subtask 12c's debugger round, `testdata/dbg113` (its README), run by
+`DBG113.COM`; EXCHANGE.CMD builds GVDBG113.EXE there, govax's image of the same program.
 
 ## Running the session
 
@@ -70,6 +72,13 @@ README), run by a procedure of its own, `FOR81G.COM`, and a program at the termi
    lines (unit 6 and ACCEPT read at the terminal), and then it writes 140 and 200
    characters to the terminal. `DISMOUNT DUA1:` after it.
 
+   Then the debugger round, still on DUA1 (some minutes; nothing at the terminal):
+
+       $ MOUNT DUA1: ERR113
+       $ SET DEFAULT DUA1:[DBG113]
+       $ @DBG113/OUTPUT=DBG113.LOG
+       $ DISMOUNT DUA1:
+
    Then the older procedures, each volume as DUA1 in turn (their READMEs):
 
        $ MOUNT DUA1: FTN86
@@ -88,7 +97,7 @@ README), run by a procedure of its own, `FOR81G.COM`, and a program at the termi
 
 3. Copy the results back:
 
-       mkdir -p testdata/err113/vax testdata/str113/vax testdata/svc113/vax
+       mkdir -p testdata/err113/vax testdata/str113/vax testdata/svc113/vax testdata/dbg113/vax
        ./govax --profile tbprobe --system-file none console < testdata/err113/copyout.cmd
 
    and the older rounds' by their READMEs. The scratch disk stays in `testdata/disks` as the

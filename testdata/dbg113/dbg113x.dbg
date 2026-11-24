@@ -1,0 +1,16 @@
+! DBG113X.DBG - exception breaks (README.md): the location the break names,
+! with the step by lines and by instructions; SHOW LANGUAGE there.
+SET BREAK/EXCEPTION
+SHOW STEP
+GO
+!> SHOW LANGUAGE at an exception break
+SHOW LANGUAGE
+SHOW CALLS
+GO
+SET STEP INSTRUCTION
+SHOW STEP
+GO
+SHOW CALLS
+GO
+!> GO to the program's end: its own lines and the exit handler's, for EXIT and QUIT to be compared with
+GO

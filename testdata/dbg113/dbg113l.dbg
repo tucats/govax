@@ -1,0 +1,14 @@
+! DBG113L.DBG - a line step ending at a RET whose return is in the middle of
+! the caller's line (README.md): TWICE is one line, two CALLS of SUBC.
+SET BREAK ENDC
+GO
+SHOW CALLS
+!> STEP from SUBC's RET: into the middle of TWICE's line
+STEP
+SHOW CALLS
+EXAMINE .PC
+!> STEP again: over the second CALLS
+STEP
+SHOW CALLS
+EXAMINE .PC
+CANCEL BREAK/ALL

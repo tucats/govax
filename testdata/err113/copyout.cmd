@@ -2,7 +2,7 @@
 ! (testdata/err113's README). Run from the repository root, after the VAX has
 ! dismounted it:
 !
-!     mkdir -p testdata/err113/vax testdata/str113/vax testdata/svc113/vax
+!     mkdir -p testdata/err113/vax testdata/str113/vax testdata/svc113/vax testdata/dbg113/vax
 !     govax --profile tbprobe --system-file none console < testdata/err113/copyout.cmd
 !
 ! The scratch disk stays in testdata/disks, as the VAX left it.
@@ -25,4 +25,21 @@ COPY/QUIET DUA5:[ERR113]MAC113D.LIS "testdata/err113/vax/mac113d.lis"/HOST
 COPY/QUIET/BINARY DUA5:[ERR113]MAC113D.OBJ "testdata/err113/vax/mac113d.obj"/HOST
 COPY/QUIET DUA5:[FOR81G]FOR81G-VAX.TXT "testdata/for81/vax/for81g-vax.txt"/HOST
 COPY/QUIET DUA5:[FOR81G]FOR81G.LOG "testdata/for81/vax/for81g.log"/HOST
+COPY/QUIET DUA5:[DBG113]DBG113.LOG "testdata/dbg113/vax/dbg113.log"/HOST
+COPY/QUIET DUA5:[DBG113]DBG113S.DLG "testdata/dbg113/vax/dbg113s.dlg"/HOST
+COPY/QUIET DUA5:[DBG113]DBG113A.DLG "testdata/dbg113/vax/dbg113a.dlg"/HOST
+COPY/QUIET DUA5:[DBG113]DBG113I.DLG "testdata/dbg113/vax/dbg113i.dlg"/HOST
+COPY/QUIET DUA5:[DBG113]DBG113T.DLG "testdata/dbg113/vax/dbg113t.dlg"/HOST
+COPY/QUIET DUA5:[DBG113]DBG113R.DLG "testdata/dbg113/vax/dbg113r.dlg"/HOST
+COPY/QUIET DUA5:[DBG113]DBG113N.DLG "testdata/dbg113/vax/dbg113n.dlg"/HOST
+COPY/QUIET DUA5:[DBG113]DBG113O.DLG "testdata/dbg113/vax/dbg113o.dlg"/HOST
+COPY/QUIET DUA5:[DBG113]DBG113L.DLG "testdata/dbg113/vax/dbg113l.dlg"/HOST
+COPY/QUIET DUA5:[DBG113]DBG113X.DLG "testdata/dbg113/vax/dbg113x.dlg"/HOST
+COPY/QUIET DUA5:[DBG113]DBG113M.DLG "testdata/dbg113/vax/dbg113m.dlg"/HOST
+COPY/QUIET DUA5:[DBG113]DBG113Q.DLG "testdata/dbg113/vax/dbg113q.dlg"/HOST
+COPY/QUIET DUA5:[DBG113]GVDBG113S.DLG "testdata/dbg113/vax/gvdbg113s.dlg"/HOST
+COPY/QUIET DUA5:[DBG113]DBG113.LIS "testdata/dbg113/vax/dbg113.lis"/HOST
+COPY/QUIET DUA5:[DBG113]DBG113.MAP "testdata/dbg113/vax/dbg113.map"/HOST
+COPY/QUIET/BINARY DUA5:[DBG113]DBG113.OBJ "testdata/dbg113/vax/dbg113.obj"/HOST
+COPY/QUIET/BINARY DUA5:[DBG113]DBG113.EXE "testdata/dbg113/vax/dbg113.exe"/HOST
 DISMOUNT DUA5:

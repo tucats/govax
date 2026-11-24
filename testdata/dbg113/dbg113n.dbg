@@ -1,0 +1,16 @@
+! DBG113N.DBG - a second STEP/RETURN (README.md): STEP/RETURN in SUBD is
+! interrupted by a break in SUBB2; STEP/RETURN there; then GO. Does SUBD's
+! return still stop?
+SET BREAK IND
+SET BREAK SUBB2
+GO
+STEP/RETURN
+SHOW CALLS
+!> The second STEP/RETURN
+STEP/RETURN
+SHOW CALLS
+!> GO after it
+GO
+SHOW CALLS
+EXAMINE .PC
+CANCEL BREAK/ALL

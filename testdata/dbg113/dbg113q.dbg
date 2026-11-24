@@ -1,0 +1,5 @@
+! DBG113Q.DBG - QUIT at a break (README.md): the procedure's log shows whether
+! the exit handler ran.
+SET BREAK LOOP
+GO
+QUIT

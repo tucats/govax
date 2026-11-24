@@ -1,0 +1,12 @@
+! DBG113R.DBG - STEP/RETURN interrupted by a break, then GO (README.md):
+! does the return's stop still come?
+SET BREAK SUBB1
+SET BREAK MID1
+GO
+STEP/RETURN
+SHOW CALLS
+!> GO after the interrupted STEP/RETURN
+GO
+SHOW CALLS
+EXAMINE .PC
+CANCEL BREAK/ALL

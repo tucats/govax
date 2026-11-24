@@ -1,0 +1,12 @@
+! DBG113O.DBG - STEP/OVER interrupted by a break, then GO (README.md): does
+! the step's end still stop?
+SET BREAK INE
+SET BREAK MID3
+GO
+STEP/OVER
+SHOW CALLS
+!> GO after the interrupted STEP/OVER
+GO
+SHOW CALLS
+EXAMINE .PC
+CANCEL BREAK/ALL
