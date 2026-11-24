@@ -1124,6 +1124,7 @@ where each goes:
 - **Later, the debugger:** `SET BREAK %LINE n`, SHOW CALLS's line column, TYPE, and
   EXAMINE/SOURCE count the MACRO file's lines (`UNIT.$LINEn` and a break's display are
   FORTRAN's); a component after subscripts in an expression; the language stays MACRO.
+  *(The first two resolved in Phase 113.)*
 - **Later, if wanted:** govax's definition modules (`$SSDEF` and the rest) as module files
   to USE, beside INCLUDE's (Phase 106).
 - **VMS's tools, open (DEVIATIONS.md):** VMS 7.1's XQP failing on an index file extension

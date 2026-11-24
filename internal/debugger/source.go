@@ -64,15 +64,16 @@ func (d *Debugger) showSource(pc uint32) {
 
 	d.showFortranLine(pc)
 	d.Machine.Printf("%s", formatSource(n, text))
-	d.noteSourceAt(pc, n)
+	d.noteSourceAt(pc)
 }
 
-// noteSourceAt records line n of the module the code at pc is in as the
-// source line last shown.
-func (d *Debugger) noteSourceAt(pc uint32, n int) {
+// noteSourceAt records the line of the code at pc as the source line last shown, by its
+// module's numbering: in a FORTRAN program compiled /DEBUG the FORTRAN line, though a
+// stop shows the MACRO file's line too.
+func (d *Debugger) noteSourceAt(pc uint32) {
 	if prog := d.Machine.DebugProgramAt(pc); prog != nil {
-		if _, mod, found := prog.LineAt(pc); found {
-			d.lastSource.module, d.lastSource.line = mod, n
+		if l, mod, found := prog.LineAt(pc); found {
+			d.lastSource.module, d.lastSource.line = mod, l.Line
 		}
 	}
 }
@@ -190,12 +191,18 @@ func (d *Debugger) examineSource(items []string) error {
 			return vmserrors.New(vmserrors.DBG_NOSYMBOL, item)
 		}
 
-		_, mod, found := prog.LineAt(pc)
+		l, mod, found := prog.LineAt(pc)
 		if !found {
 			return vmserrors.New(vmserrors.DBG_NOSYMBOL, item)
 		}
 
 		n, text, ok := d.Machine.SourceLine(pc)
+
+		// A FORTRAN program's line is the FORTRAN source's (fortranlines.go).
+		if lines := d.Machine.FortranLines(mod); lines != nil {
+			n, text, ok = l.Line, lines[l.Line], true
+		}
+
 		if !ok {
 			return vmserrors.New(vmserrors.DBG_NOSYMBOL, item)
 		}
@@ -254,8 +261,14 @@ func (d *Debugger) typeSource(text string) error {
 }
 
 // typeLines shows lines first to last of a module's source, under its
-// name.
+// name: of a FORTRAN program compiled /DEBUG, the FORTRAN source's.
 func (d *Debugger) typeLines(mod *dbgsym.Module, first, last int) {
+	if lines := d.Machine.FortranLines(mod); lines != nil {
+		d.typeFortranLines(mod, lines, first, last)
+
+		return
+	}
+
 	records := d.Machine.ModuleSource(mod)
 
 	d.Machine.Printf("module %s\n", mod.Name)

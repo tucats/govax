@@ -377,6 +377,8 @@ func (b *builder) finishModule() error {
 		return fmt.Errorf("module %s: %w", m.Name, err)
 	}
 
+	m.Listing = m.Lines
+
 	if m.Files, m.sources, err = sourceTable(m.sourceData); err != nil {
 		return fmt.Errorf("module %s: %w", m.Name, err)
 	}

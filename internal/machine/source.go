@@ -37,6 +37,7 @@ import (
 func (m *Machine) SetSourceDirs(dirs []string) {
 	m.sourceDirs = dirs
 	m.sourceCache = nil
+	m.numberAllFortranLines()
 }
 
 // SourceDirs returns the SET SOURCE search list.
@@ -52,7 +53,7 @@ func (m *Machine) SourceLine(pc uint32) (n int, text string, ok bool) {
 		return 0, "", false
 	}
 
-	line, mod, found := prog.LineAt(pc)
+	line, mod, found := prog.ListingAt(pc)
 	if !found {
 		return 0, "", false
 	}
@@ -75,7 +76,10 @@ func (m *Machine) SourceLine(pc uint32) (n int, text string, ok bool) {
 
 // ForgetSources drops the source files read so far, so that an image started next sees
 // its source as it is now: on the host, a file rewritten since has the same name.
-func (m *Machine) ForgetSources() { m.sourceCache = nil }
+func (m *Machine) ForgetSources() {
+	m.sourceCache = nil
+	m.numberAllFortranLines()
+}
 
 // SourceAt returns the lines of the source file pc's line is in, and which of them,
 // counted from 0, is that line. ok is as SourceLine's.
@@ -85,7 +89,7 @@ func (m *Machine) SourceAt(pc uint32) (records []string, index int, ok bool) {
 		return nil, 0, false
 	}
 
-	line, mod, found := prog.LineAt(pc)
+	line, mod, found := prog.ListingAt(pc)
 	if !found {
 		return nil, 0, false
 	}

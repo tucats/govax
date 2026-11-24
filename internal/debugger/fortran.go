@@ -895,8 +895,9 @@ func (d *Debugger) fortranName(name string) (uint32, bool) {
 	p := places[0]
 
 	// A dotted name of a static variable is a MACRO label, whose contents the evaluator
-	// fetches itself.
-	label := strings.Contains(name, ".") && p.v.Place.Kind == dbgtable.Static && !p.v.Pointer
+	// fetches itself; with subscripts it is an element, which only this can find.
+	label := strings.Contains(name, ".") && !strings.Contains(name, "(") &&
+		p.v.Place.Kind == dbgtable.Static && !p.v.Pointer
 
 	if d.evaluating && !label && len(places) == 1 && p.size <= 4 {
 		data, err := d.fortranBytes(p)

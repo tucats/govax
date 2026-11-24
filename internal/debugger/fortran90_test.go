@@ -101,6 +101,13 @@ func TestFortranRecords(t *testing.T) {
 		// EVALUATE gives a component's value, in an expression too.
 		{"EVALUATE GEO.D.TIME.M", "30\n"},
 		{"EVALUATE GEO.D%DAY + 1", "8\n"},
+		// Subscripts before a component, in an expression (Phase 113). The evaluator's
+		// arithmetic is on longwords, as for a MACRO label's data: 1.5 is %X40C0, 16576,
+		// and -2.0 %XC100, 49408.
+		{"EVALUATE GEO.S%P(2)%X + 1", "16577\n"},
+		{"EVALUATE GEO.HEAP(1)%Y * 2", "98816\n"},
+		{"EVALUATE (GEO.S%P(2)%X) - GEO.S%P(2)%X", "0\n"},
+		{"EVALUATE GEO.S%N + GEO.S%N", "6\n"},
 	} {
 		if got := variableOutput(t, c, step.line); got != step.output {
 			t.Errorf("%s: got %q, want %q", step.line, got, step.output)

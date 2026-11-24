@@ -269,7 +269,7 @@ marked so, and are unconfirmed.
    | **D5** | `EXAMINE STORE.COUNT` (a module's variable) shows `00000007` as a MACRO label's longword, not the table's INTEGER; bare `COUNT` from a user's internal procedure is NOSYMBOL | A module has no E line, so its unit isn't found by the dotted path, and the label answers instead; D3 for the rest |
    | **D6** | `SET BREAK DBG.INNER` stops before the entry code copies V's descriptor, so `EXAMINE V` says `%DEBUG-W-NOTALLOC` until a STEP | A routine break is at its first instruction |
    | **D7** | `SHOW CALLS` gives the main program's module as STORE | The MACRO module is named for the file's first unit, here the module. It stays: the module is the file |
-   | **D8** | `SET BREAK %LINE 20` is the MACRO file's line 20; FORTRAN's line 20 is `DBG.$LINE20` | Phase 85's level B; noted, not proposed |
+   | **D8** | `SET BREAK %LINE 20` is the MACRO file's line 20; FORTRAN's line 20 is `DBG.$LINE20` | Phase 85's level B; noted, not proposed. *(Resolved in Phase 113.)* |
 
    **Proposed:**
    - the table's new lines: `;DBG$ S name size` and a `;DBG$ C …` line per
@@ -796,7 +796,7 @@ assignments. What it left, and where each goes:
   compiler can't prove equal (two allocatable arrays) would need a run-time test too.
 - **Later, the debugger:** `SET BREAK %LINE n` is still the MACRO file's line (`UNIT.$LINEn` is
   FORTRAN's; the survey's D8); a component after subscripts in an expression (EXAMINE takes it);
-  the debugger's language stays MACRO.
+  the debugger's language stays MACRO. *(The first two resolved in Phase 113.)*
 - **Unconfirmed choices (ours, logged above):** the keywords `F77`, `F90`, and OBSOLESCENT, the
   standard each unit gets by default, and every message's text; HOSTHIDDEN and UNREAD, and the
   names UNREAD leaves out (DO variables by idiom among them); FOR numbers 311 and 312, their names

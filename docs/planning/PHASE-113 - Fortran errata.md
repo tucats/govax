@@ -330,9 +330,9 @@ HP Fortran manual (`VMS-FORTRAN-LANGUAGE.txt`) describes every one (FORALL 69 ti
    or an object writer, and the debugger reading them. *(Not planned, the author's answer 6.)*
 2. `SET BREAK %LINE n`, SHOW CALLS's line column, TYPE, and EXAMINE/SOURCE counting the MACRO
    file's lines (Phases 110, 111). **Proposed: 112**: the `/DEBUG` table already maps lines
-   both ways (`UNIT.$LINEn`, `showFortranLine`).
+   both ways (`UNIT.$LINEn`, `showFortranLine`). *(Resolved in subtask 9.)*
 3. A component after subscripts in an expression (`EVALUATE P(2)%X + 1`; EXAMINE takes it;
-   Phase 110). **Proposed: 112.**
+   Phase 110). **Proposed: 112.** *(Resolved in subtask 9.)*
 4. Phase 42's known differences (DEVIATIONS.md items 1 to 10; `expectedDifferences`): (9),
    the ACCVIO text, is **resolved** (Phase 55 gave `$GETMSG`'s table VMS 7.1's text; marked).
    (3), CALL's `%VAL`/`%REF`/`%DESCR` and "value returned is", is with the future features
@@ -701,7 +701,7 @@ A.8.1 is not planned.
 6. LINK and LIB$INITIALIZE (A.7.1, A.7.3, A.2.2; answer C: the old call removed) (done 2026-11-24).
 7. STR$'s arithmetic (A.2.1) (done 2026-11-24).
 8. Services and FTNRTL's format parses (A.2.3, A.2.5) (done 2026-11-24).
-9. The debugger (A.8.2, 3).
+9. The debugger (A.8.2, 3) (done 2026-11-24).
 10. The SHARE$LIBRTL fault (A.9.2), after subtask 6.
 11. Housekeeping (A.11.1, 2, 4, 5; A.15.2; A.16's dead hooks).
 12. The probe round (A.12, A.15.3): written, rehearsed on govax, run on VMS 7.1.
@@ -1040,3 +1040,32 @@ Each subtask may begin with a survey of its own, as earlier phases' did.
     govax and holds what the manuals settle until `vax/svc113-vax.txt` exists, then the whole.
   - MANUAL.md's formats paragraph, its missing-service example, the VMS round's paragraph, and
     Appendix A; FORTRAN-INTERNALS.md's format interpreter. Subtask 9 is next.
+- **2026-11-24, subtask 9 (done):** the debugger.
+  - *A.8.2, FORTRAN's lines.* A program compiled `/DEBUG` is assembled from the compiler's MACRO
+    file, so its line table numbers that file's lines. When the machine loads an image with a debug
+    symbol table it reads each module's source, and a module whose source is the compiler's (the
+    traceback marker, `fortranMade`) gets a second numbering (`machine/traceline.go`'s
+    `numberFortranLines`, over `dbgsym/renumber.go`'s `Module.Renumber`): each row the FORTRAN line
+    whose comment comes last at or before it, rows of one line that follow each other in memory
+    made one, code before any comment in no line, an included file's line its own file's number
+    (as a traceback shows it). `Module.Listing` keeps the object's table, which `SourceLine` and
+    `SourceAt` now search (`ListingAt`), so a stop still shows the MACRO instruction's line under the
+    FORTRAN one, numbered as the MACRO file's. Everything else asks `Lines` and so counts FORTRAN
+    lines: `%LINE n` and `SET BREAK %LINE n`, `SET BREAK/LINE`, SHOW CALLS's line column, a location's
+    name (`FV\SUB\%LINE 38`), TYPE with no line after a stop. TYPE and EXAMINE/SOURCE show the
+    FORTRAN source (`debugger/fortranlines.go`, `Machine.FortranLines`): the file the MACRO header's
+    `; from` line names when there is one, found as any source file is, else the MACRO file's
+    comments, which have every line of the first file. The numbering is redone when the files may
+    have changed (`ForgetSources`, SET SOURCE). A traceback, which already mapped MACRO lines to
+    FORTRAN's (Phase 110's 7c), gives the same lines. Unconfirmed, ours: VAX FORTRAN's debugger
+    numbers a listing's lines, an included file's among them; govax's are the source file's.
+  - *A.8.3, a component after subscripts.* The evaluator offers a name followed by any run of
+    subscripts in parentheses and `%` or `.` components (`machine/expr.go`'s `referenceEnd`,
+    `closingParen`) to the debugger's FORTRAN names whole, then without the parentheses as before;
+    `EVALUATE S%P(2)%X + 1` and `EVALUATE M(2,3) + 1` work. `fortranName` no longer takes a dotted
+    static name with subscripts for a MACRO label, whose first longword the evaluator would have
+    read. Arithmetic stays on longwords, as for a MACRO label's data: a REAL's is its bits.
+  - `debugger`'s `TestFortranLineNumbers` and `TestFortranLinesWithoutSource`, and cases in
+    `TestFortranRecords` and `TestFortranVariables`; MANUAL.md's 14.10, FORTRAN-INTERNALS.md's
+    section 35, HELP's FORTRAN_Programs and TYPE (the debug help library rebuilt); Phases 110 and
+    111's items marked resolved. Subtask 10 is next.

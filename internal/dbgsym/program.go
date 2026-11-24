@@ -66,6 +66,12 @@ type Module struct {
 	// traceback link).
 	Lines []Line
 
+	// Listing is the line-number table as the object gave it, numbering the listing's
+	// lines, the lines of the source file the module was assembled from. Lines is the
+	// same table unless Renumber gave the module another numbering: for a FORTRAN
+	// program's MACRO file, the FORTRAN source's (renumber.go).
+	Listing []Line
+
 	// Files are the source files the module's source correlation
 	// records declare, and sources maps listing lines to their records.
 	Files   []SourceFile

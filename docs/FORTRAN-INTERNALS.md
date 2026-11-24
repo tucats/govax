@@ -6237,6 +6237,16 @@ So under `/DEBUG` MACRO writes no FORTRAN table, and a traceback in such an imag
 does at traceback time what the debugger does: maps the MACRO line to its FORTRAN line through the
 file's comments (`internal/machine/traceline.go`).
 
+Phase 113 took the same map one step further. When the machine loads an image with a debug symbol
+table, it reads each module's source, and a module whose source is the compiler's MACRO file gets a
+second numbering of its line table (`dbgsym.Module.Renumber`): each row numbered by the FORTRAN line
+whose comment comes last before it, rows of one FORTRAN line that follow each other in memory made
+one. The table as the object gave it stays beside it (`Module.Listing`), since a stop still shows
+the MACRO instruction's line, which only that table finds. Everything else that asks about lines asks
+the new numbering and so counts FORTRAN lines without knowing it: `%LINE n`, `SET BREAK/LINE`, SHOW
+CALLS's line column, a location's name. TYPE and EXAMINE/SOURCE show the FORTRAN file, which the MACRO
+file's header names (`; from ...`), or the comments if it can't be found (`Machine.FortranLines`).
+
 ### Two loop improvements, measured
 
 Phase 104's assumed-shape dummies reach an element as A0 plus the subscript times the stride
@@ -6304,9 +6314,7 @@ exempting private variables, the two missed mentions, the implied DO's variable,
 and SUM over a freed block. Each of them was the kind of thing that a program's output never shows,
 which is why sections 24 to 34's programs, which check output, didn't find them.
 
-What waits: the run-time overlap test and `A = F(X)` into A, above; a break at a FORTRAN line given
-as `%LINE n`, which is still the MACRO file's line (`UNIT.$LINEn` is the FORTRAN one); and the
-debugger's language, which stays MACRO, since the module it reads is MACRO's (section 18).
+What waits: the run-time overlap test and `A = F(X)` into A, above; and the debugger's language, which stays MACRO, since the module it reads is MACRO's (section 18).
 
 ## 36. A whole program: fcalc (Phase 111)
 

@@ -328,6 +328,9 @@ func TestFortranVariables(t *testing.T) {
 	for _, want := range []struct{ line, output string }{
 		{"EVALUATE FV.I + 1", "12\n"},
 		{"EVALUATE SUB.N + 1", "4\n"},
+		// An element, its subscripts in parentheses (Phase 113).
+		{"EVALUATE FV.M(2,3) + 1", "24\n"},
+		{"EVALUATE 2 * FV.M(1+1,3)", "46\n"},
 	} {
 		if got := examineOutput(t, c, want.line); got != want.output {
 			t.Errorf("%s: %q, want %q", want.line, got, want.output)

@@ -113,7 +113,9 @@
                         routine).
 
    A stop shows the FORTRAN line above the MACRO line, and STEP goes a
-   FORTRAN line at a time (STEP/INSTRUCTION an instruction).  Subscripts
+   FORTRAN line at a time (STEP/INSTRUCTION an instruction).  %LINE n,
+   SET BREAK/LINE, SHOW CALLS, TYPE, and EXAMINE/SOURCE count FORTRAN
+   lines too.  Subscripts
    are read in the input radix, so SET RADIX DECIMAL makes them
    FORTRAN's numbers.  Compile /NOOPTIMIZE for debugging: under
    /OPTIMIZE a variable may be in a register, and EXAMINE says so when
@@ -2895,6 +2897,6 @@
      TYPE [module\]line[:line][,...]
 
    Without a module's name the lines are the module's the program is
-   in.  The numbers are read in the input radix.  A FORTRAN program's
-   source file is the MACRO file the compiler wrote, which holds the
-   FORTRAN lines as comments.
+   in.  The numbers are read in the input radix.  A FORTRAN program
+   compiled /DEBUG shows its FORTRAN lines by their numbers: the
+   FORTRAN file's, or, if it can't be found, the MACRO file's comments.

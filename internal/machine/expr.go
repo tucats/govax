@@ -514,9 +514,13 @@ func (e *Evaluator) parseAtom(s string) (uint32, string, error) {
 		// may know the whole of it, and then it's one name, whose value Names
 		// gives as it would a variable's (docs/planning/PHASE-110 - Fortran 90
 		// compiler usability.md, subtask 7a).
-		if j := e.componentEnd(s, i); j > i && e.Names != nil {
-			if v, ok := e.Names(s[:j]); ok {
-				return v, s[j:], nil
+		if e.Names != nil {
+			for _, j := range []int{e.referenceEnd(s, i), e.componentEnd(s, i)} {
+				if j > i {
+					if v, ok := e.Names(s[:j]); ok {
+						return v, s[j:], nil
+					}
+				}
 			}
 		}
 
@@ -1101,6 +1105,56 @@ func (e *Evaluator) componentEnd(s string, i int) int {
 	}
 
 	return i
+}
+
+// referenceEnd is where a FORTRAN reference after the name ending at i ends: any run of
+// subscripts in parentheses and components, P(2)%X, S%P(2:3)%Y, or M(2,1). It is i if
+// neither follows. The debugger's names decide whether the whole is a reference; a MACRO
+// name never has parentheses after it in an expression, so nothing else changes
+// (docs/planning/PHASE-113 - Fortran errata.md, subtask 9).
+func (e *Evaluator) referenceEnd(s string, i int) int {
+	for {
+		j := e.componentEnd(s, i)
+
+		if j < len(s) && s[j] == '(' {
+			if k := closingParen(s, j); k > j {
+				j = k + 1
+			}
+		}
+
+		if j == i {
+			return i
+		}
+
+		i = j
+	}
+}
+
+// closingParen is the index of the parenthesis closing the one at s[open], or -1.
+// Quoted text inside is passed over, so a substring's bounds or a quoted character
+// don't count.
+func closingParen(s string, open int) int {
+	depth := 0
+
+	for i := open; i < len(s); i++ {
+		switch s[i] {
+		case '(':
+			depth++
+		case ')':
+			if depth--; depth == 0 {
+				return i
+			}
+		case '\'', '"':
+			end := strings.IndexByte(s[i+1:], s[i])
+			if end < 0 {
+				return -1
+			}
+
+			i += end + 1
+		}
+	}
+
+	return -1
 }
 
 // component reads the rest of name.component, s starting at the component,

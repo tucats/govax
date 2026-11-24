@@ -588,6 +588,7 @@ func (p *ImageProcess) finishLoad(icb *ICB, data []byte) error {
 	}
 
 	icb.Debug, icb.LinkDebug, icb.DebugErr = readDebugSymbols(img, err, data, icb.Base)
+	p.m.numberFortranLines(icb.Debug)
 
 	if err == nil && img.Legacy() {
 		return p.activateLegacyImages(icb)

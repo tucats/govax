@@ -8339,11 +8339,15 @@ WIDGETS    14.50000
   past its entry mask, as always.
 - **Statements.** `UNIT.$LINEn` is the first instruction of FORTRAN line `n`, or `$LINEn` in that routine; an included file's
   lines have no such label. A stop shows the FORTRAN line above the MACRO line, and `break at` may name another label at the
-  same place, as above. `STEP` goes to the next FORTRAN line, and `STEP/INSTRUCTION` to the next instruction. `%LINE` and
-  `TYPE` still count the MACRO file's lines, in which the FORTRAN lines are comments.
+  same place, as above. `STEP` goes to the next FORTRAN line, and `STEP/INSTRUCTION` to the next instruction. Lines are
+  FORTRAN's everywhere else too: `%LINE 40` is line 40's first instruction (`SET BREAK %LINE 40`), `SET BREAK/LINE` stops
+  at each FORTRAN line, SHOW CALLS's line column is the FORTRAN line, and `TYPE 33:35` and `EXAMINE/SOURCE` show the
+  FORTRAN source, read from the file the MACRO file says it was compiled from, or from the MACRO file's comments if that
+  file can't be found. Only the MACRO line under a stop keeps its number in the MACRO file.
 - **Expressions.** Within one a name stands as a MACRO label does: under `EVALUATE` for what it holds (`EVALUATE I + 1`), and
-  elsewhere for its address. A component without subscripts may stand too (`EVALUATE D.TIME.H + 1`, `PT%X`). `SET WATCH V(2)`
-  watches that element.
+  elsewhere for its address. A component or an element may stand too (`EVALUATE D.TIME.H + 1`, `EVALUATE M(2,3) + 1`,
+  `S%P(2)%X`); the arithmetic is on the longword it holds, as for a MACRO label's data, so a REAL's is its bits.
+  `SET WATCH V(2)` watches that element.
 - **What it needs.** All this comes from a table the compiler writes in the MACRO file under `/DEBUG`, as comments, so keep the
   file where the object says it is, as you must to see source lines. Without it, or without `/DEBUG`, the debugger knows only
   what MACRO's records say: `EXAMINE SQUARES.I` is a longword, and a dummy's symbol is its place in the argument list.
