@@ -137,7 +137,8 @@ place is a *proposal* for the author's review (**proposed: 112**); nothing is im
    `$SNDERR`, `$SETSTK`, `$SETSSF`, `$HASH_PASSWORD`, `$GRANTID`/`$REVOKID`, `$SETIME` (out
    by Phase 94's review), RMS's `$SPACE` (Phase 88's item 8). **Proposed: 112** for `$GETCHN`,
    `$GETDEV`, and the UTC five (small, documented, a FORTRAN program's usual calls); the rest
-   **as needed** (Phase 83's Decision 6).
+   **as needed** (Phase 83's Decision 6). *(`$GETCHN`, `$GETDEV`, and the UTC five done in
+   subtask 8, its probe `testdata/svc113` for subtask 12's round.)*
 4. The last bits of OTS$ negative powers and MTHRTL's complex functions against VMS's (Phase
    86; `ftn86VMSDifferences`'s POWERS, POWBITS, MATHFNS). **Measured**: six orders of
    operations tried, none fits; a probe with more cases could find VMS's method (**probe**,
@@ -145,6 +146,8 @@ place is a *proposal* for the author's review (**proposed: 112**); nothing is im
 5. FTNRTL's per-statement paths, about 170 instructions a record; `astrace` parsing formats
    80,000 times (Phase 84, subtask 11). **Proposed: 112** to look at the 80,000 parses (a
    FORMAT's cache that misses is a bug, not a speed); the paths themselves **measured**.
+   *(Done in subtask 8: a CHARACTER constant format was a run-time format, parsed at every
+   execution; it is now compiled as a FORMAT is.)*
 6. The same frames after an unwind: RECIO_OPE on a unit a handler unwound a statement from,
    when the routine is called again from the same place (Phases 83, 89; DEVIATIONS.md).
    **Not planned**: nothing in the frames tells the activations apart; recorded as the known
@@ -697,7 +700,7 @@ A.8.1 is not planned.
 5. MACRO (A.6.1, 2, 5) (done 2026-11-23).
 6. LINK and LIB$INITIALIZE (A.7.1, A.7.3, A.2.2; answer C: the old call removed) (done 2026-11-24).
 7. STR$'s arithmetic (A.2.1) (done 2026-11-24).
-8. Services and FTNRTL's format parses (A.2.3, A.2.5).
+8. Services and FTNRTL's format parses (A.2.3, A.2.5) (done 2026-11-24).
 9. The debugger (A.8.2, 3).
 10. The SHARE$LIBRTL fault (A.9.2), after subtask 6.
 11. Housekeeping (A.11.1, 2, 4, 5; A.15.2; A.16's dead hooks).
@@ -993,3 +996,47 @@ Each subtask may begin with a survey of its own, as earlier phases' did.
     regenerated with STRMATH in `ftn86AwaitingVMS`).
   - MANUAL.md's FORTRAN strings paragraph (with an example) and Appendix B follow; Phase 83's
     items are marked resolved. Subtask 8 is next.
+- **2026-11-24, subtask 8 (done):** services and FTNRTL's format parses.
+  - *The format parses* (A.2.5). `astrace.for`'s formats are CHARACTER constants, `'(I6)'`,
+    which sema made run-time formats: FTNRTL parsed each at every execution and freed it at the
+    statement's end, some 4,000 parses for its 2,000 passes and the ASTs' statements. A
+    FORMAT statement's block keeps its parse in a cell; now a constant that reads as a format is
+    a `sema.Format` of its own, Label 0 (`compiledFormat`), whose block ir writes as a FORMAT's
+    (`formatBlock`: `$FK1`, its cell `$FKC1`, one per text in a routine), so it is parsed once, as
+    VAX FORTRAN's compiled constant formats were. One that doesn't read as a format stays a
+    run-time format, FTNRTL's to refuse when it runs. Every compiled program with a constant
+    format changes (`TestNoF90Unchanged`'s baseline, the golden dumps, fcalc's image rebuilt).
+    `directives.for` prints a COMMON block's address, which moved 4 bytes: its `.out` follows,
+    and DIRECTIVES is in `ftn86VMSDifferences` until the next VMS round. `allocvms.f90` counted a
+    PRINT's first parse of its format among the bytes a recursion kept: the call moved out of the
+    PRINT, its output VMS's as before.
+  - *The UTC services* (A.2.3; `corevms/utc.go`), from VSI's manual: `$GETUTC`, `$ASCUTC`,
+    `$BINUTC`, `$NUMUTC`, `$TIMCON`. The 128-bit form is no manual's we may use: govax's is the DCE
+    time service's (ticks since 15-Oct-1582 UTC, a 48-bit inaccuracy, all ones infinite, a 12-bit
+    TDF in minutes under a version of 1), unconfirmed. The local zone is
+    SYS$TIMEZONE_DIFFERENTIAL's, rounded to minutes (`localTDF`); every time govax makes has an
+    infinite inaccuracy. Unconfirmed choices, each a probe case: `$NUMUTC`'s 13 words (the local
+    time's seven, the inaccuracy's five, `FFFF` each when infinite, the TDF last; VSI's text lost
+    the figure); a version other than 1 or a time before 17-Nov-1858 SS$_IVTIME; `$TIMCON`'s other
+    flags SS$_BADPARAM and a missing address SS$_ACCVIO. `$ASCUTC` and `$BINUTC` run in the
+    caller's mode (the manual's words) and don't count their arguments.
+  - *`$GETCHN` and `$GETDEV`* (`corevms/getchn.go`), VMS V1's device information services,
+    which the 5.0 manual lists only as obsolete: the device by channel or name as `$GETDVI`
+    finds it, then the device information buffer, primary and secondary (govax's devices have
+    no associated mailbox, so both the device's). Its layout is govax's reconstruction (the
+    file's comment: DEVCHAR to DEVDEPND2 in 44 bytes, reserved to 116, then the controller's
+    name and the volume's label as counted strings at DEVNAMOFF and VOLNAMOFF), unconfirmed;
+    a short buffer SS$_BUFFEROVF. No `$DIBDEF` in `vmsdef` or the macro library until the round
+    gives its values (`testdata/svc113`'s `def_dib.mar`). `testdata/fortran/services.for`'s
+    `SYS$GETCHN(,,,,)` now fails with SS$_IVCHAN, unsignaled, as VMS's run showed: SERVICES is
+    out of `ftn86VMSDifferences`; the tests of a missing service name `SYS$GETLUI`.
+  - The seven services' `_S`, list, and `_G` macros in `starlet.mar` (unchecked against real
+    MACRO until a macro round runs them); FORTRAN's `$SYSSRVNAM` already had them from the
+    vector. `corevms`'s `TestUTCServices`, `TestUTCOctaword`, `TestLocalTDF`,
+    `TestGetchnGetdev`.
+  - *The probe*, `testdata/svc113` (`gen.go`, str113's framework, 57 cases; README), for subtask
+    12's round: octawords made for the VAX's TDF of -300 and shown whole, `$NUMUTC`'s words, the
+    device buffers of NLA0:, the terminal, and the disk dumped whole. `TestSvc113Probe` runs it on
+    govax and holds what the manuals settle until `vax/svc113-vax.txt` exists, then the whole.
+  - MANUAL.md's formats paragraph, its missing-service example, the VMS round's paragraph, and
+    Appendix A; FORTRAN-INTERNALS.md's format interpreter. Subtask 9 is next.

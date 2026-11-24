@@ -4937,7 +4937,7 @@ starts, and the call signals:
 -GOVAX-E-NOTIMPL, routine LIB$INSERT_TREE is not implemented in govax
 ```
 
-A system service govax doesn't have does the same, naming `SYS$GETCHN` or
+A system service govax doesn't have does the same, naming `SYS$GETLUI` or
 whichever it is. Handlers see these as any other condition; if nothing stops the
 program, the call returns `SS$_UNSUPPORTED`.
 
@@ -6548,7 +6548,8 @@ output it prints, and programs of several files in its `modules` directory.
   and the statement fails at its end with `FORVARMIS` (61), its records
   written, as VMS's library does. A unit with no OPEN takes blanks in a number as zeros, so `1 2`
   read by I3 is 102 (the manual's rule; BN reads it as 12). A run-time format is checked when it is used: one VMS's FORTRAN
-  run-time library would refuse is `SYNERRFOR` (62). A format that runs
+  run-time library would refuse is `SYNERRFOR` (62). A CHARACTER constant used as a format, `PRINT '(1X,I5)', N`,
+  is compiled as a FORMAT statement is when it reads as one, and parsed once. A format that runs
   out of data edit descriptors with items left is `INFFORLOO` (60), and a
   record past column 133 `OUTSTAOVE` (66); reading, a record longer than
   199 characters is `INPRECTOO` (22).
@@ -8401,7 +8402,7 @@ VMS 7.1 did this for every program in govax's `testdata/fortran` directory, the 
 and the recursive ones among them, compiled with and without the optimizer and `/RECURSIVE`, with no
 message from its MACRO or LINK, and for DUNGEON, built the usual way and `/RECURSIVE`, whose log of a
 game, a save, and a restore is the same to the byte as govax's both ways. The programs print what they
-print on govax, but for a program using `$GETCHN`, which govax doesn't have; SECNDS within a second of
+print on govax, but for SECNDS within a second of
 its argument, and whether a timer's AST came before a loop began, by timing; the last bits of `OTS$`
 negative powers and MTHRTL's complex functions; and, compiled `/RECURSIVE`, two programs that read what
 a local held at an earlier call, or where the stack put a record, which FORTRAN-77 leaves undefined.
@@ -10888,12 +10889,12 @@ side effects follow DIGITAL's *System Services Reference Manual*.
 | --- | --- |
 | I/O | `$ASSIGN`, `$DASSGN`, `$QIO`, `$QIOW`, `$CANCEL`, `$ALLOC`, `$DALLOC`, `$BRKTHRU(W)`, `$SNDOPR` |
 | Logical names | `$CRELNM`, `$DELLNM`, `$TRNLNM`, `$CRELNT`, `$CRELOG`, `$DELLOG`, `$TRNLOG` |
-| Time and timers | `$GETTIM`, `$ASCTIM`, `$BINTIM`, `$NUMTIM`, `$SETIMR`, `$CANTIM`, `$SCHDWK`, `$CANWAK` |
+| Time and timers | `$GETTIM`, `$ASCTIM`, `$BINTIM`, `$NUMTIM`, `$SETIMR`, `$CANTIM`, `$SCHDWK`, `$CANWAK`; in UTC, `$GETUTC`, `$ASCUTC`, `$BINUTC`, `$NUMUTC`, `$TIMCON` |
 | Event flags | `$SETEF`, `$CLREF`, `$READEF`, `$WAITFR`, `$WFLOR`, `$WFLAND`, `$ASCEFC`, `$DACEFC`, `$DLCEFC` |
 | ASTs and synchronization | `$DCLAST`, `$SETAST`, `$SYNCH` |
 | Conditions and exit | `$EXIT`, `$DCLEXH`, `$CANEXH`, `$UNWIND`, `$SETEXV`, `$SETSFM`, `$DCLCMH`, `$GETMSG`, `$PUTMSG`, `$FAO`, `$FAOL` |
 | Processes | `$CREPRC`, `$DELPRC`, `$HIBER`, `$WAKE`, `$SUSPND`, `$RESUME`, `$FORCEX`, `$SETPRI`, `$SETPRN`, `$SETPRV`, `$SETRWM`, `$SETSWM`, `$CMKRNL`, `$CMEXEC` |
-| Information | `$GETJPI(W)`, `$GETSYI(W)`, `$GETDVI(W)`, `$GETLKI(W)`, `$ASCTOID`, `$IDTOASC` |
+| Information | `$GETJPI(W)`, `$GETSYI(W)`, `$GETDVI(W)`, `$GETLKI(W)`, `$ASCTOID`, `$IDTOASC`; the obsolete `$GETCHN` and `$GETDEV` |
 | Batch queues | `$SNDJBC(W)`, `$GETQUI(W)` |
 | Mailboxes | `$CREMBX`, `$DELMBX` |
 | Memory | `$EXPREG`, `$CRETVA`, `$DELTVA`, `$CNTREG`, `$ADJSTK`, `$SETPRT`, `$ADJWSL`, `$PURGWS`, `$LKWSET`, `$ULWSET`, `$LCKPAG`, `$ULKPAG` |

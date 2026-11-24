@@ -20,14 +20,14 @@ routine LOCALS subroutine
   cell  $D3     L  $LOCAL+88   descriptor T S 7
   cell  $D4     L  $LOCAL+96   descriptor L S 4
   cell  $D5     L  $LOCAL+104  descriptor W S 2
-  cell  $FC100  L  $LOCAL+112  the parsed form of a FORMAT
-  $LOCAL is 116 bytes
+  cell  $FKC1   L  $LOCAL+112  the parsed form of a FORMAT
+  cell  $FC100  L  $LOCAL+116  the parsed form of a FORMAT
+  $LOCAL is 120 bytes
   the frame is 64 bytes
   datum $K1     text 'FRAME'
   datum $IO1    control
-  datum $IO2    control run-time format
   datum $K2     text '(I7)'
-  datum $D6     descriptor T S 4 $K2
+  datum $FK1    format constant $K2 cache $FKC1
   datum $K3     text '(I<1>, A<2>)'
   datum $F100   format 100 $K3 cache $FC100 expressions $V100
 B1:
@@ -71,7 +71,7 @@ B1:
   call S(ref I{volatile}, ref K, ref $D3, ref R{volatile})
   ; line 25
   assign $D3+4 = addr(T)
-  call FTN$WRITE_IF(ref $IO2, ref $D3, ref $D6)
+  call FTN$WRITE_IF(ref $IO1, ref $D3, ref $FK1)
   assign $D4+4 = addr(I{volatile})
   call FTN$IO_ITEM(ref $D4)
   call FTN$IO_END()

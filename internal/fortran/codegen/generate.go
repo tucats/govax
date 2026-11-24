@@ -1118,6 +1118,10 @@ func (g *routineGen) cellNote(c *ir.Cell) string {
 	case ir.SelectorCell:
 		return "the entry point the routine was called by"
 	case ir.FormatCell:
+		if strings.HasPrefix(c.Name, "$FKC") {
+			return "the parsed form of a constant format, FTNRTL's"
+		}
+
 		return "the parsed form of FORMAT " + strings.TrimPrefix(c.Name, "$FC") + ", FTNRTL's"
 	case ir.KeyListCell:
 		return "the keys of an OPEN's KEY=, for FTNRTL"
@@ -1447,7 +1451,12 @@ func (g *routineGen) writeControl(w *Writer, label string, c *ir.Control) {
 // and with flag bit 0, the address of the routine for its variable format
 // expressions.
 func (g *routineGen) writeFormat(w *Writer, label string, f *ir.FormatBlock) {
-	w.Statement(label, ".ADDRESS", g.names.symbol(f.Cache.Name), fmt.Sprintf("FORMAT %d's block: its parsed form's cell", f.Label))
+	what := fmt.Sprintf("FORMAT %d's block", f.Label)
+	if f.Label == 0 {
+		what = "a constant format's block"
+	}
+
+	w.Statement(label, ".ADDRESS", g.names.symbol(f.Cache.Name), what+": its parsed form's cell")
 	w.Statement("", ".WORD", strconv.Itoa(len(f.Text.Text)), "the text's length")
 
 	if f.VFE == nil {

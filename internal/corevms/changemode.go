@@ -88,6 +88,8 @@ var (
 // exit, and $EXIT, which doesn't return).
 var callerModeServices = map[string]bool{
 	"SYS$ASCTIM":     true,
+	"SYS$ASCUTC":     true,
+	"SYS$BINUTC":     true,
 	"SYS$BINTIM":     true,
 	"SYS$EXCMSG":     true,
 	"SYS$FAO":        true,

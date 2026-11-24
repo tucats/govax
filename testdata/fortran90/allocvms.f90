@@ -35,9 +35,12 @@ program allocvms
   after = outstanding()
   print '(1x, a, l2)', 'a block left behind:', after > before
 
+  ! The call alone between the counts: a PRINT there would count its format,
+  ! parsed at its first use and kept for the next (Phase 113, subtask 8).
   before = outstanding()
-  print '(1x, a, i6)', 'churn:', churn(6)
+  k = churn(6)
   after = outstanding()
+  print '(1x, a, i6)', 'churn:', k
   print '(1x, a, i6)', 'bytes kept:', after - before
 
 end program allocvms

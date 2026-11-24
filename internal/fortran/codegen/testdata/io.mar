@@ -35,22 +35,26 @@ IO.$FC100:
 	.BLKL	1			; the parsed form of FORMAT 100, FTNRTL's
 IO.$FC10:
 	.BLKL	1			; the parsed form of FORMAT 10, FTNRTL's
-IO.$D6:
+IO.$FKC1:
+	.BLKL	1			; the parsed form of a constant format, FTNRTL's
+IO.$D5:
 	.WORD	0			; length
 	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
 	.LONG	0			; set when the descriptor is used
 IO.$C1:	.BLKL	1			; the implied DO (line 22)'s count
-IO.$D7:
+IO.$D6:
 	.WORD	4			; length
 	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_S
 	.LONG	0			; set when the descriptor is used
 IO.$T1:	.BLKL	1			; temporary
 IO.$C2:	.BLKL	1			; the implied DO (line 25)'s count
 IO.$C3:	.BLKL	1			; the implied DO (line 25)'s count
-IO.$D8:
+IO.$D7:
 	.WORD	4			; length
 	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
 	.LONG	0			; set when the descriptor is used
+IO.$FKC2:
+	.BLKL	1			; the parsed form of a constant format, FTNRTL's
 IO.$T2:	.BLKL	1			; temporary
 
 	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
@@ -84,11 +88,12 @@ IO.$D3:
 	.WORD	8			; length
 	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
 	.ADDRESS IO.FMT
+IO.$FK1:
+	.ADDRESS IO.$FKC1		; a constant format's block: its parsed form's cell
+	.WORD	7			; the text's length
+	.WORD	0			; flags
+	.ADDRESS IO.$K3			; the text
 IO.$D4:
-	.WORD	7			; length
-	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
-	.ADDRESS IO.$K3
-IO.$D5:
 	.WORD	4			; length
 	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_A
 	.ADDRESS IO.K
@@ -105,11 +110,11 @@ IO.$IO4:
 	.WORD	8			; an I/O statement's control block: its size
 	.WORD	^X0005			; flags: ERR= IOSTAT=
 	.LONG	0			; (not used yet)
-IO.$D9:
+IO.$D8:
 	.WORD	20			; length
 	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
 	.ADDRESS IO.LINE
-IO.$D10:
+IO.$D9:
 	.WORD	20			; length
 	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_A
 	.ADDRESS IO.PAGE
@@ -118,15 +123,16 @@ IO.$D10:
 	.ADDRESS IO.PAGE-20		; A0, where the element with zero subscripts would be
 	.LONG	3			; multipliers
 	.LONG	1,3			; bounds
-IO.$D11:
+IO.$D10:
 	.WORD	4			; length
 	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
 	.ADDRESS IO.LINE+1
-IO.$D12:
-	.WORD	4			; length
-	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
-	.ADDRESS IO.$K4
-IO.$D13:
+IO.$FK2:
+	.ADDRESS IO.$FKC2		; a constant format's block: its parsed form's cell
+	.WORD	4			; the text's length
+	.WORD	0			; flags
+	.ADDRESS IO.$K4			; the text
+IO.$D11:
 	.WORD	4			; length
 	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_A
 	.ADDRESS IO.A
@@ -139,12 +145,12 @@ IO.$NG:	.ADDRESS IO.$K5			; NAMELIST /G/'s block: its name
 	.LONG	3			; its entities
 	.ADDRESS IO.$K6,IO.$D1		; I
 	.ADDRESS IO.$K7,IO.$D2		; X
-	.ADDRESS IO.$K8,IO.$D13		; A
-IO.$D14:
+	.ADDRESS IO.$K8,IO.$D11		; A
+IO.$D12:
 	.WORD	4			; length
 	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
 	.ADDRESS IO.$K9
-IO.$D15:
+IO.$D13:
 	.WORD	4			; length
 	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_S
 	.ADDRESS IO.$T2
@@ -200,15 +206,15 @@ IO.$K9:	.ASCII	/DONE/
 	CALLS	#1,G^FTN$IO_ITEM
 	CALLS	#0,G^FTN$IO_END
 ;   16        PRINT '(1X,I3)', I
-	PUSHAQ	IO.$D4
+	PUSHAB	IO.$FK1
 	PUSHL	#-1
-	PUSHAB	IO.$IO2
+	PUSHAB	IO.$IO1
 	CALLS	#3,G^FTN$WRITE_SF
 	PUSHAQ	IO.$D1
 	CALLS	#1,G^FTN$IO_ITEM
 	CALLS	#0,G^FTN$IO_END
 ;   17        PRINT K, I
-	PUSHAQ	IO.$D5
+	PUSHAQ	IO.$D4
 	PUSHL	#-1
 	PUSHAB	IO.$IO2
 	CALLS	#3,G^FTN$WRITE_SF
@@ -220,9 +226,9 @@ IO.$K9:	.ASCII	/DONE/
 	MOVAL	IO.K,R1
 	SUBL2	R1,R0
 	SUBL3	R0,#40,R0
-	CVTLW	R0,IO.$D6
-	MOVAL	IO.K+4,IO.$D6+4
-	PUSHAQ	IO.$D6
+	CVTLW	R0,IO.$D5
+	MOVAL	IO.K+4,IO.$D5+4
+	PUSHAQ	IO.$D5
 	PUSHL	#-1
 	PUSHAB	IO.$IO2
 	CALLS	#3,G^FTN$WRITE_SF
@@ -269,8 +275,8 @@ IO.$K9:	.ASCII	/DONE/
 	MOVL	#1,IO.M
 IO.$1:					; the implied DO (line 22)'s body
 	MOVL	IO.M,R0
-	MOVAL	IO.A-4[R0],IO.$D7+4
-	PUSHAQ	IO.$D7
+	MOVAL	IO.A-4[R0],IO.$D6+4
+	PUSHAQ	IO.$D6
 	CALLS	#1,G^FTN$IO_ITEM
 	INCL	IO.M
 	DECL	IO.$C1			; one pass fewer
@@ -325,8 +331,8 @@ IO.$6:					; the implied DO (line 25)'s body
 	MOVL	#1,IO.M
 IO.$7:					; the implied DO (line 25)'s body
 	MOVL	IO.M,R0
-	MOVAL	IO.K-4[R0],IO.$D8+4
-	PUSHAQ	IO.$D8
+	MOVAL	IO.K-4[R0],IO.$D7+4
+	PUSHAQ	IO.$D7
 	CALLS	#1,G^FTN$IO_ITEM
 	ADDL2	#2,IO.M
 	DECL	IO.$C3			; one pass fewer
@@ -353,7 +359,7 @@ IO.$9:
 	CALLS	#0,G^FTN$IO_END
 ;   27        READ (LINE, 10) I, X
 	PUSHAB	IO.$F10
-	PUSHAQ	IO.$D9
+	PUSHAQ	IO.$D8
 	PUSHAB	IO.$IO1
 	CALLS	#3,G^FTN$READ_IF
 	PUSHAQ	IO.$D1
@@ -362,16 +368,16 @@ IO.$9:
 	CALLS	#1,G^FTN$IO_ITEM
 	CALLS	#0,G^FTN$IO_END
 ;   28        WRITE (PAGE, *) I
-	PUSHAQ	IO.$D10
+	PUSHAQ	IO.$D9
 	PUSHAB	IO.$IO1
 	CALLS	#2,G^FTN$WRITE_IL
 	PUSHAQ	IO.$D1
 	CALLS	#1,G^FTN$IO_ITEM
 	CALLS	#0,G^FTN$IO_END
 ;   29        WRITE (LINE(2:5), '(I3)') I
-	PUSHAQ	IO.$D12
-	PUSHAQ	IO.$D11
-	PUSHAB	IO.$IO2
+	PUSHAB	IO.$FK2
+	PUSHAQ	IO.$D10
+	PUSHAB	IO.$IO1
 	CALLS	#3,G^FTN$WRITE_IF
 	PUSHAQ	IO.$D1
 	CALLS	#1,G^FTN$IO_ITEM
@@ -420,10 +426,10 @@ IO.$9:
 	PUSHL	#6
 	PUSHAB	IO.$IO1
 	CALLS	#2,G^FTN$WRITE_SL
-	PUSHAQ	IO.$D14
+	PUSHAQ	IO.$D12
 	CALLS	#1,G^FTN$IO_ITEM
 	ADDF3	IO.X,S^#1.0,IO.$T2
-	PUSHAQ	IO.$D15
+	PUSHAQ	IO.$D13
 	CALLS	#1,G^FTN$IO_ITEM
 	CALLS	#0,G^FTN$IO_END
 ;   36    100 FORMAT ('X=', F8.2)

@@ -243,6 +243,9 @@ func datumText(d *Datum) string {
 	switch d.Kind {
 	case FormatDatum:
 		text := "format " + strconv.Itoa(d.Format.Label) + " " + d.Format.Text.Name + " cache " + d.Format.Cache.Name
+		if d.Format.Label == 0 {
+			text = "format constant " + d.Format.Text.Name + " cache " + d.Format.Cache.Name
+		}
 		if v := d.Format.VFE; v != nil {
 			text += " expressions " + v.Name
 		}

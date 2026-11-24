@@ -41,7 +41,7 @@ CALLED:	.LONG	0
 	MOVL	#1,R0
 	RET
 	.ENTRY	BAD,^M<>
-	CALLS	#0,G^SYS$GETCHN
+	CALLS	#0,G^SYS$GETLUI
 	RET
 	.ENTRY	GOOD,^M<>
 	MOVL	#1,R0
@@ -53,7 +53,7 @@ CALLED:	.LONG	0
 		t.Errorf("R0 = %#x, want 1 (the second $CMKRNL's, with the handler never called)\n%s", r0, out)
 	}
 
-	if !strings.Contains(out, "-GOVAX-E-NOTIMPL, routine SYS$GETCHN is not implemented in govax") {
+	if !strings.Contains(out, "-GOVAX-E-NOTIMPL, routine SYS$GETLUI is not implemented in govax") {
 		t.Errorf("no NOTIMPL message from the catch-all:\n%s", out)
 	}
 }

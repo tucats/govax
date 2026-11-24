@@ -1918,7 +1918,14 @@ run-time format's descriptor. `ftn_format.mar` does the rest, in two steps a com
   in a `LIB$GET_VM` block whose address is kept in the FORMAT's cell, so a
   FORMAT is parsed the first time it is used and never again; a run-time
   format's text can change, so it is parsed for each statement and freed at
-  its end. The cell is in `$LOCAL`, not `$PDATA`, because it is written.
+  its end. The cell is in `$LOCAL`, not `$PDATA`, because it is written. A
+  CHARACTER constant used as a format, `WRITE (BUF, '(I6)') J`, can't change,
+  and if it reads as a format the compiler gives it a block of its own as it
+  does a FORMAT statement (`sema`'s `compiledFormat`; `$FK1`, its cell `$FKC1`,
+  one per text in a routine), so it too is parsed once; one that doesn't read
+  as a format stays a run-time format, for FTNRTL to refuse when it runs, as
+  VAX FORTRAN's were. (Until Phase 113 every constant was a run-time format,
+  and a loop of 2,000 passes parsed its formats 4,000 times.)
 - **Walking, item by item.** The statement's context holds where the walk
   is: the next operation, how many repeats the current data descriptor has
   left, and a stack of the groups being done with their counts. Each

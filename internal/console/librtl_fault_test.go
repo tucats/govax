@@ -70,14 +70,14 @@ func TestLibrtlMissingRoutine(t *testing.T) {
 // gets SS$_UNSUPPORTED back.
 func TestMissingService(t *testing.T) {
 	r0, out := runMacroProgram(t, "\t.PSECT\tCODE,NOWRT,EXE\n"+
-		"\t.ENTRY\tSTART,^M<>\n\tCALLS\t#0,G^SYS$GETCHN\n\tRET\n\t.END\tSTART\n")
+		"\t.ENTRY\tSTART,^M<>\n\tCALLS\t#0,G^SYS$GETLUI\n\tRET\n\t.END\tSTART\n")
 
 	if r0 != 0xE4A { // SS$_UNSUPPORTED
 		t.Errorf("R0 = %#x, want SS$_UNSUPPORTED (0xE4A)", r0)
 	}
 
 	want := "%SYSTEM-E-UNSUPPORTED, unsupported operation or function\n" +
-		"-GOVAX-E-NOTIMPL, routine SYS$GETCHN is not implemented in govax\n" +
+		"-GOVAX-E-NOTIMPL, routine SYS$GETLUI is not implemented in govax\n" +
 		"%TRACE-E-TRACEBACK, symbolic stack dump follows\n" +
 		"module name     routine name                     line       rel PC    abs PC\r\n\n" +
 		".MAIN.          START                                      00000009  00000209\n"

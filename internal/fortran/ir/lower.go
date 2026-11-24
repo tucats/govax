@@ -180,7 +180,7 @@ type lowerer struct {
 	// The numbers of the compiler's names: temporaries ($T), constants
 	// and texts ($K), descriptors ($D), control blocks ($IO), and DO
 	// loops (the $C and $S cells).
-	temps, konsts, descs, controls, loops, keyLists int
+	temps, konsts, descs, controls, loops, keyLists, constFormats int
 
 	// namelists are the cells of the NAMELIST groups whose blocks the
 	// statements fill in (namelistCell), one per group.

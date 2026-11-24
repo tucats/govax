@@ -50,7 +50,9 @@ const (
 )
 
 // Format is a FORMAT statement: its label, its specification's text,
-// and the specification read by internal/fortran/format.
+// and the specification read by internal/fortran/format. A CHARACTER
+// constant used as a format that reads as one is a Format too, with Label 0
+// (compiledFormat).
 //
 // VFEs are its variable format expressions (section 8.3.2), each an
 // INTEGER*4 value, and Encoded is the text FTNRTL gets: Text, with each
@@ -121,7 +123,7 @@ type IO struct {
 	Rec Expr
 
 	// Form is the statement's form. A formatted one's format is Format, a
-	// FORMAT statement's; FormatVar, an INTEGER*4 variable a FORMAT's
+	// FORMAT statement's or a CHARACTER constant's (compiledFormat); FormatVar, an INTEGER*4 variable a FORMAT's
 	// label was ASSIGNed to; or RunFormat, a run-time format (a CHARACTER
 	// value, or an array or array element of any type whose bytes are the
 	// format). A namelist statement's group is Group.
@@ -939,6 +941,12 @@ func (a *analyzer) ioFormat(io *IO, f *ast.FormatSpec) bool {
 		return false
 
 	case t.Kind == Character:
+		if c := a.compiledFormat(e); c != nil {
+			io.Format = c
+
+			break
+		}
+
 		io.RunFormat = a.constantFormat(e)
 
 	case isArrayPlace(e) && t.Kind != Record:
@@ -989,6 +997,34 @@ func (a *analyzer) constantFormat(e Expr) Expr {
 	}
 
 	return charConst(format.Apostrophes(c.Text, f), c.Pos)
+}
+
+// compiledFormat is the Format a CHARACTER constant used as a format stands
+// for, WRITE (BUF, '(I6)'), or nil if e isn't a constant or doesn't read as a
+// format. VAX FORTRAN compiles such a constant as it compiles a FORMAT
+// statement, and so does govax: FTNRTL gets a FORMAT's block, whose cell keeps
+// the parsed form, so the format is parsed once, not at every execution as a
+// run-time format is (Phase 113, subtask 8: astrace.for's loop of 2,000
+// passes parsed its three constants about 4,000 times). A constant that doesn't
+// read as a format stays a run-time format, FTNRTL's to report when the
+// statement runs, as it always was.
+func (a *analyzer) compiledFormat(e Expr) *Format {
+	c, ok := e.(*Const)
+	if !ok {
+		return nil
+	}
+
+	f, err := format.Parse(c.Text, format.Options{F90: a.f90, RunTime: true})
+	if err != nil {
+		return nil
+	}
+
+	encoded := c.Text
+	if a.f90 && strings.Contains(encoded, `"`) {
+		encoded = format.Apostrophes(encoded, f)
+	}
+
+	return &Format{Text: c.Text, Encoded: encoded, Parsed: f}
 }
 
 // isArrayPlace reports whether e is a whole array or an array element.

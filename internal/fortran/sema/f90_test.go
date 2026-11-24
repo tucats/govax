@@ -109,9 +109,13 @@ func TestConstantFormatQuotes(t *testing.T) {
 			t.Fatalf("%s: no WRITE", c.format)
 		}
 
+		// A constant that reads as a format is compiled as a FORMAT's block
+		// (compiledFormat); one that doesn't stays a run-time format.
 		got := ""
 		if k, ok := io.RunFormat.(*Const); ok {
 			got = k.Text
+		} else if io.Format != nil {
+			got = io.Format.Encoded
 		}
 
 		if got != c.want {

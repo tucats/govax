@@ -413,23 +413,26 @@ SHAPED.$D2:
 	.LONG	0			; A0, where the element with zero subscripts would be
 	.LONG	0			; multipliers
 	.LONG	1,0			; bounds
+SHAPED.$FKC1:
+	.BLKL	1			; the parsed form of a constant format, FTNRTL's
 SHAPED.$C8:
 	.BLKL	1			; array (line 31), dimension 1's count
 
 	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
 SHAPED.$IO1:
 	.WORD	8			; an I/O statement's control block: its size
-	.WORD	^X0008			; flags: run-time format
+	.WORD	^X0000			; flags: none
 	.LONG	0			; (not used yet)
+SHAPED.$FK1:
+	.ADDRESS SHAPED.$FKC1		; a constant format's block: its parsed form's cell
+	.WORD	3			; the text's length
+	.WORD	0			; flags
+	.ADDRESS SHAPED.$K1		; the text
 SHAPED.$D3:
-	.WORD	3			; length
-	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
-	.ADDRESS SHAPED.$K1
-SHAPED.$D4:
 	.WORD	1			; length
 	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
 	.ADDRESS SHAPED.$K2
-SHAPED.$D5:
+SHAPED.$D4:
 	.WORD	1			; length
 	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
 	.ADDRESS SHAPED.$K3
@@ -878,13 +881,13 @@ SHAPED.$79:
 	SUBL3	R0,SHAPED.$D2+4,SHAPED.$D2+16
 	MOVAL	SHAPED.$D2,SHAPED.$T10
 SHAPED.$92:
-	PUSHAQ	SHAPED.$D3
+	PUSHAB	SHAPED.$FK1
 	PUSHL	SHAPED.$T10
 	PUSHAB	SHAPED.$IO1
 	CALLS	#3,G^FTN$WRITE_IF
-	PUSHAQ	SHAPED.$D4
+	PUSHAQ	SHAPED.$D3
 	CALLS	#1,G^FTN$IO_ITEM
-	PUSHAQ	SHAPED.$D5
+	PUSHAQ	SHAPED.$D4
 	CALLS	#1,G^FTN$IO_ITEM
 	CALLS	#0,G^FTN$IO_END
 	TSTL	SHAPED.$T11

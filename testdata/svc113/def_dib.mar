@@ -1,0 +1,5 @@
+	.TITLE	DEF_DIB	$DIBDEF's values
+; Written by testdata/svc113/gen.go: do not edit. Assembled on VMS, its object's
+; global symbols are $DIBDEF's names and values.
+	$DIBDEF	GLOBAL
+	.END

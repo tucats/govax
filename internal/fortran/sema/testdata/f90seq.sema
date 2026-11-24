@@ -24,5 +24,5 @@
   $LOCAL is 0 bytes
 29          CALL TAKE((sequence back W[]))
 30          CALL TAKE((sequence back W[1:*:1, 1]))
-31          WRITE (internal C[],run-time '(A)') 'X' 'Y'
+31          WRITE (internal C[],format "(A)") 'X' 'Y'
 32          END

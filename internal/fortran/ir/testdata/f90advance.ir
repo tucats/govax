@@ -3,26 +3,27 @@ routine F90ADV main
   cell  A       B  $LOCAL+8    variable A
   cell  N       W  $LOCAL+16   variable N
   cell  I       L  $LOCAL+20   variable I
-  cell  $T1     L  $LOCAL+24   temporary
-  cell  $T2     L  $LOCAL+28   temporary
-  $LOCAL is 32 bytes
-  datum $IO1    control run-time format F90 nonadvancing
+  cell  $FKC1   L  $LOCAL+24   the parsed form of a FORMAT
+  cell  $T1     L  $LOCAL+28   temporary
+  cell  $T2     L  $LOCAL+32   temporary
+  $LOCAL is 36 bytes
+  datum $IO1    control F90 nonadvancing
   datum $K1     text '(A)'
-  datum $D1     descriptor T S 3 $K1
-  datum $D2     descriptor T S 8 S
-  datum $IO2    control END= run-time format F90 nonadvancing EOR=
-  datum $IO3    control END= IOSTAT= run-time format F90 nonadvancing
-  datum $D3     descriptor T S 8 A
-  datum $IO4    control run-time format F90
-  datum $IO5    control run-time format F90 bad ADVANCE=
+  datum $FK1    format constant $K1 cache $FKC1
+  datum $D1     descriptor T S 8 S
+  datum $IO2    control END= F90 nonadvancing EOR=
+  datum $IO3    control END= IOSTAT= F90 nonadvancing
+  datum $D2     descriptor T S 8 A
+  datum $IO4    control F90
+  datum $IO5    control F90 bad ADVANCE=
 B1:
   ; line 10
-  call FTN$WRITE_SF(ref $IO1, val 6, ref $D1)
-  call FTN$IO_ITEM(ref $D2)
+  call FTN$WRITE_SF(ref $IO1, val 6, ref $FK1)
+  call FTN$IO_ITEM(ref $D1)
   call FTN$IO_END()
   ; line 11
-  call FTN$READ_SF(ref $IO2, val 5, ref $D1)
-  call FTN$IO_ITEM(ref $D2)
+  call FTN$READ_SF(ref $IO2, val 5, ref $FK1)
+  call FTN$IO_ITEM(ref $D1)
   call FTN$IO_END(ref $T1) -> $T2
   assign N = cvt.LW($T1)
   branch eq.L($T2, -2) B4 B2
@@ -32,8 +33,8 @@ B3:
   ; line 12
   jump B4
 B4: L10
-  call FTN$READ_SF(ref $IO3, val 5, ref $D1)
-  call FTN$IO_ITEM(ref $D2)
+  call FTN$READ_SF(ref $IO3, val 5, ref $FK1)
+  call FTN$IO_ITEM(ref $D1)
   call FTN$IO_END() -> $T2
   assign I = $T2
   branch eq.L($T2, -2) B6 B5
@@ -43,19 +44,19 @@ B6:
   ; line 13
   jump B7
 B7: L20
-  call FTN$ADVANCE(ref $D3) -> $T2
+  call FTN$ADVANCE(ref $D2) -> $T2
   switch $T2 base 0 [B8 B9] B10
 B8:
-  call FTN$READ_SF(ref $IO4, val 5, ref $D1)
+  call FTN$READ_SF(ref $IO4, val 5, ref $FK1)
   jump B11
 B9:
-  call FTN$READ_SF(ref $IO1, val 5, ref $D1)
+  call FTN$READ_SF(ref $IO1, val 5, ref $FK1)
   jump B11
 B10:
-  call FTN$READ_SF(ref $IO5, val 5, ref $D1)
+  call FTN$READ_SF(ref $IO5, val 5, ref $FK1)
   jump B11
 B11:
-  call FTN$IO_ITEM(ref $D2)
+  call FTN$IO_ITEM(ref $D1)
   call FTN$IO_END()
   ; line 14
   return 1

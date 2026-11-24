@@ -16,7 +16,7 @@
 13          PRINT 10 I X
 14          PRINT assigned J I
 15          PRINT run-time FMT X
-16          PRINT run-time '(1X,I3)' I
+16          PRINT format "(1X,I3)" I
 17          PRINT run-time K[] I
 18          PRINT run-time K[2] I
 19          TYPE 10 I X
@@ -29,7 +29,7 @@
 26          WRITE ((+:I I 1),*) X
 27          READ (internal LINE,10) I X
 28          WRITE (internal PAGE[],*) I
-29          WRITE (internal LINE(2:5),run-time '(I3)') I
+29          WRITE (internal LINE(2:5),format "(I3)") I
 30          WRITE (6,NML=G)
 31          READ (5,NML=G)
 32          PRINT NML=G

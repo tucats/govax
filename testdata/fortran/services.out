@@ -15,8 +15,7 @@ FROM THE SUBPROCESS
 T
 Name? T     11 Alice Baker
 T
-HANDLER           6 T           1
-T
+F
           0         100          10           1         111
        1010         100
 --BA--A-B

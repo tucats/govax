@@ -194,15 +194,16 @@ routine SHAPED subroutine
   cell  $R3     L  $LOCAL+276  descriptor T A 8 (?)
   cell  $C7     L  $LOCAL+308  array (line 31), dimension 1's count
   cell  $D2     L  $LOCAL+312  descriptor T A 8 (?)
-  cell  $C8     L  $LOCAL+344  array (line 31), dimension 1's count
-  $LOCAL is 348 bytes
-  datum $IO1    control run-time format
+  cell  $FKC1   L  $LOCAL+344  the parsed form of a FORMAT
+  cell  $C8     L  $LOCAL+348  array (line 31), dimension 1's count
+  $LOCAL is 352 bytes
+  datum $IO1    control
   datum $K1     text '(A)'
-  datum $D3     descriptor T S 3 $K1
+  datum $FK1    format constant $K1 cache $FKC1
   datum $K2     text 'X'
-  datum $D4     descriptor T S 1 $K2
+  datum $D3     descriptor T S 1 $K2
   datum $K3     text 'Y'
-  datum $D5     descriptor T S 1 $K3
+  datum $D4     descriptor T S 1 $K3
 B1:
   ; line 26
   assign $B1+4 = @(arg W)+4
@@ -506,9 +507,9 @@ B77:
   assign $T10 = addr($D2)
   jump B78
 B78:
-  call FTN$WRITE_IF(ref $IO1, val $T10, ref $D3)
+  call FTN$WRITE_IF(ref $IO1, val $T10, ref $FK1)
+  call FTN$IO_ITEM(ref $D3)
   call FTN$IO_ITEM(ref $D4)
-  call FTN$IO_ITEM(ref $D5)
   call FTN$IO_END()
   branch ne.L($T11, 0) B79 B84
 B79:

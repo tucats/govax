@@ -255,7 +255,8 @@ func TestFTN86Procedure(t *testing.T) {
 // aren't what the same procedure prints on govax, with why. Each runs with its N and R
 // variants; a name ending in R is the /RECURSIVE variant alone.
 var ftn86VMSDifferences = map[string]string{
-	"SERVICES":    "$GETCHN, a service govax lacks, which the program expects to be told so of",
+	"DIRECTIVES": "STORE AT: the COMMON block's address moved 4 bytes when Phase 113's subtask 8 made a " +
+		"constant format a FORMAT's block, after VMS's run; the next VMS round's build is govax's again",
 	"SYSROUTINES": "SECNDS(T1+1.0) less than a second after T1 is a day more, and VMS's run got there in time",
 	"MATHFNS":     "CSIN's last bit: MTHRTL's complex functions aren't always VMS's in it",
 	"POWERS":      "OTS$POWRJ of a negative power: its last bit isn't always VMS's (the phase doc's round 2)",

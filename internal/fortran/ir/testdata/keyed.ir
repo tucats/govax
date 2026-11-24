@@ -7,7 +7,8 @@ routine KEYED main
   cell  I       L  $LOCAL+20   variable I
   cell  $KL1    L  $LOCAL+24   an OPEN's list of keys
   cell  $T1     L  $LOCAL+64   temporary
-  $LOCAL is 68 bytes
+  cell  $FKC1   L  $LOCAL+68   the parsed form of a FORMAT
+  $LOCAL is 72 bytes
   datum $IO1    control
   datum $K1     text 'K.DAT'
   datum $D1     descriptor T S 5 $K1
@@ -18,13 +19,13 @@ routine KEYED main
   datum $D5     descriptor W S 2 K2
   datum $D6     descriptor L S 4 $T1
   datum $D7     descriptor BU A 1 (1:4) B
-  datum $IO2    control ERR= run-time format
+  datum $IO2    control ERR=
   datum $K3     text '(F5.1)'
-  datum $D8     descriptor T S 6 $K3
+  datum $FK1    format constant $K3 cache $FKC1
   datum $K4     L 7
-  datum $D9     descriptor L S 4 $K4
+  datum $D8     descriptor L S 4 $K4
   datum $IO3    control IOSTAT=
-  datum $D10    descriptor T S 2 S
+  datum $D9     descriptor T S 2 S
 B1:
   ; line 7
   assign N = 3
@@ -62,13 +63,13 @@ B1:
   call FTN$IO_ITEM(ref $D3)
   call FTN$IO_END()
   ; line 16
-  call FTN$READ_KF(ref $IO2, val 2, ref $D8, ref $D9, val -1, val 6)
+  call FTN$READ_KF(ref $IO2, val 2, ref $FK1, ref $D8, val -1, val 6)
   call FTN$IO_ITEM(ref $D3)
   call FTN$IO_END()
   sign R0 B3 B2 B3
 B2:
   ; line 17
-  call FTN$READ_KU(ref $IO3, val 2, ref $D10, val -1, val 3)
+  call FTN$READ_KU(ref $IO3, val 2, ref $D9, val -1, val 3)
   call FTN$IO_ITEM(ref $D3)
   call FTN$IO_END() -> $T1
   assign I = $T1

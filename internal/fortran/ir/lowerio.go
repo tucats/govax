@@ -592,13 +592,28 @@ func (l *lowerer) impliedDo(d *sema.ImpliedDo) {
 
 // formatBlock is the datum holding FORMAT statement f's block, with its
 // text and the cell FTNRTL keeps its parsed form in.
+//
+// A CHARACTER constant's format (Label 0, sema's compiledFormat) has a block
+// of its own, numbered in the routine ($FK1, its cell $FKC1), shared by every
+// statement with the same text.
 func (l *lowerer) formatBlock(f *sema.Format) *Mem {
-	d := l.datum("format "+strconv.Itoa(f.Label), func() *Datum {
-		label := strconv.Itoa(f.Label)
-		cache := l.newCell("$FC"+label, FormatCell, Long, 4)
+	key, label := "format "+strconv.Itoa(f.Label), strconv.Itoa(f.Label)
+	if f.Label == 0 {
+		key = "format text " + f.Encoded
+	}
+
+	d := l.datum(key, func() *Datum {
+		name, cell := "$F"+label, "$FC"+label
+		if f.Label == 0 {
+			l.constFormats++
+			n := strconv.Itoa(l.constFormats)
+			name, cell = "$FK"+n, "$FKC"+n
+		}
+
+		cache := l.newCell(cell, FormatCell, Long, 4)
 		text := l.text(f.Encoded).Datum
 
-		return &Datum{Name: "$F" + label, Kind: FormatDatum, Format: &FormatBlock{Label: f.Label, Text: text, Cache: cache, VFE: l.vfeRoutine(f)}}
+		return &Datum{Name: name, Kind: FormatDatum, Format: &FormatBlock{Label: f.Label, Text: text, Cache: cache, VFE: l.vfeRoutine(f)}}
 	})
 
 	return &Mem{Datum: d, T: Byte}

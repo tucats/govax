@@ -12,7 +12,7 @@ import (
 // GOVAX-E-NOTIMPL with the service's name.
 //
 //	%SYSTEM-E-UNSUPPORTED, unsupported operation or function
-//	-GOVAX-E-NOTIMPL, routine SYS$GETCHN is not implemented in govax
+//	-GOVAX-E-NOTIMPL, routine SYS$GETLUI is not implemented in govax
 //
 // The program's handlers see it as any other condition. It is an error, not
 // severe, so with no handler to take it the program goes on, the call

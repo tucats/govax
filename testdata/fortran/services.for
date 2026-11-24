@@ -105,8 +105,9 @@ C     A line from the terminal, with a prompt, and the end of the input.
       ST = LIB$GET_INPUT(LINE,,)
       PRINT *, ST .EQ. RMS$_EOF
 C
-C     A service govax lacks signals, naming itself, and returns SS$_UNSUPPORTED
-C     to a program whose handler continues.
+C     A service's failure is its status, not a signal: $GETCHN with no channel
+C     returns one (SS$_IVCHAN) and the handler isn't called. Until Phase 113
+C     govax lacked $GETCHN, which signaled SS$_UNSUPPORTED; VMS printed F here.
       CALL LIB$ESTABLISH(HANDLER)
       ST = SYS$GETCHN(,,,,)
       PRINT *, ST .EQ. SS$_UNSUPPORTED

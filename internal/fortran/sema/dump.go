@@ -929,6 +929,8 @@ func dumpIO(s *IO) string {
 		control = append(control, "NML="+s.Group.Name)
 	case s.Form == UnformattedForm:
 		control = append(control, "unformatted")
+	case s.Format != nil && s.Format.Label == 0:
+		control = append(control, "format "+strconv.Quote(s.Format.Text))
 	case s.Format != nil:
 		control = append(control, strconv.Itoa(s.Format.Label))
 	case s.FormatVar != nil:
