@@ -122,7 +122,7 @@ FORTRAN program, Phases 74 to 86, is done; PLAN.md summarizes it.
 - **LINK doesn't translate a logical name for an options file** (`LINK X/OPTIONS` with X defined), as VMS's does, which caught `ftn86.com`
   (subtask 4). So `TestFTN86Procedure` can't catch that mistake.
 - **MACRO's positional `/LIBRARY`** (`MACRO LIB/LIBRARY+SRC`) isn't done; govax keeps `/LIBRARY=(...)` (subtask 1).
-- **Small things from subtask 1:** a typed name that's a system or intrinsic function (`REAL SQRT`) still gets a `$LOCAL` cell and a line in the map, harmless; a
+- **Small things from subtask 1:** a typed name that's a system or intrinsic function (`REAL SQRT`) still gets a `$LOCAL` cell and a line in the map, harmless *(resolved in Phase 113, subtask 4)*; a
   full volume is `%DCL-E-BADFILESPEC` with the reason at its end, where VMS says the device is full.
 - **The Ctrl/Y level's prompt** doesn't take `-` continuation (subtask 2).
 - **Known differences from VMS** (`ftn86VMSDifferences`): `$GETCHN`, a service govax lacks; SECNDS within a second of its argument, by timing; the last bits of OTS$ negative powers and of
@@ -192,7 +192,8 @@ FORTRAN program, Phases 74 to 86, is done; PLAN.md summarizes it.
     name (`sema`'s `noteSystem`, as `noteIntrinsic`). Of DUNGEON's 14 findings the other 13
     were read against their units and are true; the test keeps the count.
   - **Left for later:** a typed name that's a system or intrinsic function (`REAL SQRT`)
-    still gets a `$LOCAL` cell and a variable's line in the map, harmless but wasted; a full
+    still gets a `$LOCAL` cell and a variable's line in the map, harmless but wasted *(resolved
+    in Phase 113, subtask 4)*; a full
     volume is `%DCL-E-BADFILESPEC` with the reason at its end, where VMS says the device is
     full; and `-` continuation typed at the console isn't honored (`LINK A,-`, as the kit's
     LINK is written), which subtask 2 is to fix.

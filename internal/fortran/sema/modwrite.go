@@ -302,6 +302,7 @@ func (w *moduleWriter) module(opts Options) {
 	}
 
 	w.variables()
+	w.externals()
 	w.namelists()
 	w.interfaces()
 	w.privateStatement()
@@ -1114,6 +1115,32 @@ func (w *moduleWriter) variables() {
 
 	for _, b := range u.UsedBlocks {
 		w.usedBlock(b)
+	}
+}
+
+// externals writes each external procedure the module names with no interface
+// body (an EXTERNAL statement's, INTEGER, EXTERNAL :: F): its type if it has
+// one, so that a user's reference has it too (Phase 113, subtask 4: a
+// definition module's system services, INTEGER*4 SYS$ASSIGN with EXTERNAL
+// SYS$ASSIGN, were left out of its text).
+func (w *moduleWriter) externals() {
+	for _, s := range w.all() {
+		if !s.External || s.Interface != nil || s.Dummy != 0 || s.Internal != nil || s.Generic != nil || isModuleProcedure(s) {
+			continue
+		}
+
+		name := w.nameOf(s)
+		w.from(name, s)
+
+		if s.Typed {
+			if spec := w.typeSpec(s.Type); spec != "" {
+				w.put(1, spec+", EXTERNAL :: "+name)
+
+				continue
+			}
+		}
+
+		w.put(1, "EXTERNAL :: "+name)
 	}
 }
 

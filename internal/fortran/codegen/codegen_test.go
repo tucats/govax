@@ -223,7 +223,8 @@ func TestSelection(t *testing.T) {
 		{"", "I = I / J", []string{"DIVL2 T.J,T.I"}},
 		{"", "I = J / K", []string{"DIVL3 T.K,T.J,T.I"}},
 		{"", "X = X * Y", []string{"MULF2 T.Y,T.X"}},
-		{"", "X = Y + 2.5", []string{"ADDF3 T.Y,T.$KF1,T.X"}},
+		{"", "X = Y + 2.5", []string{"ADDF3 T.Y,S^#2.5,T.X"}},
+		{"", "X = Y + 0.1", []string{"ADDF3 T.Y,T.$KF1,T.X"}},
 		{"", "I = -J", []string{"MNEGL T.J,T.I"}},
 		// A tree: interior values in registers, the last operation
 		// straight into the target.

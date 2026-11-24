@@ -987,7 +987,12 @@ does (`ADDF2`), and `INCL` and `DECL` add and subtract 1.
   more for the others, section 11),
   since MACRO reads `#n` in a floating instruction as a value to convert
   itself, and the compiler's own bits, folded by `vaxfloat`, are the ones
-  wanted (Decision 16).
+  wanted (Decision 16). The exception is a value a floating *short literal*
+  holds, one of the 64 from 0.5 to 120 whose fraction is three bits (2.0,
+  0.5, 1.25): in an operand the instruction reads as floating it is
+  `S^#2.0`, a single byte, since the literal is exact in every format and so
+  can't be converted differently (Phase 113; codegen's `constant` and
+  `floatingOperand`).
 - **Branches** (`cond.go`). The VAX's conditional branches reach only
   127 bytes, and nothing here knows how long the code between is, so a
   branch is always the opposite condition's byte branch around a `BRW`,
@@ -1138,8 +1143,9 @@ wrong, or by reading the architecture manual:
 - **Floating constants are data.** MACRO reads `#1.5` in a floating
   instruction as a number to convert itself; the compiler wants its own
   bits, folded by `vaxfloat` as the CPU would round (Decision 16), so a
-  D, G, or H constant is a datum in `$PDATA` (`AREA.$KF1` below, 4D0), and
-  an F constant stored is `MOVL #^X...` of its bits.
+  D, G, or H constant is a datum in `$PDATA`, and an F constant stored is
+  `MOVL #^X...` of its bits; but a value a short literal holds is `S^#v`
+  wherever the instruction reads it as floating (4D0 below is `S^#4.0`).
 - **Character comparisons are unsigned.** `CMPC3` and `CMPC5` set the
   condition codes as an unsigned comparison of the bytes, so their
   branches are `BLSSU`, `BGTRU`, and the rest, where every other
@@ -1302,20 +1308,20 @@ that every name but SIZEOF can be passed.
 	PUSHAD	AREA.$K1                ; 1D0, by reference
 	CALLS	#1,G^MTH$DATAN
 	MOVD	R0,AREA.$T1             ; the result, in R0:R1
-	MULD3	AREA.$KF1,AREA.$T1,R0    ; 4D0 times it, into R0:R1
+	MULD3	S^#4.0,AREA.$T1,R0       ; 4D0 times it, into R0:R1
 	MULD3	@AREA.R(AP),@AREA.R(AP),R2  ; R**2, into R2:R3
 	MULD3	R0,R2,@AREA.A(AP)
 ;    6        C = C*(0.0, 1.0) + R
-	MULF3	@AREA.C(AP),AREA.$KF2,R0     ; the real part's tree
+	MULF3	@AREA.C(AP),AREA.$KF1,R0     ; the real part's tree
 	MOVL	#1,R1
-	MULF3	@AREA.C(AP)[R1],AREA.$KF3,R1
+	MULF3	@AREA.C(AP)[R1],S^#1.0,R1
 	SUBF2	R1,R0
 	CVTFD	R0,R0
 	ADDD2	@AREA.R(AP),R0
 	CVTDF	R0,AREA.$T2
-	MULF3	@AREA.C(AP),AREA.$KF3,R0     ; the imaginary part's
+	MULF3	@AREA.C(AP),S^#1.0,R0        ; the imaginary part's
 	MOVL	#1,R1
-	MULF3	@AREA.C(AP)[R1],AREA.$KF2,R1
+	MULF3	@AREA.C(AP)[R1],AREA.$KF1,R1
 	ADDF2	R1,R0
 	CVTFD	R0,R0
 	MOVL	#1,R2
@@ -1567,7 +1573,7 @@ the dummy's type first, as an assignment to it would be:
 	MOVF	(R0)[R1],SCALE.$T1
 	MOVL	SCALE.$B1+16,R0
 	MOVL	@SCALE.$A3,R1
-	MULF3	SCALE.$KF1,SCALE.$T1,(R0)[R1]
+	MULF3	S^#2.0,SCALE.$T1,(R0)[R1]
 ```
 
 Since a reference is lowered like any expression, the temporaries live to the
@@ -2702,7 +2708,7 @@ one list, `ftn86VMSDifferences`, each with its reason: a service govax lacks, a 
 | Choosing instructions | `internal/fortran/codegen` (`expr.go`, `cond.go`, `routine.go`, `chars.go`) |
 | The optimizer's list of passes | `internal/fortran/opt` |
 | A FORMAT's grammar | `internal/fortran/format` |
-| Definition modules | `internal/fortran/sysdef` |
+| Definition modules | `internal/fortran/sysdef`; as modules to USE, `internal/dclcmd/fortranstarlet.go` |
 | Listings; the debugger's table | `internal/fortran/listing`; `internal/fortran/dbgtable` |
 | The run-time library | `internal/ftnrtl/mar/*.mar`, `ftnrtl.opt`, and `go generate ./internal/ftnrtl` |
 | Math routines | `internal/mthrtl`, Go, not MACRO |
@@ -4275,7 +4281,7 @@ indexes" (`FieldRef.At`), a scalar FieldRef that `fieldMem` reaches as any other
 	MULL3	R7,#2,R8
 TOUR.$1:				; array (line 7), dimension 1's body
 	MOVL	R8,R6
-	MULF3	TOUR.$KF1,TOUR.PATH-8[R6],TOUR.PATH-4[R6]
+	MULF3	S^#2.0,TOUR.PATH-8[R6],TOUR.PATH-4[R6]
 	ADDL2	#2,R8
 	AOBLEQ	#6,R7,TOUR.$1
 ```
@@ -4666,6 +4672,15 @@ or the translations of `FORT$MODULES`, each name on the host in both cases:
 %FORT-E-MODNOTFOUND, no module file for SHAPES; looked in .../nf/shapes.f90$mod,
     .../nf/SHAPES.F90$MOD, shapes.f90$mod, SHAPES.F90$MOD
 ```
+
+Before reporting it, the search has one more place (Phase 113): govax's definition modules, each
+also a module to USE as `STARLET_` and its name without the `$`. `starletModule` wraps
+`sysdef`'s text for `$SSDEF` in `MODULE STARLET_SSDEF` and `END MODULE` and compiles it, so the
+module's text is the compiler's own, as if a file had been written; it holds constants,
+structures, and external procedures, no object, so a user's object refers to no stamp of it.
+Making it found a gap every module had: an external procedure declared only by an EXTERNAL
+statement or attribute, as `$SYSSRVNAM`'s services are, was neither written in the module's text
+nor reached by a USE (`modwrite.go`'s `externals`, and `useEntity`).
 
 Two rules make separate compilation behave. First, a module file is written only when its
 contents change (`writeModuleFiles`, comparing `sema.ModuleDigest`, a SHA-256 of the text
@@ -6247,9 +6262,9 @@ and a WHERE construct's arms one nest testing the mask once:
 ;    3    b = a + 1.0
 	...
 FUSE.$1:				; array (line 3), dimension 1's body
-	ADDF3	-4(R8)[R6],FUSE.$KF1,-4(R7)[R6]
+	ADDF3	-4(R8)[R6],S^#1.0,-4(R7)[R6]
 ;    4    c = b * 2.0
-	MULF3	-4(R7)[R6],FUSE.$KF2,-4(R9)[R6]
+	MULF3	-4(R7)[R6],S^#2.0,-4(R9)[R6]
 	AOBLEQ	#1000,R6,FUSE.$1
 ```
 

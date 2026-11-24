@@ -623,6 +623,10 @@ type (
 	AltReturn struct {
 		ExprBase
 		Target LabelRef
+
+		// Ampersand says the specifier was written &s, VAX FORTRAN's other
+		// spelling of *s, which /STANDARD flags.
+		Ampersand bool
 	}
 
 	// ImpliedDo is an implied-DO list, (Items, Var = Start, Limit[,

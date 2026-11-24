@@ -95,8 +95,6 @@ CALLS.$K9:
 CALLS.$K10:
 	.LONG	3
 CALLS.$KF1:
-	.LONG	^X00004220		; 10.0
-CALLS.$KF2:
 	.LONG	^X00003F80		; 0.25
 CALLS.$K4:
 	.ASCII	/M(1,1) IS/
@@ -162,7 +160,7 @@ CALLS.$K8:
 ;   17  C     Output: constants, a dummy-free element, a logical, a function.
 ;   18        OK = Y .GT. 10.0 .OR. I .EQ. 0
 	CLRL	R0
-	CMPF	CALLS.Y,CALLS.$KF1
+	CMPF	CALLS.Y,S^#10.0
 	BLEQ	CALLS.$1
 	MNEGL	#1,R0
 CALLS.$1:
@@ -202,7 +200,7 @@ CALLS.$2:
 	MOVL	#^X00004080,CALLS.X	; 1.0
 ;   22     10 CONTINUE
 CALLS.L10:				; DO 10's body
-	ADDF2	CALLS.$KF2,CALLS.X
+	ADDF2	CALLS.$KF1,CALLS.X
 	DECL	CALLS.$C1		; one pass fewer
 	BLEQ	CALLS.$3
 	BRW	CALLS.L10

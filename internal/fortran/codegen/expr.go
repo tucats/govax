@@ -2,10 +2,12 @@ package codegen
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 
 	"github.com/tucats/govax/internal/fortran/ir"
+	"github.com/tucats/govax/internal/vaxfloat"
 )
 
 // numRegisters is how many registers expressions use: R0 to R11 (Decision
@@ -1195,19 +1197,115 @@ func (g *routineGen) move(t ir.Type, src, dst string) {
 // since MACRO would take #n in a floating instruction for a floating value
 // of its own to convert (Decision 16 has the compiler's bits used, never
 // MACRO's). Its name is $KFn, apart from FORMAT n's block, $Fn.
+//
+// A floating value a short literal holds (one of the 64 from 0.5 to 120 whose
+// fraction is three bits, vaxfloat.ShortLiteral) is S^#v where an instruction
+// reads the operand as floating, as VAX FORTRAN's own code has it: the
+// literal's value is exact in every format, so its bits are the compiler's
+// whatever MACRO converts, and the operand needs no memory reference (Phase
+// 113, subtask 4). emit decides (floatingOperand): an instruction that reads
+// the operand otherwise (PUSHL of a %VAL(1.5), a MOVQ) gets the datum, made
+// then if lowering made none, so that $KFn are only the data written. Not for
+// raw bits.
 func (g *routineGen) constant(c *ir.Const) string {
 	if c.T.Integer() {
 		return "#" + strconv.Itoa(int(c.Int()))
 	}
 
+	lit, literal := "", false
+
+	if c.T.Floating() && !c.Raw {
+		var b byte
+		if b, literal = vaxfloat.FindShortLiteral(c.Real()); literal {
+			lit = "S^#" + shortLiteralText(b)
+		}
+	}
+
+	name := g.existingDatum(c)
+
+	switch {
+	case literal && name == "":
+		// A name no datum has: emit gives the literal, or a datum.
+		name = "%LITERAL" + strconv.Itoa(len(g.pending)+1)
+
+		if g.pending == nil {
+			g.pending = map[string]*ir.Const{}
+		}
+
+		g.pending[name] = c
+	case name == "":
+		return g.datum(c)
+	}
+
+	if literal {
+		if g.literals == nil {
+			g.literals = map[string]string{}
+		}
+
+		g.literals[name] = lit
+	}
+
+	return name
+}
+
+// existingDatum is the name of a datum holding the constant c, lowering's or
+// the code generator's, or "".
+func (g *routineGen) existingDatum(c *ir.Const) string {
 	for _, d := range append(append([]*ir.Datum(nil), g.r.Data...), g.extra...) {
 		if d.Kind == ir.ConstantDatum && *d.Value == *c {
 			return g.names.symbol(d.Name)
 		}
 	}
 
+	return ""
+}
+
+// datum is the name of a datum in $PDATA holding the constant c: one there
+// already, or a new one, $KFn.
+func (g *routineGen) datum(c *ir.Const) string {
+	if name := g.existingDatum(c); name != "" {
+		return name
+	}
+
 	d := &ir.Datum{Name: "$KF" + strconv.Itoa(len(g.extra)+1), Kind: ir.ConstantDatum, Value: c}
 	g.extra = append(g.extra, d)
 
 	return g.names.symbol(d.Name)
+}
+
+// floatingOperand reports whether the instruction opcode reads its operand i
+// as a floating value: every operand of a floating ADD, SUB, MUL, DIV, MOV,
+// MNEG, CMP, TST, or ACB, and a conversion's first from a floating type.
+func floatingOperand(opcode string, i int) bool {
+	op := strings.TrimRight(opcode, "23")
+
+	if from, ok := strings.CutPrefix(op, "CVT"); ok {
+		from = strings.TrimPrefix(from, "R")
+
+		return i == 0 && len(from) == 2 && strings.ContainsRune("FDGH", rune(from[0]))
+	}
+
+	if len(op) < 2 || !strings.ContainsRune("FDGH", rune(op[len(op)-1])) {
+		return false
+	}
+
+	switch op[:len(op)-1] {
+	case "ADD", "SUB", "MUL", "DIV", "MOV", "MNEG", "CMP", "TST", "ACB":
+		return true
+	}
+
+	return false
+}
+
+// shortLiteralText is the floating short literal lit's value as MACRO reads it:
+// (8+fraction) * 2^(exponent-4), exact in decimal, with a point (2.0, 0.5625).
+func shortLiteralText(lit byte) string {
+	v := math.Ldexp(float64(8+lit&7), int(lit>>3&7)-4)
+	text := strconv.FormatFloat(v, 'f', -1, 64)
+
+	if !strings.Contains(text, ".") {
+		text += ".0"
+	}
+
+	return text
 }

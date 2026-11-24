@@ -1,6 +1,7 @@
 package fortran_test
 
 import (
+	"slices"
 	"strings"
 	"testing"
 )
@@ -66,5 +67,43 @@ func TestErrataModuleText(t *testing.T) {
 end program`, moduleFiles{"ERRATA": moduleText(t, r, "ERRATA")})
 	if user.Errors != 0 {
 		t.Fatalf("messages: %v", messageList(user))
+	}
+}
+
+// TestModuleExternals holds a module's external procedures that have no
+// interface body (subtask 4): INTEGER, EXTERNAL :: F is in the module's text,
+// and a user's reference calls F with its type.
+func TestModuleExternals(t *testing.T) {
+	m := compileFree("OUTSIDE", `module outside
+  integer, external :: twice
+  external :: report
+end module`, nil)
+	if m.Errors != 0 {
+		t.Fatalf("messages: %v", messageList(m))
+	}
+
+	text := moduleText(t, m, "OUTSIDE")
+	for _, want := range []string{"  INTEGER(KIND=4), EXTERNAL :: TWICE", "  EXTERNAL :: REPORT"} {
+		if !slices.Contains(text, want) {
+			t.Errorf("no %q in\n%s", want, strings.Join(text, "\n"))
+		}
+	}
+
+	r := compileFree("USER", `program user
+  use outside
+  implicit none
+  integer :: k
+  k = twice(4)
+  call report(k)
+end program`, moduleFiles{"OUTSIDE": text})
+	if r.Errors != 0 {
+		t.Fatalf("messages: %v", messageList(r))
+	}
+
+	macro := strings.Join(r.MACRO, "\n")
+	for _, want := range []string{"G^TWICE", "G^REPORT"} {
+		if !strings.Contains(macro, want) {
+			t.Errorf("no %q in the user's code", want)
+		}
 	}
 }

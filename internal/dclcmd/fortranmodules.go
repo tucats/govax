@@ -33,7 +33,8 @@ import (
 //     default directory;
 //  2. the first source's directory;
 //  3. each directory of /MODULE_PATH=(dir,...), or, with no /MODULE_PATH, each
-//     translation of the logical name FORT$MODULES.
+//     translation of the logical name FORT$MODULES;
+//  4. govax's definition modules, STARLET_SSDEF and the rest (fortranstarlet.go).
 //
 // A directory is a host directory or a volume's (rms.Session.Side's rules; a
 // logical name stands for its translation). On the host, a file is looked for
@@ -275,6 +276,11 @@ func (fm *fortranModules) Find(name string) ([]string, string, bool, []string) {
 
 			looked = append(looked, shown)
 		}
+	}
+
+	// Last, a definition module to USE (fortranstarlet.go).
+	if lines, spec, ok := starletModule(name, fm.opts.GFloating); ok {
+		return lines, spec, true, nil
 	}
 
 	return nil, "", false, looked

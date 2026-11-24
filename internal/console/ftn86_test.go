@@ -265,6 +265,8 @@ var ftn86VMSDifferences = map[string]string{
 		"as it did in two of the three builds; govax's clock is the instructions'",
 	"ALIGNR":   "recursiveDifferences': MOD(%LOC(RC), 16) of a record in the frame, where VMS's stack put it on 16",
 	"OPTFLOWR": "recursiveDifferences': ENTRY AGAIN reads an unsaved local, whatever the stack holds there",
+	"OPTFORWARDR": "recursiveDifferences': KEEP(.FALSE.) returns a function value never assigned, whatever " +
+		"its frame cell held, which moved when Phase 113's short literals shrank $PDATA",
 }
 
 // ftn86AwaitingVMS are corpus programs newer than VMS's last run of the procedure, which

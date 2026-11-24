@@ -565,8 +565,12 @@
    earlier in the same compilation, or else its module file: in the
    /MODULE directory (or the default directory), then the source's
    directory, then each of /MODULE_PATH's directories, or with no
-   /MODULE_PATH each translation of FORT$MODULES (%FORT-E-MODNOTFOUND
-   lists where it looked).
+   /MODULE_PATH each translation of FORT$MODULES, then govax's
+   definition modules (%FORT-E-MODNOTFOUND lists where it looked).
+
+   Each definition module is also a module to USE, STARLET_ and its
+   name without the $: USE STARLET_SSDEF gives what INCLUDE '($SSDEF)'
+   does, with nothing to link.
 
    A user's object refers to a symbol of the module's (its stamp), so
    linking it with the object of a module compiled since from a changed

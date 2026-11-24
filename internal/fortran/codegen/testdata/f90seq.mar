@@ -80,8 +80,6 @@ GIVE.$D1:
 	.ADDRESS GIVE.$W3-4		; A0, where the element with zero subscripts would be
 	.LONG	3			; multipliers
 	.LONG	1,3			; bounds
-GIVE.$KF1:
-	.LONG	^X00004080		; 1.0
 
 	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
 ;    1        OPTIONS /F90
@@ -212,7 +210,7 @@ GIVE.$18:				; array (line 22), dimension 1's body
 	ADDL3	GIVE.$B1+20,GIVE.$I1,R1
 	MOVL	GIVE.$R1+16,R2
 	MOVL	GIVE.$I1,R3
-	ADDF3	(R0)[R1],GIVE.$KF1,(R2)[R3]
+	ADDF3	(R0)[R1],S^#1.0,(R2)[R3]
 	INCL	GIVE.$I1
 	DECL	GIVE.$C4		; one pass fewer
 	BLEQ	GIVE.$19
@@ -292,7 +290,7 @@ GIVE.$28:				; array (line 24), dimension 1's body
 	BLEQ	GIVE.$29
 	BRW	GIVE.$28
 GIVE.$29:
-	ADDF3	GIVE.$T6,GIVE.$KF1,GIVE.X
+	ADDF3	GIVE.$T6,S^#1.0,GIVE.X
 ;   25        END
 	RET
 

@@ -126,12 +126,13 @@ end subroutine lls`, nil)
 }
 
 // TestFormatBesideConstant checks that a FORMAT statement's block, $Fn, and a
-// floating constant the code generator adds, $KFn, have names apart.
+// floating constant the code generator adds, $KFn, have names apart (10.1, which
+// no short literal holds).
 func TestFormatBesideConstant(t *testing.T) {
 	r := compileFree("RENAME", `subroutine rename
   real x
   x = 1.0
-  x = x + 10.0
+  x = x + 10.1
   print 1, x
 1 format (' X =', F5.1)
 end subroutine rename`, nil)

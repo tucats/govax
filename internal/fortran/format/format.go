@@ -90,8 +90,10 @@ type Item struct {
 	W, M, D, E Value
 
 	// N is the number of X, T, TL, TR, and P (the scale factor, which may
-	// be negative).
-	N Value
+	// be negative). Bare says an X had no number, so N is the 1 it stands
+	// for: VAX FORTRAN's form, which /STANDARD flags.
+	N    Value
+	Bare bool
 
 	// Text is a character constant's text, its doubled apostrophes made
 	// one, or an H's.
@@ -499,12 +501,12 @@ func (p *parser) item(depth int) (item *Item, free bool) {
 	case 'X':
 		p.pos++
 
-		n := count
+		n, bare := count, false
 		if !n.Set && n.VFE == 0 {
-			n = Value{N: 1, Set: true} // X alone is 1X
+			n, bare = Value{N: 1, Set: true}, true // X alone is 1X
 		}
 
-		return &Item{Code: X, N: n, Offset: start}, false
+		return &Item{Code: X, N: n, Offset: start, Bare: bare}, false
 
 	case 'H':
 		return p.hollerith(start, count, countAt), true

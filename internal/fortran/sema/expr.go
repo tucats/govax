@@ -293,11 +293,19 @@ func (a *analyzer) apply(e *ast.Apply) Expr {
 		}
 
 		if a.intrinsicNamed(e.Name) {
+			if s != nil {
+				s.calledIntrinsic = true
+			}
+
 			return a.intrinsicRef(e)
 		}
 
 		// A system function, unless the file has one of its own.
 		if system, ok := systemFunctions[e.Name]; ok && a.units[e.Name] == nil {
+			if s != nil {
+				s.calledIntrinsic = true
+			}
+
 			return a.systemFunction(e, system)
 		}
 	}

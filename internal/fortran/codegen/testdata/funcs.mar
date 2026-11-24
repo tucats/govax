@@ -182,17 +182,13 @@ REPEAT.$1:
 QF.QF = 4				; QF's value goes through hidden argument 1
 QF.X = 8				; X is argument 2
 
-	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
-QF.$KF1:
-	.LONG	^X00004001,^X00000000,^X00000000,^X00000000 ; 1Q0
-
 	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
 ;   23
 ;   24        REAL*16 FUNCTION QF(X)
 	.ENTRY	QF,^M<>
 ;   25        REAL*16 X
 ;   26        QF = X + 1
-	ADDH3	@QF.X(AP),QF.$KF1,@QF.QF(AP)
+	ADDH3	@QF.X(AP),S^#1.0,@QF.QF(AP)
 ;   27        END
 	RET
 

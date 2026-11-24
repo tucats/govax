@@ -270,6 +270,8 @@ func (c *Code) operandBound(text string) int {
 		return n + 1
 	case strings.HasPrefix(text, "#"):
 		return n + immediateBound(text[1:])
+	case strings.HasPrefix(text, "S^#"):
+		return n + 1
 	}
 
 	// A displacement from a register: a number, or a symbol with a known value.
@@ -302,7 +304,7 @@ func isRegisterName(text string) bool {
 // immediateBound is the bytes of the immediate operand #text: a short literal's
 // one for an integer from 0 to 63, which MACRO always chooses, else at most a
 // longword's five. No instruction here takes an immediate wider than a longword,
-// since floating constants come from $PDATA.
+// since floating constants come from $PDATA (or are S^# short literals).
 func immediateBound(text string) int {
 	if v, err := strconv.Atoi(text); err == nil && v >= 0 && v <= 63 {
 		return 1

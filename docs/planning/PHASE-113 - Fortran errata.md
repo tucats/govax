@@ -693,7 +693,7 @@ A.8.1 is not planned.
    a module's text (A.15.4), and PURE's and ELEMENTAL's unchecked rules (A.15.6, answer B)
    (done 2026-11-23).
 3. FORALL's remaining NOTIMPLs (A.15.5, answer A) (done 2026-11-23).
-4. The compiler's small things and `STARLET_` modules (A.1.4, A.1.5, A.1.10, A.3.3).
+4. The compiler's small things and `STARLET_` modules (A.1.4, A.1.5, A.1.10, A.3.3) (done 2026-11-23).
 5. MACRO (A.6.1, 2, 5).
 6. LINK and LIB$INITIALIZE (A.7.1, A.7.3, A.2.2; answer C: the old call removed).
 7. STR$'s arithmetic (A.2.1).
@@ -861,3 +861,38 @@ Each subtask may begin with a survey of its own, as earlier phases' did.
     tuple, `compare.py`'s KNOWN), added to `testdata/f90r`'s procedure and `f90rAwaitingVMS`.
     MANUAL.md's 14.13 and its table, FORTRAN-INTERNALS.md's section 37 ("Recording the stores"),
     and Phase 112's list follow. Subtask 4 is next.
+- **2026-11-23, subtask 4 (done):** the compiler's small things and the `STARLET_` modules.
+  - *A.1.4, `/STANDARD`'s short spellings*: `FUNCTION F` with no parentheses (the tree keeps it: a
+    nil `Params`, `()` an empty list), `&s` for an alternate return's `*s` (`ast.AltReturn.Ampersand`),
+    and a bare `X` for `1X` (`format.Item.Bare`) are each an extension to both standards
+    (`sema/standard.go`). SEMANTIC stays not planned. `TestStandardSyntaxFlagged`'s three cases,
+    `TestStandardSpellingsQuiet`.
+  - *A.1.5, a typed intrinsic's cell*: a name typed but otherwise unclassified that the program
+    references as an intrinsic or system function (`REAL SQRT`, then `SQRT(X)`) is marked
+    (`Symbol.calledIntrinsic`), and layout classes it Intrinsic: no `$LOCAL` cell, no map line.
+  - *A.1.10, floating short literals*: a REAL constant a short literal holds (64 values, 0.5 to 120
+    with a three-bit fraction) is `S^#v` in an operand the instruction reads as floating
+    (`codegen`'s `floatingOperand`: ADD, SUB, MUL, DIV, MOV, MNEG, CMP, TST, ACB of F, D, G, H, and a
+    conversion's floating source). `constant` names it with a placeholder unless a datum holds it
+    already, and `emit` makes the placeholder the literal, or the `$PDATA` datum where an instruction
+    reads it otherwise (`PUSHL` of `%VAL(1.5)`, MOVQ of a D argument by value), so `$KFn` are only the
+    data written. `Code.Bound` counts `S^#` as one byte. The literal is exact in every format, so the
+    bits are still the compiler's (Decision 16). Real MACRO hasn't yet assembled `S^#` in a D, G, or
+    H instruction; subtask 12's round will, rebuilding the corpus. The change reaches nearly every old
+    program's code, so `testdata/nof90.sum` is rewritten (`TestNoF90Unchanged`, as it asks for an
+    intended change), as are `codegen`'s goldens and fcalc's image (`go generate
+    ./internal/fcalc`). `TestFTN86Oracle`'s OPTFORWARDR now differs from VMS's log in `KEPT`, the
+    value KEEP(.FALSE.) never assigned under `/RECURSIVE`, which the smaller `$PDATA` moved
+    (`ftn86VMSDifferences`, beside OPTFLOWR).
+  - *A.3.3, the definition modules to USE*: `USE STARLET_SSDEF` and the rest, every one of
+    `sysdef`'s 50 (`dclcmd/fortranstarlet.go`): the module search's last place, after every
+    directory, compiles the definition module wrapped in MODULE and END MODULE, once a session for
+    each REAL*8 format, its text the compiler's own; no object, so nothing to LINK. On the way a gap
+    in modules: a module's external procedure with only an EXTERNAL statement or attribute
+    (`INTEGER, EXTERNAL :: F`, `$SYSSRVNAM`'s every service) was neither in its text nor reached by
+    a USE (`modwrite.go`'s `externals`; `useEntity` and `symbolCopy`). `dclcmd`'s
+    `TestStarletModules`, `TestUseStarlet`; `fortran`'s `TestModuleExternals`.
+  - MANUAL.md's 14.13 (definition modules to USE, external procedures from modules, `/STANDARD`'s
+    spellings, a row gone from "What Fortran 90 isn't here") and FORTRAN-INTERNALS.md (short
+    literals, sections 9 and 11's listings) follow; the items are marked resolved in Phases 85, 86,
+    and 106. Subtask 5 is next.

@@ -330,6 +330,12 @@ type Symbol struct {
 	// it never calls.
 	onlyDeclared bool
 
+	// calledIntrinsic says a name typed but otherwise unclassified was
+	// referenced as an intrinsic or system function (REAL SQRT, then
+	// SQRT(X)): layout classes it Intrinsic, so it has no storage (Phase
+	// 113, subtask 4).
+	calledIntrinsic bool
+
 	// untyped is set for a name entered under IMPLICIT NONE, whose
 	// first letter gives it no type: unless a declaration gives it one,
 	// it is NOTYPE.

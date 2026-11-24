@@ -73,6 +73,12 @@ type routineGen struct {
 	// immediate operands.
 	extra []*ir.Datum
 
+	// literals are the floating short literals, S^#v, for the constants'
+	// names that have one, and pending the constants named only for emit to
+	// decide on (constant).
+	literals map[string]string
+	pending  map[string]*ir.Const
+
 	// note is a comment for the next instruction written.
 	note string
 
@@ -798,6 +804,20 @@ func (g *routineGen) entryMask() string {
 // receives, ir.None if it writes none; its condition codes then describe
 // that value, which lets a test of it right after be left out.
 func (g *routineGen) emit(opcode string, wrote ir.Type, operands ...string) {
+	for i, o := range operands {
+		lit, ok := g.literals[o]
+		if !ok {
+			continue
+		}
+
+		switch c := g.pending[o]; {
+		case floatingOperand(opcode, i):
+			operands[i] = lit
+		case c != nil:
+			operands[i] = g.datum(c)
+		}
+	}
+
 	g.code.instruction(opcode, g.note, operands)
 	g.note = ""
 

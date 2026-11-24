@@ -410,7 +410,9 @@ func useEntity(r *Symbol) bool {
 		return true
 	}
 
-	return r.Interface != nil && r.Dummy == 0
+	// An external procedure, with an interface body or only an EXTERNAL
+	// statement (INTEGER, EXTERNAL :: F; Phase 113).
+	return (r.Interface != nil || r.External) && r.Dummy == 0
 }
 
 // useProcedure makes c, a copy of the module's procedure r, a procedure here:
@@ -570,7 +572,7 @@ func (a *analyzer) symbolCopy(ms *moduleScope, r *Symbol, local string, pos diag
 		Use: &UseOrigin{Module: ms.name, Remote: r.Name, Entity: r, origin: symbolOrigin(r, ms)},
 	}
 
-	if r.Internal != nil || (r.Interface != nil && r.Dummy == 0) {
+	if r.Internal != nil || ((r.Interface != nil || r.External) && r.Dummy == 0) {
 		useProcedure(c, r)
 	}
 

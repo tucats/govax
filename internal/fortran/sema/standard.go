@@ -635,6 +635,12 @@ func (x *extensions) statement(s ast.Stmt) {
 		x.name(s.Name, s.Pos)
 		x.prefixes(s.Pos, s.Recursive, s.Pure, s.Elemental)
 
+		// FUNCTION F: the standards want FUNCTION F(), which the tree tells
+		// apart by an empty list rather than none.
+		if s.Params == nil {
+			x.add(s.Pos, "a FUNCTION statement without parentheses", 0)
+		}
+
 		if s.Result != nil {
 			x.add(s.Result.Pos, "RESULT", f90)
 			x.name(s.Result.Name, s.Result.Pos)
@@ -1059,6 +1065,10 @@ func (x *extensions) format(s *ast.FormatStmt) {
 				x.add(at(item), "the "+item.Code.String()+" edit descriptor", f90)
 			case format.Q, format.Dollar:
 				x.add(at(item), "the "+item.Code.String()+" edit descriptor", 0)
+			case format.X:
+				if item.Bare {
+					x.add(at(item), "an X edit descriptor without its number", 0)
+				}
 			case format.Slash:
 				if item.Repeat.Set || item.Repeat.VFE > 0 {
 					x.add(at(item), "a repeated slash edit descriptor", f90)
@@ -1212,6 +1222,10 @@ func (x *extensions) expr(e ast.Expr) {
 		x.expr(e.X)
 
 	case *ast.AltReturn:
+		if e.Ampersand {
+			x.add(e.Pos, "an alternate return specifier written &s", 0)
+		}
+
 		x.obsolete(e.Pos, "an alternate return")
 
 	case *ast.ImpliedDo:

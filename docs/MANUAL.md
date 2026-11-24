@@ -6942,8 +6942,9 @@ FORTRAN-77 has no function in a constant expression, and Fortran 90 only an elem
 are `INTEGER` or `CHARACTER`, besides `REPEAT`, `TRIM`, and the inquiry and `SELECTED_` functions. So
 `PARAMETER (N = CEILING(2.5))` is `extension to Fortran 90: a REAL argument to CEILING in a constant expression`.
 Beyond that, what a program *means* isn't looked at: a non-integer subscript, `.AND.` of integers, and a character
-variable beside a number in a common block aren't flagged, and neither is a bare `X`, or anything in a text
-library's module.
+variable beside a number in a common block aren't flagged, and neither is anything in a text library's
+module. VAX FORTRAN's short spellings are: `FUNCTION F` for `FUNCTION F()`, `&s` for an alternate return's `*s`,
+and a bare `X` for `1X` in a format.
 
 **Objects in one step.** `FORTRAN/OBJECT` runs MACRO on the MACRO file it wrote, so that `FORTRAN/OBJECT`, `LINK`, `RUN`
 works as it does on VMS. The MACRO file is kept, so `/OBJECT/NOMACRO` is refused. The object is the source's name with
@@ -10284,8 +10285,9 @@ compilation with an error; one is with `/NOMACRO`. A `USE` finds a module earlie
 compilation, or else its module file: in the `/MODULE` directory (or the default directory),
 then the first source's directory, then each directory of `/MODULE_PATH=(directory,...)` or,
 without it, each translation of the logical name `FORT$MODULES`; on the host a file's name is
-tried in the case of the source's type, then the other. A module is compiled before its users,
-and `%FORT-E-MODNOTFOUND` names every file it looked for:
+tried in the case of the source's type, then the other; and last, govax's definition modules
+(below). A module is compiled before its users, and `%FORT-E-MODNOTFOUND` names every file it
+looked for:
 
 ```text
 VAX> FORTRAN SHAPES
@@ -10294,6 +10296,26 @@ VAX> MACRO SHAPES
 VAX> MACRO PROG
 VAX> LINK PROG,SHAPES
 ```
+
+**Definition modules to USE.** Each of govax's definition modules
+([section 14.4](#144-source-lines)'s table) is also a module, named `STARLET_` and the
+definition module's name without its `$`: `USE STARLET_SSDEF` gives what `INCLUDE '($SSDEF)'`
+does, and ONLY and renames work as for any module. No file holds them: when no directory has a
+module file of the name, the compiler makes the module's text from the definition module. They
+have no object to link.
+
+```fortran
+program now
+  use starlet_ssdef
+  use starlet_syssrvnam, only: sys$gettim
+  integer :: status, time(2)
+  status = sys$gettim(time)
+  if (status /= ss$_normal) call lib$signal(%val(status))
+end program now
+```
+
+A module's external procedures are among what its users reach, those with only an `EXTERNAL`
+statement or attribute (`INTEGER, EXTERNAL :: TWICE`) as well as those with interface bodies.
 
 A user's object refers to the module's *stamp*, a global symbol `$MOD$NAME.nnnnnnnn` of its
 module file's digest, which the module's object defines when it has variables or procedures.
@@ -10806,7 +10828,6 @@ naming what it is:
 | A CHARACTER pointer whose length is known only when the program runs | A `CHARACTER(LEN=*)` pointer dummy is there, or a constant length |
 | ENTRY in a module procedure | An internal or external procedure's ENTRY, or two module procedures |
 | A module whose module file would give one type two names, an external procedure that is a specific of two of its generic names, or a COMMON block both it and a module it uses declare | `%FORT-E-NOTIMPL` when the module compiles |
-| govax's definition modules (`$SSDEF` and the rest) as modules to USE | `INCLUDE '($SSDEF)'`, as in VAX FORTRAN ([section 14.8](#148-calling-vms-from-fortran)) |
 | A module's defined operators in a fixed-form `/NOF90` unit | VAX FORTRAN reads `A.B.C` as a field; compile the unit `/F90` |
 | A CHARACTER array constructor whose first value's length is known only when the program runs and isn't a variable's, an array's, or a concatenation of them | Put the value in a variable first |
 | A CHARACTER array expression of a length known only when the program runs, not made of names, as an actual argument | The same |

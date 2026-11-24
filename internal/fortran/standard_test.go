@@ -88,6 +88,9 @@ func TestStandardSyntaxFlagged(t *testing.T) {
 		{" 10   FORMAT (I)", "the I edit descriptor without a width"},
 		{" 10   FORMAT (2(F))", "the F edit descriptor without a width"},
 		{" 10   FORMAT (I<J>)", "a variable format expression"},
+		{" 10   FORMAT (X,I3)", "an X edit descriptor without its number"},
+		{"      FUNCTION F\n      F = 1", "a FUNCTION statement without parentheses"},
+		{"      CALL S(&10)\n 10   CONTINUE", "an alternate return specifier written &s"},
 	}
 
 	for _, c := range cases {
@@ -608,5 +611,23 @@ func TestStandardWhichStandard(t *testing.T) {
 
 	if _, err := (sema.Conformance{}).With([]string{"F"}); err == nil {
 		t.Error("F was taken as a keyword")
+	}
+}
+
+// TestStandardSpellingsQuiet holds the standard spellings of three forms VAX
+// FORTRAN lets a program shorten (Phase 113, subtask 4): FUNCTION F(), *s, and
+// 1X flag nothing, where FUNCTION F, &s, and X do.
+func TestStandardSpellingsQuiet(t *testing.T) {
+	got := extensionsOf(t, Options{}, []string{"SYNTAX"},
+		"      FUNCTION F()",
+		"      CALL S(*10)",
+		"      F = 1",
+		"      WRITE (6, 20) F",
+		" 10   CONTINUE",
+		" 20   FORMAT (1X, F6.1)",
+		"      END")
+
+	if len(got) != 0 {
+		t.Errorf("flagged %q", got)
 	}
 }

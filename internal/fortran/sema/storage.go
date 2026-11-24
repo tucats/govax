@@ -328,7 +328,10 @@ func (a *analyzer) layout() {
 	}
 
 	for _, s := range a.unit.Symbols {
-		if s.Class == Unclassified {
+		switch {
+		case s.Class == Unclassified && s.calledIntrinsic:
+			s.Class = Intrinsic
+		case s.Class == Unclassified:
 			s.Class, s.onlyDeclared = Variable, true
 		}
 

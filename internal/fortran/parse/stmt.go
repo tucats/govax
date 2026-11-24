@@ -102,9 +102,9 @@ func parseCall(p *parser) ast.Stmt {
 			s.Args = append(s.Args, nil)
 
 		case p.at("*") || p.at("&"):
-			pos := p.here()
+			pos, ampersand := p.here(), p.at("&")
 			p.next()
-			s.Args = append(s.Args, &ast.AltReturn{ExprBase: ast.ExprBase{Pos: pos}, Target: p.labelRef()})
+			s.Args = append(s.Args, &ast.AltReturn{ExprBase: ast.ExprBase{Pos: pos}, Target: p.labelRef(), Ampersand: ampersand})
 
 		case p.atKeyword():
 			// Fortran 90's keyword argument, CALL SOLVE(A, TOL=1.0E-6)
