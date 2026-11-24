@@ -117,8 +117,6 @@
      IMAGES       Show an image's details on RUN.
      INTERRUPTS   Debug interrupt handling.
      KEYBOARD     Debug the console's keyboard input.
-     LIBINIT      Call shareable images' LIB$INITIALIZE routines on RUN
-                  (on by default; RUN/[NO]INIT overrides it).
      LOGICALS     Debug logical name operations.
      MEMORY       Debug memory operations.
      PROCESSES    Debug process operations (PROCESS is the same).

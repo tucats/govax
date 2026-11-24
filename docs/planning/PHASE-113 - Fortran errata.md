@@ -695,7 +695,7 @@ A.8.1 is not planned.
 3. FORALL's remaining NOTIMPLs (A.15.5, answer A) (done 2026-11-23).
 4. The compiler's small things and `STARLET_` modules (A.1.4, A.1.5, A.1.10, A.3.3) (done 2026-11-23).
 5. MACRO (A.6.1, 2, 5) (done 2026-11-23).
-6. LINK and LIB$INITIALIZE (A.7.1, A.7.3, A.2.2; answer C: the old call removed).
+6. LINK and LIB$INITIALIZE (A.7.1, A.7.3, A.2.2; answer C: the old call removed) (done 2026-11-24).
 7. STR$'s arithmetic (A.2.1).
 8. Services and FTNRTL's format parses (A.2.3, A.2.5).
 9. The debugger (A.8.2, 3).
@@ -925,3 +925,44 @@ Each subtask may begin with a survey of its own, as earlier phases' did.
   - DEVIATIONS.md's entry for the object moves to DEVIATIONS-RESOLVED.md, and its Phase 27
     entry's positional `/LIBRARY` and first undefined symbol are marked resolved; MANUAL.md's
     MACRO table and examples, HELP MACRO, and Phases 86 and 111 follow. Subtask 6 is next.
+- **2026-11-24, subtask 6 (done):** LINK and LIB$INITIALIZE.
+  - *A.7.1, an options file by logical name*: since Phase 95 `Locate` translates a bare name that
+    is a logical name, so LINK's first element worked; after a host file, `LocateRelated` took the
+    name for a file beside that one before asking whether it was a logical name. It asks first now
+    (`rms/location.go`). `TestLinkOptionsByLogicalName`.
+  - *A.7.3, the image's symbol tables*: `TestFTN86Objects` compares FTNRTL's debug symbol table
+    block for block and its global symbol table record for record with VMS's
+    (`compareImageSymbolTables`; the MHD record without its two times, the LNM record, the linker's
+    name, left out, and govax's padding past the last record, Phase 29's Decision 7). It found the
+    DST fixup records split as VMS's LINK doesn't: VMS's first record has the whole list's count, the
+    name, and 58 offsets, and each after it only offsets, 63 at most (176 as 58, 63, 55), where govax
+    repeated the header in each (`link/shareable.go`'s `withDSTFixups`, which had called the split
+    unconfirmed). FTNRTL's committed image is rebuilt (`go generate ./internal/ftnrtl`).
+  - *A.2.2, LIB$INITIALIZE, and answer C*: the VMS 5.0 LIB$ manual's chapter 7 ("Image
+    Initialization and Termination", which Phase 61's plan names) describes the mechanism whole, so
+    it is followed as written: a program puts routine addresses in the program section
+    LIB$INITIALIZE and refers to LIB$INITIALIZE; LINK puts that routine's address in the image's
+    initialization list between SYS$IMGSTA's (or the debugger's) and the main program's
+    (`link/libinit.go`'s `initializeTransfer`, when the section has a contribution of some length
+    and the symbol is defined; the Internals book's Figure 21-8), a shareable image's too. The
+    routine is govax's own module, `bootdata/files/libinit.mar`, written from chapter 7 (7.2's
+    argument list and coding sequence, 7.4's call of each routine with `(init-coroutine,
+    cli-coroutine [, image-info])`, 7.5's coroutine call, which runs the rest and the main program
+    and returns its status), assembled once and offered to LINK after STARLET.OLB
+    (`dclcmd/libinit.go`'s `libinitSource`); its empty sections LIB$INITIALIZD and LIB$INITIALIZE$
+    bracket the list, LINK sorting sections by name within an image section (the Linker manual).
+    RUN's driver (`machine/run.go`) calls each image's LIB$INITIALIZE, the shareable images' first,
+    with `(start, 0, 0)`, `start` its entry in a copy of the image's list placed after the driver's
+    code, the list itself pushed by CALLS since the routine steps `start`; the main image's
+    LIB$INITIALIZE calls the main program, which the driver then doesn't. The main routine is now
+    an image's last P0 transfer address (`mainTransferAddress`, `p0Transfers`, `initTransfers`). The
+    old call of each shareable image's `SHARE$name_INITIALIZE` with guessed arguments is gone, as is
+    SET DEBUG LIBINIT (`registers.DebugLibinit`, `vax.debug.libinit`); RUN `/[NO]INIT`, on by
+    default, controls the new calls; a shareable image's transfer symbols are all
+    `SHARE$name_TRANSFER_n`. Unconfirmed, for the probe round (subtask 12): whether VMS calls a
+    shareable image's LIB$INITIALIZE (govax does), and what a CLI coroutine and image information
+    VMS passes (govax passes 0 for each, and a routine calling the CLI coroutine would fault).
+    `TestLibInitialize` (the order, a coroutine call, `/NOTRACEBACK`, `/NOINIT`),
+    `TestLibInitializeShareable`, `machine`'s `TestMainTransferLegacy`.
+  - MANUAL.md's RUN, HELP RUN /INIT, HELP SET DEBUG and CONFIGURATION, VAX-VMS-INTERNALS.md's driver
+    paragraph, and Phases 61 and 83 follow. Subtask 7 is next.

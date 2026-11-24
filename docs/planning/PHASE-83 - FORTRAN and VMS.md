@@ -387,7 +387,7 @@ differs in three ways only, each listed below as 1, 2, and 8 of what govax gets 
 
 Done: everything in the goal above. Left for later, and logged where it was found:
 
-- **Phase 61 keeps** LIB$DECODE_FAULT, SIM_TRAP, FIND_IMAGE_SYMBOL, GET_OPCODE, and LIB$INITIALIZE (answer 4).
+- **Phase 61 keeps** LIB$DECODE_FAULT, SIM_TRAP, FIND_IMAGE_SYMBOL, GET_OPCODE, and LIB$INITIALIZE (answer 4). *(LIB$INITIALIZE resolved in Phase 113, subtask 6.)*
 - **STR$'s** ADD, DIVIDE, MUL, RECIP, and ROUND stay NOTIMPL (answer 2), with the undocumented STR$ELEMENT_R8.
 - **LIBRARY edits a library by rebuilding it,** where LIBRARIAN changes one in place (subtask 3), so only a library made by one command matches VMS's byte for byte, and history records are dropped. `/COMPRESS` and `/DATA=REDUCE` are left out. *(Resolved in Phase 90, subtask 11e: LIBRARY changes an existing library in place with LIBRARIAN's history records; `/DATA=REDUCE` and `/DATA=EXPAND`. `/COMPRESS` is still out.)*
 - **Services are added when a program needs them;** 191 of the vector's entries signal NOTIMPL (Decision 6). `$QUIDEF` and `$SJCDEF` stay out (Decision 10). *(Resolved in Phase 98: the queue manager, `$GETQUI`, `$SNDJBC`, and FORTRAN's `$QUIDEF`, `$SJCDEF`, and `$JBCMSGDEF`.)*

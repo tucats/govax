@@ -785,7 +785,7 @@ file quota 40960.
 DEBUG` switch `NAME`: `vm`, `tb`, `symbols`, `exceptions`, `interrupts`,
 `chm`, `registers`, `fulldisasm`, `userhalt`, `keyboard`, `images`,
 `services`, `dcl`, `command`, `logicals`, `devices`, `process`,
-`libinit`, `rms`, `protection`, `privileges`, or `userstep`. These trace govax's own
+`rms`, `protection`, `privileges`, or `userstep`. These trace govax's own
 workings, and are mainly for govax's developers.
 
 ---
@@ -4787,7 +4787,7 @@ From the host: `govax analyze ./routines.obj`, `govax analyze --image
 ### RUN
 
 ```text
-RUN [/DEBUG | /NODEBUG] [/NOEXECUTE] image[/HOST]
+RUN [/DEBUG | /NODEBUG] [/NOEXECUTE] [/[NO]INIT] image[/HOST]
 ```
 
 `RUN` finds the image (default type `.EXE`) by the file name rules of
@@ -4795,6 +4795,21 @@ section 5, activates it and the shareable images it uses, and runs it
 from its transfer address. When the image exits, `$STATUS` is its exit
 status: the R0 its main routine returned, or the status it passed to
 `$EXIT`. A failure's message is shown.
+
+A program that lists initialization routines for `LIB$INITIALIZE` has them
+called first, in the order listed, as on VMS: their addresses in the program
+section `LIB$INITIALIZE`, and a reference to the routine of that name, which
+LINK takes from `STARLET.OLB` or, with none, from govax:
+
+```text
+        .PSECT  LIB$INITIALIZE, NOPIC,USR,CON,REL,GBL,NOSHR,NOEXE,RD,NOWRT,LONG
+        .ADDRESS        SETUP
+        .EXTERNAL       LIB$INITIALIZE
+```
+
+A shareable image's own are called before the program's (govax's choice;
+whether VMS calls them is unconfirmed). `RUN/NOINIT` leaves them all out,
+for testing a run-time library.
 
 ```text
 VAX> RUN HELLO

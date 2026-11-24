@@ -1,0 +1,90 @@
+	.TITLE	LIB$INITIALIZE	govax's: calls a program's initialization routines
+	.IDENT	/GOVAX-1/
+;
+; LIB$INITIALIZE (docs/planning/PHASE-113 - Fortran errata.md, subtask 6),
+; written for govax from the VMS Run-Time Library Routines manual's chapter 7,
+; "Image Initialization and Termination" (the VMS 5.0 LIB$ manual); not VMS's
+; module, whose text govax doesn't use.
+;
+; A program that wants routines run before its main program puts their
+; addresses in the program section LIB$INITIALIZE and refers to the symbol
+; LIB$INITIALIZE (7.3), which this module defines; LINK takes the module from
+; the system's object library, or from govax when there is none, and puts
+; LIB$INITIALIZE in the image's initialization list, between the debugger's
+; address and the main program's:
+;
+;	.EXTRN	LIB$INITIALIZE
+;	.PSECT	LIB$INITIALIZE, NOPIC,USR,CON,REL,GBL,NOSHR,NOEXE,RD,NOWRT,LONG
+;	.LONG	INIT_PROC
+;
+; Within an image section LINK puts program sections in the order of their
+; names (the Linker manual, 3.2), so this module's two empty sections, of
+; the same attributes, bracket every module's contributions to
+; LIB$INITIALIZE: LIB$INITIALIZD sorts just before it, LIB$INITIALIZE$ just
+; after.
+;
+; LIB$INITIALIZE is called with the initialization argument list (7.2):
+; (start, cli-coroutine [, image-info]), start the address of its own entry
+; in the initialization list. It calls each routine in turn (7.4) with
+; (init-coroutine, cli-coroutine [, image-info]), init-coroutine being
+; CONTINUE below. A routine that returns lets the dispatch go on to the next;
+; one that calls CONTINUE has the rest of the list and the main program run
+; then, gets the main program's status back, and returns it (7.5). After the
+; last routine LIB$INITIALIZE calls the main program, the list's next entry,
+; with its own argument list, as 7.2's coding sequence does, and returns its
+; status. A shareable image's list has no main program after LIB$INITIALIZE
+; (a zero entry): then it returns SS$_NORMAL.
+;
+	.PSECT	LIB$INITIALIZD, NOPIC,USR,CON,REL,GBL,NOSHR,NOEXE,RD,NOWRT,LONG
+FIRST:					; the first routine's address
+	.PSECT	LIB$INITIALIZE$, NOPIC,USR,CON,REL,GBL,NOSHR,NOEXE,RD,NOWRT,LONG
+LAST:					; just past the last's
+
+	.PSECT	LIB$INITIALIZE_DATA, NOPIC,USR,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+NEXT:	.LONG	0			; the next routine's entry in the list
+CALLER:	.LONG	0			; LIB$INITIALIZE's argument list
+DONE:	.LONG	0			; nonzero once the main program has run
+
+	.PSECT	$CODE, PIC,USR,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+	.ENTRY	LIB$INITIALIZE,^M<>
+	MOVL	AP,CALLER		; the list to pass on
+	MOVAL	FIRST,NEXT		; from the first routine
+	CLRL	DONE
+	CALLS	#0,CONTINUE		; every routine, then the main program
+	RET				; with its status
+
+; CONTINUE, the init-coroutine: the rest of the routines, then the main
+; program; its status in R0.
+	.ENTRY	CONTINUE,^M<R2,R3>
+10$:	MOVL	NEXT,R2			; the next routine's entry
+	MOVAL	LAST,R3
+	CMPL	R2,R3			; past the last?
+	BGEQU	30$
+	ADDL2	#4,NEXT
+	MOVL	CALLER,R3
+	CMPB	(R3),#3			; image-info given?
+	BLSSU	15$
+	PUSHL	12(R3)			; image-info
+	PUSHL	8(R3)			; cli-coroutine
+	PUSHAB	CONTINUE		; init-coroutine
+	CALLS	#3,@0(R2)
+	BRB	20$
+15$:	PUSHL	8(R3)			; cli-coroutine
+	PUSHAB	CONTINUE		; init-coroutine
+	CALLS	#2,@0(R2)
+20$:	TSTL	DONE			; did it call CONTINUE?
+	BEQL	10$			; no: the next routine
+	RET				; yes: R0 is the main program's status
+
+30$:	MOVL	CALLER,R3		; the main program: the list's next entry
+	ADDL2	#4,4(R3)		; start steps to it (7.2)
+	MOVL	@4(R3),R0
+	BEQL	40$			; none: a shareable image's list
+	CALLG	(R3),(R0)		; with the same argument list
+	MOVL	#1,DONE
+	RET
+
+40$:	MOVL	#1,DONE
+	MOVL	#1,R0			; SS$_NORMAL
+	RET
+	.END

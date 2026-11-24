@@ -327,6 +327,22 @@ func (s *Session) LocateRelated(name string, host bool, related FileLocation) (F
 		return s.Locate(name, host)
 	}
 
+	// A bare name that is a logical name stands for its translation,
+	// which the related file's device and directory don't override: RMS
+	// translates the name before it applies the related file's fields
+	// (an options file's FORRTL/SHAREABLE, with FORRTL defined). A
+	// single translation is returned as itself, so that a default type
+	// the caller adds goes on it, not on the logical name. A related host
+	// file's directory doesn't override it either (LINK MAIN,X/OPTIONS after
+	// a host MAIN; Phase 113, subtask 6).
+	if fs, err := translateSpec(s.Logicals, name); err == nil && len(fs) > 0 && !strings.EqualFold(fs[0].Spec, name) {
+		if len(fs) == 1 {
+			return s.Locate(fs[0].Spec, host)
+		}
+
+		return s.Locate(name, host)
+	}
+
 	if related.Host {
 		path := filepath.Join(filepath.Dir(related.Name), name)
 		if err := s.checkHostAccess(path); err != nil {
@@ -334,20 +350,6 @@ func (s *Session) LocateRelated(name string, host bool, related FileLocation) (F
 		}
 
 		return FileLocation{Host: true, Name: path}, nil
-	}
-
-	// A bare name that is a logical name stands for its translation,
-	// which the related file's device and directory don't override: RMS
-	// translates the name before it applies the related file's fields
-	// (an options file's FORRTL/SHAREABLE, with FORRTL defined). A
-	// single translation is returned as itself, so that a default type
-	// the caller adds goes on it, not on the logical name.
-	if fs, err := translateSpec(s.Logicals, name); err == nil && len(fs) > 0 && !strings.EqualFold(fs[0].Spec, name) {
-		if len(fs) == 1 {
-			return s.Locate(fs[0].Spec, host)
-		}
-
-		return s.Locate(name, host)
 	}
 
 	specs, err := expandSpec(s.Logicals, related.Name, s.Default)

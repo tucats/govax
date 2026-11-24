@@ -125,7 +125,6 @@ var debugFlagNames = map[string]registers.DebugFlags{
 	"CHM":        registers.DebugCHM,
 	"COMMAND":    registers.DebugExpand,
 	"LOGICALS":   registers.DebugLogicals,
-	"LIBINIT":    registers.DebugLibinit,
 	"PROCESS":    registers.DebugProcess,
 	"PROCESSES":  registers.DebugProcess,
 	"USERSTEP":   registers.DebugUserStep,

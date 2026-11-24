@@ -262,7 +262,7 @@ func TestSetDebug_setAndClear(t *testing.T) {
 	if !c.CPU.DebugEnabled(registers.DebugVM) || !c.CPU.DebugEnabled(registers.DebugRMS) {
 		t.Errorf("Debug() = %#x, want VM and RMS set", c.CPU.Debug())
 	}
-	// The default REGISTERS/USERHALT/LIBINIT bits are untouched by setting
+	// The default REGISTERS/USERHALT/USERSTEP bits are untouched by setting
 	// unrelated flags.
 	if !c.CPU.DebugEnabled(registers.DebugUserHalt) {
 		t.Errorf("Debug() = %#x, want USERHALT still set", c.CPU.Debug())

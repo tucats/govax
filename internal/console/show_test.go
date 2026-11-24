@@ -375,7 +375,7 @@ func TestShowDebug(t *testing.T) {
 	}
 
 	out := buf.String()
-	// Default flags: REGISTERS/USERHALT/LIBINIT set, everything else clear.
+	// Default flags: REGISTERS/USERHALT/USERSTEP set, everything else clear.
 	if !strings.Contains(out, "REGISTERS  ") || strings.Contains(out, "NOREGISTERS") {
 		t.Errorf("output = %q, want REGISTERS reported set by default", out)
 	}

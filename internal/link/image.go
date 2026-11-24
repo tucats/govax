@@ -262,10 +262,15 @@ func (l *linker) header(isds []isd, fixupVA uint32) ([]byte, error) {
 
 	// IHA: the transfer addresses. With traceback, the image activator
 	// calls SYS$IMGSTA first, which sets up traceback and then calls the
-	// program.
-	transfers := make([]uint32, 0, 2)
+	// program; LIB$INITIALIZE, when the image has initialization routines
+	// for it to call, comes before the program (libinit.go).
+	transfers := make([]uint32, 0, 3)
 	if l.opts.Traceback {
 		transfers = append(transfers, l.symbols[imgstaName].value)
+	}
+
+	if addr, ok := l.initializeTransfer(); ok {
+		transfers = append(transfers, addr)
 	}
 
 	if l.transferSet {

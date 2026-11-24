@@ -5648,11 +5648,19 @@ procedure it writes at `CONSOLE$SCRATCH+8`, the IMAGE$INIT driver (section
 The first word is the entry mask, which saves no registers. The `MOVL`
 puts the traceback handler, `EXE$TRACEBACK`, a shim stub, in the driver's
 frame, where VMS's `SYS$IMGSTA` puts it for an image linked with traceback
-(section 10.7). With `/INIT` in effect, as it is unless `SET DEBUG
-NOLIBINIT` or RUN's `/NOINIT` turns it off, a `CALLS` of each shareable
-image's initialization routine, its first transfer address, would come
-next, with three arguments. Then the main routine, and `$EXIT` with what it
-returned. An image with no transfer address, a shareable image, isn't run:
+(section 10.7). With `/INIT` in effect, as it is unless RUN's `/NOINIT`
+turns it off, an image's transfer address in P0 before its last (its main
+routine) is `LIB$INITIALIZE`'s, which LINK puts there when the program lists
+routines in the program section `LIB$INITIALIZE` (VAX/VMS Internals and Data
+Structures, Figure 21-8; the VMS Run-Time Library manual's chapter 7). The
+driver calls each image's, the shareable images' first, with the
+initialization argument list, `(start, cli-coroutine, image-info)`, `start`
+the address of its entry in a copy of the image's list after the driver's
+code. `LIB$INITIALIZE` (govax's own module, `internal/bootdata/files/libinit.mar`,
+which LINK takes when there is no STARLET.OLB) calls each listed routine,
+then the list's next entry, the main routine, and returns its status, so a
+main image with one isn't called again. Without one, the driver calls the
+main routine itself. Then `$EXIT` with what it returned. An image with no transfer address, a shareable image, isn't run:
 DCL's `NOTFR`, and what its activation made goes. `RUN/NOEXECUTE` stops
 before the call.
 

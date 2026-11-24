@@ -3,6 +3,7 @@ package machine
 import (
 	"encoding/binary"
 	"fmt"
+	"slices"
 
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/lnm"
@@ -259,40 +260,75 @@ func (m *Machine) BuildImageInitDriver(main *ICB, runInits bool) (uint32, bool, 
 	return m.images().BuildImageInitDriver(main, runInits)
 }
 
-// DefaultRunInits reports RUN's own default for whether to invoke each
-// dependency's LIB$INITIALIZE before any /INIT or /NOINIT qualifier
-// overrides it, DebugLibinit defaults on (registers.DebugDefault), so
-// LIB$INITIALIZE runs by default, not only when /INIT is given explicitly.
-// See commands.go's runOptions, which applies the qualifiers.
+// DefaultRunInits reports RUN's own default for whether to call the
+// images' LIB$INITIALIZE (initTransfers) before any /INIT or /NOINIT
+// qualifier overrides it: on, as VMS always calls it (docs/planning/
+// PHASE-113 - Fortran errata.md, subtask 6). See commands.go's runOptions,
+// which applies the qualifiers.
 func (m *Machine) DefaultRunInits() bool {
-	return m.CPU != nil && m.CPU.DebugEnabled(registers.DebugLibinit)
+	return true
 }
 
-// mainTransferAddress selects icb's main routine: the first of its
+// mainTransferAddress selects icb's main routine: the last of its
 // transfer addresses that is in P0 (nonzero, below 0x3FFFFFFF). An image
 // linked with traceback or /DEBUG has SYS$IMGSTA, in the P1 vector, as
-// its first, and its main routine second; a VMS V1 image's first is its
-// startup stub (LegacyStartup), which is passed over.
+// its first, and its main routine after it; LIB$INITIALIZE, when the image
+// has initialization routines, comes between (initTransfers). A VMS V1
+// image's first is its startup stub (LegacyStartup), which is passed over.
 func mainTransferAddress(icb *ICB) (uint32, bool) {
+	p0 := p0Transfers(icb)
+	if len(p0) == 0 {
+		return 0, false
+	}
+
+	return p0[len(p0)-1], true
+}
+
+// p0Transfers are icb's transfer addresses in P0, in order: the image's own
+// routines, not SYS$IMGSTA (in the P1 vector) or a VMS V1 image's startup
+// stub.
+func p0Transfers(icb *ICB) []uint32 {
 	transfers := icb.Transfer[:3]
 	if icb.LegacyStartup {
 		transfers = transfers[1:]
 	}
 
+	var p0 []uint32
+
 	for _, addr := range transfers {
-		if addr > 0 && addr < 0x3FFFFFFF {
-			return addr, true
+		if addr == 0 {
+			break
+		}
+
+		if addr < 0x3FFFFFFF {
+			p0 = append(p0, addr)
 		}
 	}
 
-	return 0, false
+	return p0
+}
+
+// initTransfers are the initialization routines icb's transfer addresses
+// name: LIB$INITIALIZE's, which LINK puts before the program's own when the
+// image lists routines for it (internal/link/libinit.go); a shareable image,
+// which has no program, has only such. VMS's SYS$IMGSTA calls each transfer
+// address in turn (VAX/VMS Internals and Data Structures, 21.1.3.2); govax's
+// driver does, a shareable image's before the main image's (whether VMS
+// calls a shareable image's is unconfirmed, the probe round's question).
+func initTransfers(icb *ICB, shareable bool) []uint32 {
+	p0 := p0Transfers(icb)
+	if !shareable && len(p0) > 0 {
+		p0 = p0[:len(p0)-1]
+	}
+
+	return p0
 }
 
 // BuildImageInitDriver writes a small procedure in p's driver page (for
 // process 1, at CONSOLE$SCRATCH+8; see ImageProcess.driver) (an
 // empty entry mask, a MOVL of the traceback handler into its frame for
-// an image linked with traceback, then one PUSHL/PUSHL/PUSHL/CALLS sequence per
-// dependency's LIB$INITIALIZE entry point if runInits, then a final CALLS
+// an image linked with traceback, then a CALLS of each image's
+// initialization routine (initTransfers) if runInits, then a final CALLS
 // to main's own entry point, a call to $EXIT with main's status when the
 // P1 vector is present, and a RET) and returns its address -- the Go
 // equivalent of console_run's own assemble_direct-built IMAGE$INIT
@@ -347,35 +383,82 @@ func (p *ImageProcess) buildDriver(main *ICB, runInits, hibernate bool) (uint32,
 		code = append(code, EncodeCalls(0, hiber)...)
 	}
 
-	if runInits {
-		for _, dep := range p.ICBList[1:] {
-			if dep.Transfer[0] == 0 {
-				continue
-			}
+	// Each image's LIB$INITIALIZE (initTransfers), the shareable images' in
+	// the order they were activated, then the main image's, which calls the
+	// main program itself; the main program alone if it has none.
+	// LIB$INITIALIZE is called as the VMS Run-Time Library manual's 7.2 has
+	// it, with (start, cli-coroutine, image-info): start the address of its
+	// entry in a copy of the image's initialization list, after the code in
+	// the driver's page, so that it finds the main program as the list's next
+	// entry. The list is CALLS's, on the stack, since LIB$INITIALIZE steps
+	// start along it. govax has no CLI coroutine or image information to give
+	// (0 for each).
+	var vectors [][]uint32
 
-			initAddr, ok := p.symbols[fmt.Sprintf("SHARE$%s_INITIALIZE", dep.Name)]
-			if !ok {
+	callsMain := false
+
+	if runInits {
+		images := append(slices.Clone(p.ICBList[1:]), main)
+
+		for i, icb := range images {
+			inits := initTransfers(icb, i < len(images)-1)
+			if len(inits) == 0 {
 				continue
 			}
 
 			if c.CPU.DebugEnabled(registers.DebugImages) {
-				c.Printf("Preparing call to LIB$INITIALIZE entry %08X for image %s\n", initAddr, dep.Name)
-			}
-			// LIBRTL's LIB$INITIALIZE apparently wants 100 as a special
-			// flag argument.
-			flag := uint32(0)
-			if dep.Name == "LIBRTL" {
-				flag = 100
+				c.Printf("Preparing call to LIB$INITIALIZE %08X for image %s\n", inits[0], icb.Name)
 			}
 
-			code = append(code, encodePushl(0)...)
-			code = append(code, encodePushl(0)...)
-			code = append(code, encodePushl(flag)...)
-			code = append(code, EncodeCalls(3, initAddr)...)
+			// The list from LIB$INITIALIZE's entry on, ending in 0.
+			vector := append(slices.Clone(inits), 0)
+			if icb == main {
+				vector = append(slices.Clone(inits), addr, 0)
+				callsMain = true
+			}
+
+			vectors = append(vectors, vector)
 		}
 	}
 
-	code = append(code, EncodeCalls(0, addr)...)
+	// The vectors go after the code, whose length is known before their
+	// addresses are: each call is the same length whatever they are.
+	initCall := func(vector []uint32, at uint32) []byte {
+		b := append(encodePushl(0), encodePushl(0)...)
+		b = append(b, encodePushl(at)...)
+
+		return append(b, EncodeCalls(3, vector[0])...)
+	}
+
+	afterCode := len(code)
+	for _, v := range vectors {
+		afterCode += len(initCall(v, 0))
+	}
+
+	if !callsMain {
+		afterCode += len(EncodeCalls(0, addr))
+	}
+
+	if _, ok := p.p1Stub("SYS$EXIT"); ok {
+		afterCode += 2 + len(EncodeCalls(1, 0))
+	}
+
+	afterCode++ // RET
+
+	var data []byte
+
+	for _, v := range vectors {
+		at := driverAddr + uint32(afterCode+len(data))
+		code = append(code, initCall(v, at)...)
+
+		for _, entry := range v {
+			data = binary.LittleEndian.AppendUint32(data, entry)
+		}
+	}
+
+	if !callsMain {
+		code = append(code, EncodeCalls(0, addr)...)
+	}
 
 	// VMS's image activator calls $EXIT with whatever main returned, so
 	// the image's exit handlers run (docs/planning/PHASE-26.md subtask 19). $EXIT
@@ -389,6 +472,23 @@ func (p *ImageProcess) buildDriver(main *ICB, runInits, hibernate bool) (uint32,
 
 	code = append(code, 0x04) // RET
 
+	if len(code) != afterCode {
+		return 0, false, fmt.Errorf("console: the driver's code is %d bytes, not the %d its vectors were placed after", len(code), afterCode)
+	}
+
+	code = append(code, data...)
+
+	// Process 1's driver starts 8 bytes into its page, and the next page
+	// holds the shim stubs; another process's has its page to itself.
+	room := 512
+	if p.env == nil {
+		room -= 8
+	}
+
+	if len(code) > room {
+		return 0, false, fmt.Errorf("console: the IMAGE$INIT driver needs %d bytes, more than its page's %d", len(code), room)
+	}
+
 	if err := p.storeBytes(driverAddr, code); err != nil {
 		return 0, false, err
 	}
@@ -401,7 +501,6 @@ func (p *ImageProcess) buildDriver(main *ICB, runInits, hibernate bool) (uint32,
 // traceback handler's stub (corevms.CRTLLinks), which EnsureShims
 // defines.
 var imgstaAddr = vmsdef.LibrarySymbols["SYS$IMGSTA"]
-
 
 // legacyStartupStub reports whether a V1 image's first transfer
 // address, va (relative to its base), is its image startup stub: as

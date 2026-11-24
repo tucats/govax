@@ -1879,7 +1879,6 @@ var debugShowEntries = []debugShowEntry{
 	{registers.DebugImages, "IMAGES", "Display image info on RUN command"},
 	{registers.DebugInterrupts, "INTERRUPTS", "Debug interrupt handling"},
 	{registers.DebugKeyboard, "KEYBOARD", "Debug console keyboard input"},
-	{registers.DebugLibinit, "LIBINIT", "Invoke LIB$INITIALIZE for images"},
 	{registers.DebugLogicals, "LOGICALS", "Debug logical name operations"},
 	{registers.DebugProcess, "PROCESSES", "Debug process operations"},
 	{registers.DebugPrivileges, "PRIVILEGES", "Debug privilege checks"},

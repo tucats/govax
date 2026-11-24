@@ -31,7 +31,9 @@ const (
 	DebugExpand     DebugFlags = 0x00010000 // DBG_EXPAND
 	DebugLogicals   DebugFlags = 0x00020000 // DBG_LOGICALS
 	DebugDevices    DebugFlags = 0x00040000 // DBG_DEVICES
-	DebugLibinit    DebugFlags = 0x00080000 // DBG_LIBINIT
+	// 0x00080000 was DBG_LIBINIT, which RUN's old call of each shareable
+	// image's SHARE$name_INITIALIZE followed; Phase 113 replaced it with
+	// VMS's LIB$INITIALIZE, which RUN /[NO]INIT alone controls.
 	DebugProcess    DebugFlags = 0x00100000 // DBG_PROCESS
 	DebugFullDisasm DebugFlags = 0x00200000 // DBG_FULLDISASM
 	DebugRMS        DebugFlags = 0x00400000 // DBG_RMS
@@ -43,9 +45,9 @@ const (
 	DebugUserStep   DebugFlags = 0x10000000 // DBG_USERSTEP
 	DebugPrivileges DebugFlags = 0x20000000 // privilege checks (Phase 94), govax's own
 
-	// DebugDefault matches initialization.c's alloc_vax default assignment
-	// (vax.debug = DBG_REGISTERS | DBG_USERHALT | DBG_LIBINIT).
-	DebugDefault = DebugRegisters | DebugUserHalt | DebugLibinit | DebugUserStep
+	// DebugDefault is the flags on at the start: REGISTERS, USERHALT, and
+	// USERSTEP.
+	DebugDefault = DebugRegisters | DebugUserHalt | DebugUserStep
 )
 
 // Debug returns the current debug/tracing flag bitmask.

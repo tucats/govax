@@ -140,14 +140,17 @@ func (l *linker) basedAt(addr uint32) bool {
 // its type, DST$K_FIXUP, then a group, a longword count, a counted image
 // name, and each offset as a longword. The name was DEFAULT_CLUSTER,
 // though two of the offsets were in cluster SHR1_VECTORS's module; govax
-// names every group so (unconfirmed). A record holds at most
-// maxDSTFixups offsets, its length byte's limit; how real LINK splits a
-// longer list is unconfirmed, and govax writes a record for each part.
+// names every group so (unconfirmed). A record's length byte limits it to
+// 255 bytes: a longer list goes on in records of DST$K_FIXUP holding only
+// offsets, the first record's count being the whole list's (VMS 7.1's
+// FTNRTL.EXE, testdata/ftn86: 176 offsets as 58, 63, and 55; Phase 113,
+// subtask 6).
 const (
 	dstTypeFixup     = 134 // DST$K_FIXUP
 	dstFixupImage    = defaultClusterName
 	dstFixupOverhead = 1 + 4 + 1 + len(dstFixupImage) // type, count, name
 	maxDSTFixups     = (255 - dstFixupOverhead) / 4
+	maxDSTFixupsMore = (255 - 1) / 4 // a continuation's: its type, then offsets
 )
 
 // dstFixup is a longword of the debug symbol table that holds an address
@@ -180,14 +183,25 @@ func (l *linker) withDSTFixups(dst []byte) []byte {
 
 	dst = append(dst, make([]byte, int(pageUp(uint32(len(dst))))-len(dst))...)
 
-	for rest := fixups; len(rest) > 0; {
-		part := rest[:min(len(rest), maxDSTFixups)]
+	for first, rest := true, fixups; len(rest) > 0; first = false {
+		var rec []byte
+
+		limit := maxDSTFixupsMore
+		if first {
+			limit = maxDSTFixups
+		}
+
+		part := rest[:min(len(rest), limit)]
 		rest = rest[len(part):]
 
-		rec := []byte{byte(dstFixupOverhead + 4*len(part)), dstTypeFixup}
-		rec = binary.LittleEndian.AppendUint32(rec, uint32(len(part)))
-		rec = append(rec, byte(len(dstFixupImage)))
-		rec = append(rec, dstFixupImage...)
+		if first {
+			rec = []byte{byte(dstFixupOverhead + 4*len(part)), dstTypeFixup}
+			rec = binary.LittleEndian.AppendUint32(rec, uint32(len(fixups)))
+			rec = append(rec, byte(len(dstFixupImage)))
+			rec = append(rec, dstFixupImage...)
+		} else {
+			rec = []byte{byte(1 + 4*len(part)), dstTypeFixup}
+		}
 
 		for _, f := range part {
 			rec = binary.LittleEndian.AppendUint32(rec, f.offset)

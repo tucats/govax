@@ -9,16 +9,12 @@ import (
 	"github.com/tucats/govax/internal/registers"
 )
 
+// TestDefaultRunInits: RUN calls the images' LIB$INITIALIZE unless /NOINIT
+// says not to (Phase 113, subtask 6: no SET DEBUG switch turns it off now).
 func TestDefaultRunInits(t *testing.T) {
 	c := newRunnableConsole(t)
 	if !c.DefaultRunInits() {
-		t.Error("DefaultRunInits() = false, want true (DebugLibinit is on by default)")
-	}
-
-	c.CPU.SetDebug(c.CPU.Debug() &^ registers.DebugLibinit)
-
-	if c.DefaultRunInits() {
-		t.Error("DefaultRunInits() = true, want false once DebugLibinit is cleared")
+		t.Error("DefaultRunInits() = false, want true")
 	}
 }
 

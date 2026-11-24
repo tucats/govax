@@ -115,9 +115,10 @@
 
       /[NO]INIT
 
-   Whether each shareable image's LIB$INITIALIZE routines run before
-   the program.  The default is SET DEBUG's LIBINIT switch, which is on
-   unless it has been turned off.
+   Whether the initialization routines a program lists for
+   LIB$INITIALIZE (and those a shareable image lists) run before the
+   program, as VMS always runs them.  The default is /INIT; /NOINIT
+   leaves them out, as when testing a run-time library.
 
 /STEP
 

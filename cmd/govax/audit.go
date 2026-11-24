@@ -33,7 +33,6 @@ var validConfigs = map[string]bool{
 	"vax.debug.logicals":   true,
 	"vax.debug.devices":    true,
 	"vax.debug.process":    true,
-	"vax.debug.libinit":    true,
 	"vax.debug.rms":        true,
 	"vax.debug.protection": true,
 	"vax.debug.privileges": true,

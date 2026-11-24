@@ -67,17 +67,28 @@ func TestLegacyStartupStub(t *testing.T) {
 }
 
 // TestMainTransferLegacy: an image whose first transfer address is the
-// startup stub runs from its second.
+// startup stub runs from its second, and has no initialization routine; an
+// image of two P0 transfer addresses that isn't one has LIB$INITIALIZE's
+// first, then its program's (VAX/VMS Internals and Data Structures, Figure
+// 21-8, linked /NOTRACEBACK; Phase 113, subtask 6).
 func TestMainTransferLegacy(t *testing.T) {
 	icb := &ICB{Transfer: [4]uint32{0x233, 0x210}}
 
-	if addr, _ := mainTransferAddress(icb); addr != 0x233 {
-		t.Errorf("without the stub, main = %X, want 233", addr)
+	if addr, _ := mainTransferAddress(icb); addr != 0x210 {
+		t.Errorf("without the stub, main = %X, want 210", addr)
+	}
+
+	if inits := initTransfers(icb, false); len(inits) != 1 || inits[0] != 0x233 {
+		t.Errorf("without the stub, initialization routines %X, want [233]", inits)
 	}
 
 	icb.LegacyStartup = true
 
 	if addr, _ := mainTransferAddress(icb); addr != 0x210 {
 		t.Errorf("with the stub, main = %X, want 210", addr)
+	}
+
+	if inits := initTransfers(icb, false); len(inits) != 0 {
+		t.Errorf("with the stub, initialization routines %X, want none", inits)
 	}
 }

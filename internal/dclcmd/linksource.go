@@ -36,7 +36,9 @@ import (
 //     FTNRTL, the FORTRAN run-time library (docs/planning/PHASE-74 - FORTRAN
 //     plan.md, Decision 13), read from the image the locator finds,
 //     govax's own built-in one if no other (ftnrtlSource), so a FORTRAN
-//     program links against it with no options file.
+//     program links against it with no options file. After them,
+//     govax's LIB$INITIALIZE module (libinit.go), for a program with no
+//     STARLET.OLB.
 //
 // Each library is looked for through SYS$LIBRARY on a mounted volume
 // first, then in the host library directory the vax.library setting
@@ -119,7 +121,7 @@ func (c *Context) LinkSources(sysLib bool) ([]link.SymbolSource, error) {
 	ftn := &ftnrtlSource{open: func() (link.SymbolSource, error) { return c.openSharedImage(ftnrtl.Name, govax) }}
 
 	if !sysLib {
-		return []link.SymbolSource{ftn, govax}, nil
+		return []link.SymbolSource{ftn, govax, libinitSource{}}, nil
 	}
 
 	var sources []link.SymbolSource
@@ -152,7 +154,7 @@ func (c *Context) LinkSources(sysLib bool) ([]link.SymbolSource, error) {
 		sources = append(sources, &link.ObjectLibrarySource{File: loc.Name, Library: lib, System: true})
 	}
 
-	return append(sources, ftn, govax), nil
+	return append(sources, ftn, govax, libinitSource{}), nil
 }
 
 // BuiltinSources returns LINK's symbol sources for a link made with no
@@ -167,7 +169,7 @@ func BuiltinSources(shims []corevms.ShimLink) []link.SymbolSource {
 		return sharedImageSource(data, rms.BuiltinSpec(ftnrtl.Name), ftnrtl.Name)
 	}}
 
-	return []link.SymbolSource{ftn, GovaxSymbols(shims)}
+	return []link.SymbolSource{ftn, GovaxSymbols(shims), libinitSource{}}
 }
 
 // ftnrtlSource is FTNRTL's symbols, as a source among the system's: the

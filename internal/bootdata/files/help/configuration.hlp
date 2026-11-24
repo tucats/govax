@@ -558,6 +558,6 @@
                                      chm, registers, fulldisasm,
                                      userhalt, keyboard, images,
                                      services, dcl, command, logicals,
-                                     devices, process, libinit, rms,
+                                     devices, process, rms,
                                      protection, privileges, or
                                      userstep.

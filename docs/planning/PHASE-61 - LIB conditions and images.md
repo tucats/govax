@@ -28,7 +28,9 @@ activates a shareable image at run time:
   entries already (Phase 13, RUN/INIT, SET DEBUG LIBINIT). This phase
   compares that with the manual's description (the initialization
   argument list, the LIB$INITIALIZE psect of routine addresses,
-  co-routine calls) and closes the gaps.
+  co-routine calls) and closes the gaps. *(Resolved in Phase 113, subtask 6:
+  LINK's initialization list, govax's own LIB$INITIALIZE module from chapter
+  7, RUN's driver calling it; SET DEBUG LIBINIT gone.)*
 - **Review of the existing condition routines**: SIGNAL, STOP, ESTABLISH,
   REVERT, SIG_TO_RET, and MATCH_COND came from eVAX (Phases 26 and 34).
   Each is checked against the manual's entry, and DEVIATIONS.md's
@@ -72,7 +74,7 @@ activates a shareable image at run time:
 3. **SIG_TO_STOP, INT_OVER, DEC_OVER, FLT_UNDER.**
 4. **FIXUP_FLT.**
 5. **DECODE_FAULT, SIM_TRAP** (if their offsets are known).
-6. **LIB$INITIALIZE** against chapter 7.
+6. **LIB$INITIALIZE** against chapter 7. *(Resolved in Phase 113, subtask 6.)*
 7. **FIND_IMAGE_SYMBOL**: run-time activation of a shareable image.
 8. **The program** (`testdata/lib61/`), its console test, and the VMS
    probe.

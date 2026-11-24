@@ -580,4 +580,52 @@ func TestFTN86Objects(t *testing.T) {
 			t.Errorf("block %d of the image differs from VMS's", block)
 		}
 	}
+
+	compareImageSymbolTables(t, got, want, img)
+}
+
+// compareImageSymbolTables holds the symbol tables past an image's sections to
+// VMS's (Phase 113, subtask 6; the phase doc's A.7.3): the debug symbol table
+// block for block, then the global symbol table record for record, each record
+// that names when the link was made or which linker made it compared without
+// that, and govax's padding of the GST to a whole block left out (Phase 29's
+// Decision 7: VMS's LINK ends the file mid-block).
+func compareImageSymbolTables(t *testing.T, got, want []byte, vms *vmsimage.Image) {
+	t.Helper()
+
+	ours, err := vmsimage.ReadImage(got)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if ours.DSTVBN != vms.DSTVBN || ours.GSTVBN != vms.GSTVBN || ours.GSTRecordCount() != vms.GSTRecordCount() {
+		t.Fatalf("the symbol tables are at DST %d, GST %d (%d records), VMS's at %d, %d (%d)",
+			ours.DSTVBN, ours.GSTVBN, ours.GSTRecordCount(), vms.DSTVBN, vms.GSTVBN, vms.GSTRecordCount())
+	}
+
+	for block := int(vms.DSTVBN) - 1; block < int(vms.GSTVBN)-1; block++ {
+		a, b := block*512, block*512+512
+		if b > len(got) || b > len(want) || !bytes.Equal(got[a:b], want[a:b]) {
+			t.Errorf("block %d, in the debug symbol table, differs from VMS's", block+1)
+		}
+	}
+
+	// The header records: MHD's last 34 bytes are two times, the link's and
+	// the module's (17 characters each), and LNM names the linker.
+	const times = 34
+
+	for i := range vms.GST {
+		a, b := ours.GST[i], vms.GST[i]
+
+		switch {
+		case len(b) > 1 && b[0] == 0 && b[1] == 1:
+			continue
+		case len(b) > times && b[0] == 0 && b[1] == 0 && len(a) == len(b):
+			a, b = a[:len(a)-times], b[:len(b)-times]
+		}
+
+		if !bytes.Equal(a, b) {
+			t.Errorf("GST record %d differs from VMS's:\n govax % x\n VMS   % x", i+1, ours.GST[i], vms.GST[i])
+		}
+	}
 }

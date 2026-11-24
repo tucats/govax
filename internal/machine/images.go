@@ -30,8 +30,7 @@ type ImageProcess struct {
 	ICBList []*ICB
 
 	// symbols are the transfer addresses activation found: MAIN, and
-	// SHARE$name_INITIALIZE and SHARE$name_TRANSFER_n for each shareable
-	// image. Process 1's are also set in the console's symbol table, so
+	// SHARE$name_TRANSFER_n for each shareable image. Process 1's are also set in the console's symbol table, so
 	// EXAMINE MAIN and the like keep working; another process's are only
 	// here, so activating an image in it can't change what the console's
 	// names mean.

@@ -526,8 +526,9 @@ func (p *ImageProcess) newICB(fn string, flag uint32) *ICB {
 
 // setTransfer records transfer address n of icb, v as the header gives
 // it (relative to the image's base; 0 for none), and defines its symbol:
-// MAIN for the main image's first, SHARE$name_INITIALIZE and
-// SHARE$name_TRANSFER_n for a shareable image's. A shareable image's
+// MAIN for the main image's (the last it defines being the program's), and
+// SHARE$name_TRANSFER_n for a shareable image's (its LIB$INITIALIZE, which
+// RUN's driver calls: initTransfers). A shareable image's
 // address outside P0 is the system's, not the image's: SYS$IMGSTA, which
 // LINK makes a shareable image's first with traceback (testdata/link68's
 // SHR1), and which isn't an initialization routine to call. It is kept
@@ -545,11 +546,7 @@ func (p *ImageProcess) setTransfer(icb *ICB, n, v uint32) {
 		v += icb.Base
 
 		if icb.Name != "<MAIN>" {
-			if n == 0 {
-				sname = fmt.Sprintf("SHARE$%s_INITIALIZE", icb.Name)
-			} else {
-				sname = fmt.Sprintf("SHARE$%s_TRANSFER_%d", icb.Name, n)
-			}
+			sname = fmt.Sprintf("SHARE$%s_TRANSFER_%d", icb.Name, n)
 		} else {
 			sname = "MAIN"
 		}

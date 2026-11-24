@@ -46,7 +46,7 @@ func TestHelpTopics(t *testing.T) {
 		{[]string{"SE", "DEFAULT"}, []string{"SET DEFAULT [device:][directory]"}},
 		{[]string{"SHOW", "DEFAULT"}, []string{"Shows the default device and directory"}},
 		{[]string{"SET", "RADIX"}, []string{"HEXADECIMAL, DECIMAL, or OCTAL"}},
-		{[]string{"SET", "DEBUG"}, []string{"LIBINIT", "USERSTEP"}},
+		{[]string{"SET", "DEBUG"}, []string{"LOGICALS", "USERSTEP"}},
 		{[]string{"SHOW"}, []string{"string pool are the debugger's"}},
 		{[]string{"SHOW", "MEMORY", "Qualifiers", "/FILES"}, []string{"PGFLQUOTA"}},
 		{[]string{"HELP", "Qualifiers", "/USERLIBRARY"}, []string{"HLP$LIBRARY"}},
