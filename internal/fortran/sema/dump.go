@@ -296,16 +296,21 @@ func dumpStmts(b *strings.Builder, list []Stmt, depth int) {
 				header += "  [mask in a temporary]"
 			}
 
+			if s.List {
+				header += "  [tuples listed]"
+			}
+
 			line(b, s.AST, depth, header)
 
 			for i, st := range s.Body {
-				if !s.Temporaries[i] {
+				switch {
+				case s.Temporaries[i]:
+					line(b, st.Source(), depth+1, stmtText([]Stmt{st})+"  [in temporaries]")
+				case s.Recorded[i]:
+					line(b, st.Source(), depth+1, stmtText([]Stmt{st})+"  [stores recorded]")
+				default:
 					dumpStmts(b, []Stmt{st}, depth+1)
-
-					continue
 				}
-
-				line(b, st.Source(), depth+1, stmtText([]Stmt{st})+"  [in temporaries]")
 			}
 
 			if s.EndForall != nil {
@@ -1045,8 +1050,12 @@ func dumpCtorItems(items []CtorItem) string {
 // and assignment, and "[in temporaries]" when its values are computed first.
 func forallText(f *Forall) string {
 	text := forallHeaderText(f) + " " + stmtText(f.Body)
-	if f.Temporaries[0] {
+
+	switch {
+	case f.Temporaries[0]:
 		text += "  [in temporaries]"
+	case f.Recorded[0]:
+		text += "  [stores recorded]"
 	}
 
 	return text

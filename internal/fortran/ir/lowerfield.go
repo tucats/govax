@@ -191,6 +191,12 @@ func (l *lowerer) fieldArrayDescriptor(e *sema.FieldRef) *Mem {
 // which one MOVC3 allows for and pieces don't; that takes a record longer than
 // 65,535 bytes overlapping itself, and is left undefined (ours).
 func (l *lowerer) moveRecord(s *sema.Assign) {
+	if l.recordsStore(s.Target) {
+		l.recordStore(s.Target, s.Value, false)
+
+		return
+	}
+
 	// A structure constructor none of whose values reads the target is built
 	// there (lowerstruct.go).
 	if v, ok := s.Value.(*sema.StructValue); ok && s.InPlace {

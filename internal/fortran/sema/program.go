@@ -1065,13 +1065,24 @@ type (
 	// with their masks), into a LOGICAL temporary its statements read, since
 	// one of them may change what it reads. EndForall is the construct's END
 	// FORALL, nil for the statement.
+	//
+	// Recorded is parallel to Body too (Phase 113): true for a statement whose
+	// stores are recorded first, for every tuple, each target's address with the
+	// value it gets, and then done, where temporaries of the index set's shape
+	// can't hold them (forallorder.go). List says this FORALL's tuples, with
+	// those of the FORALLs around it, are listed once as it is reached, its
+	// mask tested, and its statements walk the list: its bounds or its mask may
+	// be changed by its statements, where the index set isn't a rectangle a
+	// mask temporary could be shaped as.
 	Forall struct {
 		stmtBase
 		Indexes     []*ForallIndex
 		Mask        Expr
 		Body        []Stmt
 		Temporaries []bool
+		Recorded    []bool
 		MaskTemp    bool
+		List        bool
 		EndForall   ast.Stmt
 	}
 

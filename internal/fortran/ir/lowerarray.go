@@ -973,6 +973,17 @@ func (l *lowerer) elementalCall(s *sema.Call) {
 // elements; otherwise its loops run in the order's directions, a scalar value
 // that reads the target computed once before them (sema's ArrayOrder.Hoisted).
 func (l *lowerer) maskedCall(s *sema.Call, mask *whereMask) {
+	if s.Order != nil && s.Order.Recorded {
+		// The value's elements' length isn't known (lowerrecord.go): each
+		// call's value recorded with its target, then the calls made.
+		walked := *s
+		walked.Order = nil
+
+		l.recordedStores(func() { l.maskedCall(&walked, mask) }, s)
+
+		return
+	}
+
 	call := *s
 	call.Args = slices.Clone(s.Args)
 	order := s.Order

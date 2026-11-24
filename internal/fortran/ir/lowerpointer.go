@@ -198,6 +198,12 @@ func (l *lowerer) targetAddress(target sema.Expr) Expr {
 // The length is the pointer's declared one, which sema has checked against the
 // target's where both are constants.
 func (l *lowerer) pointerAssign(s *sema.PointerAssign) {
+	if l.recordsStore(s.Pointer) {
+		l.recordPointer(s.Pointer, s.Target)
+
+		return
+	}
+
 	if p := sema.PointerSymbol(s.Pointer); p != nil && p.ArrayPointer() {
 		l.arrayPointerAssign(p, s.Target)
 
@@ -249,6 +255,12 @@ func (l *lowerer) setHeader(x sema.Expr) {
 // nullify is NULLIFY: each pointer's address 0.
 func (l *lowerer) nullify(s *sema.Nullify) {
 	for _, x := range s.Pointers {
+		if l.recordsStore(x) {
+			l.recordPointer(x, nil)
+
+			continue
+		}
+
 		l.setHeader(x)
 		l.emit(&Assign{origin: l.origin(), Dst: l.pointerOf(x), Src: LongConst(0)})
 	}

@@ -6975,9 +6975,66 @@ FORALL once, with every level's indexes). A nested FORALL adds indexes, and its 
 outer one, so `FORALL (J = 1:I)` inside `FORALL (I = 1:N)` walks a triangle; lowering makes it a
 level inside the outer level's loops (`forallLevel`). A mask that a later statement of the
 construct may change is computed for the whole index set first (`MaskTemp`), since the standard
-evaluates the mask once, at the construct's start. What doesn't fit these rules is NOTIMPL by
-name (the manual's 14.13 lists the forms): the cases are rare, and each needs a temporary of a
-shape the code doesn't yet build.
+evaluates the mask once, at the construct's start. What doesn't fit these rules was NOTIMPL by
+name in Phase 112: the cases are rare, and each needed a temporary of a shape the code didn't
+build. Phase 113 took them in, the next section's subject.
+
+### Recording the stores (Phase 113)
+
+Temporaries of the index set's shape suit a scalar assignment over a rectangle of tuples: one
+value per tuple, at a position the counters name. Many statements aren't that. An array
+assignment's tuples each store a whole section, maybe of a different length each time; a
+CHARACTER target's length may be known only when the program runs; a pointer assignment's
+"value" is a descriptor; a defined assignment's store is a call; in a triangle of tuples there is
+no rectangle to index; and in `V(V(I)) = 0` the *address* must be computed before anything is
+stored. What all of these share is the standard's rule: compute everything, then store.
+
+So the compiler stops trying to shape a temporary and records the stores instead
+(`ir/lowerrecord.go`, sema's `Forall.Recorded`). The statement is lowered three times over the
+same walk of the tuples, the walk being the statement's own lowering: the scalarizer's loops, a
+WHERE's masks, an elemental call's loops. Each time, a store to the program's storage is
+intercepted where it would happen (`assignScalar`, `moveRecord`, `call`, `pointerAssign`,
+`nullify`, each asking `recordsStore`):
+
+1. **Sizing**: each store adds its entry's size to a counter, and nothing is written.
+2. **Recording**: a buffer of that size is taken as a run-time temporary of the statement, and
+   each store writes an entry there: the target's address, its length, the value's length, and the
+   value, converted to the target's type (a CHARACTER one padded to the target's length).
+3. **Playing back**: a counted loop over the entries does each store, at its address.
+
+A store "to the program's storage" is one whose target's symbol isn't one of the compiler's
+(bound for the statement, or named with `$`), so the walk's own temporaries (a mask's, an
+overlapping array assignment's) are written as usual. A pointer assignment's entry holds the
+pointer's own storage as the assignment would leave it (an address, a CHARACTER pointer's
+descriptor, an array pointer's descriptor described in a cell of the statement's), and playing
+back moves its bytes. A defined assignment's entry holds the value with its own length, and
+playing back calls the subroutine with the target, reached through the recorded address, and the
+value in the buffer: each is a symbol of the statement's bound to a place computed at run time
+(`slotSymbol`), so `l.assign` and `l.call` lower them like any other names.
+
+A WHERE in a FORALL does each assignment for every tuple before the next, so it is one recording
+per assignment, lowered with the others left out (`sema.WhereOnly`). Each pass tests the masks
+again, which is right only if the WHERE's assignments don't change what the masks read: a WHERE
+of more than one assignment that does is still NOTIMPL. The same recording serves an elemental
+defined assignment whose CHARACTER value of run-time length overlaps its target, outside any
+FORALL (`ArrayOrder.Recorded`): a temporary of the value would need its elements' length.
+
+The header has a listing of its own. A nested FORALL's bounds are computed once, when it is
+reached, and its mask once for the tuples; if its statements change what they read, recomputing
+them in each statement's walk would be wrong. Where the index set is a rectangle a mask goes into
+a temporary (`MaskTemp`); otherwise the FORALL's tuples are listed when it is reached
+(`Forall.List`, `forallList`): a walk counts them, a second puts each tuple's indexes in a column
+of an INTEGER temporary, and every statement under it walks the list (`walkList`) instead of the
+loops. Its own mask, and those around it, are tested while listing, so the list holds only the
+active tuples.
+
+Two old bugs surfaced on the way. `forallVaries`, which says whether a nested FORALL's bounds use
+an outer index, looked only for a bare name, so `FORALL (J = 1:I-1)` counted as a rectangle and
+lowering computed its bounds before I had a value. And a mask's test in a FORALL's loops gave back
+every run-time temporary of the statement, the listing and the buffer among them, at the first
+tuple (`forallMasked` now keeps the statement's own apart). `testdata/fortran90/forallrec.f90` runs
+each case; gfortran agrees but on the pointer and defined assignments, which it does tuple by
+tuple.
 
 ### WHERE inside WHERE: a chain of masks
 
@@ -7086,7 +7143,8 @@ elements is unknown", "a generic's arguments are passed the ordinary way") were 
 ways it had been reached before.
 
 What waits: the NOTIMPLs the manual's 14.13 lists (FORALL statements whose temporaries would need
-a shape not yet built; a target whose subscripts read its own storage, `V(V(I)) = 0`); a few of
+a shape not yet built; a target whose subscripts read its own storage, `V(V(I)) = 0`; all but one
+compiled in Phase 113, "Recording the stores" above); a few of
 PURE's rules not checked (an EQUIVALENCE partner of a global, a global reached through a pointer
 component); ELEMENTAL's rule on dummies in specification expressions; a STRUCTURE's initial
 values in a module's text (Phase 113); and the VMS round of the new programs (Phase 113's probe

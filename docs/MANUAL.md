@@ -9183,8 +9183,10 @@ shifted:  72.0  72.0  85.0  52.0  91.0  49.0
   done one after another, as nested DO loops; otherwise the mask and the values go into
   temporaries of the index set's shape first. The statement may be a pointer assignment
   (`FORALL (I = 1:N) R(I)%P => T(I)`, or `=> NULL()`) or a defined assignment by a PURE
-  subroutine, each done tuple by tuple; one whose value may be what another tuple changes is
-  `NOTIMPL`.
+  subroutine. Every value and every target's subscripts are computed for all tuples before
+  anything is stored, as for an assignment, whatever the statement's kind: `FORALL (I = 1:3)
+  R(I+1)%P => R(I)%P` gives each pointer the target its neighbor had, and `FORALL (I = 1:5)
+  IV(IV(I)) = 10*I` finds every target from IV as it was.
 
   The FORALL construct, `FORALL (header)` ... `END FORALL`, optionally named as a DO is, is its
   statements one after another, each done for every tuple before the next begins: assignments,
@@ -9202,13 +9204,11 @@ shifted:  72.0  72.0  85.0  52.0  91.0  49.0
   end forall
   ```
 
-  B is set where A was positive as the FORALL began. A jump into the construct is `INTOBLOCK`.
-  Not yet compiled (`NOTIMPL`): a target whose subscripts read its own array; an array target,
-  or a CHARACTER one of a length known only when the program runs, that the value reads
-  elsewhere; a pointer assignment, defined assignment, or WHERE whose values may be what another
-  tuple changes; a nested FORALL's bounds that its own statements may change; and a statement
-  that needs temporaries, or a mask that needs one, inside a FORALL whose bounds use an outer
-  index.
+  B is set where A was positive as the FORALL began. A nested FORALL's bounds are computed when
+  it is reached, for each outer tuple, and kept, though its statements change what they read. A
+  WHERE in a FORALL does each of its assignments for every tuple before the next. A jump into
+  the construct is `INTOBLOCK`. One form is not yet compiled (`NOTIMPL`): a WHERE of more than one
+  assignment whose assignments change what its masks read and overlap what they assign.
 
   ```fortran
   forall (i = 1:n, j = 1:n, a(i,j) /= 0.0) b(i,j) = 1.0 / a(i,j)
@@ -10814,8 +10814,7 @@ naming what it is:
 | An assumed-shape array as `%LOC`'s, `%REF`'s, or a system subroutine's argument | Pass an element, or an explicit-shape copy |
 | TRANSFER to a `MOLD` that is a CHARACTER array expression of a length known only when the program runs, not a name, a section, a substring, or a constructor | A MOLD of constant length, or a name |
 | A NAMELIST object deeper than 8 levels of arrays and derived types, or with more than 15 dimensions in all | FTNRTL's limits; `%FORT-E-NOTIMPL` |
-| In a FORALL, a statement whose value overlaps what it assigns (so it needs temporaries) when it is a pointer assignment, a defined assignment, a WHERE, or an assignment to an array or to a CHARACTER target of run-time length; any such statement, or a mask its statements change, inside a FORALL whose bounds use an outer index; a target whose subscripts read its own storage (`V(V(I)) = 0`); a nested FORALL's bound that its own statements may change | A DO loop, or the value computed into an array of its own first |
-| An elemental defined assignment of a CHARACTER array expression of run-time length that overlaps its target | Put the value in a variable first |
+| In a FORALL, a WHERE of more than one assignment whose assignments change what its masks read and overlap what they assign | Split the WHERE, its mask computed into an array of its own first |
 
 Without `/CHECK=POINTERS` ([section 14.3](#143-the-fortran-command)) a disassociated pointer's
 target is at address 0, and using it is an access violation. Fortran 95's additions are all

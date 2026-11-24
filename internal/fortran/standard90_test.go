@@ -84,6 +84,14 @@ func (m memoryModules) Find(name string) ([]string, string, bool, []string) {
 // everyday forms), which gfortran -std=f95 accepts as it must. A file another
 // includes is named by the file compiled.
 var witnessExtensions = map[string][]string{
+	"errata": {
+		"errata.f90:78 obsolescent in Fortran 95: a statement function",
+		"errata.f90:79 obsolescent in Fortran 95: a statement function",
+	},
+	"zerolen": {
+		"zerolen.f90:50 obsolescent in Fortran 95: the CHARACTER*n form of a length",
+		"zerolen.f90:51 obsolescent in Fortran 95: the CHARACTER*n form of a length",
+	},
 	"autolen": {
 		"autolen.f90:75 obsolescent in Fortran 95: the CHARACTER*n form of a length",
 	},

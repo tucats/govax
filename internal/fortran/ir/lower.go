@@ -45,6 +45,10 @@ func LowerWith(p *sema.Program, opts Options) []*Routine {
 // a terminator and starts a new block. So lowering a FORTRAN statement is
 // mostly "emit some statements into cur, perhaps end it and start another".
 type lowerer struct {
+	// recording is the recording of a statement's stores in progress
+	// (lowerrecord.go), nil when none is.
+	recording *recorder
+
 	// byComponents is set while a formatted statement's items are lowered:
 	// an object of a derived type is then its components (objectItems).
 	byComponents bool

@@ -977,7 +977,8 @@ and where each goes:
   in a FORALL whose bounds use an outer index; a target whose subscripts read its own storage
   (`V(V(I)) = 0`); a nested FORALL's bound its own statements may change; a FORALL whose pointer's
   storage isn't known; an elemental defined assignment of a CHARACTER array expression of run-time
-  length overlapping its target.
+  length overlapping its target. *(Resolved in Phase 113, subtask 3, but for a WHERE of more than one
+  assignment whose assignments change what its masks read.)*
 - **Rules not checked:** PURE's storage association (an EQUIVALENCE partner of a global), a pointer
   component's target reached through a global or an INTENT(IN) dummy, a structure constructor's
   pointer component given a global, and an internal procedure of a PURE one being PURE (its

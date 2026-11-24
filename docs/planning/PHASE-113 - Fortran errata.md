@@ -692,7 +692,7 @@ A.8.1 is not planned.
 2. Fortran 90's NOTIMPLs and noticed items (A.3.1, A.3.4), a STRUCTURE with initial values in
    a module's text (A.15.4), and PURE's and ELEMENTAL's unchecked rules (A.15.6, answer B)
    (done 2026-11-23).
-3. FORALL's remaining NOTIMPLs (A.15.5, answer A).
+3. FORALL's remaining NOTIMPLs (A.15.5, answer A) (done 2026-11-23).
 4. The compiler's small things and `STARLET_` modules (A.1.4, A.1.5, A.1.10, A.3.3).
 5. MACRO (A.6.1, 2, 5).
 6. LINK and LIB$INITIALIZE (A.7.1, A.7.3, A.2.2; answer C: the old call removed).
@@ -827,3 +827,37 @@ Each subtask may begin with a survey of its own, as earlier phases' did.
     statement function, and "What Fortran 90 isn't here" six rows shorter) and
     FORTRAN-INTERNALS.md's section 33 follow; the items are marked resolved in Phases 104 to 108,
     111, and 112. Subtask 3 is next.
+- **2026-11-23, subtask 3 (done):** FORALL's remaining NOTIMPLs, all but one compiled.
+  - *Recorded stores* (`ir/lowerrecord.go`; sema's `Forall.Recorded`, the dump's "[stores
+    recorded]"): a step that can't go through temporaries of the index set's shape is lowered three
+    times over its own walk, each store to the program's storage intercepted (`recordsStore`, in
+    `assignScalar`, `moveRecord`, `call`, `pointerAssign`, and `nullify`): sized, recorded in a buffer
+    of the statement's (each entry the target's address, its length, the value's length, the value),
+    and played back by a counted loop (`playRecords`). It takes a target whose subscripts read its
+    own storage (`V(V(I)) = 0`), a target reached through a pointer, an array target, a CHARACTER
+    target of run-time length, a triangle of tuples, pointer assignments (scalar, CHARACTER, and
+    array pointer components; the storage's bytes), defined assignments (the subroutine called at
+    playback, `slotSymbol`), and a WHERE, a pass per assignment (`sema.WhereAssignments`,
+    `WhereOnly`). The one form left NOTIMPL is a WHERE of more than one assignment whose assignments
+    change what its masks read (`whereRecordable`): each pass tests the masks again. `forallStepOrder`
+    keeps the old temporaries for a scalar assignment over a rectangle (`forallTemporaries`).
+  - *Listed tuples* (`Forall.List`, "[tuples listed]"; `ir`'s `forallList` and `walkList`): a nested
+    FORALL's bound its statements change, or a mask they change where the index set isn't a
+    rectangle or is inside a listed one, lists the tuples as the FORALL is reached, masks tested, in
+    an INTEGER temporary; the statements under it walk the list.
+  - *An elemental defined assignment of CHARACTER values of run-time length overlapping its target*
+    (`operators.go`): `ArrayOrder.Recorded`, its calls recorded by `maskedCall`.
+  - *Found and fixed*: `forallVaries` asked `readSymbols`, which doesn't look inside an operation,
+    so `FORALL (J = 1:I-1)` was a rectangle and its bounds were computed before I had a value (now
+    `readsAny`); a mask's test in a FORALL's loops (`forallMasked`'s `stmtCond`) gave back every
+    run-time temporary of the statement at the first tuple; an array pointer component's
+    references all dump as `V()%P`, so `V(I+1)%P => V(I)%P` looked like the same element
+    (`referenceKey` adds the component's symbol), and a pointer assignment's target that is a
+    pointer now counts as reading its home's storage. And subtask 2's left-over: `errata.f90` and
+    `zerolen.f90` draw Fortran 95's obsolescent notices, now in `TestStandardF90Witness`'s list.
+  - Tests: `sema`'s `TestForallRecorded` (and `TestForallErrors`'/`TestForallConstructErrors`'
+    old NOTIMPLs gone, the one left); `testdata/fortran90/forallrec.f90` (every case, in all eight
+    modes; gfortran the same but for the pointer and defined assignments, which it does tuple by
+    tuple, `compare.py`'s KNOWN), added to `testdata/f90r`'s procedure and `f90rAwaitingVMS`.
+    MANUAL.md's 14.13 and its table, FORTRAN-INTERNALS.md's section 37 ("Recording the stores"),
+    and Phase 112's list follow. Subtask 4 is next.

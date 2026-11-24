@@ -174,6 +174,7 @@ PROGRAMS90 = {
     "elementals": ["elementals.f90"],
     "foralls": ["foralls.f90"],
     "forallc": ["forallc.f90"],
+    "forallrec": ["forallrec.f90"],
     "wheres": ["wheres.f90"],
     "intrins": ["intrins.f90"],
     "zerowid": ["zerowid.f90"],
@@ -205,6 +206,13 @@ FCALC_BUILDS = {
 
 # Lines gfortran prints differently for a reason, each program's: the .out's line and gfortran's.
 KNOWN = {
+    "forallrec": {
+        # Fortran 95's 7.5.4.4 has a FORALL's pointer assignment determine every target, and its
+        # defined assignment evaluate every value, for all tuples before any is stored; gfortran
+        # does both tuple by tuple, so later tuples see earlier ones' stores (PHASE-113, subtask 3).
+        " 1  2  1  2  3  4": " 1  2  1  2  1  2",
+        "40000 30000 20000 10000": "40000 30000************",
+    },
     "model": {
         # REAL(8) is D_floating, 56 digits, where gfortran's is IEEE's double, 53: a unit in the
         # last place of 3 is 2**-54, not 2**-51 (PHASE-108's finding 7).

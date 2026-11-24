@@ -1,6 +1,8 @@
 package sema
 
 import (
+	"fmt"
+
 	"github.com/tucats/govax/internal/fortran/ast"
 	"github.com/tucats/govax/internal/fortran/lex"
 )
@@ -94,7 +96,7 @@ func (a *analyzer) forallStatement(s *ast.ForallStmt) Stmt {
 		return nil
 	}
 
-	f.Body, f.Temporaries = []Stmt{st}, []bool{false}
+	f.Body, f.Temporaries, f.Recorded = []Stmt{st}, []bool{false}, []bool{false}
 
 	if a.inForall() {
 		// The outermost FORALL judges it, with the rest of its statements.
@@ -144,6 +146,7 @@ func (a *analyzer) endForall(s *ast.EndForallStmt) {
 	f.EndForall = s
 	f.Body = c.arm.Body
 	f.Temporaries = make([]bool, len(f.Body))
+	f.Recorded = make([]bool, len(f.Body))
 
 	if !a.inForall() && (!a.forallReferences(c.firstCall) || !a.finishForall(f)) {
 		return
@@ -401,6 +404,11 @@ func (a *analyzer) forallReferences(first int) bool {
 	return ok
 }
 
+// StoreSymbol is the symbol whose storage a store to t writes, or nil if that
+// isn't known (a place reached through a pointer): lowering's test of whether a
+// store is the program's (ir/lowerrecord.go).
+func StoreSymbol(t Expr) *Symbol { return forallTargetSymbol(t) }
+
 // forallTargetSymbol is the symbol whose storage the FORALL target t writes.
 func forallTargetSymbol(t Expr) *Symbol {
 	if s := baseSymbol(t); s != nil {
@@ -452,15 +460,28 @@ func forallSubscriptsRead(target Expr, ts *Symbol) bool {
 	return false
 }
 
+// referenceKey is what tells two references of a FORALL's statement apart: the
+// dump's text, and for an array pointer component its own symbol, which the text
+// doesn't show (V(I)%P and V(I+1)%P are both V()%P there; Phase 113).
+func referenceKey(e Expr) string {
+	key := DumpExpr(e)
+
+	if s := definedSymbol(e); s != nil && s.Component != nil {
+		key += fmt.Sprintf(" @%p", s)
+	}
+
+	return key
+}
+
 // readsElsewhere reports whether e may read storage ts may share anywhere but
-// at the reference whose text is same, the target's: arrayReads, passing over
-// each part of e that is that very reference.
+// at the reference whose key is same, the target's (referenceKey): arrayReads,
+// passing over each part of e that is that very reference.
 func readsElsewhere(e Expr, ts *Symbol, same string) bool {
 	if e == nil {
 		return false
 	}
 
-	if DumpExpr(e) == same {
+	if referenceKey(e) == same {
 		return false
 	}
 

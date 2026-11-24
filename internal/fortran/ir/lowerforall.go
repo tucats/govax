@@ -92,6 +92,12 @@ type forallLevel struct {
 	known    bool
 	counters []*sema.Symbol
 	maskTemp *sema.ArrayRef
+
+	// list is a listed level's tuples (sema's Forall.List; forallList): an
+	// INTEGER array whose column j is the j'th tuple's indexes, this level's
+	// and those around it, outermost first; listed, how many there are.
+	list   *sema.ArrayRef
+	listed sema.Expr
 }
 
 // forall lowers a FORALL statement or construct.
@@ -121,7 +127,10 @@ func (l *lowerer) forallLevels(n *arrayNest, outer []*forallLevel, s *sema.Foral
 	lv := l.forallLevel(n, s, sema.ForallVaries(append(foralls, s)))
 	levels := append(outer[:len(outer):len(outer)], lv)
 
-	if s.MaskTemp {
+	switch {
+	case s.List:
+		l.forallList(n, levels)
+	case s.MaskTemp:
 		l.forallMaskTemp(n, levels)
 	}
 
@@ -140,9 +149,12 @@ func (l *lowerer) forallLevels(n *arrayNest, outer []*forallLevel, s *sema.Foral
 			l.from = st.Source()
 		}
 
-		if s.Temporaries[i] {
+		switch {
+		case s.Temporaries[i]:
 			l.forallThroughTemps(n, levels, st.(*sema.Assign))
-		} else {
+		case s.Recorded[i]:
+			l.forallRecorded(n, levels, st)
+		default:
 			l.forallNest(n, levels, innermostMaskTemp(levels), true, func() { l.forallStatement(st) })
 		}
 
@@ -298,12 +310,20 @@ func (l *lowerer) forallNest(n *arrayNest, levels []*forallLevel, counted int, t
 	pos := l.here()
 	one := sema.IntConstAt(1, pos)
 	temp := innermostMaskTemp(levels)
+	listed := innermostList(levels)
 
 	var level func(j int)
 
 	level = func(j int) {
 		if j == len(levels) {
 			l.forallPass(body)
+
+			return
+		}
+
+		if j <= listed {
+			// The listed levels' tuples, their masks tested already.
+			l.walkList(n, levels[:listed+1], func() { level(listed + 1) })
 
 			return
 		}
@@ -509,7 +529,9 @@ func (l *lowerer) forallPass(body func()) {
 
 // forallMasked lowers body where the scalar LOGICAL mask holds, or always for a
 // nil mask. A temporary the mask made is given back before the test, so that
-// both ways leave it given back.
+// both ways leave it given back; the statement's own (its temporaries, a
+// listing, a recording's buffer) are kept apart from it, since they last
+// until its end.
 func (l *lowerer) forallMasked(mask sema.Expr, body func()) {
 	if mask == nil {
 		body()
@@ -518,7 +540,13 @@ func (l *lowerer) forallMasked(mask sema.Expr, body func()) {
 	}
 
 	yes, next := l.newBlock(), l.newBlock()
-	l.branch(l.stmtCond(mask), yes, next)
+
+	statement := l.runtime
+	l.runtime = runtimeTemps{}
+	cond := l.stmtCond(mask)
+	l.runtime = statement
+
+	l.branch(cond, yes, next)
 	l.begin(yes)
 
 	runtime, after := l.runtime, l.after
@@ -554,4 +582,109 @@ func (l *lowerer) forallStore(target, value sema.Expr) {
 	}
 
 	l.assignScalar(target, value)
+}
+
+// innermostList is the innermost of levels whose tuples are listed, or -1.
+func innermostList(levels []*forallLevel) int {
+	for j := len(levels) - 1; j >= 0; j-- {
+		if levels[j].list != nil {
+			return j
+		}
+	}
+
+	return -1
+}
+
+// forallList lists the tuples of levels' index set whose masks hold, the last
+// level's mask among them, as the last of them is reached (sema's
+// Forall.List): its bounds and its mask computed once, as 7.5.4.4 has them,
+// whatever its statements then change. A first walk counts the tuples, and a
+// second, the same, puts each one's indexes in a column of an INTEGER
+// temporary of that many columns.
+func (l *lowerer) forallList(n *arrayNest, levels []*forallLevel) {
+	pos := l.here()
+	lv := levels[len(levels)-1]
+	counted := innermostMaskTemp(levels)
+
+	var indexes []*sema.Symbol
+
+	for _, v := range levels {
+		for _, x := range v.f.Indexes {
+			indexes = append(indexes, x.Sym)
+		}
+	}
+
+	count := sema.NewSymbol("$I", sema.IntegerType)
+	l.bound[count] = &Mem{Cell: l.indexCell(), T: Long}
+	n.kept = append(n.kept, count)
+
+	increment := func() {
+		l.emit(&Assign{origin: l.origin(), Dst: l.symbolMem(count), Src: arith(Add, Long, &Load{l.symbolMem(count)}, LongConst(1))})
+	}
+
+	l.emit(&Assign{origin: l.origin(), Dst: l.symbolMem(count), Src: LongConst(0)})
+	l.forallNest(n, levels, counted, true, increment)
+
+	list := l.runtimeTemp(sema.IntegerType, []Expr{LongConst(int32(len(indexes))), &Load{l.symbolMem(count)}}, nil)
+
+	l.emit(&Assign{origin: l.origin(), Dst: l.symbolMem(count), Src: LongConst(0)})
+	l.forallNest(n, levels, counted, true, func() {
+		increment()
+
+		for k, x := range indexes {
+			at := sema.NewElem(list.Sym, []sema.Expr{sema.IntConstAt(k+1, pos), sema.NewVar(count, pos)}, []bool{true, true}, pos)
+			l.emit(&Assign{origin: l.origin(), Dst: l.mem(at), Src: &Load{l.symbolMem(x)}})
+		}
+	})
+
+	lv.list, lv.listed = list, sema.NewVar(count, pos)
+}
+
+// walkList lowers body for each tuple the last of levels has listed, every
+// level's index given its value there.
+func (l *lowerer) walkList(n *arrayNest, levels []*forallLevel, body func()) {
+	pos := l.here()
+	lv := levels[len(levels)-1]
+
+	counter := sema.NewSymbol("$I", sema.IntegerType)
+	l.bound[counter] = &Mem{Cell: l.indexCell(), T: Long}
+	n.kept = append(n.kept, counter)
+
+	name := "FORALL (line " + strconv.Itoa(lv.f.AST.Position().Line) + "), its listed tuples"
+
+	l.countedLoop(name, counter, sema.IntConstAt(1, pos), lv.listed, sema.IntConstAt(1, pos), false, func(*Block) {
+		k := 0
+
+		for _, v := range levels {
+			for _, x := range v.f.Indexes {
+				k++
+				at := sema.NewElem(lv.list.Sym, []sema.Expr{sema.IntConstAt(k, pos), sema.NewVar(counter, pos)}, []bool{true, true}, pos)
+				l.emit(&Assign{origin: l.origin(), Dst: l.symbolMem(x.Sym), Src: &Load{l.mem(at)}})
+			}
+		}
+
+		body()
+	})
+}
+
+// forallRecorded lowers st, a statement of the FORALL levels whose stores are
+// recorded (sema's Forall.Recorded; lowerrecord.go): its walk over every tuple,
+// sized, recorded, and the stores done; a WHERE's for each of its assignments
+// in turn.
+func (l *lowerer) forallRecorded(n *arrayNest, levels []*forallLevel, st sema.Stmt) {
+	pass := func(walked, store sema.Stmt) {
+		l.recordedStores(func() {
+			l.forallNest(n, levels, innermostMaskTemp(levels), true, func() { l.forallStatement(walked) })
+		}, store)
+	}
+
+	if w, ok := st.(*sema.Where); ok {
+		for _, a := range sema.WhereAssignments(w) {
+			pass(sema.WhereOnly(w, a), a)
+		}
+
+		return
+	}
+
+	pass(st, st)
 }

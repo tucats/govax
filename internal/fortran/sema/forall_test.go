@@ -86,10 +86,6 @@ func TestForallErrors(t *testing.T) {
 			"FORALLSET: I is an index of the FORALL, which only the FORALL gives values"},
 		{"a function not PURE", []string{"  forall (i = 1:4) v(i) = f(i)"},
 			"FORALLPURE: F isn't declared PURE, so it can't be referenced in a FORALL"},
-		{"its own subscripts", []string{"  forall (i = 1:4) v(v(i)) = 0"},
-			"NOTIMPL: a FORALL target whose subscripts read its own storage is not implemented yet"},
-		{"an array target overlapped", []string{"  forall (i = 1:3) w(i,:) = w(i+1,:)"},
-			"NOTIMPL: a FORALL whose array target its value overlaps is not implemented yet"},
 	}
 
 	for _, c := range cases {
@@ -259,18 +255,9 @@ func TestForallConstructErrors(t *testing.T) {
 			"INTOBLOCK: this jump to label 10 goes into a FORALL construct from outside it"},
 		{"an index outside", []string{"  forall (k = 1:4)", "    v(k) = 0", "  end forall", "  v(k) = 1"},
 			""},
-		{"a nested bound changed", []string{"  forall (i = 1:4)", "    forall (j = 1:v(1))", "      v(j) = 0", "      w(j,i) = 1",
-			"    end forall", "  end forall"},
-			"NOTIMPL: a nested FORALL's bound that its own statements may change is not implemented yet"},
-		{"a mask changed in a triangle", []string{"  forall (i = 1:4)", "    forall (j = 1:i, w(i,j) > 0)", "      w(i,j) = 0", "      v(j) = 1",
-			"    end forall", "  end forall"},
-			"NOTIMPL: a FORALL mask its statements may change, inside a FORALL whose bounds use an outer index is not implemented yet"},
-		{"through temporaries in a triangle", []string{"  forall (i = 1:4)", "    forall (j = 1:i) w(i,j) = w(j,i)", "  end forall"},
-			"NOTIMPL: a FORALL whose target its value overlaps, inside a FORALL whose bounds use an outer index is not implemented yet"},
-		{"a pointer target overlapped", []string{"  forall (i = 1:3) pp(i)%p => pp(i+1)%p"},
-			"NOTIMPL: a FORALL's pointer assignment whose values overlap what it assigns is not implemented yet"},
-		{"a WHERE overlapped", []string{"  forall (i = 1:3)", "    where (w(i,:) > 0) w(i,:) = w(:,i)", "  end forall"},
-			"NOTIMPL: a FORALL's WHERE whose values overlap what it assigns is not implemented yet"},
+		{"a WHERE's masks changed by two", []string{"  forall (i = 1:3)", "    where (w(i,:) > 0)", "      w(i,:) = w(:,i)",
+			"      w(i,:) = w(i,:) + 1", "    end where", "  end forall"},
+			"NOTIMPL: a FORALL's WHERE of more than one assignment, whose assignments change what its masks read and overlap what it assigns, is not implemented yet"},
 	}
 
 	for _, c := range cases {
@@ -285,6 +272,73 @@ func TestForallConstructErrors(t *testing.T) {
 
 		if got := messageText(analyzeFree(t, lines...)); got != c.want {
 			t.Errorf("%s:\n got %q\nwant %q", c.name, got, c.want)
+		}
+	}
+}
+
+// TestForallRecorded holds the forms Phase 113's subtask 3 compiles that were
+// NOTIMPL: each store recorded ("[stores recorded]") where temporaries of the
+// index set's shape can't hold the values, and a nested FORALL's tuples listed
+// ("[tuples listed]") where its bounds or mask are changed by its statements.
+func TestForallRecorded(t *testing.T) {
+	prog, messages := analyzeFreeWith(t, Options{},
+		"program p",
+		"  implicit none",
+		"  type pt",
+		"    integer, pointer :: p",
+		"  end type pt",
+		"  type pv",
+		"    integer, pointer :: v(:)",
+		"  end type pv",
+		"  integer :: v(8), w(4,4), i, j",
+		"  type(pt) :: pp(4)",
+		"  type(pv) :: vv(4)",
+		"  forall (i = 1:4) v(v(i)) = 0",
+		"  forall (i = 1:3) w(i,:) = w(i+1,:)",
+		"  forall (i = 1:4)",
+		"    forall (j = 1:i) w(i,j) = w(j,i)",
+		"  end forall",
+		"  forall (i = 2:4)",
+		"    forall (j = 1:i-1) w(i,j) = 0",
+		"  end forall",
+		"  forall (i = 1:4)",
+		"    forall (j = 1:v(1))",
+		"      v(j) = 0",
+		"      w(j,i) = 1",
+		"    end forall",
+		"  end forall",
+		"  forall (i = 1:4)",
+		"    forall (j = 1:i, w(i,j) > 0)",
+		"      w(i,j) = 0",
+		"      v(j) = 1",
+		"    end forall",
+		"  end forall",
+		"  forall (i = 1:3) pp(i)%p => pp(i+1)%p",
+		"  forall (i = 1:3) vv(i+1)%v => vv(i)%v",
+		"  forall (i = 1:3)",
+		"    where (w(i,:) > 0) w(i,:) = w(:,i)",
+		"  end forall",
+		"end program p")
+
+	if len(messages) != 0 {
+		t.Fatalf("messages: %s", messageText(messages))
+	}
+
+	dump := Dump(prog)
+
+	for _, want := range []string{
+		"FORALL (I = 1:4) V[V[I]] = 0  [stores recorded]\n",
+		"FORALL (I = 1:3) W[I, 1:4:1] = W[(+:I I 1), 1:4:1]  [stores recorded]\n",
+		"  FORALL (J = 1:I) W[I, J] = W[J, I]  [stores recorded]\n",
+		"  FORALL (J = 1:(-:I I 1)) W[I, J] = 0\n",
+		"  FORALL (J = 1:V[1])  [tuples listed]\n",
+		"  FORALL (J = 1:I, (.GT.:I W[I, J] 0))  [tuples listed]\n",
+		"FORALL (I = 1:3) PP[I].P:+0 => PP[(+:I I 1)].P:+0  [stores recorded]\n",
+		"FORALL (I = 1:3) VV()%V[] => VV()%V[]  [stores recorded]\n",
+		"  WHERE (.GT.:I W[I, 1:4:1] 0) W[I, 1:4:1] = W[1:4:1, I]  [through a temporary]  [stores recorded]\n",
+	} {
+		if !strings.Contains(dump, want) {
+			t.Errorf("the dump has no %q:\n%s", want, dump)
 		}
 	}
 }

@@ -7,20 +7,28 @@ package sema
 // of the indexes of the FORALLs around it (its levels, outermost first) whose
 // masks hold, wholly before the next step begins. A step is done tuple by
 // tuple in turn, a nest of loops with each level's mask tested after its
-// loops, when no tuple's statement can change what another tuple's reads;
-// otherwise, for an assignment, its masks and values are computed first into
-// temporaries over the index set (Forall.Temporaries), as for the statement.
+// loops, when no tuple's statement can change what another tuple's reads.
+// Otherwise its values are computed first, and stored after: for a scalar
+// assignment over a rectangle of tuples, into temporaries of the index set's
+// shape (Forall.Temporaries), as for the statement; for anything else (an
+// array or a WHERE's assignment, a CHARACTER target of run-time length, a
+// pointer or defined assignment, a target whose subscripts read its own
+// storage or whose storage isn't known, an index set that isn't a rectangle)
+// by recording each store, its target's address with its value, for every
+// tuple, and then doing them (Forall.Recorded; Phase 113).
 //
 // What a FORALL's header computes is computed once, as the FORALL is reached.
 // Lowering keeps the outermost bounds then, and a nested FORALL's when it is
 // reached. A nested FORALL's bounds are computed again for each step and each
 // outer tuple, which gives the same values unless its own steps change what
-// they read: NOTIMPL. A mask is tested again by each step, which is right
-// unless one step changes what it reads before another tests it: then
-// (Forall.MaskTemp) it is computed for the whole index set into a LOGICAL
-// temporary at the FORALL, and its steps test that. Both temporaries need an
-// index set whose bounds don't use an outer index (a rectangle, varying);
-// anything else is NOTIMPL.
+// they read. A mask is tested again by each step, which is right unless one
+// step changes what it reads before another tests it: then (Forall.MaskTemp)
+// it is computed for the whole index set into a LOGICAL temporary at the
+// FORALL, and its steps test that, if the index set is a rectangle. Where
+// neither will do (a nested bound its steps change; a mask they change, in an
+// index set that isn't a rectangle or inside a listed one), the FORALL's
+// tuples are listed as it is reached, its mask tested then (Forall.List), and
+// its steps walk the list.
 
 // forallStep is one statement of a FORALL that isn't itself a FORALL: the
 // FORALLs around it, outermost first, and its place in the innermost's Body.
@@ -108,7 +116,7 @@ func (a *analyzer) forallSetsIndex(st forallStep) bool {
 
 // forallHeaderRules checks what the FORALL f's header computes against its
 // steps (the top of this file), f inside the FORALLs outer, and sets
-// MaskTemp; then f's nested FORALLs. False after NOTIMPL.
+// MaskTemp or List; then f's nested FORALLs.
 func (a *analyzer) forallHeaderRules(f *Forall, outer []*Forall, steps []forallStep) bool {
 	levels := append(outer[:len(outer):len(outer)], f)
 
@@ -120,29 +128,30 @@ func (a *analyzer) forallHeaderRules(f *Forall, outer []*Forall, steps []forallS
 		}
 	}
 
-	ok := true
+	listed := false
+	for _, o := range outer {
+		listed = listed || o.List
+	}
 
 	if len(outer) > 0 {
 		for _, x := range f.Indexes {
 			for _, e := range []Expr{x.Lower, x.Upper, x.Stride} {
 				if e != nil && stepsWrite(mine, e) {
-					a.notImplForm(e.Position(), "a nested FORALL's bound that its own statements may change")
-
-					return false
+					f.List = true
 				}
 			}
 		}
 	}
 
-	if f.Mask != nil && len(mine) > 1 && stepsWrite(mine, f.Mask) {
-		if forallVaries(levels) {
-			a.notImplForm(f.Mask.Position(), "a FORALL mask its statements may change, inside a FORALL whose bounds use an outer index")
-
-			return false
+	if f.Mask != nil && !f.List && len(mine) > 1 && stepsWrite(mine, f.Mask) {
+		if listed || forallVaries(levels) {
+			f.List = true
+		} else {
+			f.MaskTemp = true
 		}
-
-		f.MaskTemp = true
 	}
+
+	ok := true
 
 	for _, st := range f.Body {
 		if inner, nested := st.(*Forall); nested {
@@ -170,7 +179,7 @@ func stepsWrite(steps []forallStep, e Expr) bool {
 // first, isn't a rectangle: whether a bound or stride of one uses an index of
 // another around it.
 func forallVaries(levels []*Forall) bool {
-	outer := map[*Symbol]bool{}
+	var outer []*Symbol
 
 	for _, l := range levels {
 		for _, x := range l.Indexes {
@@ -179,8 +188,9 @@ func forallVaries(levels []*Forall) bool {
 					continue
 				}
 
-				for _, s := range readSymbols(e) {
-					if outer[s] {
+				// Anywhere in the expression: J = 1:I-1 uses I.
+				for _, s := range outer {
+					if readsAny(e, s) {
 						return true
 					}
 				}
@@ -188,7 +198,7 @@ func forallVaries(levels []*Forall) bool {
 		}
 
 		for _, x := range l.Indexes {
-			outer[x.Sym] = true
+			outer = append(outer, x.Sym)
 		}
 	}
 
@@ -211,8 +221,8 @@ func stepMasks(levels []*Forall) []Expr {
 }
 
 // forallStepOrder decides whether the step st is done tuple by tuple in turn,
-// or, for an assignment, through temporaries (Forall.Temporaries). False after
-// NOTIMPL, for the forms neither way takes yet.
+// through temporaries (Forall.Temporaries), or by recording its stores
+// (Forall.Recorded). False after NOTIMPL, for the one form none takes.
 func (a *analyzer) forallStepOrder(st forallStep) bool {
 	f := st.levels[len(st.levels)-1]
 	masks := stepMasks(st.levels)
@@ -227,22 +237,19 @@ func (a *analyzer) forallStepOrder(st forallStep) bool {
 		reads = append(reads, t.expr)
 	}
 
-	inTurn := true
+	inTurn, plain := true, true
 
 	for _, t := range targets {
-		if t.sym == nil {
-			a.notImplForm(t.expr.Position(), "a FORALL whose pointer's storage isn't known")
+		// A target whose storage isn't known (through a pointer), or whose
+		// subscripts read its own (V(V(I)) = 0): every target's subscripts are
+		// computed before any element is stored (7.5.4.4), so its address is.
+		if t.sym == nil || forallSubscriptsRead(t.expr, t.sym) {
+			inTurn, plain = false, false
 
-			return false
+			continue
 		}
 
-		if forallSubscriptsRead(t.expr, t.sym) {
-			a.notImplForm(t.expr.Position(), "a FORALL target whose subscripts read its own storage")
-
-			return false
-		}
-
-		same := DumpExpr(t.expr)
+		same := referenceKey(t.expr)
 
 		for _, e := range reads {
 			if readsElsewhere(e, t.sym, same) {
@@ -251,51 +258,162 @@ func (a *analyzer) forallStepOrder(st forallStep) bool {
 		}
 	}
 
-	if inTurn {
+	// A pointer assignment whose target is a pointer reads that pointer's
+	// storage, which for an array pointer component is its record's though the
+	// reference names the component's own symbol: V(I+1)%P => V(I)%P.
+	if p, ok := st.stmt().(*PointerAssign); ok && IsPointer(p.Target) {
+		if home := pointerOwner(p.Target); home != nil {
+			for _, t := range targets {
+				if t.sym != nil && mayShare(t.sym, home) && referenceKey(t.expr) != referenceKey(p.Target) {
+					inTurn = false
+				}
+			}
+		}
+	}
+
+	switch {
+	case inTurn:
+		return true
+
+	case plain && forallTemporaries(st):
+		f.Temporaries[st.at] = true
+
 		return true
 	}
 
-	s, assign := st.stmt().(*Assign)
-
-	switch {
-	case !assign:
-		a.notImplForm(st.stmt().Source().Position(), "a FORALL's "+forallStepWhat(st.stmt())+" whose values overlap what it assigns")
-
-		return false
-
-	case rankOf(s.Target) > 0:
-		a.notImplForm(s.Target.Position(), "a FORALL whose array target its value overlaps")
-
-		return false
-
-	case s.Target.Type().Kind == Character && s.Target.Type().Size == 0:
-		a.notImplForm(s.Target.Position(), "a FORALL whose target of run-time length its value overlaps")
-
-		return false
-
-	case forallVaries(st.levels):
-		a.notImplForm(s.Target.Position(), "a FORALL whose target its value overlaps, inside a FORALL whose bounds use an outer index")
+	if w, ok := st.stmt().(*Where); ok && !whereRecordable(w, masks) {
+		a.notImplForm(w.Mask.Position(), "a FORALL's WHERE of more than one assignment, whose assignments change what its masks read and overlap what it assigns,")
 
 		return false
 	}
 
-	f.Temporaries[st.at] = true
+	f.Recorded[st.at] = true
 
 	return true
 }
 
-// forallStepWhat names a step's statement for NOTIMPL.
-func forallStepWhat(s Stmt) string {
-	switch s.(type) {
-	case *Call:
-		return "defined assignment"
-	case *PointerAssign, *Nullify:
-		return "pointer assignment"
-	case *Where:
-		return "WHERE"
+// forallTemporaries reports whether the step st, done through temporaries, can
+// have them in the index set's shape: a scalar assignment, not of a CHARACTER
+// target of run-time length, in FORALLs whose index set is a rectangle and
+// whose tuples aren't listed.
+func forallTemporaries(st forallStep) bool {
+	s, assign := st.stmt().(*Assign)
+	if !assign || rankOf(s.Target) > 0 || forallVaries(st.levels) {
+		return false
 	}
 
-	return "assignment"
+	if t := s.Target.Type(); t.Kind == Character && t.Size == 0 {
+		return false
+	}
+
+	for _, l := range st.levels {
+		if l.List {
+			return false
+		}
+	}
+
+	return true
+}
+
+// whereRecordable reports whether the WHERE w, a FORALL's step whose stores are
+// recorded, can be: one recorded pass for each of its assignments in turn, each
+// testing the masks again (WhereAssignments), which needs one assignment, or
+// masks (its own, and the FORALL's masks the step tests) that none of its
+// assignments may change.
+func whereRecordable(w *Where, masks []Expr) bool {
+	if len(WhereAssignments(w)) <= 1 {
+		return true
+	}
+
+	masks = append(masks, whereMasks(w)...)
+
+	for _, t := range stepTargets(w) {
+		if t.sym == nil {
+			return false
+		}
+
+		for _, m := range masks {
+			if arrayReads(m, t.sym) {
+				return false
+			}
+		}
+	}
+
+	return true
+}
+
+// whereMasks are every mask of the WHERE w and of the WHEREs nested in it.
+func whereMasks(w *Where) []Expr {
+	masks := []Expr{w.Mask}
+
+	for _, m := range w.Masked {
+		masks = append(masks, m.Mask)
+	}
+
+	for _, arm := range w.arms() {
+		for _, st := range arm.Body {
+			if inner, ok := st.(*Where); ok {
+				masks = append(masks, whereMasks(inner)...)
+			}
+		}
+	}
+
+	return masks
+}
+
+// WhereAssignments are the WHERE w's assignments (an *Assign, or an elemental
+// defined assignment's *Call), those of the WHEREs nested in it among them, in
+// the order written: the order they are done in.
+func WhereAssignments(w *Where) []Stmt {
+	var list []Stmt
+
+	for _, arm := range w.arms() {
+		for _, st := range arm.Body {
+			if inner, ok := st.(*Where); ok {
+				list = append(list, WhereAssignments(inner)...)
+
+				continue
+			}
+
+			list = append(list, st)
+		}
+	}
+
+	return list
+}
+
+// WhereOnly is a copy of the WHERE w with only its assignment keep, one of
+// WhereAssignments(w): every mask the same, every other assignment gone.
+func WhereOnly(w *Where, keep Stmt) *Where {
+	only := func(arm *Arm) *Arm {
+		if arm == nil {
+			return nil
+		}
+
+		copied := *arm
+		copied.Body = nil
+
+		for _, st := range arm.Body {
+			if inner, ok := st.(*Where); ok {
+				copied.Body = append(copied.Body, WhereOnly(inner, keep))
+			} else if st == keep {
+				copied.Body = append(copied.Body, st)
+			}
+		}
+
+		return &copied
+	}
+
+	copied := *w
+	copied.Then = only(w.Then)
+	copied.Else = only(w.Else)
+	copied.Masked = nil
+
+	for _, m := range w.Masked {
+		copied.Masked = append(copied.Masked, &MaskedArm{Arm: only(m.Arm), Mask: m.Mask, MaskTemp: m.MaskTemp})
+	}
+
+	return &copied
 }
 
 // forallTarget is what a FORALL's step gives a value or an association to,

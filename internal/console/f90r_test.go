@@ -244,9 +244,9 @@ var f90rVMSDifferences = map[string]string{}
 // programs and fcalc whose bare .ASCII VMS's MACRO refused; round 2 ran them all.)
 // ZEROSIZE, NULLS, and DEFAULTS are Phase 112's (subtasks 3 to 5), and the rest (M_COLONY too) its later
 // subtasks', added to the corpus after round 2; Phase 113's VMS round is to run them,
-// with Phase 113's own programs (RUNDIMS to M_STAMPS, subtask 2).
+// with Phase 113's own programs (RUNDIMS to M_STAMPS, subtask 2; FORALLREC, subtask 3).
 var f90rAwaitingVMS = []string{"ZEROSIZE", "NULLS", "DEFAULTS", "PURES", "ELEMENTALS", "FORALLS", "FORALLC", "WHERES",
-	"INTRINS", "ZEROWID", "ZEROWIDVMS", "M_COLONY", "RUNDIMS", "ERRATA", "ZEROLEN", "MODELRAW", "M_STAMPS"}
+	"INTRINS", "ZEROWID", "ZEROWIDVMS", "M_COLONY", "RUNDIMS", "ERRATA", "ZEROLEN", "MODELRAW", "M_STAMPS", "FORALLREC"}
 
 // TestF90ROracle holds the procedure's run on govax to VMS 7.1's: Fortran 90 programs
 // govax's compiler made, assembled and linked by VMS's MACRO and LINK against an FTNRTL

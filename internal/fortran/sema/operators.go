@@ -468,13 +468,12 @@ func (a *analyzer) elementalAssignment(c *Call, pos diag.Position) bool {
 
 	c.Order = order
 
-	// The temporary's CHARACTER elements need a length (Constructor.LengthOf's
-	// rule, as an assignment's).
+	// A temporary's CHARACTER elements need a length (Constructor.LengthOf's
+	// rule, as an assignment's); without one, each value is recorded with its
+	// call's target instead.
 	if value := c.Args[1].Expr; ok && order.Temporary {
 		if vt := value.Type(); vt.Kind == Character && vt.Size == 0 && !lengthFromNames(value) {
-			a.notImplForm(pos, "an elemental defined assignment of a CHARACTER array expression of a length known only when the program runs, overlapping its target")
-
-			return false
+			order.Recorded = true
 		}
 	}
 

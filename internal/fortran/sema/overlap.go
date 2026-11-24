@@ -51,10 +51,14 @@ import (
 // extent then needn't be known when compiling); CopyVectors that the target's
 // vector subscripts read the target's own array (IV(IV) = 1), so that each is
 // copied into a temporary first, since they must be computed before any
-// element is defined (7.5.1.5).
+// element is defined (7.5.1.5). Recorded, with Temporary, says the
+// temporary's elements' length isn't known (an elemental defined assignment's
+// CHARACTER value of run-time length, not made of names: Phase 113), so the
+// value is recorded with each call's target instead (ir/lowerrecord.go).
 type ArrayOrder struct {
 	Down        []bool
 	Temporary   bool
+	Recorded    bool
 	TempShape   []int
 	Fill        bool
 	CopyVectors bool
@@ -89,6 +93,10 @@ func (o *ArrayOrder) Hoisted(e Expr) bool {
 func (o *ArrayOrder) String() string {
 	if o == nil {
 		return ""
+	}
+
+	if o.Recorded {
+		return o.vectorsText() + "  [stores recorded]"
 	}
 
 	if o.Temporary {

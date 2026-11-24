@@ -206,6 +206,12 @@ func (l *lowerer) call(s *sema.Call) {
 		return
 	}
 
+	if l.recordsCall(s) {
+		l.recordStore(s.Args[0].Expr, s.Args[1].Expr, true)
+
+		return
+	}
+
 	args, backs := l.args(s.Args)
 	call := &Call{origin: l.origin(), Args: args}
 	call.Routine, call.Local, call.Through = l.callee(s.Sub)
@@ -325,6 +331,12 @@ func (l *lowerer) assign(s *sema.Assign) {
 
 // assignScalar lowers target = value for a scalar target that isn't a record.
 func (l *lowerer) assignScalar(target, value sema.Expr) {
+	if l.recordsStore(target) {
+		l.recordStore(target, value, false)
+
+		return
+	}
+
 	if target.Type().Kind == sema.Character {
 		l.emit(&CharMove{l.origin(), l.chars(target), l.chars(value)})
 
