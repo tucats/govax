@@ -1,0 +1,38 @@
+$ ! FOR81G.COM - Phase 113's FORRTL round (round 3 of testdata/for81).
+$ ! Written by testdata/for81/gen.go. Run it from the round's volume's [FOR81G]
+$ ! (testdata/err113's README):
+$ !
+$ !     @FOR81G/OUTPUT=FOR81G.LOG
+$ !
+$ SET NOON
+$ SET VERIFY
+$ WRITE SYS$OUTPUT F$GETSYI("VERSION"), " ", F$GETSYI("HW_NAME")
+$ MACRO/NOLIST FOR81G
+$ LINK/NOMAP FOR81G,FOR81/OPTIONS
+$ MACRO/NOLIST FOR81T
+$ LINK/NOMAP FOR81T,FOR81/OPTIONS
+$ !
+$ ! Units -1 to -4: which name each statement's unit opens, if any of these.
+$ CREATE ACC.DAT
+FROM FOR$ACCEPT
+$ CREATE RDF.DAT
+FROM FOR$READ
+$ DEFINE/NOLOG FOR$PRINT PRT.DAT
+$ DEFINE/NOLOG FOR$TYPE TYP.DAT
+$ DEFINE/NOLOG FOR$ACCEPT ACC.DAT
+$ DEFINE/NOLOG FOR$READ RDF.DAT
+$ !
+$ ! Through a procedure with /OUTPUT, so that unit 6's records join the cases'
+$ ! lines in one file.
+$ @FOR81H/OUTPUT=FOR81G-VAX.TXT
+$ SHOW SYMBOL $STATUS
+$ DEASSIGN FOR$PRINT
+$ DEASSIGN FOR$TYPE
+$ DEASSIGN FOR$ACCEPT
+$ DEASSIGN FOR$READ
+$ DIRECTORY/SIZE=ALL *.DAT,*.IDX
+$ TYPE PRT.DAT
+$ TYPE TYP.DAT
+$ TYPE FOR013.DAT
+$ DUMP/RECORD S*.DAT
+$ EXIT

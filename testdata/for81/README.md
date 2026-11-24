@@ -124,6 +124,33 @@ and ends rather than running out of stack.
 
 It ran on 2026-10-31, whole: `vax/for81f-vax.txt` and `vax/for81f.log`.
 
+## Round 3: Phase 113's FORRTL round
+
+`docs/planning/PHASE-113 - Fortran errata.md`'s subtask 12b asks VMS what Phases 80, 81,
+88, and 112 left unconfirmed that a program can ask FORRTL (A.10), and Fortran 95's zero
+widths on output (A.15.3). `gen.go` writes:
+
+| File | What it holds |
+| ---- | ------------- |
+| `for81g.mar` | 64 cases: the current record after REWIND, BACKSPACE, ENDFILE, and UNLOCK; DELETE by number on a unit not open and on a sequential-access relative unit, and the associated variable after it; record -1 and 0, through FORRTL and RMS's keyed `$GET`; an implicit OPEN's FAB; a last FIX record the end of file cuts short (SHORT.DAT, one block `$WRITE` to a FIX 24 file); a relative file's growth; segment words FORRTL reads (SEGRECFOR); ERRSNS after ERR= or IOSTAT= took an error; the PC and user PC of an error an item's call finds; I0, B0, O0, Z0, F0.d, and the others with w 0; a longword, word, and byte key on a signed word key; units -1 to -4 by logical name |
+| `for81t.mar` | At a terminal, by hand: a long line and a short one read from unit 5, unit 6 and ACCEPT read there, 140 and 200 characters written |
+| `for81g.com`, `for81h.com` | Build both, define FOR$PRINT, FOR$TYPE, FOR$ACCEPT, and FOR$READ, run FOR81G, show the files |
+
+The output adds three line forms to round 1's: `errsns n= sts= stv= u= c=` (FOR$ERRSNS's five
+values), `pc b= i= e=` and `user pc b= i= e=` (a condition's PC, and a FOR$ condition's user
+PC, less the places after the statement's begin call, its first item's call, and FOR$IO_END's
+call), and `rms $GET name key n: sts= stv= rsz=`, each after a blank. Unit 6's records come among the lines, each
+a case's edit and value, then the field between bars.
+
+It goes to the VAX on `testdata/err113`'s volume, in `[FOR81G]`, whose README has the session;
+`err113/copyout.cmd` brings back `vax/for81g-vax.txt` and `vax/for81g.log`, and FOR81T's
+terminal text is pasted into `vax/for81t.log`.
+
+`TestFor81GProcedure` (`internal/console/for81g_test.go`) rehearses it on VMS's FORRTL.EXE over
+govax (or skips without one on a local volume). FORRTL's own logic runs unchanged there, so the
+rehearsal already answers what doesn't reach RMS (the phase doc lists it); the VAX confirms
+those and answers the rest. `FOR81G_WRITE` names a file for govax's output.
+
 ## What the tests hold
 
 `internal/console/for81rms_test.go` runs the RMS programs on govax, on a fresh RD54 volume as

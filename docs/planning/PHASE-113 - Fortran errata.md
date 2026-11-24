@@ -717,7 +717,7 @@ A.8.1 is not planned.
       LIB$INITIALIZE, MACRO's questions (A.6.3, 6, 7), DCL's messages from subtask 11, TYPE
       without carriage control, a full volume, and the index file past its header (A.9.1);
       RECURAST's longer timer (A.9.3) (done 2026-11-24).
-    - 12b. The FORRTL round (A.10's FORRTL items, Fortran 95's zero widths on output).
+    - 12b. The FORRTL round (A.10's FORRTL items, Fortran 95's zero widths on output) (done 2026-11-24).
     - 12c. The debugger round (A.8.6).
     - 12d. The session on VMS 7.1: `testdata/err113`, `testdata/ftn86` (round 6), and
       `testdata/f90r` (round 3), with 12b's and 12c's; the results copied back.
@@ -1207,3 +1207,52 @@ Each subtask may begin with a survey of its own, as earlier phases' did.
     three arguments when an image has the section (`MAIN: 3 arguments`); VMS's count is the
     round's answer.
   - Subtask 12b, the FORRTL round, is next.
+- **2026-11-24, subtask 12b (done):** the FORRTL round, round 3 of `testdata/for81` (its
+  README's "Round 3"), on the round's volume in `[FOR81G]` (`err113`'s `exchange.cmd`,
+  `copyout.cmd`, and README's session).
+  - *What it asks* (`gen.go`'s `round3`, `for81g.mar`, 64 cases): the current record after
+    REWIND, BACKSPACE, ENDFILE, and UNLOCK (DELETE on relative units, REWRITE on sequential FIX
+    ones, since REWIND of a relative unit is REWERR); DELETE by number on a unit not open and on a
+    sequential-access relative unit, and the associated variable after it (code 17: round 1's
+    `kAssoc` was 22, IOSTAT, which is how IOSTAT was found; `kAssocVar` now); record -1 and 0
+    through FORRTL, and RMS's keyed `$GET` of a relative and a FIX file (`KEYGET`); an implicit
+    READ's and WRITE's FAB; a last FIX record the end of file cuts short (`MKSHORT`: one block
+    `$WRITE` to a FIX 24 file, 21 records and 8 bytes), read formatted, unformatted, and direct; a
+    relative file's growth from one record far out; thirteen files of segment words; ERRSNS after
+    ERR= and IOSTAT= took an error; the PC and the user PC of errors found at the begin call, an
+    item's call, and FOR$IO_END (`HNDPC`); I0, Iw.m, B0, O0, Z0, F0.d, and E, G, L, A, D with w 0;
+    a longword, a word, and a byte value on a signed word key; units -1 to -4 with FOR$PRINT,
+    FOR$TYPE, FOR$ACCEPT, and FOR$READ defined. `for81t.mar` is the terminal's part, by hand (a
+    line of 250 characters, unit 6 and ACCEPT read there, 140 and 200 written). `$FORIOSDEF`'s
+    names (A.10) can't be asked of FORRTL; FORRTL's by-name NAME over govax is govax's own bug,
+    not a VMS question.
+  - *The rehearsal*, `TestFor81GProcedure` (`internal/console/for81g_test.go`), runs it on VMS's
+    FORRTL.EXE over govax. FORRTL's own logic runs there as on the VAX, so what doesn't reach RMS
+    is already answered (the VAX confirms it); subtask 13 compares FTNRTL with these:
+    - Units: -1 opens FOR$PRINT, -2 FOR$TYPE, -3 FOR$ACCEPT, -4 FOR$READ.
+    - The user PC: an output conversion error (OUTCONERR) and FORVARMIS report FOR$IO_END's
+      return, as FTNRTL does; INPCONERR reports the failing item's call's return, where FTNRTL
+      reports FOR$IO_END's; an end of file and FMTSYN the begin call's.
+    - ERRSNS: an error ERR= or IOSTAT= took on OPEN or CLOSE is saved, and ERRSNS clears it (a
+      second call is all zeros); INQUIRE of unit 120 with ERR= succeeds.
+    - Segment words: only bit 1 (last) ends a record: a first bit again, a last segment first,
+      and a middle one first are all joined into one record; a word over 3, a record shorter
+      than 2 bytes, and an empty record are SEGRECFOR (35); a file ending inside a record is
+      ENDDURREA (24).
+    - Zero widths: FORRTL takes w 0 in I, O, Z, F, E, G, L, D as a field of no columns,
+      OUTCONERR (63) for every value but I0.0 of 0, which is empty without error; A0 writes nothing
+      without error; B is FMTSYN. So VMS's FORRTL has no Fortran 95 zero widths; Phase 112's
+      `I0` of zero and F0.d's sign stay govax's choices.
+    - Keys: a longword on a word key is taken if its value fits (5, 70, -3) and KEYVALERR (49)
+      if not (70005, 65541: not truncated); a byte value is KEYVALERR, with RMS's status.
+    - The associated variable (preset to -1 before each statement): DELETE of record 3 sets 4, a
+      second DELETE of 3 (DELERR) leaves it, READ of 1 sets 2, then DELETE of 1 sets 3 (not 2:
+      FTNRTL's r+1 holds only for the first), and FIND of 4 sets 4. The rule isn't plain yet;
+      subtask 13 may want a case or two more.
+    - Record -1 and 0: FORRTL's RECNUMOUT (25) on a relative unit, before RMS; on a sequential FIX
+      direct unit RMS is asked (ERRDURREA and ERRDURWRI, govax's RMS$_KEY).
+  - *For the VAX* (RMS's side): the current record after each operation; RMS's keyed `$GET`
+    statuses; the short FIX record (govax gives the 8 bytes, blank-padded formatted, INPSTAREQ
+    unformatted and direct); the relative files' allocations (govax: 3, 3, 21, 93, 51, 603, and 9
+    blocks); an implicit READ's FAC (govax: 1F); the terminal's limits.
+  - Subtask 12c, the debugger round, is next.

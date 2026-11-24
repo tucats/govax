@@ -38,6 +38,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -70,7 +71,8 @@ const (
 	kOrg      = 19
 	kRecType  = 20
 	kUserOpen = 21
-	kAssoc    = 22
+	kAssoc    = 22 // round 1's guess, which turned out to be IOSTAT
+	kAssocVar = 17 // ASSOCIATEVARIABLE, as round 2 found
 	kKey      = 23
 	kBlank    = 24
 	kDefault  = 26
@@ -88,6 +90,7 @@ type prog struct {
 	subs  strings.Builder
 	nsub  int
 	inner bool
+	hnd   string // the statements' handler, HND when empty
 }
 
 func newProg(name string) *prog { return &prog{name: name, texts: map[string]string{}} }
@@ -145,7 +148,13 @@ func (p *prog) stmt(f func()) {
 	f()
 	p.inner = false
 	p.body = prev
-	fmt.Fprintf(&p.subs, "\t.ENTRY\tS%d,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>\n\tMOVAB\tHND,(FP)\n%s\tRET\n", id, b.String())
+
+	hnd := p.hnd
+	if hnd == "" {
+		hnd = "HND"
+	}
+
+	fmt.Fprintf(&p.subs, "\t.ENTRY\tS%d,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>\n\tMOVAB\t%s,(FP)\n%s\tRET\n", id, hnd, b.String())
 	p.emit("CALLS\t#0,L^S%d", id)
 }
 
@@ -3173,11 +3182,817 @@ $ DUMP/RECORD FOR015.DAT
 $ EXIT
 `
 
+// round3 is Phase 113's FORRTL round (docs/planning/PHASE-113 - Fortran errata.md,
+// subtask 12b): the choices Phases 80, 81, 88, and 112 left unconfirmed that a
+// program can ask FORRTL, and Fortran 95's zero widths on output. It runs from
+// testdata/err113's volume, in [FOR81G], with FOR$PRINT, FOR$TYPE, FOR$ACCEPT, and
+// FOR$READ naming files (FOR81G.COM).
+func round3() *prog {
+	p := newProg("FOR81G")
+
+	p.section("setup: the files the cases read")
+
+	p.kase("make the relative files, four records each", func() {
+		for _, name := range []string{"RC1", "RC2", "RC3", "RC4", "DN", "DA", "RM"} {
+			p.open(10, file(p, name+".DAT"), imm(kOrg, 2), imm(kRecl, 2), imm(kAccess, 1), imm(kStatus, 2))
+			for r := 1; r <= 4; r++ {
+				p.wrDU(10, r, 8)
+			}
+			p.closeU(10)
+		}
+	})
+	p.kase("make the sequential FIX files, four records each", func() {
+		for _, name := range []string{"RW1", "RW2", "RW3", "RW4"} {
+			p.open(10, file(p, name+".DAT"), imm(kForm, 2), imm(kRecType, 1), imm(kRecl, 2), imm(kStatus, 2))
+			for r := 1; r <= 4; r++ {
+				p.wrU(10, 8)
+			}
+			p.closeU(10)
+		}
+	})
+	p.kase("make FOR017.DAT and ABC.DAT", func() {
+		p.open(17, imm(kStatus, 2))
+		p.wrF(17, "SEVENTEEN")
+		p.closeU(17)
+		p.open(14, file(p, "ABC.DAT"), imm(kStatus, 2))
+		p.wrF(14, "ABCD")
+		p.wrF(14, "12345678")
+		p.closeU(14)
+	})
+
+	p.section("the current record after REWIND, BACKSPACE, ENDFILE, and UNLOCK (Phase 81)")
+
+	ops := []string{"FOR$REWIND", "FOR$BACKSPACE", "FOR$ENDFILE", "FOR$UNLOCK"}
+	for i, op := range ops {
+		i, op := i, op
+		p.kase(fmt.Sprintf("DELETE after two reads and %s, sequential access", op), func() {
+			p.open(10, file(p, fmt.Sprintf("RC%d.DAT", i+1)), imm(kOrg, 2), imm(kForm, 2), imm(kStatus, 1))
+			p.rdU(10, 8)
+			p.rdU(10, 8)
+			p.unitCall(op, 10)
+			p.call("FOR$DELETE", true, "#10")
+			p.errs()
+			p.rdU(10, 8)
+			p.closeU(10)
+			p.stat(fmt.Sprintf("RC%d.DAT", i+1), 1)
+		})
+		p.kase(fmt.Sprintf("REWRITE after two reads and %s, a sequential FIX file", op), func() {
+			p.open(10, file(p, fmt.Sprintf("RW%d.DAT", i+1)), imm(kForm, 2), imm(kStatus, 1))
+			p.rdU(10, 8)
+			p.rdU(10, 8)
+			p.unitCall(op, 10)
+			p.rwU(10, 8)
+			p.errs()
+			p.rdU(10, 8)
+			p.closeU(10)
+			p.stat(fmt.Sprintf("RW%d.DAT", i+1), 1)
+		})
+	}
+	p.kase("DELETE after a direct READ and UNLOCK", func() {
+		p.open(10, file(p, "RM.DAT"), imm(kOrg, 2), imm(kAccess, 1), imm(kStatus, 1))
+		p.rdDU(10, 2, 8)
+		p.call("FOR$UNLOCK", true, "#10")
+		p.call("FOR$DELETE", true, "#10")
+		p.errs()
+		p.closeU(10)
+		p.stat("RM.DAT", 1)
+	})
+
+	p.section("DELETE by number (Phase 81)")
+
+	p.kase("on a unit not open", func() {
+		p.call("FOR$DELETE_D", true, "#12", "#1")
+		p.errs()
+		p.inq(12)
+	})
+	p.kase("on a sequential-access relative unit", func() {
+		p.open(10, file(p, "DN.DAT"), imm(kOrg, 2), imm(kForm, 2), imm(kStatus, 1))
+		p.fab(10)
+		p.call("FOR$DELETE_D", true, "#10", "#2")
+		p.errs()
+		p.rdU(10, 8)
+		p.rdU(10, 8)
+		p.rdU(10, 8)
+		p.closeU(10)
+		p.stat("DN.DAT", 1)
+	})
+	p.kase("the associated variable after DELETE by number", func() {
+		p.emit("MOVL\t#^X12345678,ASVL")
+		p.open(10, file(p, "DA.DAT"), imm(kOrg, 2), imm(kAccess, 1), imm(kStatus, 1), ref(kAssocVar, mLongRef, "ASVL"))
+		p.asv()
+		p.call("FOR$DELETE_D", true, "#10", "#3")
+		p.asv()
+		p.call("FOR$DELETE_D", true, "#10", "#3")
+		p.asv()
+		p.rdDU(10, 1, 8)
+		p.asv()
+		p.call("FOR$DELETE_D", true, "#10", "#1")
+		p.asv()
+		p.call("FOR$FIND", true, "#10", "#4")
+		p.asv()
+		p.closeU(10)
+	})
+
+	p.section("record -1 and record 0 (Phase 81): RMS's status by ERRSNS")
+
+	p.kase("on a relative unit", func() {
+		p.open(10, file(p, "RC1.DAT"), imm(kOrg, 2), imm(kAccess, 1), imm(kStatus, 1))
+		for _, r := range []int{-1, 0} {
+			p.rdDU(10, r, 8)
+			p.errs()
+			p.wrDU(10, r, 8)
+			p.errs()
+			p.call("FOR$FIND", true, "#10", fmt.Sprintf("#%d", r))
+			p.errs()
+			p.call("FOR$DELETE_D", true, "#10", fmt.Sprintf("#%d", r))
+			p.errs()
+		}
+		p.closeU(10)
+	})
+	p.kase("on a sequential FIX direct unit", func() {
+		p.open(10, file(p, "FX.DAT"), imm(kAccess, 1), imm(kRecl, 2), imm(kStatus, 2))
+		p.wrDU(10, 1, 8)
+		for _, r := range []int{-1, 0} {
+			p.rdDU(10, r, 8)
+			p.errs()
+			p.wrDU(10, r, 8)
+			p.errs()
+		}
+		p.closeU(10)
+	})
+
+	p.kase("RMS's keyed $GET of a relative file and a sequential FIX file", func() {
+		for _, name := range []string{"RC1.DAT", "FX.DAT"} {
+			for _, k := range []int{-1, 0, 1, 2, 5, 70000} {
+				p.stmt(func() {
+					p.emit("PUSHAB\t%s", p.text(name))
+					p.emit("PUSHL\t#%d", k)
+					p.emit("CALLS\t#2,L^KEYGET")
+				})
+			}
+		}
+	})
+
+	p.section("an implicit OPEN's FAB (Phase 81)")
+
+	p.kase("an implicit READ of an existing FOR017.DAT", func() {
+		p.rdF(17, 9)
+		p.fab(17)
+		p.inq(17)
+	})
+	p.kase("an implicit WRITE of unit 16", func() {
+		p.wrF(16, "SIXTEEN")
+		p.fab(16)
+	})
+
+	p.section("a last FIX record the end of file cuts short (Phase 81, round 1's #38)")
+
+	p.kase("make SHORT.DAT: FIX 24, one block by $WRITE, so 21 records and 8 bytes", func() {
+		p.call("MKSHORT", true)
+		p.stat("SHORT.DAT", 1)
+	})
+	p.kase("read it formatted", func() {
+		p.open(10, file(p, "SHORT.DAT"), imm(kStatus, 1), imm(kReadOnly, 1))
+		p.fab(10)
+		for i := 0; i < 21; i++ {
+			p.stmt(func() {
+				p.call("FOR$READ_SO", false, "#10", "&FMTA")
+				p.rdItem(24)
+				p.call("FOR$IO_END", false)
+			})
+		}
+		p.rdF(10, 24)
+		p.errs()
+		p.rdF(10, 24)
+		p.errs()
+		p.closeU(10)
+	})
+	p.kase("read it unformatted", func() {
+		p.open(10, file(p, "SHORT.DAT"), imm(kStatus, 1), imm(kReadOnly, 1), imm(kForm, 2))
+		p.fab(10)
+		for i := 0; i < 21; i++ {
+			p.stmt(func() {
+				p.call("FOR$READ_SU", false, "#10")
+				p.rdItem(24)
+				p.call("FOR$IO_END", false)
+			})
+		}
+		p.rdU(10, 24)
+		p.errs()
+		p.rdU(10, 8)
+		p.errs()
+		p.closeU(10)
+	})
+	p.kase("read it direct", func() {
+		p.open(10, file(p, "SHORT.DAT"), imm(kStatus, 1), imm(kReadOnly, 1), imm(kAccess, 1), imm(kRecl, 6))
+		p.fab(10)
+		p.rdDU(10, 21, 24)
+		p.rdDU(10, 22, 24)
+		p.errs()
+		p.rdDU(10, 23, 24)
+		p.errs()
+		p.closeU(10)
+	})
+
+	p.section("a relative file's growth (Phase 81)")
+
+	for _, g := range []struct{ recl, rec int }{{2, 1}, {2, 100}, {2, 1000}, {2, 5000}, {100, 50}, {100, 600}} {
+		g := g
+		name := fmt.Sprintf("GR%d_%d.DAT", g.recl, g.rec)
+		p.kase(fmt.Sprintf("RECL %d longwords, record %d alone", g.recl, g.rec), func() {
+			p.open(10, file(p, name), imm(kOrg, 2), imm(kRecl, g.recl), imm(kAccess, 1), imm(kStatus, 2))
+			p.wrDU(10, g.rec, 4*g.recl)
+			p.closeU(10)
+			p.stat(name, 0)
+		})
+	}
+	p.kase("RECL 2, records 1 to 300 in order", func() {
+		p.open(10, file(p, "GRSEQ.DAT"), imm(kOrg, 2), imm(kRecl, 2), imm(kAccess, 1), imm(kStatus, 2))
+		p.stmt(func() {
+			p.emit("MOVL\t#1,R6")
+			p.emit("900$:\tMOVL\tR6,R7")
+			p.call("FOR$WRITE_DU", false, "#10", "R7")
+			p.items(8)
+			p.call("FOR$IO_END", false)
+			p.emit("AOBLEQ\t#300,R6,900$")
+		})
+		p.closeU(10)
+		p.stat("GRSEQ.DAT", 0)
+	})
+
+	p.section("segment words (Phase 81's SEGRECFOR): VAR records read as SEGMENTED")
+
+	segs := []struct {
+		name, what string
+		recs       [][2]string // label and length
+	}{
+		{"S1", "one whole segment (3)", [][2]string{{"SG3", "6"}}},
+		{"S2", "first (1), then last (2)", [][2]string{{"SG1", "4"}, {"SG2", "4"}}},
+		{"S3", "first, first again, last", [][2]string{{"SG1", "4"}, {"SG1", "4"}, {"SG2", "4"}}},
+		{"S4", "a last segment first", [][2]string{{"SG2", "4"}}},
+		{"S5", "a middle segment (0) first, then last", [][2]string{{"SG0", "4"}, {"SG2", "4"}}},
+		{"S6", "a word of 4", [][2]string{{"SG4", "4"}}},
+		{"S7", "a word of 7", [][2]string{{"SG7", "4"}}},
+		{"S8", "a record of one byte", [][2]string{{"SGB", "1"}}},
+		{"S9", "a first segment, then the end of file", [][2]string{{"SG1", "4"}}},
+		{"S10", "first, then a whole one (3)", [][2]string{{"SG1", "4"}, {"SG3", "6"}}},
+		{"S11", "a whole segment with only its word", [][2]string{{"SG3", "2"}}},
+		{"S12", "first, middle, middle, last", [][2]string{{"SG1", "4"}, {"SG0", "4"}, {"SG0", "4"}, {"SG2", "4"}}},
+		{"S13", "an empty record", [][2]string{{"SG3", "0"}}},
+	}
+	for _, sg := range segs {
+		sg := sg
+		// The read's item is as long as every record's data together, all that
+		// FORRTL could join into one record: a shorter record is INPSTAREQ.
+		data := 0
+		for _, r := range sg.recs {
+			n, _ := strconv.Atoi(r[1])
+			data += max(n-2, 0)
+		}
+		data = max(data, 1)
+
+		p.kase(sg.name+": "+sg.what, func() {
+			p.open(10, file(p, sg.name+".DAT"), imm(kForm, 2), imm(kRecType, 2), imm(kStatus, 2))
+			for _, r := range sg.recs {
+				p.wrBytes(10, r[0], r[1])
+			}
+			p.closeU(10)
+			p.stat(sg.name+".DAT", 1)
+			p.open(10, file(p, sg.name+".DAT"), imm(kForm, 2), imm(kStatus, 1))
+			p.fab(10)
+			p.rdU(10, data)
+			p.errs()
+			p.rdU(10, data)
+			p.errs()
+			p.unitCall("FOR$BACKSPACE", 10)
+			p.rdU(10, data)
+			p.closeU(10)
+		})
+	}
+
+	p.section("ERRSNS after a specifier took the error (Phase 80)")
+
+	p.kase("OPEN with ERR=", func() {
+		p.errs()
+		p.open(10, file(p, "MISSING.DAT"), imm(kStatus, 1))
+		p.errs()
+		p.errs()
+	})
+	p.kase("OPEN with IOSTAT=", func() {
+		p.openS(10, file(p, "MISSING.DAT"), imm(kStatus, 1), ref(22, mLongRef, "ASVL"))
+		p.asv()
+		p.errs()
+	})
+	p.kase("CLOSE and INQUIRE with ERR=", func() {
+		p.closeU(120)
+		p.errs()
+		p.call("FOR$INQUIRE", true, append(unit(120), errFlag[0], "#^X0516", "&ASVL")...)
+		p.errs()
+	})
+	p.kase("OPEN with neither, signaled", func() {
+		p.openS(10, file(p, "MISSING.DAT"), imm(kStatus, 1))
+		p.errs()
+	})
+	p.kase("a second error after the first, then ERRSNS", func() {
+		p.open(10, file(p, "MISSING.DAT"), imm(kStatus, 1))
+		p.open(10, file(p, "A[B"), imm(kStatus, 1))
+		p.errs()
+	})
+
+	p.section("the PC of an error an item's call finds (Phase 80): b=, i=, e= are the PC less the place after the begin call, the item's call, and FOR$IO_END's")
+
+	p.kase("OUTCONERR: (I2) of 12345, one item", func() {
+		p.pcStatement(func() {
+			p.call("FOR$WRITE_SO", false, "#13", "&"+p.fmtz("(I2)"))
+		}, func() {
+			p.call("FOR$IO_L_V", false, "#12345")
+		})
+	})
+	p.kase("OUTCONERR in the first of two items", func() {
+		p.pcStatement(func() {
+			p.call("FOR$WRITE_SO", false, "#13", "&"+p.fmtz("(I2,I3)"))
+		}, func() {
+			p.call("FOR$IO_L_V", false, "#12345")
+		}, func() {
+			p.call("FOR$IO_L_V", false, "#7")
+		})
+	})
+	p.kase("FORVARMIS: (I5) of a REAL", func() {
+		p.pcStatement(func() {
+			p.call("FOR$WRITE_SO", false, "#13", "&"+p.fmtz("(I5)"))
+		}, func() {
+			p.call("FOR$IO_F_R", false, "&"+p.flt("1.5"))
+		})
+	})
+	p.kase("INPCONERR: (I4) of ABCD", func() {
+		p.open(14, file(p, "ABC.DAT"), imm(kStatus, 1), imm(kReadOnly, 1))
+		p.pcStatement(func() {
+			p.call("FOR$READ_SO", false, "#14", "&"+p.fmtz("(I4)"))
+		}, func() {
+			p.call("FOR$IO_L_R", false, "&VAL")
+		})
+		p.errs()
+		p.closeU(14)
+	})
+	p.kase("INPCONERR in the first of two items", func() {
+		p.open(14, file(p, "ABC.DAT"), imm(kStatus, 1), imm(kReadOnly, 1))
+		p.pcStatement(func() {
+			p.call("FOR$READ_SO", false, "#14", "&"+p.fmtz("(I2,I2)"))
+		}, func() {
+			p.call("FOR$IO_L_R", false, "&VAL")
+		}, func() {
+			p.call("FOR$IO_L_R", false, "&VAL+4")
+		})
+		p.closeU(14)
+	})
+	p.kase("ENDDURREA: a third READ of a file of two records", func() {
+		p.open(14, file(p, "ABC.DAT"), imm(kStatus, 1), imm(kReadOnly, 1))
+		p.rdF(14, 4)
+		p.rdF(14, 8)
+		p.pcStatement(func() {
+			p.call("FOR$READ_SO", false, "#14", "&FMTA")
+		}, func() {
+			p.rdItem(8)
+		})
+		p.closeU(14)
+	})
+	p.kase("FMTSYN: a format with an error, at the begin call", func() {
+		p.pcStatement(func() {
+			p.call("FOR$WRITE_SO", false, "#13", "&"+p.fmtz("(I2,Q9)"))
+		}, func() {
+			p.call("FOR$IO_L_V", false, "#1")
+		})
+	})
+
+	p.section("zero widths on output (Fortran 95; Phase 112's I0 of zero and F0.d's sign)")
+
+	type zw struct {
+		format string
+		items  []string // an integer by value, or f:x a REAL
+	}
+	zero := []struct {
+		title string
+		cases []zw
+	}{
+		{"I0", []zw{{"I0", []string{"0", "7", "-123", "2147483647", "-2147483648"}}}},
+		{"Iw.m with w 0", []zw{{"I0.0", []string{"0", "5"}}, {"I0.3", []string{"5", "-5", "12345"}}}},
+		{"B0, O0, Z0", []zw{{"B0", []string{"0", "5", "-1"}}, {"O0", []string{"0", "8", "-1"}},
+			{"Z0", []string{"0", "255", "-1"}}, {"Z0.4", []string{"10"}}}},
+		{"F0.d", []zw{{"F0.2", []string{"f:3.14159", "f:-0.5", "f:0.0", "f:1234.5", "f:0.004", "f:-0.004"}},
+			{"F0.0", []string{"f:2.5", "f:-0.4", "f:0.0"}}, {"F0.3", []string{"f:1.0E10"}}}},
+		{"zero widths among others", []zw{{"I0,1X,I0,1X,F0.1", []string{"1", "-22", "f:3.25"}}}},
+		{"other edits with w 0", []zw{{"E0.3", []string{"f:1.5"}}, {"G0.3", []string{"f:1.5"}}, {"L0", []string{"1"}},
+			{"A0", []string{"1"}}, {"D0.3", []string{"f:1.5"}}}},
+	}
+	for _, z := range zero {
+		z := z
+		p.kase(z.title+", each between bars", func() {
+			for _, c := range z.cases {
+				if strings.Contains(c.format, ",") {
+					// Several edits in one format: one statement of all its items.
+					p.stmt(func() {
+						p.call("FOR$WRITE_SO", false, "#6", "&"+p.fmtz("(1X,'|',"+c.format+",'|')"))
+						for _, it := range c.items {
+							p.outItem(it)
+						}
+						p.call("FOR$IO_END", true)
+					})
+
+					continue
+				}
+
+				for _, it := range c.items {
+					shown := strings.TrimPrefix(it, "f:")
+					p.stmt(func() {
+						p.call("FOR$WRITE_SO", false, "#6", "&"+p.fmtz("(1X,'"+c.format+" "+shown+" |',"+c.format+",'|')"))
+						p.outItem(it)
+						p.call("FOR$IO_END", true)
+					})
+				}
+			}
+		})
+	}
+
+	p.section("a longword on a word key (Phase 88)")
+
+	p.kase("an indexed file keyed on a signed word, read by longwords and words", func() {
+		p.open(10, file(p, "KW.IDX"), imm(kOrg, 3), addr(kKey, "KWB"), imm(kRecl, 2), imm(kRecType, 1),
+			imm(kForm, 2), imm(kAccess, 4), imm(kStatus, 2))
+		p.fab(10)
+		for _, r := range []string{"KR1", "KR2", "KR3"} {
+			p.wrBytes(10, r, "8")
+		}
+		for _, k := range []string{"KDL5", "KDW5", "KDL70", "KDLM3", "KDL70005", "KDL65541", "KDB5"} {
+			p.rdKey(10, k, 8)
+			p.errs()
+		}
+		p.closeU(10)
+	})
+
+	p.section("units -1 to -4: which logical name each opens (FOR81G.COM defines them)")
+
+	p.kase("WRITE to -1 and -2, READ from -3 and -4", func() {
+		p.wrF(-1, " WRITTEN TO UNIT -1")
+		p.errs()
+		p.wrF(-2, " WRITTEN TO UNIT -2")
+		p.errs()
+		p.rdF(-3, 16)
+		p.errs()
+		p.rdF(-4, 16)
+		p.errs()
+		p.inq(-1)
+		p.inq(-3)
+	})
+
+	return p
+}
+
+// errs shows FOR$ERRSNS's five values: the FOR number, RMS's STS and STV, the
+// unit, and the condition.
+func (p *prog) errs() { p.emit("CALLS\t#0,L^ERRS") }
+
+// fmtz is a label for a format's text, ending in a NUL, as FOR$WRITE_SO takes it.
+func (p *prog) fmtz(s string) string {
+	key := "fmt:" + s
+	if l, ok := p.texts[key]; ok {
+		return l
+	}
+
+	l := fmt.Sprintf("T%d", len(p.texts))
+	p.texts[key] = l
+	fmt.Fprintf(&p.data, "%s:\t.ASCIZ\t~%s~\n", l, s)
+
+	return l
+}
+
+// flt is a label for an F_floating value.
+func (p *prog) flt(v string) string {
+	key := "flt:" + v
+	if l, ok := p.texts[key]; ok {
+		return l
+	}
+
+	l := fmt.Sprintf("T%d", len(p.texts))
+	p.texts[key] = l
+	fmt.Fprintf(&p.data, "\t.ALIGN\tLONG\n%s:\t.F_FLOATING %s\n", l, v)
+
+	return l
+}
+
+// outItem is one output item: an integer by value, or "f:x" a REAL by reference.
+func (p *prog) outItem(it string) {
+	if v, ok := strings.CutPrefix(it, "f:"); ok {
+		p.call("FOR$IO_F_R", false, "&"+p.flt(v))
+
+		return
+	}
+
+	p.call("FOR$IO_L_V", false, "#"+it)
+}
+
+// wrBytes writes one unformatted record of n bytes at label.
+func (p *prog) wrBytes(u int, label, n string) {
+	p.stmt(func() {
+		p.call("FOR$WRITE_SU", false, fmt.Sprintf("#%d", u))
+		p.emit("MOVW\t#%s,SGD", n)
+		p.emit("MOVAB\t%s,SGD+4", label)
+		p.call("FOR$IO_T_DS", false, "&SGD")
+		p.call("FOR$IO_END", true)
+	})
+}
+
+// rdKey is a keyed READ on key 0 by the descriptor at label, into an item of n bytes.
+func (p *prog) rdKey(u int, label string, n int) {
+	p.stmt(func() {
+		p.emit("PUSHAB\t%s", p.text(label))
+		p.emit("CALLS\t#1,G^LIB$PUT_OUTPUT")
+		p.call("FOR$READ_KU", false, fmt.Sprintf("#%d", u), "&"+label, "#0", "#0")
+		p.rdItem(n)
+		p.call("FOR$IO_END", true)
+		p.showRd(n)
+	})
+}
+
+// pcStatement is one statement under HNDPC, which shows each condition's PC, and
+// its user PC (the FOR$ message's third value), less the places after the begin
+// call (b=), the first item's call (i=), and FOR$IO_END's call (e=).
+func (p *prog) pcStatement(begin func(), items ...func()) {
+	prev := p.hnd
+	p.hnd = "HNDPC"
+
+	p.stmt(func() {
+		p.emit("MOVAB\t901$,PCR0")
+		p.emit("MOVAB\t902$,PCR1")
+		p.emit("MOVAB\t903$,PCR2")
+		begin()
+		p.emit("901$:")
+
+		for i, it := range items {
+			it()
+
+			if i == 0 {
+				p.emit("902$:")
+			}
+		}
+
+		p.call("FOR$IO_END", false)
+		p.emit("903$:")
+		p.shownow("IO_END")
+	})
+
+	p.hnd = prev
+}
+
+// term3 is round 3's terminal program, run by hand (the README): a long line read
+// from unit 5, unit 6 read at the terminal, and long records written there.
+func term3() *prog {
+	p := newProg("FOR81T")
+
+	p.kase("type a line of 250 characters (READ unit 5, (Q,A))", func() { p.rdQ(5, 300) })
+	p.kase("type a line of 100 characters (READ unit 5, (Q,A))", func() { p.rdQ(5, 300) })
+	p.kase("type a short line (READ unit 6, (Q,A))", func() {
+		p.rdQ(6, 300)
+		p.errs()
+	})
+	p.kase("type a short line (ACCEPT, unit -3 or -4)", func() {
+		p.rdQ(-3, 300)
+		p.errs()
+	})
+	p.kase("WRITE of 140 and 200 characters to unit 6", func() {
+		p.wrF(6, " "+strings.Repeat("1234567890", 14))
+		p.errs()
+		p.wrF(6, " "+strings.Repeat("ABCDEFGHIJ", 20))
+		p.errs()
+	})
+
+	return p
+}
+
+// rdQ is a READ of (Q,A): the length Q gives, then the first 32 bytes.
+func (p *prog) rdQ(u, n int) {
+	p.stmt(func() {
+		p.emit("MOVL\t#^X12345678,VAL")
+		p.call("FOR$READ_SO", false, fmt.Sprintf("#%d", u), "&FMTQA")
+		p.call("FOR$IO_L_R", false, "&VAL")
+		p.rdItem(n)
+		p.call("FOR$IO_END", true)
+		p.emit("PUSHL\tVAL\n\tPUSHAB\t%s\n\tCALLS\t#2,L^SHOW", p.text("Q"))
+		p.showRd(n)
+	})
+}
+
+// round3Code is round 3's own run-time code beside forrtlCode.
+const round3Code = `	.PSECT	D,NOEXE,WRT,LONG
+E1:	.LONG	0,0,0,0,0
+MERRS:	.ASCID	~ errsns n=!SL sts=!XL stv=!XL u=!SL c=!XL~
+MPC:	.ASCID	~ pc b=!SL i=!SL e=!SL~
+MUPC:	.ASCID	~ user pc b=!SL i=!SL e=!SL~
+PCR0:	.LONG	0
+PCR1:	.LONG	0
+PCR2:	.LONG	0
+FMTQA:	.ASCIZ	~(Q,A)~
+	.ALIGN	LONG
+SGD:	.WORD	0
+	.BYTE	14,1
+	.ADDRESS SG3
+SG3:	.WORD	3
+	.ASCII	/ABCD/
+SG1:	.WORD	1
+	.ASCII	/AB/
+SG2:	.WORD	2
+	.ASCII	/CD/
+SG0:	.WORD	0
+	.ASCII	/EF/
+SG4:	.WORD	4
+	.ASCII	/GH/
+SG7:	.WORD	7
+	.ASCII	/IJ/
+SGB:	.BYTE	1
+	.ALIGN	LONG
+; KW.IDX's key: one, a signed word at bytes 1 and 2 (testdata/for88's README).
+KWB:	.WORD	0,3
+	.LONG	7,1,2
+KR1:	.WORD	5
+	.ASCII	/FIVE  /
+KR2:	.WORD	70
+	.ASCII	/SEVNTY/
+KR3:	.WORD	-3
+	.ASCII	/MINUS3/
+	.ALIGN	LONG
+KL5:	.LONG	5
+KL70:	.LONG	70
+KLM3:	.LONG	-3
+KL70005:	.LONG	70005
+KL65541:	.LONG	65541
+KW5:	.WORD	5
+KB5:	.BYTE	5
+	.ALIGN	LONG
+KDL5:	.WORD	4
+	.BYTE	8,1
+	.ADDRESS KL5
+KDW5:	.WORD	2
+	.BYTE	7,1
+	.ADDRESS KW5
+KDL70:	.WORD	4
+	.BYTE	8,1
+	.ADDRESS KL70
+KDLM3:	.WORD	4
+	.BYTE	8,1
+	.ADDRESS KLM3
+KDL70005:	.WORD	4
+	.BYTE	8,1
+	.ADDRESS KL70005
+KDL65541:	.WORD	4
+	.BYTE	8,1
+	.ADDRESS KL65541
+KDB5:	.WORD	1
+	.BYTE	6,1
+	.ADDRESS KB5
+; KEYGET's file, by name.
+	.ALIGN	LONG
+KFB:	$FAB	FAC=<GET>,SHR=<GET,PUT,UPD,DEL>
+	.ALIGN	LONG
+KRB:	$RAB	FAB=KFB,RAC=KEY,KBF=RKEY,KSZ=4,UBF=RDB,USZ=8
+MKG:	.ASCID	~ rms $GET !AS key !SL: sts=!XL stv=!XL rsz=!UW~
+MKO:	.ASCID	~ rms $OPEN !AS: sts=!XL~
+; SHORT.DAT: FIX records of 24 bytes, one block written by $WRITE.
+	.ALIGN	LONG
+SFB:	$FAB	FNM=<SHORT.DAT>,FAC=<BIO>,RFM=FIX,MRS=24,ORG=SEQ
+	.ALIGN	LONG
+SRB:	$RAB	FAB=SFB,RBF=BIGB,RSZ=512,BKT=1
+	.PSECT	C,EXE,NOWRT,LONG
+; ERRS shows FOR$ERRSNS's five values.
+	.ENTRY	ERRS,^M<R2>
+	MOVAL	E1,R2
+	MOVL	#^X12345678,(R2)
+	MOVL	#^X12345678,4(R2)
+	MOVL	#^X12345678,8(R2)
+	MOVL	#^X12345678,12(R2)
+	MOVL	#^X12345678,16(R2)
+	PUSHAL	16(R2)
+	PUSHAL	12(R2)
+	PUSHAL	8(R2)
+	PUSHAL	4(R2)
+	PUSHAL	(R2)
+	CALLS	#5,G^FOR$ERRSNS
+	PUSHL	16(R2)
+	PUSHL	12(R2)
+	PUSHL	8(R2)
+	PUSHL	4(R2)
+	PUSHL	(R2)
+	PUSHAB	MERRS
+	CALLS	#6,OUT
+	RET
+; HNDPC shows a condition's PC, and for a FOR$ condition (facility 24) of six
+; longwords or more its fifth argument, the user PC, each less PCR0, PCR1, and
+; PCR2; then it does what HND does.
+HNDPC:	.WORD	^M<R2,R3>
+	MOVL	4(AP),R2
+	CMPL	4(R2),#SS$_UNWIND
+	BEQL	10$
+	MOVL	(R2),R3
+	MOVL	-4(R2)[R3],R3
+	SUBL3	PCR2,R3,-(SP)
+	SUBL3	PCR1,R3,-(SP)
+	SUBL3	PCR0,R3,-(SP)
+	PUSHAB	MPC
+	CALLS	#4,OUT
+	EXTZV	#16,#12,4(R2),R3
+	CMPL	R3,#24
+	BNEQ	10$
+	CMPL	(R2),#6
+	BLSS	10$
+	MOVL	20(R2),R3
+	SUBL3	PCR2,R3,-(SP)
+	SUBL3	PCR1,R3,-(SP)
+	SUBL3	PCR0,R3,-(SP)
+	PUSHAB	MUPC
+	CALLS	#4,OUT
+10$:	JMP	HND+2
+; KEYGET(key, name) is RMS's keyed $GET of record key from the named file.
+	.ENTRY	KEYGET,^M<R2>
+	MOVL	8(AP),R2
+	MOVB	(R2),KFB+FAB$B_FNS
+	MOVL	4(R2),KFB+FAB$L_FNA
+	MOVL	4(AP),RKEY
+	$OPEN	FAB=KFB
+	BLBS	R0,10$
+	PUSHL	R0
+	PUSHL	R2
+	PUSHAB	MKO
+	CALLS	#3,OUT
+	RET
+10$:	$CONNECT RAB=KRB
+	CLRW	KRB+RAB$W_RSZ
+	$GET	RAB=KRB
+	MOVZWL	KRB+RAB$W_RSZ,-(SP)
+	PUSHL	KRB+RAB$L_STV
+	PUSHL	R0
+	PUSHL	4(AP)
+	PUSHL	R2
+	PUSHAB	MKG
+	CALLS	#6,OUT
+	$CLOSE	FAB=KFB
+	RET
+; MKSHORT makes SHORT.DAT.
+	.ENTRY	MKSHORT,^M<>
+	$CREATE	FAB=SFB
+	BLBC	R0,90$
+	$CONNECT RAB=SRB
+	BLBC	R0,90$
+	$WRITE	RAB=SRB
+	BLBC	R0,90$
+	$CLOSE	FAB=SFB
+90$:	RET
+`
+
+const comG = `$ ! FOR81G.COM - Phase 113's FORRTL round (round 3 of testdata/for81).
+$ ! Written by testdata/for81/gen.go. Run it from the round's volume's [FOR81G]
+$ ! (testdata/err113's README):
+$ !
+$ !     @FOR81G/OUTPUT=FOR81G.LOG
+$ !
+$ SET NOON
+$ SET VERIFY
+$ WRITE SYS$OUTPUT F$GETSYI("VERSION"), " ", F$GETSYI("HW_NAME")
+$ MACRO/NOLIST FOR81G
+$ LINK/NOMAP FOR81G,FOR81/OPTIONS
+$ MACRO/NOLIST FOR81T
+$ LINK/NOMAP FOR81T,FOR81/OPTIONS
+$ !
+$ ! Units -1 to -4: which name each statement's unit opens, if any of these.
+$ CREATE ACC.DAT
+FROM FOR$ACCEPT
+$ CREATE RDF.DAT
+FROM FOR$READ
+$ DEFINE/NOLOG FOR$PRINT PRT.DAT
+$ DEFINE/NOLOG FOR$TYPE TYP.DAT
+$ DEFINE/NOLOG FOR$ACCEPT ACC.DAT
+$ DEFINE/NOLOG FOR$READ RDF.DAT
+$ !
+$ ! Through a procedure with /OUTPUT, so that unit 6's records join the cases'
+$ ! lines in one file.
+$ @FOR81H/OUTPUT=FOR81G-VAX.TXT
+$ SHOW SYMBOL $STATUS
+$ DEASSIGN FOR$PRINT
+$ DEASSIGN FOR$TYPE
+$ DEASSIGN FOR$ACCEPT
+$ DEASSIGN FOR$READ
+$ DIRECTORY/SIZE=ALL *.DAT,*.IDX
+$ TYPE PRT.DAT
+$ TYPE TYP.DAT
+$ TYPE FOR013.DAT
+$ DUMP/RECORD S*.DAT
+$ EXIT
+`
+
 func main() {
 	f := forrtl()
 	r := rmsCases()
 	c := round2()
 	d := rms2()
+	g := round3()
+	t := term3()
 
 	files := map[string]string{
 		"for81.mar":  f.write("Phase 81's probe of FORRTL's file statements", forrtlCode),
@@ -3185,6 +4000,10 @@ func main() {
 		"for81c.mar": c.write2("round 2 of Phase 81's probe, FORRTL", forrtlCode),
 		"for81d.mar": d.write2("round 2 of Phase 81's probe, RMS", rmsCode),
 		"for81x.mar": exitProg,
+		"for81g.mar": g.write2("Phase 113's FORRTL round, round 3 of Phase 81's probe", forrtlCode+round3Code),
+		"for81t.mar": t.write2("Phase 113's FORRTL round at a terminal, by hand", forrtlCode+round3Code),
+		"for81g.com": comG,
+		"for81h.com": "$ SET NOVERIFY\n$ RUN FOR81G\n$ EXIT $STATUS\n",
 		"for81c.com": comC,
 		"for81f.com": comF,
 		"exchangef.cmd": `! EXCHANGEF.CMD - builds the volume for round 2's FORRTL program, run again.
@@ -3276,5 +4095,6 @@ DISMOUNT DUA2
 		}
 	}
 
-	fmt.Printf("for81.mar: %d cases; for81r.mar: %d cases; for81c.mar: %d cases; for81d.mar: %d cases\n", f.n, r.n, c.n, d.n)
+	fmt.Printf("for81.mar: %d cases; for81r.mar: %d cases; for81c.mar: %d cases; for81d.mar: %d cases; for81g.mar: %d cases\n",
+		f.n, r.n, c.n, d.n, g.n)
 }

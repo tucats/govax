@@ -26,6 +26,9 @@ Each part is a section of the log, `==== NAME`:
 | FULL | A full volume: COPY's message and `$STATUS`, whether the copy that didn't fit stays (and how big), DCL's OPEN/WRITE and WRITE, CREATE, and MACRO's object | subtask 11; A.11.1 |
 | INDEX | The index file past its header: 3,000 files of a block each on a volume made `/HEADERS=16/EXTENSION=1`, so the index file grows in pieces between the files' blocks. Does VMS give INDEXF.SYS an extension header, or refuse (HEADERFULL)? DUMP/HEADER and ANALYZE/DISK_STRUCTURE show what VMS made | A.9.1 |
 
+The volume's `[FOR81G]` is subtask 12b's FORRTL round, round 3 of `testdata/for81` (its
+README), run by a procedure of its own, `FOR81G.COM`, and a program at the terminal by hand.
+
 ## Running the session
 
 1. Build the volumes, from the repository root. The scratch disk is RD51-sized; VMS
@@ -54,6 +57,18 @@ Each part is a section of the log, `==== NAME`:
    INDEX part makes up to 3,000 files, some minutes on simh. The TYPE after it is the NOCC
    question at the terminal: note whether `AFTER` starts a line of its own, and whether
    `ONE` and `TWO` do.
+
+   Then the FORRTL round, still on DUA1, and its terminal program by hand (paste the
+   terminal's text from `$ RUN FOR81T` to its end into `testdata/for81/vax/for81t.log`):
+
+       $ MOUNT DUA1: ERR113
+       $ SET DEFAULT DUA1:[FOR81G]
+       $ @FOR81G/OUTPUT=FOR81G.LOG
+       $ RUN FOR81T
+
+   FOR81T's cases each say what to type: a line of 250 characters, one of 100, two short
+   lines (unit 6 and ACCEPT read at the terminal), and then it writes 140 and 200
+   characters to the terminal. `DISMOUNT DUA1:` after it.
 
    Then the older procedures, each volume as DUA1 in turn (their READMEs):
 
