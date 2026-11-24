@@ -18,8 +18,11 @@ const initializeName = "LIB$INITIALIZE"
 // initializeTransfer is the transfer address LIB$INITIALIZE adds to the image's
 // array, and true: the routine's address, when the image has a contribution of
 // some length to the program section LIB$INITIALIZE and the symbol is defined.
-// A shareable image's too, whose array has no program's address after it
-// (whether VMS's image activator calls it is the probe round's question).
+// A shareable image's too, whose array has no program's address after it;
+// there it is also the shareable image initialization list, IHA$L_INISHR,
+// marked by IHD$V_INISHR (header), which is what the image activator calls,
+// as VMS 7.1's DECC$SHR shows (docs/planning/PHASE-113 - Fortran errata.md,
+// subtask 10). Its argument list is the probe round's question.
 func (l *linker) initializeTransfer() (uint32, bool) {
 	g := l.symbols[initializeName]
 	if g == nil || !g.defined {

@@ -4951,7 +4951,13 @@ caller at `12(FP)`; each handler found is a `CallRequest` with the
 mechanism array's frame and depth filled in. The handler's RET lands on
 `SYS$SRCHANDLER`'s XFC again, with SP at the arrays, which is how the
 search knows which dispatch it is continuing, and it acts on the
-handler's R0:
+handler's R0. A program may also jump to `SYS$SRCHANDLER` itself with the
+arrays and argument list laid out below SP, as VMS's own LIBRTL.EXE does
+from its LIB$SIGNAL (the book's 4.2.2.2): with no dispatch of govax's at
+that SP, the search takes them up as an exception's (`adoptDispatch`),
+allowing for the longword VMS's leaves between the two arrays.
+
+The handler's answers:
 
 - **Low bit set (`SS$_CONTINUE`).** The program goes on: for an exception,
   at the signal array's PC (which a handler may change, as the traced
@@ -5652,7 +5658,11 @@ frame, where VMS's `SYS$IMGSTA` puts it for an image linked with traceback
 turns it off, an image's transfer address in P0 before its last (its main
 routine) is `LIB$INITIALIZE`'s, which LINK puts there when the program lists
 routines in the program section `LIB$INITIALIZE` (VAX/VMS Internals and Data
-Structures, Figure 21-8; the VMS Run-Time Library manual's chapter 7). The
+Structures, Figure 21-8; the VMS Run-Time Library manual's chapter 7). A
+shareable image's is its *initialization list*, `IHA$L_INISHR`, which LINK
+writes, with the header flag `IHD$V_INISHR`, when a shareable image lists
+routines; its transfer addresses are never called (VMS's own LIBRTL.EXE has
+one, a module's leftover, which nothing may call). The
 driver calls each image's, the shareable images' first, with the
 initialization argument list, `(start, cli-coroutine, image-info)`, `start`
 the address of its entry in a copy of the image's list after the driver's
@@ -5660,7 +5670,7 @@ code. `LIB$INITIALIZE` (govax's own module, `internal/bootdata/files/libinit.mar
 which LINK takes when there is no STARLET.OLB) calls each listed routine,
 then the list's next entry, the main routine, and returns its status, so a
 main image with one isn't called again. Without one, the driver calls the
-main routine itself. Then `$EXIT` with what it returned. An image with no transfer address, a shareable image, isn't run:
+main routine itself. Then `$EXIT` with what it returned. A shareable image has no main routine, whatever its transfer addresses, and isn't run:
 DCL's `NOTFR`, and what its activation made goes. `RUN/NOEXECUTE` stops
 before the call.
 

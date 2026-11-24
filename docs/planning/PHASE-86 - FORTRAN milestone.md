@@ -126,7 +126,7 @@ FORTRAN program, Phases 74 to 86, is done; PLAN.md summarizes it.
   full volume is `%DCL-E-BADFILESPEC` with the reason at its end, where VMS says the device is full.
 - **The Ctrl/Y level's prompt** doesn't take `-` continuation (subtask 2).
 - **Known differences from VMS** (`ftn86VMSDifferences`): `$GETCHN`, a service govax lacks; SECNDS within a second of its argument, by timing; the last bits of OTS$ negative powers and of
-  MTHRTL's complex functions, where six orders of operations were tried and none fits. Real LIBRTL on govax faults at `SHARE$LIBRTL+0CE1`, so it can't stand in for the VAX; why isn't known.
+  MTHRTL's complex functions, where six orders of operations were tried and none fits. Real LIBRTL on govax faults at `SHARE$LIBRTL+0CE1`, so it can't stand in for the VAX; why isn't known. *(Resolved in Phase 113: govax called LIBRTL's transfer address, LIB$EMODD.)*
 - **The image's symbol tables** past the debug symbol table aren't compared with VMS's in `TestFTN86Objects`.
 - **Unconfirmed on VMS:** `MACRO A+B`'s numbering of files and `/DEBUG`'s source file, what a `.END` before the last file does, and COPY's choices for a host source
   (lines padded with blanks, PRINT's control bytes).
@@ -306,7 +306,7 @@ FORTRAN program, Phases 74 to 86, is done; PLAN.md summarizes it.
     tried fits: the reciprocal first fits this and VMS's D bits for `3.0**(-5)`, the present order its F
     bits. CSIN's last digit differs too (`-27.03494`). `powbits.for` prints the exact bits of a grid of
     cases, in F, D, G, and H, to settle them; nothing is changed until then. Real LIBRTL on govax
-    (a `DEFINE LIBRTL` to VMS's) faults in its own code at `SHARE$LIBRTL+0CE1`, so it can't stand in for the VAX.
+    (a `DEFINE LIBRTL` to VMS's) faults in its own code at `SHARE$LIBRTL+0CE1`, so it can't stand in for the VAX. *(Resolved in Phase 113: govax called LIBRTL's transfer address, LIB$EMODD.)*
   - **`vax/round1`** keeps VMS's log, objects, image, and map. Round 2 is the same procedure; the oracle
     tests come with its results.
 - **2026-11-03, subtask 4, round 2's first try:** in the same VAX session as round 1, so FTNRTL was still

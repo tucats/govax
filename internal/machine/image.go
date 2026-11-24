@@ -126,6 +126,12 @@ type ICB struct {
 	// process's JPI$_IMAGNAME (ActivateImage).
 	Spec imageSpec
 
+	// InitShare is a shareable image's initialization routine, relocated:
+	// IHA$L_INISHR when its header sets IHD$V_INISHR, else 0. RUN's driver
+	// calls it (initTransfers); a shareable image's transfer addresses are
+	// never called.
+	InitShare uint32
+
 	// Ident and Match are a shareable image's global section ident and
 	// match control, from its header (IHD$L_IDENT and the top byte of
 	// IHD$L_LNKFLAGS), which the images naming it were linked against
@@ -527,8 +533,8 @@ func (p *ImageProcess) newICB(fn string, flag uint32) *ICB {
 // setTransfer records transfer address n of icb, v as the header gives
 // it (relative to the image's base; 0 for none), and defines its symbol:
 // MAIN for the main image's (the last it defines being the program's), and
-// SHARE$name_TRANSFER_n for a shareable image's (its LIB$INITIALIZE, which
-// RUN's driver calls: initTransfers). A shareable image's
+// SHARE$name_TRANSFER_n for a shareable image's, which nothing calls (its
+// initialization is IHA$L_INISHR's: ICB.InitShare). A shareable image's
 // address outside P0 is the system's, not the image's: SYS$IMGSTA, which
 // LINK makes a shareable image's first with traceback (testdata/link68's
 // SHR1), and which isn't an initialization routine to call. It is kept
@@ -580,6 +586,9 @@ func (p *ImageProcess) finishLoad(icb *ICB, data []byte) error {
 	img, err := vmsimage.ReadImage(data)
 	if err == nil {
 		icb.Ident, icb.Match, icb.Type = img.Ident, int(img.LinkFlags>>24&7), img.Type
+		if img.LinkFlags&vmsimage.IHDFlagINISHR != 0 && img.InitShare != 0 {
+			icb.InitShare = img.InitShare + icb.Base
+		}
 		icb.LegacyStartup = img.Legacy() && legacyStartupStub(img, data, icb.Transfer[0]-icb.Base)
 
 		if img.Fixups != nil {

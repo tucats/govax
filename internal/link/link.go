@@ -712,13 +712,13 @@ func (l *linker) symbol(m *module, s *obj.Symbol) error {
 func (l *linker) noteTransfer(m *module, eom *obj.EOM) error {
 	weak := eom.HasFlags && eom.Flags&1 != 0
 
-	// A shareable image has no user transfer address: its entry points
-	// are its universal symbols. What real LINK does with a module's
-	// transfer address there is unconfirmed; govax passes over it.
-	if l.opts.Shareable {
-		return nil
-	}
-
+	// A shareable image's entry points are its universal symbols, but VMS's
+	// LINK keeps a module's transfer address there too, after
+	// LIB$INITIALIZE's, with LNKNOTFR clear, as VMS 7.1's LIBRTL.EXE and
+	// DECC$SHR.EXE have them (docs/planning/PHASE-113 - Fortran errata.md,
+	// subtask 10). Nothing calls it. Whether it names the image's ident, as
+	// an executable's module does, is unconfirmed: govax leaves the ident
+	// as it was.
 	switch {
 	case l.transferSet && weak:
 		return nil
@@ -732,7 +732,10 @@ func (l *linker) noteTransfer(m *module, eom *obj.EOM) error {
 
 	l.transferSet, l.transferWk = true, weak
 	l.pendingTransfer = pendingTransfer{contrib: m.contribs[eom.Psect], offset: eom.Transfer}
-	l.imageID = m.ident
+
+	if !l.opts.Shareable {
+		l.imageID = m.ident
+	}
 
 	return nil
 }

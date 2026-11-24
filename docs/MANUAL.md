@@ -4807,9 +4807,13 @@ LINK takes from `STARLET.OLB` or, with none, from govax:
         .EXTERNAL       LIB$INITIALIZE
 ```
 
-A shareable image's own are called before the program's (govax's choice;
-whether VMS calls them is unconfirmed). `RUN/NOINIT` leaves them all out,
-for testing a run-time library.
+A shareable image's own are called before the program's: LINK/SHAREABLE
+marks such an image's header (`IHD$V_INISHR`, with the routine's address in
+its initialization list), as VMS's LINK did for DECC$SHR.EXE, and only a
+marked image is initialized. A shareable image's transfer address, which
+LINK keeps from a module's `.END` as VMS's does, is never called, and RUN of
+a shareable image is `NOTFR`. `RUN/NOINIT` leaves them all out, for testing
+a run-time library.
 
 ```text
 VAX> RUN HELLO

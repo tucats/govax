@@ -356,6 +356,7 @@ HP Fortran manual (`VMS-FORTRAN-LANGUAGE.txt`) describes every one (FORALL 69 ti
    `tools/odscheck`, the seed of an ANALYZE/DISK_STRUCTURE/REPAIR phase: **own phase**.
 2. Real LIBRTL on govax faulting at `SHARE$LIBRTL+0CE1` (Phase 86). **Proposed: 112** to find
    out why (it may be a CPU or activation bug), if the author wants it; no probe needed.
+   *(Resolved in subtask 10: govax called LIBRTL's transfer address, LIB$EMODD's.)*
 3. RECURAST's WAITED (Phase 89; a longer timer settles it) and SECNDS within a second (Phase
    86). **Probe** for RECURAST; SECNDS is timing, **not planned**.
 4. `testdata/idx88`'s split points, check characters, DATA_FILL, SIDRs, contiguity, `$PUT`
@@ -702,7 +703,7 @@ A.8.1 is not planned.
 7. STR$'s arithmetic (A.2.1) (done 2026-11-24).
 8. Services and FTNRTL's format parses (A.2.3, A.2.5) (done 2026-11-24).
 9. The debugger (A.8.2, 3) (done 2026-11-24).
-10. The SHARE$LIBRTL fault (A.9.2), after subtask 6.
+10. The SHARE$LIBRTL fault (A.9.2), after subtask 6 (done 2026-11-24).
 11. Housekeeping (A.11.1, 2, 4, 5; A.15.2; A.16's dead hooks).
 12. The probe round (A.12, A.15.3): written, rehearsed on govax, run on VMS 7.1.
 13. Its fixes, the ods2 header among them.
@@ -1069,3 +1070,41 @@ Each subtask may begin with a survey of its own, as earlier phases' did.
     `TestFortranRecords` and `TestFortranVariables`; MANUAL.md's 14.10, FORTRAN-INTERNALS.md's
     section 35, HELP's FORTRAN_Programs and TYPE (the debug help library rebuilt); Phases 110 and
     111's items marked resolved. Subtask 10 is next.
+- **2026-11-24, subtask 10 (done):** the SHARE$LIBRTL fault (A.9.2). It was govax's.
+  - *The cause.* VMS 7.1's LIBRTL.EXE (on the local system disk, `DEFINE LIBRTL` to it) has a
+    first transfer address, ^XCD4, which is LIB$EMODD's vector entry: a module's `.END`, kept by
+    VMS's LINK, which nothing calls. govax called it at activation, before subtask 6 as
+    `SHARE$LIBRTL_INITIALIZE`, since subtask 6 as a shareable image's initialization routine,
+    with `(start, 0, 0)`, and LIB$EMODD read its arguments' operands: +0CE1 was the first's, +0D3F
+    the third's. The rule is the header's: DECC$SHR.EXE, VMS's one shareable image with
+    initialization routines, sets IHD$V_INISHR and puts its LIB$INITIALIZE's address in
+    IHA$L_INISHR (its first transfer address too); LIBRTL's flag is clear. So a shareable image's
+    initialization is IHA$L_INISHR's, when the flag says so, and its transfer addresses are never
+    called (`machine/run.go`'s `initTransfers`, `ICB.InitShare`). LINK/SHAREABLE now sets both for
+    an image with a LIB$INITIALIZE contribution (`link/image.go`), and keeps a module's transfer
+    address, with LNKNOTFR clear, as LIBRTL's and DECC$SHR's headers show, which Phase 68 had left
+    unconfirmed and passed over (`noteTransfer`; the image's ident stays as it was, unconfirmed). RUN
+    of a shareable image is NOTFR whatever its transfer addresses (`mainTransferAddress`;
+    unconfirmed for one that has one). `TestShareableTransferNotCalled`, and
+    `TestLibInitializeShareable` now checks the header. Answer C's question, whether VMS runs a
+    shareable image's routines, is answered yes by DECC$SHR's header; how it calls them (the
+    argument list) stays the round's.
+  - *The next stop, SYS$SRCHANDLER.* With LIBRTL's own code running, VMS's LIB$SIGNAL removes its
+    frame, lays out the arrays and argument list below SP, and jumps to SYS$SRCHANDLER (the
+    Internals book's 4.2.2.2), which govax knew only as the place its own dispatches return to.
+    It now takes such a condition up as an exception's (`corevms/condition.go`'s `adoptDispatch`):
+    the layout govax's own, but for a longword VMS's LIB$SIGNAL leaves between the mechanism and
+    signal arrays (2 in the case seen; no source gives its meaning), and a mechanism array whose
+    depth VMS starts at -3. `TestSrchandlerFromProgram`.
+  - *What VMS's LIBRTL now runs on govax*: a MACRO program's LIB$PUT_OUTPUT, and
+    `testdata/fortran`'s TEXT, its output its `.out`'s to the byte. STRMATH stops with FTNRTL's
+    OUTSTAOVE: VMS's STR$ADD, STR$MUL, and STR$ROUND write a result's digits into a CHARACTER*20
+    destination right-justified with leading zeros (`00000000000009999998`), where govax's
+    (subtask 7) writes them left-justified with blanks, so SHOW's INDEX finds no blank. Not changed
+    here: `testdata/str113`'s round settles it on the VAX (subtask 12), and whether VMS's LIBRTL
+    may serve as a black box on govax, as FORRTL does (Phase 80's exception), is the author's to
+    say.
+  - MANUAL.md's RUN, HELP RUN (the help library rebuilt), and VAX-VMS-INTERNALS.md's driver and
+    10.7 follow; in passing, HELP FORTRAN's three paragraphs with a line inserted unwrapped (the
+    Fortran 95 paragraph, the arrays', /STANDARD's) are wrapped again; Phase 68's unconfirmed transfer address and Phase 86's fault are marked resolved.
+    Subtask 11 is next.

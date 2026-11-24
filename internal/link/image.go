@@ -29,6 +29,8 @@ const (
 	ihsLength = 0x1C
 	ihiLength = 0x50
 
+	ihaInitShare = 0x10 // IHA$L_INISHR, after four transfer addresses
+
 	ihaOffset = ihdLength
 	ihsOffset = ihaOffset + ihaLength
 	ihiOffset = ihsOffset + ihsLength
@@ -51,6 +53,7 @@ const (
 	ihdIHSLONG    = 1 << 7
 	ihdLNKDEBUG   = 1 << 0 // linked /DEBUG: the debugger takes control
 	ihdLNKNOTFR   = 1 << 1 // no user transfer address
+	ihdINISHR     = 1 << 6 // a shareable image's initialization list (IHA$L_INISHR)
 	ihdNOP0BUFS   = 1 << 2 // IOSEGMENT=n,NOP0BUFS: RMS takes no more pages in P0
 	ihdMatchShift = 24
 	ihdMatchCtl   = 1 << ihdMatchShift
@@ -256,6 +259,18 @@ func (l *linker) header(isds []isd, fixupVA uint32) ([]byte, error) {
 		flags |= ihdLNKDEBUG
 	}
 
+	// A shareable image's LIB$INITIALIZE is also its shareable image
+	// initialization list (IHA$L_INISHR, after the transfer addresses and
+	// the zero that ends them), marked by IHD$V_INISHR, as VMS 7.1's
+	// DECC$SHR has them: the image activator calls a shareable image's
+	// initialization through these, never through its transfer addresses
+	// (libinit.go).
+	initialize, initializes := l.initializeTransfer()
+	if l.opts.Shareable && initializes {
+		flags |= ihdINISHR
+		le.PutUint32(b[ihaOffset+ihaInitShare:], initialize)
+	}
+
 	le.PutUint32(b[0x20:], flags)
 	le.PutUint32(b[0x24:], ident)   // IHD$L_IDENT
 	le.PutUint32(b[0x2C:], fixupVA) // IHD$L_IAFVA
@@ -269,8 +284,8 @@ func (l *linker) header(isds []isd, fixupVA uint32) ([]byte, error) {
 		transfers = append(transfers, l.symbols[imgstaName].value)
 	}
 
-	if addr, ok := l.initializeTransfer(); ok {
-		transfers = append(transfers, addr)
+	if initializes {
+		transfers = append(transfers, initialize)
 	}
 
 	if l.transferSet {

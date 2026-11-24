@@ -564,6 +564,10 @@ func (env *Environment) endDispatch() {
 func serviceSysSrchandler(env *Environment, _ []uint32) (uint32, error) {
 	d := env.currentDispatch()
 	if d == nil {
+		d = env.adoptDispatch()
+	}
+
+	if d == nil {
 		return 0, fmt.Errorf("rtl: SYS$SRCHANDLER reached at SP %08X with no condition being dispatched there", env.cpu.GPR(registers.SP))
 	}
 
@@ -582,6 +586,81 @@ func serviceSysSrchandler(env *Environment, _ []uint32) (uint32, error) {
 	}
 
 	return env.nextHandler(d)
+}
+
+// adoptDispatch takes up a condition that code of the program's own laid
+// out and jumped to SYS$SRCHANDLER with, as VMS's LIB$SIGNAL and LIB$STOP
+// do: they remove their call frame, build the signal and mechanism arrays
+// and the argument list naming them on their caller's stack, and use the
+// executive's search (VAX/VMS Internals and Data Structures, 4.2.2.2 and
+// Figure 4-3), which is how VMS's own LIBRTL.EXE signals on govax
+// (docs/planning/PHASE-113 - Fortran errata.md, subtask 10). The stack is
+// read as startDispatch lays it out, from SP up: the argument list (2, sig,
+// mech), the mechanism array (4, frame, depth, R0, R1), and the signal
+// array (n, condition, detail..., PC, PSL), but for a gap of up to
+// maxArrayGap bytes between the arrays: VMS 7.1's LIB$SIGNAL leaves a
+// longword there (its value 2 in the case seen), whose meaning no source
+// gives. It returns nil, starting nothing, if the stack doesn't hold them
+// so. The mechanism array's depth and frame are the search's to fill in.
+//
+// The search starts at the current frame, the signaling routine's caller's,
+// at depth 0, as for an exception, and a continue resumes as an exception's
+// does: at the signal array's PC and PSL, with SP just past the signal
+// array and R0 and R1 from the mechanism array.
+func (env *Environment) adoptDispatch() *conditionDispatch {
+	const maxArrayGap = 16
+
+	c := env.cpu
+	sp := c.GPR(registers.SP)
+
+	load := func(addr uint32) (uint32, bool) {
+		w, err := env.mem.LoadLongword(c, addr)
+
+		return w, err == nil
+	}
+
+	count, ok1 := load(sp)
+	sig, ok2 := load(sp + 4)
+	mech, ok3 := load(sp + 8)
+	mechCount, ok4 := load(mech)
+	n, ok5 := load(sig)
+
+	if !ok1 || !ok2 || !ok3 || !ok4 || !ok5 || count != 2 || mech != sp+12 || mechCount != 4 ||
+		sig < mech+20 || sig > mech+20+maxArrayGap || sig&3 != 0 || n < 3 || n > 256 {
+		return nil
+	}
+
+	psl, ok := load(sig + 4*n)
+	if !ok {
+		return nil
+	}
+
+	d := &conditionDispatch{
+		kind:        kindException,
+		mode:        c.PSL().CurMod(),
+		sp:          sp,
+		sig:         sig,
+		mech:        mech,
+		argList:     sp,
+		sigCount:    n,
+		stage:       stagePrimary,
+		startFP:     c.GPR(registers.FP),
+		fp:          c.GPR(registers.FP),
+		resumeSP:    sig + 4*(n+1),
+		resumeFP:    c.GPR(registers.FP),
+		resumePSL:   c.PSL()&^0xFF | registers.PSL(psl&0xFF),
+		conditionSP: sig + 4*(n+1),
+	}
+
+	env.Process.conditions = append(env.Process.conditions, d)
+
+	if c.DebugEnabled(registers.DebugExceptions) {
+		cond, _ := load(sig + 4)
+		pc, _ := load(sig + 4*(n-1))
+		fmt.Fprintf(c.DebugWriter(), "DEBUG(EXCEPTION): SYS$SRCHANDLER, CONDITION=%08X  PC=%08X  SIGNAL=%08X\n", cond, pc, sig)
+	}
+
+	return d
 }
 
 // nextHandler moves d's search on to the next handler and calls it, or,

@@ -275,7 +275,16 @@ func (m *Machine) DefaultRunInits() bool {
 // its first, and its main routine after it; LIB$INITIALIZE, when the image
 // has initialization routines, comes between (initTransfers). A VMS V1
 // image's first is its startup stub (LegacyStartup), which is passed over.
+//
+// A shareable image has no main routine, whatever transfer addresses its
+// header has (VMS's LINK keeps a module's: LIBRTL's is LIB$EMODD's vector
+// entry), so RUN of one is NOTFR, as of one without (testdata/link68's E7;
+// VMS's answer for one with a transfer address is the probe round's).
 func mainTransferAddress(icb *ICB) (uint32, bool) {
+	if icb.Type == vmsimage.TypeShareable {
+		return 0, false
+	}
+
 	p0 := p0Transfers(icb)
 	if len(p0) == 0 {
 		return 0, false
@@ -308,16 +317,28 @@ func p0Transfers(icb *ICB) []uint32 {
 	return p0
 }
 
-// initTransfers are the initialization routines icb's transfer addresses
-// name: LIB$INITIALIZE's, which LINK puts before the program's own when the
-// image lists routines for it (internal/link/libinit.go); a shareable image,
-// which has no program, has only such. VMS's SYS$IMGSTA calls each transfer
+// initTransfers are the initialization routines RUN's driver calls for icb.
+// A main image's are its transfer addresses before the program's own:
+// LIB$INITIALIZE's, which LINK puts there when the image lists routines for
+// it (internal/link/libinit.go). VMS's SYS$IMGSTA calls each transfer
 // address in turn (VAX/VMS Internals and Data Structures, 21.1.3.2); govax's
-// driver does, a shareable image's before the main image's (whether VMS
-// calls a shareable image's is unconfirmed, the probe round's question).
+// driver does. A shareable image's is its initialization list, IHA$L_INISHR,
+// when its header sets IHD$V_INISHR (ICB.InitShare), as VMS 7.1's DECC$SHR
+// has it, and nothing else: its transfer addresses are never called. VMS's
+// LIBRTL.EXE has a transfer address, LIB$EMODD's vector entry, which LINK
+// took from a module's .END and nothing calls; calling it faulted
+// (docs/planning/PHASE-113 - Fortran errata.md, subtask 10).
 func initTransfers(icb *ICB, shareable bool) []uint32 {
+	if shareable {
+		if icb.InitShare == 0 {
+			return nil
+		}
+
+		return []uint32{icb.InitShare}
+	}
+
 	p0 := p0Transfers(icb)
-	if !shareable && len(p0) > 0 {
+	if len(p0) > 0 {
 		p0 = p0[:len(p0)-1]
 	}
 
@@ -383,8 +404,8 @@ func (p *ImageProcess) buildDriver(main *ICB, runInits, hibernate bool) (uint32,
 		code = append(code, EncodeCalls(0, hiber)...)
 	}
 
-	// Each image's LIB$INITIALIZE (initTransfers), the shareable images' in
-	// the order they were activated, then the main image's, which calls the
+	// Each image's LIB$INITIALIZE (initTransfers), the shareable images'
+	// (each one's IHA$L_INISHR) in the order they were activated, then the main image's, which calls the
 	// main program itself; the main program alone if it has none.
 	// LIB$INITIALIZE is called as the VMS Run-Time Library manual's 7.2 has
 	// it, with (start, cli-coroutine, image-info): start the address of its

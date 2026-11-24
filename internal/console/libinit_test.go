@@ -1,6 +1,7 @@
 package console
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -102,10 +103,11 @@ const libinitUser = `	.TITLE	USEINIT
 `
 
 // TestLibInitializeShareable runs a program using a shareable image whose own
-// LIB$INITIALIZE psect lists a routine (Phase 113, subtask 6): govax calls it
-// before the program, as the old SHARE$name_INITIALIZE call ran a shareable
-// image's first transfer address (whether VMS does is the probe round's
-// question). RUN/NOINIT leaves it out.
+// LIB$INITIALIZE psect lists a routine (Phase 113, subtask 6): LINK makes
+// LIB$INITIALIZE the image's initialization list, IHD$V_INISHR and
+// IHA$L_INISHR, as VMS 7.1's DECC$SHR has it (subtask 10), and govax calls it
+// before the program (how VMS calls it is the probe round's question).
+// RUN/NOINIT leaves it out.
 func TestLibInitializeShareable(t *testing.T) {
 	d, _, buf := dungeonConsole(t, false)
 	dir := t.TempDir()
@@ -140,6 +142,16 @@ func TestLibInitializeShareable(t *testing.T) {
 		t.Fatalf("building said %q", got)
 	}
 
+	buf.Reset()
+	shareFindRun(t, d, "ANALYZE/IMAGE/OUTPUT=SHRINIT.ANI SHRINIT.EXE")
+	shareFindRun(t, d, "TYPE SHRINIT.ANI")
+
+	for _, want := range []string{"IHD$V_INISHR     1", "shareable image initialization list:"} {
+		if !strings.Contains(buf.String(), want) {
+			t.Errorf("SHRINIT's header lacks %q:\n%s", want, buf.String())
+		}
+	}
+
 	for run, want := range map[string]string{
 		"RUN USEINIT":        `$STATUS == "%X00000021"`,
 		"RUN/NOINIT USEINIT": `$STATUS == "%X00000001"`,
@@ -151,5 +163,90 @@ func TestLibInitializeShareable(t *testing.T) {
 		if got := strings.TrimSpace(buf.String()); got != want {
 			t.Errorf("%s: %q, want %q", run, got, want)
 		}
+	}
+}
+
+// libinitStray is a shareable image with a transfer address and no
+// initialization list, as VMS 7.1's LIBRTL.EXE is: its .END names LIB$EMODD,
+// which LINK put in the transfer address array. STRAY, the transfer address
+// here, reads its first argument's longword, as LIB$EMODD does, and sets
+// COUNTER.
+const libinitStray = `	.TITLE	SHRSTRAY
+	.PSECT	SHRDATA, NOEXE,WRT,NOSHR,LONG
+COUNTER::	.LONG	0
+	.PSECT	SHRCODE, EXE,NOWRT,SHR,PIC
+	.ENTRY	STRAY,^M<R2>
+	MOVL	@4(AP),R2
+	MOVL	#^X40,COUNTER
+	RET
+	.END	STRAY
+`
+
+// TestShareableTransferNotCalled is Phase 113's subtask 10: a shareable
+// image's transfer addresses are never called, only its initialization list.
+// Before it govax called VMS's LIBRTL's, LIB$EMODD, with no arguments to read,
+// and faulted at SHARE$LIBRTL+0CE1.
+func TestShareableTransferNotCalled(t *testing.T) {
+	d, _, buf := dungeonConsole(t, false)
+	dir := t.TempDir()
+
+	for name, text := range map[string]string{"shrstray.mar": libinitStray, "useinit.mar": libinitUser} {
+		path := filepath.Join(dir, name)
+		if err := os.WriteFile(path, []byte(text), 0o644); err != nil {
+			t.Fatal(err)
+		}
+
+		shareFindRun(t, d, `COPY/QUIET "`+path+`"/HOST `+strings.ToUpper(name))
+	}
+
+	proc := writeProcedure(t, dir, "build.com",
+		"$ MACRO SHRSTRAY",
+		"$ MACRO USEINIT",
+		"$ LINK/SHAREABLE=SHRSTRAY/NOMAP/NOTRACEBACK SHRSTRAY,SYS$INPUT/OPTIONS",
+		"UNIVERSAL=COUNTER",
+		"$ DEFINE SHRSTRAY SYS$DISK:[]SHRSTRAY.EXE",
+		"$ LINK/NOMAP USEINIT,SYS$INPUT/OPTIONS",
+		"SHRSTRAY/SHAREABLE",
+		"$ SHOW SYMBOL $STATUS",
+		"$ ANALYZE/IMAGE/OUTPUT=SHRSTRAY.ANI SHRSTRAY.EXE",
+	)
+
+	buf.Reset()
+
+	if err := d.Dispatch("@" + proc); err != nil {
+		t.Fatalf("@build: %v\n%s", err, buf.String())
+	}
+
+	if got := buf.String(); !strings.HasPrefix(got, "  $STATUS == \"%X10000001\"\n") {
+		t.Fatalf("building said %q", got)
+	}
+
+	buf.Reset()
+	shareFindRun(t, d, "TYPE SHRSTRAY.ANI")
+
+	for _, want := range []string{"IHD$V_INISHR     0", "first transfer address:  %X'00000"} {
+		if !strings.Contains(buf.String(), want) {
+			t.Errorf("SHRSTRAY's header lacks %q:\n%s", want, buf.String())
+		}
+	}
+
+	if strings.Contains(buf.String(), "first transfer address:  %X'00000000'") {
+		t.Errorf("SHRSTRAY has no transfer address:\n%s", buf.String())
+	}
+
+	buf.Reset()
+	_ = d.Dispatch("RUN USEINIT")
+	shareFindRun(t, d, "SHOW SYMBOL $STATUS")
+
+	if got, want := strings.TrimSpace(buf.String()), `$STATUS == "%X00000001"`; got != want {
+		t.Errorf("RUN USEINIT: %q, want %q", got, want)
+	}
+
+	// RUN of the shareable image itself is still NOTFR.
+	buf.Reset()
+
+	err := d.Dispatch("RUN SHRSTRAY")
+	if got := fmt.Sprint(err) + buf.String(); !strings.Contains(got, "no transfer address") {
+		t.Errorf("RUN SHRSTRAY: %q, want NOTFR", got)
 	}
 }

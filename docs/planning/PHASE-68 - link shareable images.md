@@ -133,7 +133,9 @@ console's LINK has `/EXECUTABLE`, `/[NO]TRACEBACK`, `/DEBUG`,
 - The global section ISD's ident and match control are ignored: there
   is no GSMATCH check.
 - `/INIT` runs each shareable image's first transfer address before the
-  main image (`run.go`, `SHARE$name_INITIALIZE`).
+  main image (`run.go`, `SHARE$name_INITIALIZE`). *(Resolved in Phase 113:
+  a shareable image's IHA$L_INISHR, when IHD$V_INISHR is set, never its
+  transfer addresses.)*
 - `TestMappedSharedImage` and `TestCopiedSharedImage`
   (`internal/console/imageshare_test.go`) use a shareable image
   **made by hand** from an executable. Its comment says a real one
@@ -900,7 +902,9 @@ What the images settled:
   link flags' top byte from GSMATCH=, or the link time and EQUAL without
   it (SHR1A). The first transfer address is `SYS$IMGSTA` with traceback
   and 0 without. A module's transfer address in a shareable link is
-  passed over (**unconfirmed**: no probe image had one).
+  passed over (**unconfirmed**: no probe image had one). *(Resolved in
+  Phase 113: VMS's LINK keeps it, as LIBRTL.EXE's and DECC$SHR.EXE's
+  headers show, and so does govax's; nothing calls it.)*
 - **Sections:** base 0, no user stack ISD, and the shareable half of
   Table 6-1: the section key adds NOSHR and PIC below VEC, so the order
   is SHRFXD, PRVFXD, SHRPIC, PRVPIC, each NOWRT/NOEXE, WRT, EXE, WRT+EXE

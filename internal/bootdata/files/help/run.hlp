@@ -22,8 +22,8 @@
 2 Description
 
    The image is started at its transfer address.  A shareable image
-   (one LINK/SHAREABLE made) has none, and running one is %DCL-E-NOTFR,
-   "no transfer address", as on VMS.  RUN needs an INITIALIZE/MEMORY and
+   (one LINK/SHAREABLE made) has no main routine, and running one is
+   %DCL-E-NOTFR, "no transfer address".  RUN needs an INITIALIZE/MEMORY and
    the microkernel loaded and initialized, as STARTUP.COM does.
 
    RUN gives the image no command text: LIB$GET_FOREIGN returns an empty
@@ -116,8 +116,8 @@
       /[NO]INIT
 
    Whether the initialization routines a program lists for
-   LIB$INITIALIZE (and those a shareable image lists) run before the
-   program, as VMS always runs them.  The default is /INIT; /NOINIT
+   LIB$INITIALIZE (and those a shareable image lists, its header marked
+   IHD$V_INISHR) run before the program, as VMS always runs them.  The default is /INIT; /NOINIT
    leaves them out, as when testing a run-time library.
 
 /STEP
