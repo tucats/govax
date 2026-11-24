@@ -109,21 +109,46 @@ func relativeArgs(args []string) []string {
 	return lines
 }
 
-// ascid is a class S text descriptor for s at label, its text after it.
+// ascid is a class S text descriptor for s at label, its text after it. A
+// byte past ASCII, or a "%" (which prefix would take for the case's label
+// prefix), is an angle-bracket term between the quoted runs; no run is empty
+// unless s is.
 func ascid(label, s string) string {
 	var b strings.Builder
 
-	fmt.Fprintf(&b, "%s:\t.ASCID\t\"", label)
+	fmt.Fprintf(&b, "%s:\t.ASCID\t", label)
 
-	for i := 0; i < len(s); i++ {
-		if s[i] < 0x80 {
-			b.WriteByte(s[i])
-		} else {
-			fmt.Fprintf(&b, "\"<%d>\"", s[i])
-		}
+	if s == "" {
+		b.WriteString(`""`)
+
+		return b.String()
 	}
 
-	b.WriteByte('"')
+	open := false
+
+	for i := 0; i < len(s); i++ {
+		if s[i] < 0x80 && s[i] != '%' {
+			if !open {
+				b.WriteByte('"')
+				open = true
+			}
+
+			b.WriteByte(s[i])
+
+			continue
+		}
+
+		if open {
+			b.WriteByte('"')
+			open = false
+		}
+
+		fmt.Fprintf(&b, "<%d>", s[i])
+	}
+
+	if open {
+		b.WriteByte('"')
+	}
 
 	return b.String()
 }
@@ -387,6 +412,14 @@ func buildCases() []probeCase {
 		[]string{"%D", "#1", "%L", "%S"}, txt("%D")))
 	add(jsb("ELEMENT_R8 reference", "STR$ELEMENT_R8", []string{dyn("%D"), long("%N", 1), ascid("%L", ","), ascid("%S", "A,BC,D")},
 		[]string{"%D", "%N", "%L", "%S"}, txt("%D")))
+
+	// STR$MATCH_WILD with "%", which testdata/str83's probe couldn't ask: its
+	// label prefix replaced every "%" in a case's data (ascid now spares them).
+	for _, x := range [][2]string{{"abc", "a%c"}, {"abc", "a%"}, {"abc", "%%%"}, {"abc", "%%%%"}, {"abc", "%%"},
+		{"ac", "a%c"}, {"", "%"}, {"abc", "%*"}, {"abc", "*%"}, {"abcd", "a*%d"}, {"a%c", "a%c"}, {"abc", "a\\%c"}} {
+		add(probeCase{name: "WILD " + x[0] + " " + x[1], data: []string{ascid("%C", x[0]), ascid("%P", x[1])},
+			call: "STR$MATCH_WILD", args: []string{"%C", "%P"}})
+	}
 
 	return c
 }

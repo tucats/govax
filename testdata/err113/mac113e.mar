@@ -1,0 +1,4 @@
+	.TITLE	MAC113E	an object for a full volume
+	.PSECT	DATA, NOEXE,WRT,LONG
+	.LONG	1
+	.END

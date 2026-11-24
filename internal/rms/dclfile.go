@@ -137,8 +137,12 @@ type DCLFileError struct {
 // RMS status sts.
 func newDCLFileError(name string, sts uint32) *DCLFileError {
 	e := &DCLFileError{Name: name, Status: sts}
-	if sts == rmsDirNotFound {
+
+	switch sts {
+	case rmsDirNotFound:
 		e.STV = ssNoSuchFile
+	case rmsDeviceFull:
+		e.STV = ssDeviceFull
 	}
 
 	return e
@@ -385,6 +389,10 @@ func createDCLFile(ctx *Context, fac, shr byte, attr ondisk.RecAttr, p parsedNam
 	file, err := vol.CreateFileVersionWith(dir, name, version, attr, profile, bm, ib)
 	if errors.Is(err, volume.ErrExists) {
 		return nil, found, rmsFileExists
+	}
+
+	if DeviceFull(err) {
+		return nil, found, rmsDeviceFull
 	}
 
 	if err != nil {

@@ -98,14 +98,15 @@ C PING, which may have let an AST in.
       END
 
 C LIMIT levels, each with an array and a text of its own. Outside the AST the
-C last waits for the timer's.
+C last waits for the timer's, 200 ms (Phase 113's round: at 10 ms a VAX's AST
+C could end before the wait began).
       RECURSIVE SUBROUTINE SPIN(N, LIMIT, SUM)
       EXTERNAL TICK
       INTEGER N, LIMIT, SUM, I, A(8), DELTA(2), ST, SYS$SETIMR
       CHARACTER*8 TAG, WANT
       COMMON /AST/ INNER, NAST, NDONE, TOTAL, ATOTAL, NBAD, SPINS, INAST
       VOLATILE /AST/
-      DATA DELTA /-100000, -1/
+      DATA DELTA /-2000000, -1/
       DO 10 I = 1, 8
          A(I) = N * 10 + I
    10 CONTINUE

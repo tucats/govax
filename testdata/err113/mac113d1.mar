@@ -1,0 +1,9 @@
+	.TITLE	MAC113D	an .END before the last file
+;
+; Phase 113's probe round (A.6.7): MACRO MAC113D1+MAC113D2, the first file ending
+; in .END. Is the second file read, and is anything said?
+;
+	.PSECT	$CODE, NOWRT,EXE,LONG
+	.ENTRY	D1,^M<>
+	RET
+	.END	D1

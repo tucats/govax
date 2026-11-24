@@ -711,7 +711,16 @@ A.8.1 is not planned.
 9. The debugger (A.8.2, 3) (done 2026-11-24).
 10. The SHARE$LIBRTL fault (A.9.2), after subtask 6 (done 2026-11-24).
 11. Housekeeping (A.11.1, 2, 4, 5; A.15.2; A.16's dead hooks) (done 2026-11-24).
-12. The probe round (A.12, A.15.3): written, rehearsed on govax, run on VMS 7.1.
+12. The probe round (A.12, A.15.3): written, rehearsed on govax, run on VMS 7.1. In four parts
+    (2026-11-24), so each is a subtask's size:
+    - 12a. The round's own volume, `testdata/err113`: STR113 (with STR$MATCH_WILD's `%`), SVC113,
+      LIB$INITIALIZE, MACRO's questions (A.6.3, 6, 7), DCL's messages from subtask 11, TYPE
+      without carriage control, a full volume, and the index file past its header (A.9.1);
+      RECURAST's longer timer (A.9.3) (done 2026-11-24).
+    - 12b. The FORRTL round (A.10's FORRTL items, Fortran 95's zero widths on output).
+    - 12c. The debugger round (A.8.6).
+    - 12d. The session on VMS 7.1: `testdata/err113`, `testdata/ftn86` (round 6), and
+      `testdata/f90r` (round 3), with 12b's and 12c's; the results copied back.
 13. Its fixes, the ods2 header among them.
 14. The close-out.
 
@@ -1162,3 +1171,39 @@ Each subtask may begin with a survey of its own, as earlier phases' did.
     follow.
   - MANUAL.md's COPY, HELP COPY (the library rebuilt); Phases 83, 86, 87, and 91 marked.
     Subtask 12, the probe round, is next.
+- **2026-11-24, subtask 12a (done):** the round's own volume. Subtask 12 is split in four (the
+  subtask list): this volume, the FORRTL round, the debugger round, and the session on VMS.
+  - *`testdata/err113`* (README; the files by hand, no `gen.go`): `exchange.cmd` makes the volume
+    (ERR113, RD54) and an RD51 scratch disk VMS initializes itself (`/HEADERS=16/EXTENSION=1`);
+    `ERR113.COM` runs a section per question: STR113 and SVC113 (their outputs files of their own,
+    copied back into `testdata/str113/vax` and `testdata/svc113/vax`), INI113 and INI113NT
+    (`ini113.mar` and the shareable `ini113s.mar`: each initialization routine and the main program
+    show their argument lists, INITB calls the init-coroutine and shows the status it returns),
+    MAC113A to D (a register name as data; `;` in `<...>`; `.WARN`, `.ERROR`, and `.PRINT`;
+    `MACRO/DEBUG A+B`; an `.END` before the last file; listings and objects copied back), DCL
+    (DELVER, PURGE and COPY with a bad name, PURGE/KEEP=0, INITIALIZE and START alone), NOCC (TYPE
+    of a file made by CREATE/FDL with no carriage control, and the same at the terminal by hand),
+    FULL (COPY until a copy doesn't fit, what's left of it, DCL's OPEN/WRITE and WRITE, CREATE,
+    and MACRO's object on the full volume), and INDEX (3,000 one-block files on the scratch
+    volume, so its index file grows in pieces between their blocks: an extension header, or
+    HEADERFULL? DUMP/HEADER and ANALYZE/DISK_STRUCTURE show it; the disk comes back whole).
+    `TestErr113Procedure` rehearses it on govax (`internal/console/err113_test.go`).
+  - *STR$MATCH_WILD's `%`*: `testdata/str113`'s `ascid` writes a `%` as `<37>`, so the label
+    prefix spares it, and twelve MATCH_WILD cases follow the arithmetic (118 cases).
+  - *RECURAST* (A.9.3): its timer is 200 ms, not 10, so VMS's AST shouldn't end before the wait
+    begins; its output is unchanged on govax (`nof90.sum`'s three lines follow), and
+    `ftn86VMSDifferences`' RECURAST says the round runs it.
+  - *What the rehearsal found in govax*, fixed: govax's LIB$INITIALIZE module had its code in
+    `$CODE`, so a program with a `$CODE` of other attributes got LINK-W-MULPSC; it is
+    `_LIB$CODE` now. RMS's `$CREATE` and DCL's OPEN on a volume with no room for the file said
+    RMS$_DEV; they say RMS$_FUL with SS$_DEVICEFULL now, as COPY does (`rms.DeviceFull`; the
+    STV unconfirmed with the rest of subtask 11's full volume).
+  - *Found and left*, for subtask 13 or later: govax's built-in utilities (TYPE, DIRECTORY, DUMP,
+    ...) write to DCL's SYS$OUTPUT whatever `DEFINE/USER SYS$OUTPUT` says, where VMS's are images
+    that use it (DEVIATIONS.md); and a shareable image's `.LONG` of one of its own addresses keeps
+    the address as linked, base 0 (INI113S's first version, `.LONG SINIT`, called address 0),
+    with no message from govax's LINK, where `.ADDRESS` is relocated, as the round's programs now
+    use (what VMS's LINK says of the `.LONG` unconfirmed). govax calls a main program with LIB$INITIALIZE's
+    three arguments when an image has the section (`MAIN: 3 arguments`); VMS's count is the
+    round's answer.
+  - Subtask 12b, the FORRTL round, is next.

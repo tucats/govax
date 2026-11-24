@@ -1,0 +1,5 @@
+; The second file of MAC113C.
+	.ENTRY	C2,^M<>
+	MOVL	#2,R0
+	RET
+	.END	C1

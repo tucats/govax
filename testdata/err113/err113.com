@@ -1,0 +1,173 @@
+$ ! ERR113.COM - Phase 113's probe round, its own questions (testdata/err113's
+$ ! README). Run it with the exchange volume's [000000] the default directory,
+$ ! the scratch disk attached but not mounted:
+$ !
+$ !     @ERR113/OUTPUT=ERR113.LOG [scratch-device]
+$ !
+$ ! P1 is the scratch disk, DUA3: when not given. Its volume is initialized here
+$ ! (on govax, where the test mounts it first, it is used as it is).
+$ !
+$ SET NOON
+$ SCRATCH = P1
+$ IF SCRATCH .EQS. "" THEN SCRATCH = "DUA3:"
+$ HOME = F$ENVIRONMENT("DEFAULT")
+$ SET DEFAULT [ERR113]
+$ HERE = F$ENVIRONMENT("DEFAULT")
+$ !
+$ ! STR$'s arithmetic, and STR$MATCH_WILD with "%" (testdata/str113).
+$ WRITE SYS$OUTPUT "==== STR113"
+$ MACRO/NOLIST STR113
+$ LINK/NOMAP STR113
+$ DEFINE/USER SYS$OUTPUT STR113.TXT
+$ RUN STR113
+$ SHOW SYMBOL $STATUS
+$ !
+$ ! The UTC and device information services (testdata/svc113). DEF_DIB.OBJ goes
+$ ! back for its $DIBDEF values.
+$ WRITE SYS$OUTPUT "==== SVC113"
+$ MACRO/NOLIST DEF_DIB
+$ MACRO/NOLIST SVC113
+$ LINK/NOMAP SVC113
+$ DEFINE/USER SYS$OUTPUT SVC113.TXT
+$ RUN SVC113
+$ SHOW SYMBOL $STATUS
+$ !
+$ ! LIB$INITIALIZE: a main image's routines, a shareable image's, their
+$ ! arguments, the init-coroutine, and an image linked /NOTRACEBACK.
+$ WRITE SYS$OUTPUT "==== INI113"
+$ MACRO/NOLIST INI113S
+$ LINK/NOMAP/SHAREABLE INI113S,INI113S/OPTIONS
+$ SHOW SYMBOL $STATUS
+$ DEFINE INI113S 'HERE'INI113S.EXE
+$ MACRO/NOLIST INI113
+$ LINK/NOMAP INI113,INI113/OPTIONS
+$ SHOW SYMBOL $STATUS
+$ RUN INI113
+$ SHOW SYMBOL $STATUS
+$ WRITE SYS$OUTPUT "==== INI113NT"
+$ LINK/NOMAP/NOTRACEBACK/EXECUTABLE=INI113NT INI113,INI113/OPTIONS
+$ RUN INI113NT
+$ SHOW SYMBOL $STATUS
+$ DEASSIGN INI113S
+$ !
+$ ! MACRO: register names as data, ";" in <...>, .WARN and .ERROR, and A+B.
+$ WRITE SYS$OUTPUT "==== MAC113A"
+$ MACRO/LIST MAC113A
+$ SHOW SYMBOL $STATUS
+$ WRITE SYS$OUTPUT "==== MAC113B"
+$ MACRO/LIST MAC113B
+$ SHOW SYMBOL $STATUS
+$ WRITE SYS$OUTPUT "==== MAC113C"
+$ MACRO/DEBUG/LIST=MAC113C/OBJECT=MAC113C MAC113C1+MAC113C2
+$ SHOW SYMBOL $STATUS
+$ WRITE SYS$OUTPUT "==== MAC113D"
+$ MACRO/LIST=MAC113D/OBJECT=MAC113D MAC113D1+MAC113D2
+$ SHOW SYMBOL $STATUS
+$ !
+$ ! DCL's messages and statuses that Phase 113's subtask 11 chose.
+$ WRITE SYS$OUTPUT "==== DCL"
+$ CREATE DCLX.TXT
+A line.
+$ DELETE DCLX.TXT
+$ SHOW SYMBOL $STATUS
+$ PURGE DCL[X.TXT
+$ SHOW SYMBOL $STATUS
+$ COPY DCLX.TXT DCL[Y.TXT
+$ SHOW SYMBOL $STATUS
+$ PURGE/KEEP=0 DCLX.TXT
+$ SHOW SYMBOL $STATUS
+$ INITIALIZE
+$ SHOW SYMBOL $STATUS
+$ START
+$ SHOW SYMBOL $STATUS
+$ DELETE DCLX.TXT;*
+$ !
+$ ! TYPE of a file whose records have no carriage control, into the log (the
+$ ! README asks for the same at the terminal).
+$ WRITE SYS$OUTPUT "==== NOCC"
+$ CREATE/FDL=NOCC.FDL NOCC.DAT
+$ OPEN/APPEND F NOCC.DAT
+$ WRITE F "ONE"
+$ WRITE F "TWO"
+$ CLOSE F
+$ WRITE SYS$OUTPUT "BEFORE"
+$ TYPE NOCC.DAT
+$ WRITE SYS$OUTPUT "AFTER"
+$ !
+$ ! The scratch volume: initialized, then filled by COPY, by DCL's WRITE, CREATE,
+$ ! and MACRO, each message the question; then emptied again.
+$ WRITE SYS$OUTPUT "==== FULL"
+$ IF .NOT. F$GETDVI(SCRATCH,"MNT") THEN -
+     INITIALIZE/HEADERS=16/EXTENSION=1 'SCRATCH' SCR113
+$ IF .NOT. F$GETDVI(SCRATCH,"MNT") THEN MOUNT/NOASSIST 'SCRATCH' SCR113
+$ ! BIG.DAT, 32 records doubled 8 times: about 4,100 blocks.
+$ OPEN/WRITE F BIG.DAT
+$ N = 0
+$ SEED:
+$ N = N + 1
+$ WRITE F F$FAO("!4ZL!246*X", N)
+$ IF N .LT. 32 THEN GOTO SEED
+$ CLOSE F
+$ N = 0
+$ DOUBLE:
+$ N = N + 1
+$ COPY BIG.DAT BIGC.DAT
+$ CONVERT/APPEND BIGC.DAT BIG.DAT
+$ DELETE BIGC.DAT;*
+$ PURGE BIG.DAT
+$ IF N .LT. 8 THEN GOTO DOUBLE
+$ WRITE SYS$OUTPUT "BIG.DAT: ", F$FILE_ATTRIBUTES("BIG.DAT","EOF"), " blocks"
+$ ! COPY until a copy doesn't fit.
+$ N = 0
+$ FILL:
+$ N = N + 1
+$ COPY BIG.DAT 'SCRATCH'[000000]FILL'N'.DAT
+$ S = $STATUS
+$ SHOW SYMBOL S
+$ IF S .AND. N .LT. 10 THEN GOTO FILL
+$ ! Is the copy that didn't fit still there?
+$ DIRECTORY/SIZE=ALL 'SCRATCH'[000000]FILL'N'.DAT
+$ ! Then DCL's WRITE to the last block.
+$ OPEN/WRITE F 'SCRATCH'[000000]REST.DAT
+$ IF .NOT. $STATUS THEN GOTO REST_DONE
+$ N = 0
+$ REST:
+$ N = N + 1
+$ WRITE F F$FAO("!5ZL!245*Y", N)
+$ S = $STATUS
+$ IF S .AND. N .LT. 100000 THEN GOTO REST
+$ SHOW SYMBOL S
+$ CLOSE F
+$ SHOW SYMBOL $STATUS
+$ REST_DONE:
+$ CREATE 'SCRATCH'[000000]MORE.TXT
+A line for a full volume.
+$ SHOW SYMBOL $STATUS
+$ MACRO/NOLIST/OBJECT='SCRATCH'[000000]MAC113E MAC113E
+$ SHOW SYMBOL $STATUS
+$ DELETE 'SCRATCH'[000000]*.DAT;*,*.TXT;*,*.OBJ;*
+$ DELETE BIG.DAT;*
+$ !
+$ ! The index file: a header and a data block a file, until the index file's
+$ ! extents fill its header, or 3,000 files. How does VMS take the index file
+$ ! past its header (an extension header, or HEADERFULL)?
+$ WRITE SYS$OUTPUT "==== INDEX"
+$ CREATE/DIRECTORY 'SCRATCH'[FILES]
+$ N = 0
+$ INDEX:
+$ N = N + 1
+$ OPEN/WRITE F 'SCRATCH'[FILES]F'N'.DAT
+$ S = $STATUS
+$ IF .NOT. S THEN GOTO INDEX_END
+$ WRITE F "FILE ''N'"
+$ CLOSE F
+$ IF N .LT. 3000 THEN GOTO INDEX
+$ INDEX_END:
+$ WRITE SYS$OUTPUT "FILES ", N, " STATUS ", S
+$ DIRECTORY/SIZE=ALL 'SCRATCH'[000000]INDEXF.SYS
+$ DUMP/HEADER/BLOCK=COUNT:0 'SCRATCH'[000000]INDEXF.SYS
+$ ANALYZE/DISK_STRUCTURE 'SCRATCH'
+$ DISMOUNT 'SCRATCH'
+$ !
+$ SET DEFAULT 'HOME'
+$ WRITE SYS$OUTPUT "==== END"

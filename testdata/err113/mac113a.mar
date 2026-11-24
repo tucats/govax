@@ -1,0 +1,14 @@
+	.TITLE	MAC113A	register names in data expressions
+;
+; Phase 113's probe round (A.6.3): testdata/tir111's TIRR found VMS's MACRO taking
+; R1 in .LONG R1[2] for a register and storing 0. What of a register alone, in an
+; expression, and in the other data directives?
+;
+	.PSECT	DATA, NOEXE,WRT,LONG
+A:	.LONG	R1
+B:	.LONG	R1+4
+C:	.WORD	R5
+D:	.BYTE	PC
+E:	.LONG	1,R2,3
+F:	.ADDRESS R3
+	.END

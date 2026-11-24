@@ -1,0 +1,4 @@
+; The second file of MAC113D, after the first's .END.
+	.ENTRY	D2,^M<>
+	RET
+	.END

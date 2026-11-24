@@ -1,0 +1,8 @@
+TITLE	"A file with no carriage control (Phase 113's probe round)"
+
+FILE
+	ORGANIZATION		sequential
+
+RECORD
+	CARRIAGE_CONTROL	none
+	FORMAT			variable

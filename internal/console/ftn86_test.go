@@ -263,7 +263,8 @@ var ftn86VMSDifferences = map[string]string{
 	"POWBITS":     "the same, in exact bits",
 	"RECURAST": "WAITED: on the VAX the 10 ms timer's AST can run SPIN six deep and end before " +
 		"the wait loop's first test (a quantum end after $SETIMR, or simh's clock catching up), " +
-		"as it did in two of the three builds; govax's clock is the instructions'",
+		"as it did in two of the three builds; govax's clock is the instructions'. Phase 113's " +
+		"round runs it with a 200 ms timer, which should make VMS wait too",
 	"ALIGNR":   "recursiveDifferences': MOD(%LOC(RC), 16) of a record in the frame, where VMS's stack put it on 16",
 	"OPTFLOWR": "recursiveDifferences': ENTRY AGAIN reads an unsaved local, whatever the stack holds there",
 	"OPTFORWARDR": "recursiveDifferences': KEEP(.FALSE.) returns a function value never assigned, whatever " +

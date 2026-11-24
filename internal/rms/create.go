@@ -546,8 +546,14 @@ func createOnVolume(ctx *Context, fabAddr uint32, fac byte, p parsedName, cif bo
 		return 0, found, false, nil, rmsFileExists, 0, nil
 	}
 
+	// A volume with no room for the file's header or blocks is RMS$_FUL
+	// (unconfirmed: docs/planning/PHASE-113 - Fortran errata.md, subtask 12).
+	if DeviceFull(err) {
+		return 0, found, false, nil, rmsDeviceFull, ssDeviceFull, nil
+	}
+
 	if err != nil {
-		// A real ods2/volume-layer failure (out of disk space, a
+		// Any other ods2/volume-layer failure (a
 		// directory-lookup problem past what ResolveDirectory already
 		// checked, ...) rather than a Go-level bug — reported as an
 		// RMS device error, not propagated as a Go error, so the

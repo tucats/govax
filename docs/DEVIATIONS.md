@@ -2126,3 +2126,13 @@ nothing is changed until a program needs it. `TestLink82Oracle` lists the case.
   the file. fcalc's HELP (Phase 111's subtask 12) relies on it when govax runs without a system
   volume. A library named explicitly that can't be opened is RMS$_FNF, as on VMS.
 - **Status**: by choice.
+
+### [Phase 113] A user-mode SYS$OUTPUT and govax's own utilities
+
+- **Where**: `internal/dclcmd` (TYPE, DIRECTORY, DUMP, and the other commands govax runs in Go);
+  `internal/corevms/outfile.go` (an image's SYS$OUTPUT).
+- **What**: on VMS, `DEFINE/USER SYS$OUTPUT file` before TYPE sends TYPE's output to the file,
+  TYPE being an image. govax's TYPE, and its other built-in utilities, write to DCL's own
+  SYS$OUTPUT whatever the user-mode name says; an image run by RUN does follow it. Found by
+  Phase 113's probe round rehearsal (`testdata/err113`), which no longer depends on it.
+- **Status**: open.

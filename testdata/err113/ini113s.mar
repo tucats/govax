@@ -1,0 +1,50 @@
+	.TITLE	INI113S	a shareable image with initialization routines
+;
+; Phase 113's probe round (testdata/err113's README): does VMS run the routines a
+; shareable image lists in its own LIB$INITIALIZE section, before the main image's,
+; and with what arguments? SINIT shows its argument list; INI113S_HELLO is what
+; INI113 calls, so that it is linked against this image.
+;
+	.EXTRN	LIB$INITIALIZE
+	.PSECT	LIB$INITIALIZE, NOPIC,USR,CON,REL,GBL,NOSHR,NOEXE,RD,NOWRT,LONG
+	.ADDRESS SINIT		; .ADDRESS: relocated where the image goes
+
+	.PSECT	$DATA, NOPIC,USR,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+LINE:	.BLKB	132
+LINDSC:	.LONG	132
+	.ADDRESS LINE
+LINLEN:	.WORD	0
+OUTDSC:	.LONG	0
+	.ADDRESS LINE
+ARGCTL:	.ASCID	"!AC: !UL arguments"
+VALCTL:	.ASCID	"  !UL: !XL"
+SNAME:	.ASCIC	"SINIT"
+HELLO:	.ASCID	"INI113S_HELLO"
+
+	.PSECT	$CODE, NOPIC,USR,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+	.ENTRY	SINIT,^M<R2,R3,R4>
+	MOVZBL	(AP),R3
+	MOVAB	SNAME,R2		; by address: no immediate to fix up
+	$FAO_S	CTRSTR=ARGCTL,OUTLEN=LINLEN,OUTBUF=LINDSC,P1=R2,P2=R3
+	BSBB	PUT
+	CLRL	R4
+1$:	CMPL	R4,R3
+	BGEQ	2$
+	INCL	R4
+	$FAO_S	CTRSTR=VALCTL,OUTLEN=LINLEN,OUTBUF=LINDSC,P1=R4,P2=(AP)[R4]
+	BSBB	PUT
+	BRB	1$
+2$:	MOVL	#1,R0
+	RET
+
+PUT:	MOVW	LINLEN,OUTDSC
+	PUSHAQ	OUTDSC
+	CALLS	#1,G^LIB$PUT_OUTPUT
+	RSB
+
+	.ENTRY	INI113S_HELLO,^M<>
+	PUSHAQ	HELLO
+	CALLS	#1,G^LIB$PUT_OUTPUT
+	MOVL	#1,R0
+	RET
+	.END

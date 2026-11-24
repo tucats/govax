@@ -1,8 +1,9 @@
 # The Phase 113 probe of STR$'s arithmetic
 
 `docs/planning/PHASE-113 - Fortran errata.md`'s subtask 7. One MACRO program calls STR$ADD,
-STR$MUL, STR$DIVIDE, STR$RECIP, and STR$ROUND case by case (104 cases), and the undocumented
-STR$ELEMENT_R8 twice, and prints what each returned, signaled, and stored. It is laid out as
+STR$MUL, STR$DIVIDE, STR$RECIP, and STR$ROUND case by case (104 cases), the undocumented
+STR$ELEMENT_R8 twice, and STR$MATCH_WILD with `%` (12 cases), and prints what each returned,
+signaled, and stored. It is laid out as
 `testdata/str83`'s, whose README explains the output, with one addition: a result's sign and
 exponent start as 99 each, so `CS:` shows whether the routine wrote them (the sign first, then
 the exponent).
@@ -28,8 +29,11 @@ routine's arguments and one example. What the manuals leave open, the cases ask:
   place), zeros.
 - **ELEMENT_R8**, which no manual describes: R1 as the element number by value (govax's guess,
   as STR$LEFT_R8 takes its position), then as an address.
+- **MATCH_WILD with `%`**, which `testdata/str83`'s probe couldn't ask: its label prefix
+  replaced every `%` in a case's data. Here a `%` in a text is written `<37>`, which the prefix
+  leaves alone (Phase 113's subtask 12).
 
-It runs in Phase 113's probe round (subtask 12), with the round's other programs. Until then
+It runs in Phase 113's probe round (subtask 12, `testdata/err113`), with the round's other programs. Until then
 `TestStr113Probe` (`internal/console/str113_test.go`) runs it on govax and holds it to the
 manuals' examples; with VMS's output in `vax/str113-vax.txt`, it holds govax to that line for
 line, but for `expectedStr113Differences`.

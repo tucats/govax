@@ -1,0 +1,83 @@
+	.TITLE	INI113	LIB$INITIALIZE's calls
+;
+; Phase 113's probe round (testdata/err113's README), on the VMS 5.0 LIB$ manual's
+; chapter 7: INITA and INITB are in the LIB$INITIALIZE section, so LIB$INITIALIZE
+; calls each before the main program. Each shows its argument list (govax passes
+; init-coroutine, cli-coroutine, and image-info, the last two 0). INITA returns;
+; INITB calls the init-coroutine, which is to run the main program then, and shows
+; the status it gets back. MAIN shows its own argument list, calls INI113S (whose
+; SINIT shows whether a shareable image's routines run, and when), and returns 3,
+; a status of its own to see come back through INITB and in $STATUS.
+;
+	.EXTRN	LIB$INITIALIZE
+	.PSECT	LIB$INITIALIZE, NOPIC,USR,CON,REL,GBL,NOSHR,NOEXE,RD,NOWRT,LONG
+	.ADDRESS INITA
+	.ADDRESS INITB
+
+	.PSECT	$DATA, NOPIC,USR,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+LINE:	.BLKB	132
+LINDSC:	.LONG	132
+	.ADDRESS LINE
+LINLEN:	.WORD	0
+OUTDSC:	.LONG	0
+	.ADDRESS LINE
+ARGCTL:	.ASCID	"!AC: !UL arguments"
+VALCTL:	.ASCID	"  !UL: !XL"
+RETCTL:	.ASCID	"INITB: the init-coroutine returned !XL"
+ENDCTL:	.ASCID	"MAIN: returning 3"
+ANAME:	.ASCIC	"INITA"
+BNAME:	.ASCIC	"INITB"
+MNAME:	.ASCIC	"MAIN"
+
+	.PSECT	$CODE, NOPIC,USR,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+
+; SHOWARGS name, argument list: the count, then each argument.
+	.ENTRY	SHOWARGS,^M<R2,R3,R4>
+	MOVL	8(AP),R2
+	MOVZBL	(R2),R3
+	$FAO_S	CTRSTR=ARGCTL,OUTLEN=LINLEN,OUTBUF=LINDSC,P1=4(AP),P2=R3
+	CALLS	#0,PUTLINE
+	CLRL	R4
+1$:	CMPL	R4,R3
+	BGEQ	2$
+	INCL	R4
+	$FAO_S	CTRSTR=VALCTL,OUTLEN=LINLEN,OUTBUF=LINDSC,P1=R4,P2=(R2)[R4]
+	CALLS	#0,PUTLINE
+	BRB	1$
+2$:	RET
+
+; PUTLINE: LINE, LINLEN bytes of it.
+	.ENTRY	PUTLINE,^M<>
+	MOVW	LINLEN,OUTDSC
+	PUSHAQ	OUTDSC
+	CALLS	#1,G^LIB$PUT_OUTPUT
+	RET
+
+	.ENTRY	INITA,^M<>
+	PUSHL	AP
+	PUSHAB	ANAME
+	CALLS	#2,SHOWARGS
+	MOVL	#1,R0
+	RET
+
+	.ENTRY	INITB,^M<R2>
+	PUSHL	AP
+	PUSHAB	BNAME
+	CALLS	#2,SHOWARGS
+	CALLS	#0,@4(AP)		; the init-coroutine
+	MOVL	R0,R2
+	$FAO_S	CTRSTR=RETCTL,OUTLEN=LINLEN,OUTBUF=LINDSC,P1=R2
+	CALLS	#0,PUTLINE
+	MOVL	R2,R0
+	RET
+
+	.ENTRY	MAIN,^M<>
+	PUSHL	AP
+	PUSHAB	MNAME
+	CALLS	#2,SHOWARGS
+	CALLS	#0,G^INI113S_HELLO
+	PUSHAQ	ENDCTL
+	CALLS	#1,G^LIB$PUT_OUTPUT
+	MOVL	#3,R0
+	RET
+	.END	MAIN

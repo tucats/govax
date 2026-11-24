@@ -1,0 +1,20 @@
+	.TITLE	MAC113B	a semicolon in angle brackets, .ERROR and .WARN
+;
+; Phase 113's probe round (A.6.6): is a ";" inside <...> in a macro call part of the
+; argument, or a comment? And what do .WARN, .ERROR, and .PRINT show, at the terminal
+; and in the listing?
+;
+	.MACRO	SHOW	A, B
+	.ASCII	/A/
+	.ASCII	/B/
+	.ENDM	SHOW
+
+	.PSECT	DATA, NOEXE,WRT,LONG
+	SHOW	<X;Y>, Z
+	SHOW	<P ; Q>
+	SHOW	<;>, W
+	.WARN	1		; a warning's text
+	.ERROR	2		; an error's text
+	.PRINT	3		; a printed line
+	.WARN			; a warning with no expression
+	.END

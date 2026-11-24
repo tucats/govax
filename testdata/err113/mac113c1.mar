@@ -1,0 +1,10 @@
+	.TITLE	MAC113C	two files, one module
+;
+; Phase 113's probe round (A.6.7): MACRO/DEBUG MAC113C1+MAC113C2. How does the
+; listing number the second file's lines, and what source files does the object's
+; debugger information name?
+;
+	.PSECT	$CODE, NOWRT,EXE,LONG
+	.ENTRY	C1,^M<>
+	MOVL	#1,R0
+	RET

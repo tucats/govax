@@ -35,7 +35,7 @@ UTC service's arguments and statuses but not the octaword's layout, and names `$
 The probe runs with the simh VAX's time zone, US Eastern (SYS$TIMEZONE_DIFFERENTIAL -18000):
 the cases' octawords are made for a TDF of -300, and `GETUTC now` should show `1ED4`.
 
-It runs in Phase 113's probe round (subtask 12), with the round's other programs. Until then
+It runs in Phase 113's probe round (subtask 12, `testdata/err113`), with the round's other programs. Until then
 `TestSvc113Probe` (`internal/console/svc113_test.go`) runs it on govax and holds it to what
 the manuals settle; with VMS's output in `vax/svc113-vax.txt`, it holds govax to that line for
 line, but for `expectedSvc113Differences`. The terminal and disk cases fail on govax's test

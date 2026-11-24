@@ -45,7 +45,9 @@ NEXT:	.LONG	0			; the next routine's entry in the list
 CALLER:	.LONG	0			; LIB$INITIALIZE's argument list
 DONE:	.LONG	0			; nonzero once the main program has run
 
-	.PSECT	$CODE, PIC,USR,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+; The code's section is the run-time library's own name, not $CODE, which a
+; program's code may have with other attributes (LINK-W-MULPSC).
+	.PSECT	_LIB$CODE, PIC,USR,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
 	.ENTRY	LIB$INITIALIZE,^M<>
 	MOVL	AP,CALLER		; the list to pass on
 	MOVAL	FIRST,NEXT		; from the first routine

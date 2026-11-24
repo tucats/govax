@@ -126,10 +126,13 @@ type extendRequest struct {
 	count uint32
 }
 
-// rmsInvalidALQ and rmsDeviceFull are $EXTEND's own statuses.
+// rmsInvalidALQ and rmsDeviceFull are $EXTEND's own statuses; a $CREATE or
+// DCL OPEN that finds no room for the file is rmsDeviceFull too, with
+// ssDeviceFull its STV.
 var (
 	rmsInvalidALQ = vmsConst("RMS$_ALQ")
 	rmsDeviceFull = vmsConst("RMS$_FUL")
+	ssDeviceFull  = vmsConst("SS$_DEVICEFULL")
 )
 
 // extendFile adds each request's blocks to h's file: to an indexed file's
