@@ -9,7 +9,7 @@ subtask 9, the FORALL construct, done 2026-11-23; subtask 10, WHERE in WHERE, do
 subtask 11, the intrinsics, done 2026-11-23; subtask 12, FTNRTL's zero widths and namelist
 comments, done 2026-11-23; subtask 13, `/STANDARD=F90` widened with listings, cross references,
 and the debugger, done 2026-11-23; subtask 14, programs end to end, done 2026-11-23; subtask 15, the
-close-out, is next. Phase 99's question 2 left Fortran 95's additions to an
+close-out, done 2026-11-23: the phase is done ("Where things stand" is its follow-up list). Phase 99's question 2 left Fortran 95's additions to an
 optional Phase 112, the author chose go at Phase 111's close-out, and the phase was widened
 to the Fortran errata the same day. At the errata survey's review the author split it:
 Fortran 95 is this phase, and the errata, with the survey (its Part A), is Phase 113
@@ -320,7 +320,7 @@ way) and the HPF_LIBRARY routines. **Not planned.**
     with outputs worked by hand, held to gfortran by `compare.py`'s `PROGRAMS90`; a program
     of some size using them together (done 2026-11-23).
 15. The close-out: MANUAL.md's 14.13, FORTRAN-INTERNALS.md's section 37, HELP FORTRAN,
-    `TestNoF90Unchanged` and the corpus held.
+    `TestNoF90Unchanged` and the corpus held (done 2026-11-23).
 
 The order puts the syntax first (nothing else can be judged without it), then the
 storage items that FORALL's and ELEMENTAL's tests will use (NULL, default values), then
@@ -939,3 +939,55 @@ with every recommendation of A.5:
   README has COLONY's row and the eight Phase 112 programs' rows it lacked (PURES to ZEROWIDVMS).
   `testdata/f90r` regenerated, M_COLONY added to `f90rAwaitingVMS`. Subtask 15, the close-out,
   is next.
+- **2026-11-23:** Subtask 15, the close-out; the phase is done. FORTRAN-INTERNALS.md's section 37,
+  "Fortran 95", follows ROD (a rod heated at one end: a type with default values, a PURE and an
+  ELEMENTAL module function, a FORALL construct through temporaries and a FORALL statement in turn,
+  a WHERE in a WHERE with a masked ELSEWHERE, MAXLOC with DIM=, F0.1) through the decisions: the
+  header's recovery (UNRECPREFIX), an empty dimension as (1:0) and `Elements() == 0`'s two
+  meanings, `NULL()` with no row of the table, default initialization as initial values or entry
+  assignments, PURE checked where the analysis already looks, ELEMENTAL as a call the scalarizer
+  reaches into, FORALL's order (in turn or through temporaries, the construct's steps), the chain
+  of masks, the intrinsics and FTNRTL's zero widths, the tools, and what the programs found. Its
+  dumps, MACRO, and output are govax's own (`sema.Dump`, `ir.Dump`, `/NOOPTIMIZE`, a run). The
+  introduction, contents, map (section 21), and the stale forward references in sections 32 and
+  33 updated. MANUAL.md's 14.13: the introduction names Fortran 95 and the corpus's counts (128
+  programs and 6 of several files), a new "Fortran 95" part (a table of each addition and where it
+  is described, what `/NOF90` compiles, UNRECPREFIX, COLONY), and "What Fortran 90 isn't here"
+  gains Phase 112's NOTIMPLs (FORALL's forms, an elemental defined assignment of a run-time-length
+  CHARACTER array overlapping its target) and loses its stale closing list. HELP FORTRAN's
+  Fortran_90 topic has a Fortran 95 paragraph in place of its partial list; `helplib.hlb` rebuilt
+  by `go generate`. PLAN.md's row and summary. `TestNoF90Unchanged`, the corpus
+  (`TestFortranPrograms`, `TestFortranModules`, `TestFortran90Programs`, `TestFortran90Modules`),
+  and the help tests pass.
+
+## Where things stand
+
+Phase 112 is done: Fortran 95's additions compile under `/F90`, most under `/NOF90` too, and every
+VAX FORTRAN and Fortran 90 program is unchanged (`TestNoF90Unchanged`, the corpora). What it left,
+and where each goes:
+
+- **Phase 113 (the errata):** the VMS round of the new programs (`testdata/f90r`'s
+  `f90rAwaitingVMS`: ZEROSIZE, NULLS, DEFAULTS, PURES, ELEMENTALS, FORALLS, FORALLC, WHERES,
+  INTRINS, ZEROWID, ZEROWIDVMS, M_COLONY; `testdata/ftn86`'s ZEROVAX), and what VMS's FORRTL does
+  with a zero width, if anything wants the answer (Decision 4); a STRUCTURE with initial values in
+  a module's text (its A.3.2).
+- **NOTIMPL, named, in no phase yet:** in a FORALL, a statement through temporaries that is a
+  pointer assignment, a defined assignment, a WHERE, or an assignment to an array or to a CHARACTER
+  target of run-time length; any statement through temporaries, or a mask its statements change,
+  in a FORALL whose bounds use an outer index; a target whose subscripts read its own storage
+  (`V(V(I)) = 0`); a nested FORALL's bound its own statements may change; a FORALL whose pointer's
+  storage isn't known; an elemental defined assignment of a CHARACTER array expression of run-time
+  length overlapping its target.
+- **Rules not checked:** PURE's storage association (an EQUIVALENCE partner of a global), a pointer
+  component's target reached through a global or an INTENT(IN) dummy, a structure constructor's
+  pointer component given a global, and an internal procedure of a PURE one being PURE (its
+  references are checked); ELEMENTAL's rule that a dummy appear in specification expressions only
+  as an inquiry's argument (12.7.1). `ASSOCIATED(P, NULL())` is NULLPLACE.
+- **Unconfirmed choices (ours, logged above):** an empty dimension shown as (1:0) in maps, module
+  files, and the debugger; a specification function may be recursive; DATA of a default-initialized
+  object is DEFAULTINIT; CPU_TIME's -1 on failure; `I0` of zero one blank; a negative `F0.d` showing
+  only zeros has no minus sign (VMS's rule for F, where gfortran writes `-.00`); a nested FORALL's
+  kept bounds computed as it is reached, even with no outer tuple active.
+- **Not planned:** MAXLOC's and MINLOC's KIND= (answer 6); what later standards added (IMPURE,
+  which is UNRECPREFIX, procedure pointers, bounds remapping).
+

@@ -37,8 +37,10 @@ constructs (section 26), arrays as values (section 27), procedures with explicit
 array-valued functions (section 29), derived types (section 30), modules and separate compilation
 (section 31), pointers (section 32), the intrinsic procedures (section 33), and its I/O (section
 34), with the compiler's tools (`/STANDARD`, warnings, listings, `/CHECK`, the debugger, and the
-optimizer) taught the new language (section 35). What it leaves out is a short list of corners,
-each refused by name (the manual's 14.13, "What Fortran 90 isn't here").
+optimizer) taught the new language (section 35). Fortran 95's additions, FORALL, PURE and
+ELEMENTAL procedures, `NULL()`, default initialization, and WHERE inside WHERE, are compiled under
+the same `/F90` (section 37). What it leaves out is a short list of corners, each refused by name
+(the manual's 14.13, "What Fortran 90 isn't here").
 
 A real program in each language builds and runs, and has run on a real VAX: DUNGEON, about
 11,600 lines of VAX FORTRAN (section 20), and fcalc, a scientific calculator of about 11,000 lines
@@ -51,8 +53,8 @@ control flow and subprograms (section 12), and records (section 13). Then come
 FTNRTL, what using VMS asks of compiler and library, the optimizer, testing,
 the debugger, listings and checks, and what a real program and a real VAX
 found. Sections 24 to 35 add Fortran 90 a part at a time, each built on the
-passes as sections 1 to 23 leave them, and section 36 is a whole Fortran 90
-program. The contents below list every section.
+passes as sections 1 to 23 leave them, section 36 is a whole Fortran 90
+program, and section 37 adds Fortran 95. The contents below list every section.
 Every dump and MACRO listing before section 16
 is `/NOOPTIMIZE`'s, the compiler's plain code, which is what the earlier chapters
 explain; `/OPTIMIZE` is the command's default.
@@ -121,6 +123,10 @@ each topic to the files that hold it.
 **A whole Fortran 90 program**
 
 - [36. A whole program: fcalc](#36-a-whole-program-fcalc-phase-111)
+
+**Fortran 95**
+
+- [37. Fortran 95](#37-fortran-95-phase-112)
 
 ## 1. The shape of the compiler
 
@@ -2718,7 +2724,8 @@ one list, `ftn86VMSDifferences`, each with its reason: a service govax lacks, a 
 | `/STANDARD=F90`, obsolescent features, warnings, `/CHECK=POINTERS` | `sema/standard.go`, `sema/warnings.go`; `ir/lowerguard.go` |
 | Fortran 90 programs and expected output | `testdata/fortran90` (and its `modules/`), `testdata/fortran/gfortran/compare.py`'s `PROGRAMS90`, `testdata/f90r` |
 | A whole Fortran 90 program | `internal/fcalc/src` (fcalc's sources), `internal/fcalc/build`, `testdata/fcalc` (its scripts); section 36 |
-| Why something is as it is | `docs/planning/PHASE-74` to `PHASE-86`, `PHASE-88` for indexed files, `PHASE-89` for recursion, and `PHASE-99` to `PHASE-111` for Fortran 90, each with its decisions and log |
+| Fortran 95: prefixes, FORALL, PURE, ELEMENTAL, NULL(), default initialization, nested WHERE | `lex/f95stmt.go`, `parse/f95.go`; `sema/forall.go`, `forallorder.go`, `pure.go`, `elemental.go`, `null.go`, `defaults.go`, `where.go`; `ir/lowerforall.go`, `lowerdefaults.go`, `lowerwhere.go`; section 37 |
+| Why something is as it is | `docs/planning/PHASE-74` to `PHASE-86`, `PHASE-88` for indexed files, `PHASE-89` for recursion, and `PHASE-99` to `PHASE-111` for Fortran 90, `PHASE-112` for Fortran 95, each with its decisions and log |
 
 If you're writing a compiler for this machine, this one's history suggests a few things:
 
@@ -5091,7 +5098,7 @@ dummy's component (`Y(A%N)`), a defined operator's array operand, a defined assi
 value, and ASSOCIATED of a pointer function's value. Each is held by a test of its own.
 
 What waits: a CHARACTER pointer whose length is known only when the program runs. (`NULL()` and
-default initialization came with Phase 112, subtasks 4 and 5, which its section is to describe.)
+default initialization came with Fortran 95, section 37.)
 
 ## 33. Fortran 90: the intrinsic procedures (Phase 108)
 
@@ -5427,8 +5434,8 @@ imaginary half, so `(0.0_16, 0.5_16)` and `(0.0_16, 1.0_16)` shared one datum; a
 constant (`MONTHS(11)(1:8)`), which the standard allows and sema refused. Each is held by a test of
 its own.
 
-What waits: Fortran 95's additions, CEILING's and
-FLOOR's KIND, NULL, and CPU_TIME (Phase 112). Not there, and in no phase yet: a BACK= that is an array, a TRANSFER to
+What waits: nothing of Fortran 95's (CEILING's and FLOOR's KIND=, NULL, and CPU_TIME came
+with it, section 37). Not there, and in no phase yet: a BACK= that is an array, a TRANSFER to
 a CHARACTER MOLD of zero or run-time length, and a component or function value of length zero, each
 `%FORT-E-NOTIMPL`, named.
 
@@ -6585,3 +6592,499 @@ If you're writing a compiler and no real program in its language is at hand, wri
 test, but a tool you would use, big enough that you stop thinking about the compiler while you
 write it. That is when you write the combinations a test-writer wouldn't: fcalc's first part,
 the expressions and the prompt, found two compiler bugs.
+
+## 37. Fortran 95 (Phase 112)
+
+Fortran 95 is a small revision of Fortran 90, and most of it is not new machinery but new
+*rules* over the machinery sections 24 to 35 built. FORALL assigns over an index set, which
+the scalarizer of section 27 already knew how to do for a section; ELEMENTAL procedures are
+called element by element, which section 33 already did for the elemental intrinsics; default
+initialization is an initial value, which section 8 placed, except that sometimes it must be
+placed at every call. What Fortran 95 changes is *when* those things happen and *what a
+program may rely on*, and those are what a compiler gets wrong. This section is about the
+decisions, more than the code.
+
+govax compiles Fortran 95 under the same `/F90` as Fortran 90 (Phase 112's Decision 2): there
+is no Fortran 95 mode. A new form VAX FORTRAN gave no meaning (FORALL, PURE, ELEMENTAL, a
+WHERE in a WHERE) is compiled under `/NOF90` too; the three that change what an old text means
+(`A(5:1)`, `I0`, a `!` in namelist input) are only `/F90`'s, and VAX FORTRAN's programs get
+the answers they always got.
+
+The section follows a short program, a rod heated at one end:
+
+```fortran
+module heat
+  implicit none
+  type cell
+    real :: t = 20.0
+    logical :: fixed = .false.
+  end type cell
+contains
+  pure real function mean(a, b)
+    real, intent(in) :: a, b
+    mean = (a + b) / 2.0
+  end function mean
+
+  elemental real function clamp(x, lo, hi)
+    real, intent(in) :: x, lo, hi
+    clamp = min(max(x, lo), hi)
+  end function clamp
+end module heat
+
+program rod
+  use heat
+  implicit none
+  integer, parameter :: n = 8
+  type(cell) :: bar(n)
+  real :: t(n)
+  integer :: i, step
+
+  bar(1)%t = 100.0
+  bar(1)%fixed = .true.
+  do step = 1, 3
+    forall (i = 2:n-1, .not. bar(i)%fixed)
+      bar(i)%t = mean(bar(i-1)%t, bar(i+1)%t)
+    end forall
+  end do
+  forall (i = 1:n) t(i) = bar(i)%t
+  print '(1x, 8(1x, f0.1))', t
+
+  where (t > 20.0)
+    where (t > 60.0)
+      t = clamp(t, 0.0, 60.0)
+    elsewhere
+      t = t - 1.0
+    end where
+  elsewhere (t < 20.0)
+    t = 20.0
+  end where
+  print '(1x, 8(1x, f0.1))', t
+  print '(1x, a, i0)', 'hottest free cell: ', maxloc(t(2:), dim=1) + 1
+end program rod
+```
+
+It prints:
+
+```text
+ 100.0 70.0 40.0 30.0 20.0 20.0 20.0 20.0
+ 60.0 60.0 39.0 29.0 20.0 20.0 20.0 20.0
+hottest free cell: 2
+```
+
+Every cell starts at 20 degrees because the type says so. Each step sets every free cell to the
+mean of its neighbours *as they were before the step*: in the first step cell 2 becomes 60 and
+cell 3 stays 20, since cell 2's new value isn't seen until the next step. A DO loop over I
+would have given 60, 40, 30, 25, ... in one step, each cell reading its neighbour's new value.
+That difference is FORALL's whole meaning, and the first thing its code has to get right.
+
+### A header that survives a word it doesn't know
+
+Fortran 95's procedures may start with PURE or ELEMENTAL, beside Fortran 90's RECURSIVE, in any
+order, before or after the type: `ELEMENTAL REAL FUNCTION`, `REAL PURE FUNCTION`, `RECURSIVE
+PURE SUBROUTINE`. The lexer reads them as it read RECURSIVE (`lex/f95stmt.go`'s
+`headerPrefixes`), each a flag on the statement. That was the easy part.
+
+The survey found the hard part by accident. Before Phase 112 a PURE function's header was an
+unrecognized statement, and an unrecognized first statement meant the unit had no header: its
+statements joined the unit before, whose END then came too early, whose CONTAINS was in the
+wrong place, and a dozen messages followed, none of them saying PURE. A compiler that will meet
+later standards' words (Fortran 2008's IMPURE, for one) should recover from a prefix it doesn't
+know. `lostHeader` does: a unit's first statement that would be unrecognized, but has words
+before a known prefix, FUNCTION, or SUBROUTINE, is reported once and read from the known word on:
+
+```text
+%FORT-E-UNRECPREFIX, IMPURE is not a prefix FORTRAN knows; the rest is read as a SUBROUTINE statement
+  at line 16 of ERRS.F90
+  impure elemental subroutine twice(x)
+  ^
+```
+
+The unit keeps its header, its ELEMENTAL, and its END, and the only message is the one that
+matters. The same idea runs through the parser: a statement with an error keeps its place in
+the tree (section 6), and now so does a header with one.
+
+### An empty array is (1:0)
+
+Fortran 90 allows an array of no elements, `REAL A(5:1)`, and VAX FORTRAN called it an error,
+BOUNDORDER. Under `/F90` govax now keeps such a dimension. The question was how. Keeping the
+declared bounds, 5 and 1, with an extent clamped to zero, would have meant teaching every pass
+that reads bounds (LBOUND and UBOUND, which the standard says are 1 and 0 for an empty
+dimension of a whole array; descriptors; the debugger's table) that the bounds no longer give
+the extent. Instead `sema/arrays.go`'s `emptyDimension` replaces the bounds with **(1:0)**, and
+every later pass sees an ordinary array whose extent is 0. The storage map and module files show
+`(1:0)` rather than what was written; that is the price.
+
+The bug this found is worth knowing about if you write a compiler: in three places
+`Elements() == 0` had meant *the shape isn't known yet* (an assumed-size array, say), and an
+empty array is a known shape of no elements. `Symbol.Empty` now says which, so DATASIZE and the
+size check no longer divide by zero or refuse an empty array an initial value. When a value
+can be "nothing" legitimately, it can't also be the signal for "unknown".
+
+### NULL() has no type of its own
+
+Every other intrinsic function has a row in sema's table (section 33): arguments in, a type out.
+`NULL()` has no type; it takes the type, kind, and rank of the pointer it is given to. So it has
+no row. Each place a pointer's value goes asks for it by name (`sema/null.go`'s
+`nullReference`), and analyzes it against the pointer it is for (`nullValue`): after `=>`, in a
+declaration's `=> NULL()`, in DATA, for a pointer component in a structure constructor, as a
+pointer dummy's argument. Anywhere else it is NULLPLACE:
+
+```text
+%FORT-E-NULLPLACE, a reference to NULL() is a disassociated pointer, so it can stand only where a pointer's value goes: after =>, in DATA for a pointer, for a pointer component in a structure constructor, or as a pointer dummy's argument
+```
+
+What `NULL()` compiles to is almost nothing. `P => NULL()` is a NULLIFY. A declaration's
+`=> NULL()` gives no bytes: a static pointer's storage already starts at zero (section 32's
+choice), which is disassociated. The one place it costs code is a pointer dummy's argument,
+which must be the address of a pointer: `nullPointer` makes a pointer of the statement's own,
+cleared, and passes that.
+
+A generic name is where `NULL()` gets interesting. The specific is chosen by the arguments'
+types, and `NULL()` has none, so it fits any pointer dummy; if that lets two specifics fit, the
+reference is ambiguous (NULLMOLD), and the program must say `NULL(MOLD=P)`, whose type then
+decides. Writing this found a bug of Phase 107's: a generic's pointer dummy was given the
+*target's* address rather than the pointer's, since `resolveGeneric` passed every actual the
+ordinary way. No earlier program had a generic with a pointer dummy.
+
+### Default initialization: an initial value, sometimes at every call
+
+A component may say what every object of its type starts with:
+
+```fortran
+  type cell
+    real :: t = 20.0
+    logical :: fixed = .false.
+  end type cell
+```
+
+`sema/derived.go` keeps each default as `Field.Default`, and the record's bytes with them, as
+the structure's `Initials`: the same bytes a STRUCTURE's initial values were (section 13). For
+ROD's `BAR`, a main program's array, they are initial values, and the dump shows eight cells'
+worth:
+
+```text
+  initial $LOCAL+0 BAR(1).T REAL = A0 42 00 00
+  initial $LOCAL+4 BAR(1).FIXED LOGICAL = 00 00 00 00
+  initial $LOCAL+8 BAR(2).T REAL = A0 42 00 00
+  ...
+```
+
+(`A0 42 00 00` is 20.0 in F_floating, words swapped as the VAX stores them.)
+
+That is right for a main program's objects, a module's, and a subprogram's SAVE'd ones, which
+exist once. But a subprogram's other locals don't keep their values between calls, and the
+manual and gfortran agree that default initialization doesn't imply SAVE: such a local starts
+with its defaults *at every call*, and so does an INTENT(OUT) dummy (whatever the caller's
+object held is gone) and a function's value. Here is a module procedure with both:
+
+```fortran
+  subroutine start(c, n)
+    type(counter), intent(out) :: c
+    integer, intent(in) :: n
+    type(counter) :: scratch
+    ...
+```
+
+Its MACRO begins:
+
+```text
+	.ENTRY	TALLY.START,^M<R2,R3,R4,R5>
+	MOVC3	#12,TALLY.START.$K1,@TALLY.START.C(AP)
+	MOVC3	#12,TALLY.START.$K1,TALLY.START.SCRATCH
+```
+
+`sema/defaults.go` decides, object by object, which of the two each is: initial values, or
+`Unit.Defaults`, assignments of the record's default bytes (a constant in `$PDATA`, `$K1`) that
+`ir/lowerdefaults.go` makes at each entry point, after the allocatable arrays are cleared. An
+array is set by the scalarizer's loop, an OPTIONAL dummy only if present, a dummy only at an
+entry point whose list has it; ALLOCATE sets what it makes after each successful allocation.
+
+Two consequences are easy to miss. In a RECURSIVE unit, where an initial value makes a local
+static (section 23), a local with defaults stays in the frame: it is set at entry, not given a
+value once, so each level of the recursion gets its own. And SAVE of a derived type's object had
+been refused since Phase 105, by VAX FORTRAN's rule for records applied to derived types too;
+Fortran 90 allows it, and with default initialization SAVE is what decides which way the
+defaults go, so the old refusal was found and removed.
+
+### PURE: checking where the analysis already looks
+
+A PURE procedure has no side effects: it changes nothing but its own locals and its value (a
+subroutine also its INTENT(OUT) and INOUT dummies), does no I/O but to internal files, and calls
+only PURE procedures. Fortran 95 needs the promise for FORALL and ELEMENTAL, whose order of
+evaluation is the processor's: if a function referenced in a FORALL could change a global, the
+answer could depend on the order the tuples were done in.
+
+The rules are a dozen, and the tempting design is a pass of its own, walking every PURE
+procedure's statements looking for violations. govax doesn't, because each rule is about
+something the analysis already finds for another reason. An assignment to a dummy already went
+through `checkIntentIn`, which refuses an INTENT(IN) dummy; it now also asks `pureDefines`
+whether the thing defined is a *global* (a module's variable, a host's, or one in COMMON) in a
+PURE unit. Every place INTENTIN was checked (assignment, a DO variable, an input item, a
+specifier, ALLOCATE of a component) is now checked for globals too, for free, and no place can
+be forgotten that INTENT(IN) didn't already forget. The message says which rule and why:
+
+```text
+%FORT-E-NOTPURE, CALLS, a variable of the module STATS, can't be given a value in a PURE procedure
+  at line 7 of ERRS.F90
+      calls = calls + 1
+  ----^
+```
+
+The other rules sit where their subject is seen: `checkPure`, at the unit's end, looks at the
+dummies' INTENTs and the locals' SAVE and initial values, and at `unit.calls`, the list of every
+procedure the unit references, which each must reach a PURE procedure through an explicit
+interface; `pureStatement` refuses STOP, PAUSE, and I/O but to internal files. A PURE interface
+body for a procedure that isn't PURE is INTERFACEDIFF, and a procedure not declared PURE passed
+to a dummy procedure whose interface says PURE is PUREACTUAL.
+
+PURE also lets a function compute a declaration's bounds, a *specification function*: `CHARACTER
+(LEN=WIDTH(N)) :: LINE`, where WIDTH is a PURE module function. `boundFunction`, which already
+took the intrinsic inquiries in bounds (section 29), takes such a function too; lowering needed
+nothing, since the bounds are computed at entry already. One of the standard's rules was left
+out on purpose: a specification function may not be recursive. Under `/RECURSIVE` every unit is
+recursive, and a module's text says so, so the rule would have made a program legal or not by a
+compiling option. The corpus found that: the same program failed only in its `/RECURSIVE` run.
+
+### ELEMENTAL: a call the scalarizer reaches into
+
+`CLAMP` is written for scalars and called with arrays:
+
+```fortran
+      t = clamp(t, 0.0, 60.0)
+```
+
+means `T(K) = CLAMP(T(K), 0.0, 60.0)` for every K. The obvious lowering is a temporary: call
+CLAMP once per element into an array of results, then assign. govax doesn't make one. Section
+27's scalarizer already turns an array expression into a loop nest with the expression's
+elements at its leaves, and the elemental *intrinsics* (`SQRT(A)`) are not leaves: the
+scalarizer reaches into their arguments, so `SQRT(A(K))` is computed at each element. An
+elemental reference is the same: `funcRef` makes a `FuncRef` with `Elemental` set and the
+arrays' shape (the dump's `CLAMP(T[], 0.0, 60.0)(8)`), and `Scalarize` reaches into it as into
+SQRT. The call is in the loop:
+
+```text
+ROD.$25:
+	PUSHAL	ROD.$K3
+	PUSHAL	ROD.$K2
+	MOVL	ROD.$I3,R0
+	PUSHAL	ROD.T-4[R0]
+	CALLS	#3,G^HEAT.CLAMP
+	MOVL	ROD.$I3,R1
+	MOVF	R0,ROD.T-4[R1]
+```
+
+That the target is also an argument is no problem: overlap (section 27) sees the arrays the
+call reads through its arguments (`Leaves`), and here T(K) is read and written at the same
+element, so the loop is safe in any order. `R(2:5) = CLIP(R(1:4), ...)` would run down instead.
+An elemental subroutine's CALL gets a shape too, `Call.Shape`, and lowering's `elementalCall`
+(MVBITS's, from section 33) calls it once per element in array element order.
+
+Two parts of the language had to decide between an elemental procedure and a specific one.
+A generic name may have both a specific for vectors and an elemental specific for scalars; the
+standard prefers an exact fit, so `resolveGeneric` tries every specific exactly first, and only
+then elemental ones element by element: a vector picks the vector specific, a scalar or a matrix
+the elemental one. And an elemental *defined assignment*, `CELLS = 'X'` through an elemental
+subroutine, is a call per element whose value is, by the standard's rule, computed whole before
+the target changes; `elementalAssignment` gives the call the array assignment's order
+(`Call.Order`), so `maskedCall` either runs it in a safe direction or computes the value into a
+temporary first. Inside a WHERE the same call is masked.
+
+### FORALL: an index set, not a loop
+
+A FORALL looks like a DO loop and isn't one. `FORALL (I = 2:N-1) V(I) = (V(I-1) + V(I+1)) / 2`
+means: compute the right side for every I, *then* assign them all. The standard says the
+values may be computed in any order, even at once; what it guarantees is that no assignment is
+seen by any evaluation. A DO loop guarantees the opposite.
+
+So the first question about each FORALL is whether it can be done as a loop anyway. It can if
+nothing the value or the mask reads is the target's storage, except at the target's own element:
+then doing the tuples in turn gives the same answer. That is the case for ROD's second FORALL,
+`forall (i = 1:n) t(i) = bar(i)%t`, which reads BAR and writes T, and its code is one loop:
+
+```text
+ROD.$11:				; FORALL (line 34), index I's body
+	MULL3	ROD.$I2,#2,R0
+	MOVL	ROD.$I2,R1
+	MOVF	ROD.BAR-8[R0],ROD.T-4[R1]
+	INCL	ROD.$I2
+	DECL	ROD.$C4			; one pass fewer
+	BLEQ	ROD.$12
+	BRW	ROD.$11
+```
+
+The first FORALL reads `BAR(I-1)%T` and `BAR(I+1)%T` and writes `BAR(I)%T`, so it can't, and
+the dump says so:
+
+```text
+30            FORALL (I = 2:7, (.NOT.:L BAR[I].FIXED:+4))
+31              BAR[I].T:+0 = MEAN(BAR[(-:I I 1)].T:+0, BAR[(+:I I 1)].T:+0)  [in temporaries]
+32            END FORALL
+```
+
+`sema/forall.go`'s `forallOrder` decides with `readsElsewhere`: a reference with the same text as
+the target (by `DumpExpr`) is the target's own element and is passed over; any other reference
+to the target's storage is a conflict; and a function's arguments are looked at by the same rule,
+unless the function could reach the target some other way. Section 27 asked a finer question,
+whether a section's elements run up or down, so a loop in the right direction would do; FORALL's
+subscripts are any expressions of the indexes, so govax asks only the coarse one, and a FORALL
+that fails it goes through temporaries.
+
+Through temporaries, lowering (`ir/lowerforall.go`) makes two loop nests. The first computes the
+mask for every tuple into a LOGICAL temporary and, where it holds, the value into a temporary of
+the target's type (`$W2` and `$W1`, six elements each, since I runs from 2 to 7); the second
+stores each kept value where its mask held:
+
+```text
+B3:  ; FORALL (line 30), index I's body
+  assign $I1 = add.L($I2, 1)
+  assign $W2-4[$I2] = not.L(BAR-4[mul.L($I1, 2)])
+  branch $W2-4[$I2] B4 B5
+B4:
+  call HEAT.MEAN(ref BAR-16[mul.L($I1, 2)], ref BAR[mul.L($I1, 2)]) -> $W1-4[$I2]
+  jump B5
+  ...
+B7:  ; FORALL (line 30), index I's body
+  assign $I1 = add.L($I2, 1)
+  branch $W2-4[$I2] B8 B9
+B8:
+  assign BAR-8[mul.L($I1, 2)] = $W1-4[$I2]
+```
+
+Each nest counts from 1 (`$I2`) and computes the index from the count (`$I1`, the FORALL's I),
+because the temporaries are indexed by position in the index set, whatever the bounds and
+stride. Notice MEAN is called only where the mask holds: the standard evaluates the value only
+for the active tuples, which matters if it would fault elsewhere.
+
+The FORALL's index I is not ROD's variable I. It is a symbol of the statement's own scope
+(`newInnerScope`, as a statement function's dummies are), which takes from the unit's I only its
+type; ROD's I is left alone, and its `$LOCAL` cell is never touched. The bounds are read in the
+statement's scope too, so a bound that uses an index finds it and is refused (FORALLBOUND). And
+MEAN must be PURE, or the statement is FORALLPURE:
+
+```text
+%FORT-E-FORALLPURE, CUBE isn't declared PURE, so it can't be referenced in a FORALL
+```
+
+**The construct** holds several statements, which are done one after another, each for every
+tuple before the next starts. Each statement is judged on its own, as a step: in turn if it can
+be, else through temporaries (`sema/forallorder.go`'s `finishForall`, which judges the outermost
+FORALL once, with every level's indexes). A nested FORALL adds indexes, and its bounds may use an
+outer one, so `FORALL (J = 1:I)` inside `FORALL (I = 1:N)` walks a triangle; lowering makes it a
+level inside the outer level's loops (`forallLevel`). A mask that a later statement of the
+construct may change is computed for the whole index set first (`MaskTemp`), since the standard
+evaluates the mask once, at the construct's start. What doesn't fit these rules is NOTIMPL by
+name (the manual's 14.13 lists the forms): the cases are rare, and each needs a temporary of a
+shape the code doesn't yet build.
+
+### WHERE inside WHERE: a chain of masks
+
+Fortran 90's WHERE has one mask and its complement. Fortran 95's may nest, and its ELSEWHERE may
+have a mask of its own, so a statement deep inside is controlled by several masks together. In
+ROD, `t = t - 1.0` runs where `T > 20.0` held and `T > 60.0` didn't. The standard is precise
+about *when* each mask is computed: a nested mask is evaluated only where the masks around it
+hold, and a masked ELSEWHERE's mask only after the block before it has run, so it sees what that
+block assigned. That rules out computing every mask at the start.
+
+`ir/lowerwhere.go`'s `generalWhere` gives each statement its control mask as a *chain*, a list
+of mask temporaries each tested in turn, possibly negated. Each mask is computed into its
+temporary when its WHERE or ELSEWHERE is reached, under the chain that controls it:
+
+```text
+B16:  ; array (line 38), dimension 1's body
+  branch $W3-4[$I1] B17 B18
+B17:
+  assign $W4-4[$I1] = gt.F(T-4[$I1], 60.0)
+  ...
+B26:  ; array (line 41), dimension 1's body
+  branch $W3-4[$I4] B27 B30
+B27:
+  branch $W4-4[$I4] B29 B28
+B28:
+  assign T-4[$I4] = sub.F(T-4[$I4], 1.0)
+```
+
+`$W3` is `T > 20.0`, `$W4` is `T > 60.0`, computed only where `$W3` holds; line 41 runs where
+`$W3` holds and `$W4` doesn't. The masked ELSEWHERE's `$W5`, `T < 20.0`, is computed after the
+nested WHERE has run, where `$W3` doesn't hold. The program could have divided by something the
+outer mask tested for zero, and nothing would fault. A WHERE with one mask, Fortran 90's form,
+is lowered as before, and the optimizer's fusion (section 35) still applies only to those.
+
+### The rest: intrinsics and FTNRTL
+
+The intrinsics' changes are small, and each went where its kind already lived. MAXLOC and MINLOC
+with DIM= are reductions like MAXVAL's (section 27), so `maxloc(t(2:), dim=1)` is one loop with
+two accumulators, the place found so far and the value there:
+
+```text
+B42:  ; array (line 47), dimension 1's body
+  assign $T3 = T[$I6]
+  branch eq.L($T1, 0) B44 B43
+B43:
+  branch gt.F($T3, $T2) B44 B45
+B44:
+  assign $T2 = $T3
+  assign $T1 = $I6
+```
+
+`$T1` starts at 0, "nothing seen", and a later element replaces the best only if strictly
+greater, so the first of equal values wins, as the standard says. CEILING's and FLOOR's KIND= are
+the existing KIND= machinery of INT and NINT (section 25). CPU_TIME is an intrinsic subroutine
+like DATE_AND_TIME, calling FTNRTL's `FTN$CPU_TIME_F` (or `_D`, `_G`, `_H` by the argument's
+format), which asks `$GETJPIW` for the process's CPU time in 10 ms ticks.
+
+FTNRTL's two changes are both under the F90 flag of section 34, since VAX FORTRAN gave their
+texts meanings. A zero width, `I0` or `F0.1` (ROD's prints use `F0.1`), writes a value in the
+fewest columns that hold it; the output paths already counted a value's columns before comparing
+them with the width, so `I0` is that count taken as the width (`ftn_edit.mar`'s `ZERO_WIDTH`),
+and `F0.d` lays the number out as if the width were the record's room left (`ftn_float.mar`'s
+`L_ZERO`), then puts only its own columns. And a `!` in namelist input starts a comment: the one
+routine that passes over blanks for list-directed and namelist input, `FTN$$LI_SKIP`, passes over
+the rest of the record after one, in a namelist READ with the flag. Without the flag, `I0` is
+still a field too narrow for anything (OUTCONERR) and `!` still SYNERRNAM, and
+`testdata/fortran/zerovax.for` holds them there.
+
+### What the tools say
+
+`/STANDARD=F90` judges by Fortran 90 with Fortran 95's additions (there is no F95 keyword), so
+it flags none of them, and `/STANDARD=F77` flags each as an extension. Its obsolescent list is
+now Fortran 95's, and the features Fortran 95 deleted get a message of their own, still only
+informational, since govax compiles them:
+
+```text
+%FORT-I-DELETED, deleted in Fortran 95: the PAUSE statement
+```
+
+Section 35 described both. A cross reference says PURE or ELEMENTAL after a procedure's type,
+and gives each FORALL index a row of its own (`I  INTEGER FORALL index`), so a reader can tell
+the FORALL's I from the unit's. The debugger needed nothing: a FORALL index has no storage of its
+own (it lives in a pooled `$In` cell, absent from the `/DEBUG` table), so EXAMINE of I shows
+ROD's variable, which the FORALL leaves alone; that is what the program means, if not always what
+its reader expects.
+
+### What the programs found
+
+Each subtask added a program to `testdata/fortran90` with its output worked by hand from the
+standard and the HP manual, and gfortran `-std=f95` printed the same: `zerosize`, `nulls`,
+`defaults`, `pures`, `elementals`, `foralls`, `forallc`, `wheres`, `intrins`, and `zerowid`
+(with `zerowidvms`, govax's own choices, and the VAX side, `testdata/fortran/zerovax.for`). Then
+`modules/colony`, Conway's Life in three files, used all of them together: cells with default
+values, an elemental defined assignment, an ELEMENTAL function of the whole board, PURE functions
+in FORALL, a WHERE in a WHERE, MAXLOC with DIM=, and a NAMELIST with comments. It ran right the
+first time in every mode, which says more about the subtasks' programs than about COLONY.
+
+The bugs were in the old code, found by the new rules: the generic's pointer dummy (Phase 107),
+SAVE of a derived type refused (Phase 105), `Elements() == 0` meaning two things (Phase 102), the
+debugger showing one element of an empty array (it stepped before testing the bounds),
+`/WARNINGS=NOGENERAL` holding back what `/STANDARD` asked for (Phase 110), an intrinsic
+subroutine's CALL never judged by `/STANDARD` at all, and NULL mentioned nowhere in a cross
+reference. Each is held by a test of its own. The pattern is a familiar one: a new
+feature is a new way of reaching old code, and the old code's assumptions ("a shape with no
+elements is unknown", "a generic's arguments are passed the ordinary way") were true only of the
+ways it had been reached before.
+
+What waits: the NOTIMPLs the manual's 14.13 lists (FORALL statements whose temporaries would need
+a shape not yet built; a target whose subscripts read its own storage, `V(V(I)) = 0`); a few of
+PURE's rules not checked (an EQUIVALENCE partner of a global, a global reached through a pointer
+component); ELEMENTAL's rule on dummies in specification expressions; a STRUCTURE's initial
+values in a module's text (Phase 113); and the VMS round of the new programs (Phase 113's probe
+round). What later standards added, IMPURE among it, is not planned.

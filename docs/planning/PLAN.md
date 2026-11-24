@@ -161,7 +161,7 @@ questions, and a progress log extended as that phase is worked.
 | 109 | [PHASE-109 - Fortran 90 IO](PHASE-109%20-%20Fortran%2090%20IO.md) | Nonadvancing I/O, OPEN's and INQUIRE's new specifiers, B, EN, ES, and G for every type, Fortran 90's NAMELIST form, items by descriptor — planned 2026-11-17; done 2026-11-20 |
 | 110 | [PHASE-110 - Fortran 90 compiler usability](PHASE-110%20-%20Fortran%2090%20compiler%20usability.md) | `/STANDARD=F90` and the obsolescent features, warnings, listings and cross references by scope, `/CHECK` on shapes and pointers, `/DEBUG` and the debugger on Fortran 90's data, traceback lines, stepped addresses and fused nests — planned 2026-11-17; done 2026-11-20 |
 | 111 | [PHASE-111 - Fortran 90 milestone](PHASE-111%20-%20Fortran%2090%20milestone.md) | fcalc, a scientific calculator of 11,000 lines, as the Fortran 90 milestone: every mode, gfortran's witness, the VMS round (fcalc and the whole corpus on VMS 7.1), shipped as SYS$SYSTEM:FCALC.EXE with HELP FCALC; the manual's 14.13 and Appendix E and FORTRAN-INTERNALS.md finished — planned 2026-11-17; done 2026-11-22 |
-| 112 | [PHASE-112 - Fortran 95](PHASE-112%20-%20Fortran%2095.md) | Fortran 95's additions under `/F90`: FORALL, PURE and ELEMENTAL, `NULL()` and default initialization, nested WHERE, the intrinsic changes, CPU_TIME, zero widths, zero-sized arrays, `/STANDARD=F90` widened — planned 2026-11-22, split from the errata at its survey's review |
+| 112 | [PHASE-112 - Fortran 95](PHASE-112%20-%20Fortran%2095.md) | Fortran 95's additions under `/F90`: FORALL, PURE and ELEMENTAL, `NULL()` and default initialization, nested WHERE, the intrinsic changes, CPU_TIME, zero widths, zero-sized arrays, `/STANDARD=F90` widened — planned 2026-11-22, split from the errata at its survey's review; done 2026-11-23 |
 | 113 | [PHASE-113 - Fortran errata](PHASE-113%20-%20Fortran%20errata.md) | The errata of both Fortran programs and their tools: the survey's whole to-do list (Part A, done 2026-11-22) and what the author chose done (Part B), with a VMS probe round — planned 2026-11-22 |
 | 114 | [PHASE-114 - FORTRAN CONVERT](PHASE-114%20-%20FORTRAN%20CONVERT.md) | OPEN's `CONVERT=` other than NATIVE in FTNRTL, held to VMS's FORRTL — planned 2026-11-22 |
 
@@ -1208,3 +1208,38 @@ into the Fortran errata: a whole to-do list of what both Fortran programs and th
 Fortran 95's additions among it, with resolved items marked in the docs that still listed them. At
 the survey's review the author split it: Fortran 95 is Phase 112, the errata Phase 113, and
 `CONVERT=` Phase 114.
+
+Phase 112 (done 2026-11-23) is Fortran 95, compiled under the same `/F90` as Fortran 90 (no F95
+mode; `/STANDARD=F90` judges by Fortran 90 with Fortran 95's additions). Its survey read the HP
+Fortran manual's additions whole, with nine probe programs built by gfortran `-std=f95`
+(`testdata/f95`); there is no VMS probe, there being no VAX Fortran 95.
+
+- **Syntax and recovery**: PURE and ELEMENTAL beside RECURSIVE in any order; FORALL's statement and
+  construct; END INTERFACE's generic name; named WHERE; a unit's header read past a prefix word it
+  doesn't know (UNRECPREFIX), so the unit keeps its structure.
+- **Zero-sized explicit-shape arrays** under `/F90`, each empty dimension kept as (1:0).
+- **`NULL()`** where a pointer's value goes, context-typed, with MOLD= for generics; a fix to
+  generics with pointer dummies.
+- **Default initialization**: initial values for objects that exist once, `Unit.Defaults` at every
+  entry for a subprogram's other locals, INTENT(OUT) dummies, and values, and after ALLOCATE; SAVE of
+  a derived type's object allowed; the module text carries the defaults.
+- **PURE**: the constraints checked where the analysis already looks (`checkIntentIn`'s
+  `pureDefines`), PURE interfaces, specification functions.
+- **ELEMENTAL**: a reference with arrays a `FuncRef` the scalarizer reaches into, elemental CALLs,
+  generics exact first, elemental defined operators and assignment, in WHERE too.
+- **FORALL**: the statement and construct in a scope of their own, in turn when nothing read
+  overlaps the target, else through temporaries of the index set's shape; nested FORALLs, WHERE
+  inside, pointer and defined assignment, masks the body changes.
+- **WHERE inside WHERE** and masked ELSEWHERE, each mask computed when reached under a chain of
+  masks; F95ONLY retired.
+- **The intrinsics**: MAXLOC and MINLOC with DIM=, CEILING's and FLOOR's KIND=, CPU_TIME
+  (FTNRTL's `FTN$CPU_TIME_x`, GSMATCH 1,33); **FTNRTL's** zero widths and namelist comments under
+  the F90 flag.
+- **The tools**: Fortran 95's obsolescent list and its deleted features (`%FORT-I-DELETED`) under
+  `/STANDARD=F90`; cross references with PURE/ELEMENTAL and FORALL indexes.
+- **Programs end to end**: ten corpus programs, and `modules/colony`, Conway's Life using every
+  addition together; gfortran prints the same.
+
+MANUAL.md's 14.13 (a "Fortran 95" part among the rest), HELP FORTRAN, and FORTRAN-INTERNALS.md's
+section 37 describe it; the phase doc's "Where things stand" lists what it left. The next phase is
+113, the errata.

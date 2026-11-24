@@ -8527,7 +8527,11 @@ interface blocks, keyword, optional, and generic arguments and defined operators
 types, the I/O statements' new forms (nonadvancing records, the new specifiers and edit
 descriptors, Fortran 90's NAMELIST), allocatable, automatic, and assumed-shape arrays and
 array-valued functions, modules compiled together or apart, pointers, and the standard's
-intrinsic procedures. The compiler's tools know them all: `/STANDARD=F90` judges a program by
+intrinsic procedures. It takes in Fortran 95 (ISO/IEC 1539-1:1997) too, a small revision whose
+additions (FORALL, PURE and ELEMENTAL procedures, `NULL()`, default initialization, WHERE
+inside WHERE, zero-sized arrays, a few intrinsics and edit descriptors) are compiled wherever
+Fortran 90's are; [Fortran 95](#fortran-95) lists them and where each is described. The
+compiler's tools know them all: `/STANDARD=F90` judges a program by
 Fortran 90 and its obsolescent features, `/WARNINGS` reports a host's name hidden and a value
 never read, listings and cross references go by scope, `/CHECK=POINTERS` looks for a pointer
 not associated and an array not allocated ([section 14.3](#143-the-fortran-command)), the
@@ -8536,7 +8540,7 @@ debugger reads derived types, sections, and pointers
 assumed-shape arrays and fuses array assignments ([section 14.9](#149-what-optimize-does)).
 
 What a program compiled here does is checked three ways: by programs whose output was worked
-by hand from the standard (govax's `testdata/fortran90`, 117 programs and 5 of several files,
+by hand from the standard (govax's `testdata/fortran90`, 128 programs and 6 of several files,
 each run in every mode the compiler has), by gfortran building the same sources and printing
 the same lines, and by VMS 7.1 assembling and linking the compiler's MACRO files and FTNRTL's
 on a real VAX and running them. The largest program, fcalc, the calculator govax ships, is
@@ -8558,6 +8562,7 @@ made where the standard leaves one to the processor.
 | ALLOCATE, automatic and assumed-shape arrays | [Dynamic arrays](#dynamic-arrays) |
 | MODULE, USE, module files | [Modules](#modules) |
 | POINTER, TARGET, `=>` | [Pointers](#pointers) |
+| FORALL, PURE, ELEMENTAL, `NULL()`, and the rest of Fortran 95 | [Fortran 95](#fortran-95) |
 | A whole program in modules | [fcalc, a whole program](#fcalc-a-whole-program) |
 | gfortran and a real VMS | [On gfortran and on VMS](#on-gfortran-and-on-vms) |
 | What isn't there | [What Fortran 90 isn't here](#what-fortran-90-isnt-here) |
@@ -10652,6 +10657,50 @@ end do
 A CHARACTER pointer may point at any length's text, so every CHARACTER TARGET is in
 reach of one. Any call may change any pointer's target.
 
+#### Fortran 95
+
+Fortran 95 (ISO/IEC 1539-1:1997) is a small revision of Fortran 90: a few new statements and
+procedures, rules made explicit, and some old features named obsolescent or deleted. govax
+compiles its additions in the same compiler and under the same `/F90` setting; nothing about a
+Fortran 90 or VAX FORTRAN program changes. Each addition is described with the part of the
+language it belongs to:
+
+| Fortran 95 adds | Described under |
+| --- | --- |
+| The FORALL statement and construct | [Arrays as values](#arrays-as-values) |
+| WHERE inside WHERE, `ELSEWHERE (mask)`, named WHERE constructs | [Arrays as values](#arrays-as-values) |
+| Zero-sized explicit-shape arrays, `REAL A(5:1)` | [Arrays as values](#arrays-as-values) |
+| MAXLOC and MINLOC with `DIM=` | [Arrays as values](#arrays-as-values) |
+| PURE procedures, and PURE functions in a declaration's bounds and lengths | [Procedures and interfaces](#procedures-and-interfaces) |
+| ELEMENTAL procedures, elemental defined operators and assignment | [Procedures and interfaces](#procedures-and-interfaces) |
+| `END INTERFACE` naming its generic specification | [Procedures and interfaces](#procedures-and-interfaces) |
+| Default initialization of a derived type's components | [Derived types](#derived-types) |
+| `NULL()`, and `=> NULL()` in a declaration | [Pointers](#pointers) |
+| CEILING's and FLOOR's `KIND=`, `CALL CPU_TIME` | [The intrinsic procedures](#the-intrinsic-procedures) |
+| The zero widths `I0`, `B0`, `O0`, `Z0`, `F0.d`; `!` comments in namelist input | [Input and output](#input-and-output) |
+| Its obsolescent and deleted features under `/STANDARD=F90` | [section 14.3](#143-the-fortran-command) |
+
+FORALL, PURE, ELEMENTAL, the new forms of WHERE, `END INTERFACE`'s name, default
+initialization, the intrinsics' new keywords, and `NULL()` where a pointer's value goes are
+compiled under `/NOF90` too, so a fixed-form VAX FORTRAN unit may use them; VAX
+FORTRAN gave none of those texts a meaning. Zero-sized arrays, zero widths, and namelist
+comments are only Fortran 90's, under `/F90`: to VAX FORTRAN `A(5:1)` is `BOUNDORDER`, `I0` a
+field too narrow for any value (`OUTCONERR`), and a `!` in namelist input `SYNERRNAM`, and a
+program compiled `/NOF90` still gets those answers. `CPU_TIME`, like Fortran 90's other intrinsic
+subroutines, is intrinsic under `/F90` or by an `INTRINSIC` statement. `/STANDARD=F90` judges a
+program by Fortran 90 with Fortran 95's additions, so it flags none of them;
+`/STANDARD=F77` flags each as an extension.
+
+A word the compiler doesn't know before `FUNCTION` or `SUBROUTINE`, as in Fortran 2008's
+`IMPURE ELEMENTAL SUBROUTINE S(X)`, is `%FORT-E-UNRECPREFIX`, and the rest of the line is still
+read as the header, so the unit and its other prefixes are kept and only that line is wrong.
+
+`testdata/fortran90/modules/colony` uses Fortran 95's additions together: Conway's Life on a
+torus, its cells a type with default values, set by an elemental defined assignment from a
+letter, stepped by an ELEMENTAL function of the whole board, counted by PURE functions inside
+FORALL, and reported through a WHERE in a WHERE, MAXLOC with `DIM=`, `I0`, and `F0.2`, each
+colony read as a NAMELIST group with comments. gfortran `-std=f95` prints what govax prints.
+
 #### fcalc, a whole program
 
 fcalc, the calculator in [section 6.6](#fcalc-a-calculator), is govax's example of a whole
@@ -10760,13 +10809,13 @@ naming what it is:
 | A derived type's component, or a function's value, of CHARACTER length zero | A length of 1 |
 | A COMPLEX(16) argument to SUM, PRODUCT, and the other functions not named under "The intrinsic procedures" | A loop |
 | A NAMELIST object deeper than 8 levels of arrays and derived types, or with more than 15 dimensions in all | FTNRTL's limits; `%FORT-E-NOTIMPL` |
+| In a FORALL, a statement whose value overlaps what it assigns (so it needs temporaries) when it is a pointer assignment, a defined assignment, a WHERE, or an assignment to an array or to a CHARACTER target of run-time length; any such statement, or a mask its statements change, inside a FORALL whose bounds use an outer index; a target whose subscripts read its own storage (`V(V(I)) = 0`); a nested FORALL's bound that its own statements may change | A DO loop, or the value computed into an array of its own first |
+| An elemental defined assignment of a CHARACTER array expression of run-time length that overlaps its target | Put the value in a variable first |
 
 Without `/CHECK=POINTERS` ([section 14.3](#143-the-fortran-command)) a disassociated pointer's
-target is at address 0, and using it is an access violation. These are Fortran 95's or later's,
-and not Fortran 90 at all (`NULL()` and default initialization are there, under "Pointers"
-and "Derived types", PURE and ELEMENTAL under "Procedures and interfaces", and zero widths and
-namelist comments under "Input and output"): procedure pointers and bounds remapping
-(`P(1:N) => A`). The FORALL statement and construct are under "Arrays as values".
+target is at address 0, and using it is an access violation. Fortran 95's additions are all
+there ([Fortran 95](#fortran-95)); what later standards added is not, among it procedure
+pointers, bounds remapping (`P(1:N) => A`), and IMPURE (`%FORT-E-UNRECPREFIX`).
 
 ## 15. Appendices
 

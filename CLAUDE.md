@@ -1494,7 +1494,11 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   (`OBSOLESCENT`, now "in Fortran 95": the computed GO TO, statement functions, DATA among
   executables, CHARACTER*(*) functions, CHARACTER*n, fixed form once per file) and its deleted list
   (`DELETED`, `extensions.deleted`); cross references with PURE/ELEMENTAL and a row per FORALL
-  index name (`forallRows`), NULL noted; the debugger unchanged, `TestFortran95Forms`),
+  index name (`forallRows`), NULL noted; the debugger unchanged, `TestFortran95Forms`;
+  subtask 14, done 2026-11-23, programs end to end, `testdata/fortran90/modules/colony`, Conway's
+  Life using every addition, gfortran the same; subtask 15, done 2026-11-23, the close-out:
+  FORTRAN-INTERNALS.md's section 37, MANUAL.md's 14.13 "Fortran 95", HELP FORTRAN; the phase done
+  2026-11-23, its "Where things stand" the follow-up list, and PLAN.md summarizes it),
   **Phase 113 is the errata** (its Part B the scope: the cheap
   Fortran 90 NOTIMPLs, LIB$INITIALIZE, STR$'s arithmetic, `USE
   STARLET_SSDEF`, MACRO's and LINK's gaps, housekeeping, and a VMS probe
