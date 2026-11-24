@@ -720,7 +720,7 @@ A.8.1 is not planned.
     - 12b. The FORRTL round (A.10's FORRTL items, Fortran 95's zero widths on output) (done 2026-11-24).
     - 12c. The debugger round (A.8.6) (done 2026-11-24).
     - 12d. The session on VMS 7.1: `testdata/err113`, `testdata/ftn86` (round 6), and
-      `testdata/f90r` (round 3), with 12b's and 12c's; the results copied back.
+      `testdata/f90r` (round 3), with 12b's and 12c's; the results copied back (done 2026-11-24).
 13. Its fixes, the ods2 header among them.
 14. The close-out.
 
@@ -1303,3 +1303,50 @@ Each subtask may begin with a survey of its own, as earlier phases' did.
     - SET and CANCEL SOURCE have no `/MODULE` (SYNTAX); EXIT and QUIT at a break run no
       exit handler, and QUIT isn't logged.
   - Subtask 12d, the session on VMS 7.1, is next.
+- **2026-11-24, subtask 12d (done):** the session on VMS 7.1, the author's, every part run and
+  its results copied back (`testdata/err113`'s README, "What came back").
+  - *ERR113* took three passes. The first stopped in STR113: STR$RECIP with a precision limit
+    whose digits are `0` (`RECIP 6 0e-4`) never returned (minutes of CPU time, no I/O). That is
+    VMS's answer; the case is out of `testdata/str113` (117 cases), and ERR113.COM takes P2, a
+    section to start at. The second ran every section with the scratch disk unattached, so FULL
+    and INDEX were run again by a third (`"" FULL`); `vax/err113.log` is the second with the
+    third's two sections, `vax/err113-rerun.log` the third as it came.
+  - *Where things are*: `testdata/err113/vax` (the log, INI113's images, MAC113's listings and
+    objects), `testdata/str113/vax/str113-vax.txt`, `testdata/svc113/vax` (and `def_dib.obj`),
+    `testdata/for81/vax`'s `for81g-vax.txt`, `for81g.log`, and `for81t.log` (the terminal, by
+    hand), `testdata/dbg113/vax` (eleven sessions, GVDBG113's, the listing, map, object, and
+    image), `testdata/ftn86/vax/round6` (DUNGEON's log `testdata/disks/ftn86d-round6.log`, the
+    same as round 5's), `testdata/f90r/vax/round3`; the scratch disk stays in `testdata/disks`
+    as the VAX left it.
+  - *TestStr113Probe and TestSvc113Probe* hold govax to the manuals' examples until subtask 13
+    sets `str113Compared` and `svc113Compared`; meanwhile they log how many lines differ from
+    VMS's run (93 and 62). VMS agrees with every manual example.
+  - *A first look*, for subtask 13 to work through:
+    - STR$: VMS moves a result's trailing zeros into the exponent and drops its leading zeros
+      (10e1 + 0e1 is `1` with exponent 2, 007 + 3 `1` with exponent 1, where govax gives `10`
+      with exponent 1 and 0). `DEFINE/USER SYS$OUTPUT STR113.TXT` of an existing file put the second
+      run's output after the first run's in that file, version 1, not in a new version (taken
+      off `str113-vax.txt`); whether govax does so is a question for 13.
+    - LIB$INITIALIZE: the shareable image's routine runs first, with 1 argument; the main
+      image's routines and the main program get 6 (govax's main: 3); the init-coroutine runs the
+      main program and returns its status (3), the image's `$STATUS`; the same `/NOTRACEBACK`.
+    - MACRO: a register name in a data directive is an error (DIRSYNX; DATALSTSYN in a list;
+      ADRLSTSYNX for `.ADDRESS`), status E. `.WARN` and `.ERROR` are GENWRN and GENERR with the
+      expression's value before the text; `.PRINT` the value and the text, no message.
+    - DCL: DELETE without a version is DELETE-E-DELVER (`%X1093120A`); a bad directory to PURGE
+      and as COPY's output DCL-W-DIRECT with the segment; PURGE/KEEP=0 PURGE-F-BADVALUE;
+      INITIALIZE and START alone DCL-W-INSFPRM.
+    - NOCC: in the log `ONETWOAFTER`, one line; at the terminal `ONE` began a line, `TWO`
+      followed on it, and `AFTER` began a line of its own.
+    - FULL: five copies of BIG.DAT (4,064 blocks) fit, the sixth is COPY-E-OPENOUT with
+      RMS-F-FUL (`%X106710A2`) and COPY-W-NOTCOPIED, nothing left of it
+      (NOFILES); DCL's OPEN/WRITE opens, its WRITEs go on until one is RMS-F-FUL (`%X00018544`),
+      and CLOSE succeeds; CREATE makes the file and then CREATE-E-WRITEERR with RMS-F-FUL;
+      MACRO's object MACRO-E-OPENOUT with RMS-F-FUL.
+    - INDEX: all 3,000 files made; INDEXF.SYS grew to 3,374 blocks in eleven extents (807, 686,
+      583, ... blocks, not ones), all in its one header, no extension header.
+    - FOR81T: a terminal READ through FORRTL takes 132 characters, then FOR error 39 (ERRDURREA)
+      with RMS$_TNS; the rest of the line went to the next read.
+    - The debugger: VMS's debugger on GVDBG113, govax's image, wrote DBG113S's session to the
+      byte.
+  - Subtask 13, the fixes, is next.

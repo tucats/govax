@@ -1,0 +1,30 @@
+@DBG113O.DBG
+!%DEBUG-I-VERIFYICF, entering command procedure DBG113O.DBG
+! ! DBG113O.DBG - STEP/OVER interrupted by a break, then GO (README.md): does
+! ! the step's end still stop?
+! SET BREAK INE
+! SET BREAK MID3
+! GO
+!break at DBG113\SUBE\INE
+!   152: INE:    CALLS   #0, SUBB3
+! STEP/OVER
+!break at DBG113\SUBB3\MID3
+!   168: MID3:   NOP
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBG113          SUBB3              168               00000003         000005A4
+!*DBG113          SUBE               152               00000009         00000595
+!*DBG113          START               62               00000071         00000471
+! !> GO after the interrupted STEP/OVER
+! GO
+!stepped to DBG113\SUBE\AFTERE
+!   153: AFTERE: NOP
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBG113          SUBE               153               00000009         00000595
+!*DBG113          START               62               00000071         00000471
+! EXAMINE .PC
+!DBG113\SUBE\AFTERE:     NOP     
+! CANCEL BREAK/ALL
+!%DEBUG-I-VERIFYICF, exiting command procedure DBG113O.DBG
+EXIT

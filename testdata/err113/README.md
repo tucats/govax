@@ -111,4 +111,21 @@ its index file takes all 3,000 files.
 
 ## What came back
 
-Nothing yet.
+`vax/` is the author's run on VMS 7.1, 24-NOV-2026 (Phase 113's subtask 12d), in three
+passes:
+
+- The first stopped in STR113: STR$RECIP with a precision limit whose digits are `0` never
+  returned (minutes of CPU time, no I/O). That case was taken out of `testdata/str113`
+  (117 cases), and ERR113.COM was given P2, a section to start at.
+- The second ran every section, but the scratch disk wasn't attached, so FULL and INDEX
+  found DUA3 offline.
+- The third, `@ERR113/OUTPUT=ERR113.LOG "" FULL` with the scratch disk attached, ran FULL
+  and INDEX (with SET VERIFY on: `vax/err113-rerun.log` is its log as it came).
+
+`vax/err113.log` is the second pass's log with the third's FULL and INDEX sections in place
+of its own. `testdata/disks/err113-scratch.dsk` is the scratch disk as the VAX left it (3,000
+files; INDEXF.SYS 3,374 blocks in eleven extents, all in its one header).
+
+At the terminal, `TYPE NOCC.DAT` showed `ONE` at the start of a line and `TWO` after it on
+the same line; `AFTER` started a line of its own. In the log the three are one line,
+`ONETWOAFTER`.

@@ -1,0 +1,316 @@
+DBG113                          Phase 113 probe: the debugger's open que 24-NOV-2026 10:28:43  VAX MACRO V5.4-3            Page   1
+01                                                                       24-NOV-2026 14:22:39  DUA1:[DBG113]DBG113.MAR;1         (1)
+
+                                     0000     1 	.TITLE	DBG113	Phase 113 probe: the debugger's open questions
+                                     0000     2 	.IDENT	/01/
+                                     0000     3 ; DBG113.MAR - the program behind Phase 113's debugger round (README.md). Each
+                                     0000     4 ; routine is the stage for one group of questions; the sessions (DBG113*.DBG)
+                                     0000     5 ; stop in it. START declares an exit handler (EXIT and QUIT), then calls:
+                                     0000     6 ;
+                                     0000     7 ;   REC(3)      a recursion to LEAF, as testdata/dbg89's: REC(n) writes
+                                     0000     8 ;               n*^X100 + k in Rk (R1 to R5) and saves R2 to R4, not R5, with
+                                     0000     9 ;               IV set by its entry mask; LEAF saves R6, not R7, sets DV, and
+                                     0000    10 ;               leaves the condition codes N set at INLEAF (the scope round)
+                                     0000    11 ;   FLOATS      short literals in F, D, G, and H instructions
+                                     0000    12 ;   REGINS      registers holding an instruction's bytes (EXAMINE/INSTRUCTION
+                                     0000    13 ;               of a register)
+                                     0000    14 ;   LOOP twice  three passes over LOOPTOP each, writing WATCHL and COUNT
+                                     0000    15 ;               (tracepoints and watchpoints)
+                                     0000    16 ;   SUBA, SUBD, SUBE   each calls one of SUBB1 to SUBB3 (STEP/RETURN and
+                                     0000    17 ;               STEP/OVER interrupted by a break)
+                                     0000    18 ;   TWICE       a macro: one source line, two calls of SUBC (a line step
+                                     0000    19 ;               that ends at a RET in the middle of the caller's line)
+                                     0000    20 ;   SIGNAL      two unhandled warnings (exception breaks)
+                                     0000    21 ;
+                                     0000    22 ; and prints "DBG113: done". The exit handler prints "DBG113: the exit
+                                     0000    23 ; handler ran".
+                                     0000    24 
+                                 00000000    25 	.PSECT	DATA113, WRT, NOEXE, LONG
+                           00000000  0000    26 WATCHL:	.LONG	0			; LOOP adds 2 each pass
+                           00000000  0004    27 COUNT:	.LONG	0			; LOOP's pass
+                           00000000  0008    28 DEPTH:	.LONG	0			; REC's activations
+                           00000000  000C    29 EXITST:	.LONG	0			; the exit handler's status
+                           00000000  0010    30 EXHBLK:	.LONG	0			; $DCLEXH's block: the link,
+                           000001C8' 0014    31 	.ADDRESS EXH			; the handler,
+                           00000001  0018    32 	.LONG	1			; one argument,
+                           0000000C' 001C    33 	.ADDRESS EXITST			; the status's address
+                  00000000 00004024  0020    34 GVAL:	.G_FLOATING	2.5		; EXAMINE/G_FLOAT
+00000000 00000000 00000000 40004002  0028    35 HVAL:	.H_FLOATING	2.5		; EXAMINE/H_FLOAT
+33 31 31 47 42 44 00000040'010E0000' 0038    36 EXMSG:	.ASCID	/DBG113: the exit handler ran/
+68 20 74 69 78 65 20 65 68 74 20 3A  0046       
+      6E 61 72 20 72 65 6C 64 6E 61  0052       
+33 31 31 47 42 44 00000064'010E0000' 005C    37 DONE:	.ASCID	/DBG113: done/
+                  65 6E 6F 64 20 3A  006A       
+                                     0070    38 
+                                 00000000    39 	.PSECT	CODE113, NOWRT, EXE, LONG
+                                     0000    40 
+                                     0000    41 	.MACRO	TWICE			; one source line, two calls of SUBC
+                                     0000    42 	CALLS	#0, SUBC
+                                     0000    43 	CALLS	#0, SUBC
+                                     0000    44 	.ENDM	TWICE
+                                     0000    45 
+                               003C  0000    46 	.ENTRY	START, ^M<R2,R3,R4,R5>
+                                     0002    47 	$DCLEXH_S DESBLK=EXHBLK		; for EXIT and QUIT
+              52   00001002 8F   D0  000F    48 	MOVL	#^X1002, R2
+              53   00001003 8F   D0  0016    49 	MOVL	#^X1003, R3
+              54   00001004 8F   D0  001D    50 	MOVL	#^X1004, R4
+              55   00001005 8F   D0  0024    51 	MOVL	#^X1005, R5
+                            03   DD  002B    52 	PUSHL	#3
+              00000097'EF   01   FB  002D    53 	CALLS	#1, REC			; REC(3), recursively
+              000000F3'EF   00   FB  0034    54 	CALLS	#0, FLOATS		; short literals
+DBG113                          Phase 113 probe: the debugger's open que 24-NOV-2026 10:28:43  VAX MACRO V5.4-3            Page   2
+01                                                                       24-NOV-2026 14:22:39  DUA1:[DBG113]DBG113.MAR;1         (1)
+
+              00000116'EF   00   FB  003B    55 	CALLS	#0, REGINS		; instructions in registers
+                   00000000'EF   DF  0042    56 	PUSHAL	WATCHL
+              00000136'EF   01   FB  0048    57 	CALLS	#1, LOOP		; LOOP's first run
+                   00000000'EF   DF  004F    58 	PUSHAL	WATCHL
+              00000136'EF   01   FB  0055    59 	CALLS	#1, LOOP		; and its second
+              00000176'EF   00   FB  005C    60 	CALLS	#0, SUBA		; STEP/RETURN interrupted
+              00000181'EF   00   FB  0063    61 	CALLS	#0, SUBD		; a second STEP/RETURN
+              0000018C'EF   00   FB  006A    62 	CALLS	#0, SUBE		; STEP/OVER interrupted
+                                     0071    63 	TWICE				; a line two calls long
+              000001AA'EF   00   FB  007F    64 AFTERT:	CALLS	#0, SIGNAL		; exception breaks
+                   0000005C'EF   7F  0086    65 	PUSHAQ	DONE
+              00000000'GF   01   FB  008C    66 	CALLS	#1, G^LIB$PUT_OUTPUT
+                       50   01   D0  0093    67 	MOVL	#1, R0
+                                 04  0096    68 	RET
+                                     0097    69 
+                                     0097    70 ; The recursion. REC's mask sets IV, so the PSW its callers' frames save has IV
+                                     0097    71 ; clear and REC's own has it set; LEAF's sets DV, and LEAF leaves N set.
+                               401C  0097    72 	.ENTRY	REC, ^M<R2,R3,R4,IV>	; R5 is written but not saved
+      51   04 AC   00000100 8F   C5  0099    73 	MULL3	#^X100, 4(AP), R1	; n*^X100
+                  52   51   02   C1  00A2    74 	ADDL3	#2, R1, R2
+                  53   51   03   C1  00A6    75 	ADDL3	#3, R1, R3
+                  54   51   04   C1  00AA    76 	ADDL3	#4, R1, R4
+                  55   51   05   C1  00AE    77 	ADDL3	#5, R1, R5
+                   00000008'EF   D6  00B2    78 	INCL	DEPTH
+                    01   04 AC   D1  00B8    79 	CMPL	4(AP), #1
+                            0B   14  00BC    80 	BGTR	RECUR
+              000000D7'EF   00   FB  00BE    81 	CALLS	#0, LEAF		; REC(1) calls LEAF
+                       50   01   D0  00C5    82 DEEP:	MOVL	#1, R0
+                                 04  00C8    83 	RET
+               7E   04 AC   01   C3  00C9    84 RECUR:	SUBL3	#1, 4(AP), -(SP)
+                    C5 AF   01   FB  00CE    85 	CALLS	#1, REC
+                    50   04 AC   C4  00D2    86 BACK:	MULL2	4(AP), R0		; each inner REC returns here
+                                 04  00D6    87 	RET
+                                     00D7    88 
+                               8040  00D7    89 	.ENTRY	LEAF, ^M<R6,DV>		; R7 is written but not saved
+              56   00006006 8F   D0  00D9    90 	MOVL	#^X6006, R6
+              50   00000F00 8F   D0  00E0    91 	MOVL	#^X0F00, R0
+              51   00000F01 8F   D0  00E7    92 	MOVL	#^X0F01, R1
+                       57   01   CE  00EE    93 	MNEGL	#1, R7			; N set: the live condition codes
+                                 01  00F1    94 INLEAF:	NOP
+                                 04  00F2    95 	RET
+                                     00F3    96 
+                                     00F3    97 ; Short literals in each floating format: how the debugger writes their
+                                     00F3    98 ; values (govax: F's seven digits for all four).
+                               000C  00F3    99 	.ENTRY	FLOATS, ^M<R2,R3>
+                       50   0C   50  00F5   100 	MOVF	S^#1.5, R0
+                       50   17   70  00F8   101 	MOVD	S^#3.75, R0
+                       50   00 50FD  00FB   102 	MOVG	S^#0.5, R0
+                       50   3F 50FD  00FF   103 	MOVG	S^#120.0, R0
+                       50   17 70FD  0103   104 	MOVH	S^#3.75, R0
+                       50   01 70FD  0107   105 	MOVH	S^#0.5625, R0
+                  50   10   0C 41FD  010B   106 	ADDG3	S^#1.5, S^#2.0, R0
+                  50   1F   02 61FD  0110   107 	ADDH3	S^#0.625, S^#7.5, R0
+                                 04  0115   108 INFLT:	RET
+                                     0116   109 
+                                     0116   110 ; Registers holding an instruction's bytes. R5 and R6 hold MOVL #^X12345678,R0
+                                     0116   111 ; (D0 8F 78 56 34 12 50), which runs past R5's four bytes; R7 holds a short
+DBG113                          Phase 113 probe: the debugger's open que 24-NOV-2026 10:28:43  VAX MACRO V5.4-3            Page   3
+01                                                                       24-NOV-2026 14:22:39  DUA1:[DBG113]DBG113.MAR;1         (1)
+
+                                     0116   112 ; one; R11's runs into AP.
+                               0FFC  0116   113 	.ENTRY	REGINS, ^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+              55   56788FD0 8F   D0  0118   114 	MOVL	#^X56788FD0, R5		; D0 8F 78 56
+              56   01501234 8F   D0  011F   115 	MOVL	#^X01501234, R6		; 34 12 50 01
+              57   0000046D 8F   D0  0126   116 	MOVL	#^X0000046D, R7		; 6D 04 00 00: CVTWD S^#4, S^#0.5
+              5B   12348FD0 8F   D0  012D   117 	MOVL	#^X12348FD0, R11	; D0 8F 34 12, then AP's bytes
+                                 01  0134   118 INREG:	NOP
+                                 04  0135   119 	RET
+                                     0136   120 
+                                     0136   121 ; LOOP(A): three passes. LOOPTOP is a line start and the branch's target, so
+                                     0136   122 ; an address trace, a line trace, and a branch trace all meet there. Its
+                                     0136   123 ; operands are of many kinds, for EXAMINE/OPERANDS.
+                               000C  0136   124 	.ENTRY	LOOP, ^M<R2,R3>
+                   00000004'EF   D4  0138   125 	CLRL	COUNT
+                   00000000'EF   D4  013E   126 	CLRL	WATCHL
+              52   00000000'EF   DE  0144   127 	MOVAL	WATCHL, R2
+                            53   D4  014B   128 	CLRL	R3
+                   00000004'EF   D6  014D   129 LOOPTOP: INCL	COUNT			; the pass, 1 to 3
+              00000000'EF   02   C0  0153   130 LOOPADD: ADDL2	#2, WATCHL		; watched: 2, 4, 6
+                    50   04 BC   D0  015A   131 	MOVL	@4(AP), R0		; deferred: WATCHL again
+            51   00000008'EF43   DE  015E   132 	MOVAL	DEPTH[R3], R1		; indexed
+                       50   82   D0  0166   133 	MOVL	(R2)+, R0		; autoincrement
+                       50   72   D0  0169   134 	MOVL	-(R2), R0		; autodecrement
+              03   00000004'EF   D1  016C   135 	CMPL	COUNT, #3		; a literal
+                            D8   19  0173   136 	BLSS	LOOPTOP			; a branch
+                                 04  0175   137 ENDLP:	RET
+                                     0176   138 
+                                     0176   139 ; STEP/RETURN and STEP/OVER. Each caller calls its own SUBBn, so a session's
+                                     0176   140 ; breaks in one don't stop another.
+                               0000  0176   141 	.ENTRY	SUBA, ^M<>
+              00000197'EF   00   FB  0178   142 INA:	CALLS	#0, SUBB1
+                                 01  017F   143 AFTERA:	NOP
+                                 04  0180   144 ENDA:	RET
+                                     0181   145 
+                               0000  0181   146 	.ENTRY	SUBD, ^M<>
+              0000019C'EF   00   FB  0183   147 IND:	CALLS	#0, SUBB2
+                                 01  018A   148 AFTERD:	NOP
+                                 04  018B   149 ENDD:	RET
+                                     018C   150 
+                               0000  018C   151 	.ENTRY	SUBE, ^M<>
+              000001A1'EF   00   FB  018E   152 INE:	CALLS	#0, SUBB3
+                                 01  0195   153 AFTERE:	NOP
+                                 04  0196   154 ENDE:	RET
+                                     0197   155 
+                               0000  0197   156 	.ENTRY	SUBB1, ^M<>
+                                 01  0199   157 	NOP
+                                 01  019A   158 MID1:	NOP
+                                 04  019B   159 END1:	RET
+                                     019C   160 
+                               0000  019C   161 	.ENTRY	SUBB2, ^M<>
+                                 01  019E   162 	NOP
+                                 01  019F   163 MID2:	NOP
+                                 04  01A0   164 END2:	RET
+                                     01A1   165 
+                               0000  01A1   166 	.ENTRY	SUBB3, ^M<>
+                                 01  01A3   167 	NOP
+                                 01  01A4   168 MID3:	NOP
+DBG113                          Phase 113 probe: the debugger's open que 24-NOV-2026 10:28:43  VAX MACRO V5.4-3            Page   4
+01                                                                       24-NOV-2026 14:22:39  DUA1:[DBG113]DBG113.MAR;1         (1)
+
+                                 04  01A5   169 END3:	RET
+                                     01A6   170 
+                               0000  01A6   171 	.ENTRY	SUBC, ^M<>
+                                 01  01A8   172 	NOP
+                                 04  01A9   173 ENDC:	RET
+                                     01AA   174 
+                                     01AA   175 ; Two unhandled warnings, SS$_ENDOFFILE: the debugger's exception breaks.
+                               0000  01AA   176 	.ENTRY	SIGNAL, ^M<>
+                   00000870 8F   DD  01AC   177 	PUSHL	#^X870			; SS$_ENDOFFILE
+              00000000'GF   01   FB  01B2   178 	CALLS	#1, G^LIB$SIGNAL
+                   00000870 8F   DD  01B9   179 SIG1:	PUSHL	#^X870
+              00000000'GF   01   FB  01BF   180 	CALLS	#1, G^LIB$SIGNAL
+                                 04  01C6   181 SIG2:	RET
+                                     01C7   182 
+                                     01C7   183 ; A source record longer than 144 columns (its comment), on an instruction never run.
+                                 01  01C7   184 LONGLN:	NOP		; 0000000001111111111222222222233333333334444444444555555555566666666667777777777888888888899999999990000000000111111111122222222223333333333444444444455555555556666666666
+                                     01C8   185 
+                                     01C8   186 ; The exit handler.
+                               0000  01C8   187 	.ENTRY	EXH, ^M<>
+                   00000038'EF   7F  01CA   188 	PUSHAQ	EXMSG
+              00000000'GF   01   FB  01D0   189 	CALLS	#1, G^LIB$PUT_OUTPUT
+                                 04  01D7   190 	RET
+                                     01D8   191 
+                                     01D8   192 	.END	START
+DBG113                          Phase 113 probe: the debugger's open que 24-NOV-2026 10:28:43  VAX MACRO V5.4-3            Page   5
+Symbol table                                                             24-NOV-2026 14:22:39  DUA1:[DBG113]DBG113.MAR;1         (1)
+
+$$$ADR         = 000000A0    D          
+AFTERA           0000017F R  D  02      
+AFTERD           0000018A R  D  02      
+AFTERE           00000195 R  D  02      
+AFTERT           0000007F R  D  02      
+BACK             000000D2 R  D  02      
+COUNT            00000004 R  D  01      
+DEEP             000000C5 R  D  02      
+DEPTH            00000008 R  D  01      
+DONE             0000005C R  D  01      
+END1             0000019B R  D  02      
+END2             000001A0 R  D  02      
+END3             000001A5 R  D  02      
+ENDA             00000180 R  D  02      
+ENDC             000001A9 R  D  02      
+ENDD             0000018B R  D  02      
+ENDE             00000196 R  D  02      
+ENDLP            00000175 R  D  02      
+EXH              000001C8 RG D  02      
+EXHBLK           00000010 R  D  01      
+EXITST           0000000C R  D  01      
+EXMSG            00000038 R  D  01      
+FLOATS           000000F3 RG D  02      
+GVAL             00000020 R  D  01      
+HVAL             00000028 R  D  01      
+INA              00000178 R  D  02      
+IND              00000183 R  D  02      
+INE              0000018E R  D  02      
+INFLT            00000115 R  D  02      
+INLEAF           000000F1 R  D  02      
+INREG            00000134 R  D  02      
+LEAF             000000D7 RG D  02      
+LIB$PUT_OUTPUT   ********   X   02      
+LIB$SIGNAL       ********   X   02      
+LONGLN           000001C7 R  D  02      
+LOOP             00000136 RG D  02      
+LOOPADD          00000153 R  D  02      
+LOOPTOP          0000014D R  D  02      
+MID1             0000019A R  D  02      
+MID2             0000019F R  D  02      
+MID3             000001A4 R  D  02      
+REC              00000097 RG D  02      
+RECUR            000000C9 R  D  02      
+REGINS           00000116 RG D  02      
+SIG1             000001B9 R  D  02      
+SIG2             000001C6 R  D  02      
+SIGNAL           000001AA RG D  02      
+START            00000000 RG D  02      
+SUBA             00000176 RG D  02      
+SUBB1            00000197 RG D  02      
+SUBB2            0000019C RG D  02      
+SUBB3            000001A1 RG D  02      
+SUBC             000001A6 RG D  02      
+SUBD             00000181 RG D  02      
+SUBE             0000018C RG D  02      
+SYS$DCLEXH       ********  GX   02      
+WATCHL           00000000 R  D  01      
+DBG113                          Phase 113 probe: the debugger's open que 24-NOV-2026 10:28:43  VAX MACRO V5.4-3            Page   6
+Psect synopsis                                                           24-NOV-2026 14:22:39  DUA1:[DBG113]DBG113.MAR;1         (1)
+
+
+                                                +----------------+
+                                                ! Psect synopsis !
+                                                +----------------+
+
+PSECT name                      Allocation          PSECT No.  Attributes     
+----------                      ----------          ---------  ----------     
+.  ABS  .                       00000000  (    0.)  00 (  0.)  NOPIC   USR   CON   ABS   LCL NOSHR NOEXE NORD  NOWRT NOVEC BYTE  
+DATA113                         00000070  (  112.)  01 (  1.)  NOPIC   USR   CON   REL   LCL NOSHR NOEXE   RD    WRT NOVEC LONG  
+CODE113                         000001D8  (  472.)  02 (  2.)  NOPIC   USR   CON   REL   LCL NOSHR   EXE   RD  NOWRT NOVEC LONG  
+
+                                             +------------------------+
+                                             ! Performance indicators !
+                                             +------------------------+
+
+Phase                    Page faults    CPU Time       Elapsed Time   
+-----                    -----------    --------       ------------   
+Initialization                  425     00:00:00.00    00:00:00.00
+Command processing              926     00:00:00.01    00:00:00.01
+Pass 1                          407     00:00:00.01    00:00:00.01
+Symbol table sort                 1     00:00:00.00    00:00:00.00
+Pass 2                           89     00:00:00.00    00:00:00.00
+Symbol table output               6     00:00:00.00    00:00:00.00
+Psect synopsis output             4     00:00:00.00    00:00:00.00
+Cross-reference output            0     00:00:00.00    00:00:00.00
+Assembler run totals           1881     00:00:00.02    00:00:00.02
+
+The working set limit was 812 pages.
+4646 bytes (10 pages) of virtual memory were used to buffer the intermediate code.
+There were 10 pages of symbol table space allocated to hold 57 non-local and 0 local symbols.
+192 source lines were read in Pass 1, producing 62 object records in Pass 2.
+3 pages of virtual memory were used to define 3 macros.
+
+                                            +--------------------------+
+                                            ! Macro library statistics !
+                                            +--------------------------+
+
+Macro library name                           Macros defined      
+------------------                           --------------      
+SYS$COMMON:[SYSLIB]STARLET.MLB;1                        2        
+
+37 GETS were required to define 2 macros.
+
+There were no errors, warnings or information messages.
+
+MACRO/DEBUG/LIST DBG113

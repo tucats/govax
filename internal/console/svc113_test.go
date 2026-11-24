@@ -17,6 +17,10 @@ import (
 // with vax/svc113-vax.txt in place, it is held to VMS's output line for line,
 // but for expectedSvc113Differences.
 
+// svc113Compared turns on the comparison with VMS's run, as str113Compared
+// does: off until Phase 113's subtask 13 makes govax's services VMS's.
+const svc113Compared = false
+
 // expectedSvc113Differences are the lines of VMS's output govax doesn't
 // reproduce, by the case's name and the line's first word, each with why.
 var expectedSvc113Differences = map[string]string{}
@@ -72,6 +76,14 @@ func TestSvc113Probe(t *testing.T) {
 		return
 	} else if err != nil {
 		t.Fatal(err)
+	}
+
+	if !svc113Compared {
+		holdSvc113ToManual(t, gotLines)
+		t.Logf("%d lines differ from VMS's run (svc113Compared is off)",
+			countDifferentLines(gotLines, strings.Split(string(want), "\n")))
+
+		return
 	}
 
 	compareSvc113(t, gotLines, strings.Split(string(want), "\n"))

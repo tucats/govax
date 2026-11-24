@@ -1,0 +1,287 @@
+$ WRITE SYS$OUTPUT F$GETSYI("VERSION"), " ", F$GETSYI("HW_NAME")
+V7.1     VAX 8600
+$ MACRO/NOLIST FOR81G
+$ LINK/NOMAP FOR81G,FOR81/OPTIONS
+SYS$SHARE:FORRTL/SHAREABLE
+$ MACRO/NOLIST FOR81T
+$ LINK/NOMAP FOR81T,FOR81/OPTIONS
+SYS$SHARE:FORRTL/SHAREABLE
+$ !
+$ ! Units -1 to -4: which name each statement's unit opens, if any of these.
+$ CREATE ACC.DAT
+FROM FOR$ACCEPT
+$ CREATE RDF.DAT
+FROM FOR$READ
+$ DEFINE/NOLOG FOR$PRINT PRT.DAT
+$ DEFINE/NOLOG FOR$TYPE TYP.DAT
+$ DEFINE/NOLOG FOR$ACCEPT ACC.DAT
+$ DEFINE/NOLOG FOR$READ RDF.DAT
+$ !
+$ ! Through a procedure with /OUTPUT, so that unit 6's records join the cases'
+$ ! lines in one file.
+$ @FOR81H/OUTPUT=FOR81G-VAX.TXT
+  $STATUS == "%X00000001"
+
+Directory DUA1:[FOR81G]
+
+ABC.DAT;1                  1/3      
+ACC.DAT;1                  1/3      
+DA.DAT;1                   3/3      
+DN.DAT;1                   3/3      
+FOR013.DAT;3               1/3      
+FOR013.DAT;2               1/3      
+FOR013.DAT;1               1/3      
+FOR016.DAT;1               1/3      
+FOR017.DAT;1               1/3      
+FX.DAT;1                   1/3      
+GR100_50.DAT;1            51/51     
+GR100_600.DAT;1          603/603    
+GR2_1.DAT;1                3/3      
+GR2_100.DAT;1              3/3      
+GR2_1000.DAT;1            21/21     
+GR2_5000.DAT;1            93/93     
+GRSEQ.DAT;1                9/9      
+PRT.DAT;1                  1/3      
+RC1.DAT;1                  3/3      
+RC2.DAT;1                  3/3      
+RC3.DAT;1                  3/3      
+RC4.DAT;1                  3/3      
+RDF.DAT;1                  1/3      
+RM.DAT;1                   3/3      
+RW1.DAT;1                  1/3      
+RW2.DAT;1                  1/3      
+RW3.DAT;1                  1/3      
+RW4.DAT;1                  1/3      
+S1.DAT;1                   1/3      
+S10.DAT;1                  1/3      
+S11.DAT;1                  1/3      
+S12.DAT;1                  1/3      
+S13.DAT;1                  1/3      
+S2.DAT;1                   1/3      
+S3.DAT;1                   1/3      
+S4.DAT;1                   1/3      
+S5.DAT;1                   1/3      
+S6.DAT;1                   1/3      
+S7.DAT;1                   1/3      
+S8.DAT;1                   1/3      
+S9.DAT;1                   1/3      
+SHORT.DAT;1                1/3      
+TYP.DAT;1                  1/3      
+KW.IDX;1                   9/9      
+
+Total of 44 files, 842/900 blocks.
+WRITTEN TO UNIT -1
+WRITTEN TO UNIT -2
+
+6576
+Dump of file DUA1:[FOR81G]S1.DAT;1 on 24-NOV-2026 10:26:36.80
+File ID (109,1,0)   End of file block 1 / Allocated 3
+
+Record number 1 (00000001), 6 (0006) bytes, RFA(0001,0000,0000)
+
+                                                           4443 42410003 ..ABCD.......................... 000000
+
+Dump of file DUA1:[FOR81G]S10.DAT;1 on 24-NOV-2026 10:26:36.80
+File ID (118,1,0)   End of file block 1 / Allocated 3
+
+Record number 1 (00000001), 4 (0004) bytes, RFA(0001,0000,0000)
+
+                                                                42410001 ..AB............................ 000000
+
+Record number 2 (00000002), 6 (0006) bytes, RFA(0001,0000,0006)
+
+                                                           4443 42410003 ..ABCD.......................... 000000
+
+Dump of file DUA1:[FOR81G]S11.DAT;1 on 24-NOV-2026 10:26:36.80
+File ID (119,1,0)   End of file block 1 / Allocated 3
+
+Record number 1 (00000001), 2 (0002) bytes, RFA(0001,0000,0000)
+
+                                                                    0003 ................................ 000000
+
+Dump of file DUA1:[FOR81G]S12.DAT;1 on 24-NOV-2026 10:26:36.80
+File ID (120,1,0)   End of file block 1 / Allocated 3
+
+Record number 1 (00000001), 4 (0004) bytes, RFA(0001,0000,0000)
+
+                                                                42410001 ..AB............................ 000000
+
+Record number 2 (00000002), 4 (0004) bytes, RFA(0001,0000,0006)
+
+                                                                46450000 ..EF............................ 000000
+
+Record number 3 (00000003), 4 (0004) bytes, RFA(0001,0000,000C)
+
+                                                                46450000 ..EF............................ 000000
+
+Record number 4 (00000004), 4 (0004) bytes, RFA(0001,0000,0012)
+
+                                                                44430002 ..CD............................ 000000
+
+Dump of file DUA1:[FOR81G]S13.DAT;1 on 24-NOV-2026 10:26:36.81
+File ID (121,1,0)   End of file block 1 / Allocated 3
+
+Record number 1 (00000001), 0 (0000) bytes, RFA(0001,0000,0000)
+
+
+Dump of file DUA1:[FOR81G]S2.DAT;1 on 24-NOV-2026 10:26:36.81
+File ID (110,1,0)   End of file block 1 / Allocated 3
+
+Record number 1 (00000001), 4 (0004) bytes, RFA(0001,0000,0000)
+
+                                                                42410001 ..AB............................ 000000
+
+Record number 2 (00000002), 4 (0004) bytes, RFA(0001,0000,0006)
+
+                                                                44430002 ..CD............................ 000000
+
+Dump of file DUA1:[FOR81G]S3.DAT;1 on 24-NOV-2026 10:26:36.81
+File ID (111,1,0)   End of file block 1 / Allocated 3
+
+Record number 1 (00000001), 4 (0004) bytes, RFA(0001,0000,0000)
+
+                                                                42410001 ..AB............................ 000000
+
+Record number 2 (00000002), 4 (0004) bytes, RFA(0001,0000,0006)
+
+                                                                42410001 ..AB............................ 000000
+
+Record number 3 (00000003), 4 (0004) bytes, RFA(0001,0000,000C)
+
+                                                                44430002 ..CD............................ 000000
+
+Dump of file DUA1:[FOR81G]S4.DAT;1 on 24-NOV-2026 10:26:36.81
+File ID (112,1,0)   End of file block 1 / Allocated 3
+
+Record number 1 (00000001), 4 (0004) bytes, RFA(0001,0000,0000)
+
+                                                                44430002 ..CD............................ 000000
+
+Dump of file DUA1:[FOR81G]S5.DAT;1 on 24-NOV-2026 10:26:36.81
+File ID (113,1,0)   End of file block 1 / Allocated 3
+
+Record number 1 (00000001), 4 (0004) bytes, RFA(0001,0000,0000)
+
+                                                                46450000 ..EF............................ 000000
+
+Record number 2 (00000002), 4 (0004) bytes, RFA(0001,0000,0006)
+
+                                                                44430002 ..CD............................ 000000
+
+Dump of file DUA1:[FOR81G]S6.DAT;1 on 24-NOV-2026 10:26:36.81
+File ID (114,1,0)   End of file block 1 / Allocated 3
+
+Record number 1 (00000001), 4 (0004) bytes, RFA(0001,0000,0000)
+
+                                                                48470004 ..GH............................ 000000
+
+Dump of file DUA1:[FOR81G]S7.DAT;1 on 24-NOV-2026 10:26:36.81
+File ID (115,1,0)   End of file block 1 / Allocated 3
+
+Record number 1 (00000001), 4 (0004) bytes, RFA(0001,0000,0000)
+
+                                                                4A490007 ..IJ............................ 000000
+
+Dump of file DUA1:[FOR81G]S8.DAT;1 on 24-NOV-2026 10:26:36.81
+File ID (116,1,0)   End of file block 1 / Allocated 3
+
+Record number 1 (00000001), 1 (0001) byte, RFA(0001,0000,0000)
+
+                                                                      01 ................................ 000000
+
+Dump of file DUA1:[FOR81G]S9.DAT;1 on 24-NOV-2026 10:26:36.81
+File ID (117,1,0)   End of file block 1 / Allocated 3
+
+Record number 1 (00000001), 4 (0004) bytes, RFA(0001,0000,0000)
+
+                                                                42410001 ..AB............................ 000000
+
+Dump of file DUA1:[FOR81G]SHORT.DAT;1 on 24-NOV-2026 10:26:36.81
+File ID (101,1,0)   End of file block 1 / Allocated 3
+
+Record number 1 (00000001), 24 (0018) bytes, RFA(0001,0000,0000)
+
+                   17161514 13121110 0F0E0D0C 0B0A0908 07060504 03020100 ................................ 000000
+
+Record number 2 (00000002), 24 (0018) bytes, RFA(0001,0000,0018)
+
+                   2F2E2D2C 2B2A2928 27262524 23222120 1F1E1D1C 1B1A1918 ........ !"#$%&'()*+,-./........ 000000
+
+Record number 3 (00000003), 24 (0018) bytes, RFA(0001,0000,0030)
+
+                   47464544 43424140 3F3E3D3C 3B3A3938 37363534 33323130 0123456789:;<=>?@ABCDEFG........ 000000
+
+Record number 4 (00000004), 24 (0018) bytes, RFA(0001,0000,0048)
+
+                   5F5E5D5C 5B5A5958 57565554 53525150 4F4E4D4C 4B4A4948 HIJKLMNOPQRSTUVWXYZ[\]^_........ 000000
+
+Record number 5 (00000005), 24 (0018) bytes, RFA(0001,0000,0060)
+
+                   77767574 73727170 6F6E6D6C 6B6A6968 67666564 63626160 `abcdefghijklmnopqrstuvw........ 000000
+
+Record number 6 (00000006), 24 (0018) bytes, RFA(0001,0000,0078)
+
+                   8F8E8D8C 8B8A8988 87868584 83828180 7F7E7D7C 7B7A7978 xyz{|}~......................... 000000
+
+Record number 7 (00000007), 24 (0018) bytes, RFA(0001,0000,0090)
+
+                   A7A6A5A4 A3A2A1A0 9F9E9D9C 9B9A9998 97969594 93929190 .................¡¢£¤¥¦§........ 000000
+
+Record number 8 (00000008), 24 (0018) bytes, RFA(0001,0000,00A8)
+
+                   BFBEBDBC BBBAB9B8 B7B6B5B4 B3B2B1B0 AFAEADAC ABAAA9A8 ¨©ª«¬­®¯°±²³´µ¶·¸¹º»¼½¾¿........ 000000
+
+Record number 9 (00000009), 24 (0018) bytes, RFA(0001,0000,00C0)
+
+                   D7D6D5D4 D3D2D1D0 CFCECDCC CBCAC9C8 C7C6C5C4 C3C2C1C0 ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×........ 000000
+
+Record number 10 (0000000A), 24 (0018) bytes, RFA(0001,0000,00D8)
+
+                   EFEEEDEC EBEAE9E8 E7E6E5E4 E3E2E1E0 DFDEDDDC DBDAD9D8 ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîï........ 000000
+
+Record number 11 (0000000B), 24 (0018) bytes, RFA(0001,0000,00F0)
+
+                   07060504 03020100 FFFEFDFC FBFAF9F8 F7F6F5F4 F3F2F1F0 ðñòóôõö÷øùúûüýþ................. 000000
+
+Record number 12 (0000000C), 24 (0018) bytes, RFA(0001,0000,0108)
+
+                   1F1E1D1C 1B1A1918 17161514 13121110 0F0E0D0C 0B0A0908 ................................ 000000
+
+Record number 13 (0000000D), 24 (0018) bytes, RFA(0001,0000,0120)
+
+                   37363534 33323130 2F2E2D2C 2B2A2928 27262524 23222120  !"#$%&'()*+,-./01234567........ 000000
+
+Record number 14 (0000000E), 24 (0018) bytes, RFA(0001,0000,0138)
+
+                   4F4E4D4C 4B4A4948 47464544 43424140 3F3E3D3C 3B3A3938 89:;<=>?@ABCDEFGHIJKLMNO........ 000000
+
+Dump of file DUA1:[FOR81G]SHORT.DAT;1 on 24-NOV-2026 10:26:36.81
+File ID (101,1,0)   End of file block 1 / Allocated 3
+
+Record number 15 (0000000F), 24 (0018) bytes, RFA(0001,0000,0150)
+
+                   67666564 63626160 5F5E5D5C 5B5A5958 57565554 53525150 PQRSTUVWXYZ[\]^_`abcdefg........ 000000
+
+Record number 16 (00000010), 24 (0018) bytes, RFA(0001,0000,0168)
+
+                   7F7E7D7C 7B7A7978 77767574 73727170 6F6E6D6C 6B6A6968 hijklmnopqrstuvwxyz{|}~......... 000000
+
+Record number 17 (00000011), 24 (0018) bytes, RFA(0001,0000,0180)
+
+                   97969594 93929190 8F8E8D8C 8B8A8988 87868584 83828180 ................................ 000000
+
+Record number 18 (00000012), 24 (0018) bytes, RFA(0001,0000,0198)
+
+                   AFAEADAC ABAAA9A8 A7A6A5A4 A3A2A1A0 9F9E9D9C 9B9A9998 .........¡¢£¤¥¦§¨©ª«¬­®¯........ 000000
+
+Record number 19 (00000013), 24 (0018) bytes, RFA(0001,0000,01B0)
+
+                   C7C6C5C4 C3C2C1C0 BFBEBDBC BBBAB9B8 B7B6B5B4 B3B2B1B0 °±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇ........ 000000
+
+Record number 20 (00000014), 24 (0018) bytes, RFA(0001,0000,01C8)
+
+                   DFDEDDDC DBDAD9D8 D7D6D5D4 D3D2D1D0 CFCECDCC CBCAC9C8 ÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞß........ 000000
+
+Record number 21 (00000015), 24 (0018) bytes, RFA(0001,0000,01E0)
+
+                   F7F6F5F4 F3F2F1F0 EFEEEDEC EBEAE9E8 E7E6E5E4 E3E2E1E0 àáâãäåæçèéêëìíîïðñòóôõö÷........ 000000

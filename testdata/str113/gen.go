@@ -374,7 +374,9 @@ func buildCases() []probeCase {
 	add(binary("RECIP 6 25e-4", "STR$RECIP", num{0, 0, "6"}, num{0, -4, "25"}, "D"))
 	add(binary("RECIP 6 1e-6", "STR$RECIP", num{0, 0, "6"}, num{0, -6, "1"}, "D"))
 	add(binary("RECIP 6 -1e-4", "STR$RECIP", num{0, 0, "6"}, num{1, -4, "1"}, "D"))
-	add(binary("RECIP 6 0e-4", "STR$RECIP", num{0, 0, "6"}, num{0, -4, "0"}, "D"))
+	// "RECIP 6 0e-4", a precision limit whose digits are 0, was here: VMS 7.1's
+	// STR$RECIP never returned from it (24-NOV-2026, minutes of CPU time, no I/O),
+	// so it was taken out for the rest of the round to run.
 	add(binary("RECIP 8 e-4", "STR$RECIP", num{0, 0, "8"}, num{0, -4, "1"}, "D"))
 	add(binary("RECIP 25e-2 e-4", "STR$RECIP", num{0, -2, "25"}, num{0, -4, "1"}, "D"))
 	add(binary("RECIP 3 e2", "STR$RECIP", num{0, 0, "3"}, num{0, 2, "1"}, "D"))

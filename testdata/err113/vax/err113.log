@@ -1,0 +1,209 @@
+==== STR113
+  $STATUS == "%X00000001"
+==== SVC113
+  $STATUS == "%X00000001"
+==== INI113
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+SINIT: 1 arguments
+  1: 00023E55
+INITA: 6 arguments
+  1: 00000742
+  2: 7FF6B997
+  3: 7FFE5E0C
+  4: 7FFE5EBC
+  5: 010000A8
+  6: 00000010
+INITB: 6 arguments
+  1: 00000742
+  2: 7FF6B997
+  3: 7FFE5E0C
+  4: 7FFE5EBC
+  5: 010000A8
+  6: 00000010
+MAIN: 6 arguments
+  1: 7FFE5E44
+  2: 7FF6B997
+  3: 7FFE5E0C
+  4: 7FFE5EBC
+  5: 010000A8
+  6: 00000010
+INI113S_HELLO
+MAIN: returning 3
+INITB: the init-coroutine returned 00000003
+  $STATUS == "%X00000003"
+==== INI113NT
+SINIT: 1 arguments
+  1: 00023E55
+INITA: 6 arguments
+  1: 00000742
+  2: 7FF6B997
+  3: 7FFE5E0C
+  4: 7FFE5EBC
+  5: 010000A8
+  6: 00000010
+INITB: 6 arguments
+  1: 00000742
+  2: 7FF6B997
+  3: 7FFE5E0C
+  4: 7FFE5EBC
+  5: 010000A8
+  6: 00000010
+MAIN: 6 arguments
+  1: 7FFE5E40
+  2: 7FF6B997
+  3: 7FFE5E0C
+  4: 7FFE5EBC
+  5: 010000A8
+  6: 00000010
+INI113S_HELLO
+MAIN: returning 3
+INITB: the init-coroutine returned 00000003
+  $STATUS == "%X00000003"
+==== MAC113A
+                           00000000  0000     8 A:	.LONG	R1
+%MACRO-E-DIRSYNX, Directive syntax error                        !
+                           00000000  0004     9 B:	.LONG	R1+4
+%MACRO-E-DIRSYNX, Directive syntax error                        !
+                               0000  0008    10 C:	.WORD	R5
+%MACRO-E-DIRSYNX, Directive syntax error                        !
+                                 00  000A    11 D:	.BYTE	PC
+%MACRO-E-DIRSYNX, Directive syntax error                        !
+                           00000001  000B    12 E:	.LONG	1,R2,3
+%MACRO-E-DATALSTSYN, Data list syntax error                      !
+                                     0017    13 F:	.ADDRESS R3
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0017       
+%MACRO-E-DIRSYNX, Directive syntax error                    !
+  $STATUS == "%X10000002"
+==== MAC113B
+%MACRO-W-GENWRN, Generated WARNING: 1  a warning's text
+%MACRO-E-GENERR, Generated ERROR: 2  an error's text
+3  a printed line
+%MACRO-W-GENWRN, Generated WARNING:  a warning with no expression
+  $STATUS == "%X10000002"
+==== MAC113C
+  $STATUS == "%X10000001"
+==== MAC113D
+  $STATUS == "%X10000001"
+==== DCL
+%DELETE-E-DELVER, explicit version number or wild card required
+  $STATUS == "%X1093120A"
+%DCL-W-DIRECT, invalid directory syntax - check brackets and other delimiters
+ \DCL[X.TXT\
+  $STATUS == "%X00038030"
+%DCL-W-DIRECT, invalid directory syntax - check brackets and other delimiters
+ \DCL[Y.TXT\
+  $STATUS == "%X00038030"
+%PURGE-F-BADVALUE, '0' is an invalid keyword value
+  $STATUS == "%X10941114"
+%DCL-W-INSFPRM, missing command parameters - supply all required parameters
+  $STATUS == "%X00038048"
+%DCL-W-INSFPRM, missing command parameters - supply all required parameters
+  $STATUS == "%X00038048"
+==== NOCC
+BEFORE
+ONETWOAFTER
+==== FULL
+%MOUNT-I-MOUNTED, SCR113 mounted on _SIMVAX$DUA3:
+BIG.DAT: 4064 blocks
+  S = "%X00000001"
+  S = "%X00000001"
+  S = "%X00000001"
+  S = "%X00000001"
+  S = "%X00000001"
+%COPY-E-OPENOUT, error opening DUA3:[000000]FILL6.DAT; as output
+-RMS-F-FUL, device full (insufficient space for allocation)
+%COPY-W-NOTCOPIED, DUA1:[ERR113]BIG.DAT;1 not copied
+  S = "%X106710A2"
+%DIRECT-W-NOFILES, no files found
+%RMS-F-FUL, device full (insufficient space for allocation)
+  S = "%X00018544"
+  $STATUS == "%X00010001"
+A line for a full volume.
+%CREATE-E-WRITEERR, error writing DUA3:[000000]MORE.TXT;1
+-RMS-F-FUL, device full (insufficient space for allocation)
+  $STATUS == "%X109110D2"
+%MACRO-E-OPENOUT, error opening DUA3:[000000]MAC113E.OBJ; as output
+-RMS-F-FUL, device full (insufficient space for allocation)
+  $STATUS == "%X100310A2"
+%DELETE-W-SEARCHFAIL, error searching for DUA3:[000000]*.OBJ;*
+-RMS-E-FNF, file not found
+==== INDEX
+
+Directory DUA3:[000000]
+
+INDEXF.SYS;1            3374/3374   
+
+Total of 1 file, 3374/3374 blocks.
+
+Dump of file DUA3:[000000]INDEXF.SYS;1 on 24-NOV-2026 10:47:38.95
+File ID (1,1,0)   End of file block 3374 / Allocated 3374
+
+                             File Header
+
+Header area
+    Identification area offset:           40
+    Map area offset:                      100
+    Access control area offset:           255
+    Reserved area offset:                 255
+    Extension segment number:             0
+    Structure level and version:          2, 1
+    File identification:                  (1,1,0)
+    Extension file identification:        (0,0,0)
+    VAX-11 RMS attributes
+        Record type:                      Fixed
+        File organization:                Sequential
+        Record attributes:                <none specified>
+        Record size:                      512
+        Highest block:                    3374
+        End of file block:                3375
+        End of file byte:                 0
+        Bucket size:                      0
+        Fixed control area size:          0
+        Maximum record size:              512
+        Default extension size:           0
+        Global buffer count:              0
+        Directory version limit:          0
+    File characteristics:                 Contiguous best try
+    Map area words in use:                28
+    Access mode:                          0
+    File owner UIC:                       [SYSTEM]
+    File protection:                      S:RWED, O:RWED, G:RE, W:
+    Back link file identification:        (4,4,0)
+    Journal control flags:                <none specified>
+    Active recovery units:                None
+    Highest block written:                3374
+
+Identification area
+    File name:                            INDEXF.SYS;1                                                                          
+    Revision number:                      1
+    Creation date:                        24-NOV-2026 10:47:29.37
+    Revision date:                        24-NOV-2026 10:47:29.37
+    Expiration date:                      <none specified>
+    Backup date:                          <none specified>
+
+Map area
+    Retrieval pointers
+        Count:          2        LBN:          0
+        Count:          1        LBN:       1034
+        Count:          1        LBN:      11842
+        Count:         18        LBN:      10809
+        Count:          1        LBN:      20479
+        Count:        807        LBN:      19574
+        Count:        686        LBN:          2
+        Count:        583        LBN:       1901
+        Count:        496        LBN:       2673
+        Count:        421        LBN:       4013
+        Count:        358        LBN:       5108
+
+
+Dump of file DUA3:[000000]INDEXF.SYS;1 on 24-NOV-2026 10:47:38.95
+File ID (1,1,0)   End of file block 3374 / Allocated 3374
+
+Checksum:                                 18498
+Analyze/Disk_Structure for _SIMVAX$DUA3: started on 24-NOV-2026 10:47:38.97
+
+%ANALDISK-I-OPENQUOTA, error opening QUOTA.SYS
+-SYSTEM-W-NOSUCHFILE, no such file
+==== END

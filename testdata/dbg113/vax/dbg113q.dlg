@@ -1,0 +1,11 @@
+@DBG113Q.DBG
+!%DEBUG-I-VERIFYICF, entering command procedure DBG113Q.DBG
+! ! DBG113Q.DBG - QUIT at a break (README.md): the procedure's log shows whether
+! ! the exit handler ran.
+! SET BREAK LOOP
+! GO
+!break at routine DBG113\LOOP
+!   125:         CLRL    COUNT
+! QUIT
+!%DEBUG-I-VERIFYICF, exiting command procedure DBG113Q.DBG
+EXIT

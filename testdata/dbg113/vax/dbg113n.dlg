@@ -1,0 +1,40 @@
+@DBG113N.DBG
+!%DEBUG-I-VERIFYICF, entering command procedure DBG113N.DBG
+! ! DBG113N.DBG - a second STEP/RETURN (README.md): STEP/RETURN in SUBD is
+! ! interrupted by a break in SUBB2; STEP/RETURN there; then GO. Does SUBD's
+! ! return still stop?
+! SET BREAK IND
+! SET BREAK SUBB2
+! GO
+!break at DBG113\SUBD\IND
+!   147: IND:    CALLS   #0, SUBB2
+! STEP/RETURN
+!break at routine DBG113\SUBB2
+!   162:         NOP
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBG113          SUBB2              162               00000002         0000059E
+!*DBG113          SUBD               147               00000009         0000058A
+!*DBG113          START               61               0000006A         0000046A
+! !> The second STEP/RETURN
+! STEP/RETURN
+!stepped on return from routine DBG113\SUBB2 to DBG113\SUBB2\END2
+!   164: END2:   RET
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBG113          SUBB2              164               00000004         000005A0
+!*DBG113          SUBD               147               00000009         0000058A
+!*DBG113          START               61               0000006A         0000046A
+! !> GO after it
+! GO
+!stepped on return from DBG113\SUBD\IND to DBG113\SUBD\ENDD
+!   149: ENDD:   RET
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBG113          SUBD               149               0000000A         0000058B
+!*DBG113          START               61               0000006A         0000046A
+! EXAMINE .PC
+!DBG113\SUBD\ENDD:       RET     
+! CANCEL BREAK/ALL
+!%DEBUG-I-VERIFYICF, exiting command procedure DBG113N.DBG
+EXIT

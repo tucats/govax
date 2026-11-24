@@ -1,0 +1,31 @@
+@DBG113R.DBG
+!%DEBUG-I-VERIFYICF, entering command procedure DBG113R.DBG
+! ! DBG113R.DBG - STEP/RETURN interrupted by a break, then GO (README.md):
+! ! does the return's stop still come?
+! SET BREAK SUBB1
+! SET BREAK MID1
+! GO
+!break at routine DBG113\SUBB1
+!   157:         NOP
+! STEP/RETURN
+!break at DBG113\SUBB1\MID1
+!   158: MID1:   NOP
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBG113          SUBB1              158               00000003         0000059A
+!*DBG113          SUBA               142               00000009         0000057F
+!*DBG113          START               60               00000063         00000463
+! !> GO after the interrupted STEP/RETURN
+! GO
+!stepped on return from routine DBG113\SUBB1 to DBG113\SUBB1\END1
+!   159: END1:   RET
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBG113          SUBB1              159               00000004         0000059B
+!*DBG113          SUBA               142               00000009         0000057F
+!*DBG113          START               60               00000063         00000463
+! EXAMINE .PC
+!DBG113\SUBB1\END1:      RET     
+! CANCEL BREAK/ALL
+!%DEBUG-I-VERIFYICF, exiting command procedure DBG113R.DBG
+EXIT

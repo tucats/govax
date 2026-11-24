@@ -1,0 +1,4822 @@
+	.TITLE	FCNUMERIC
+	.IDENT	/01/
+; TBT$ FORTRAN: a traceback's line numbers are the FORTRAN lines below
+;
+; Compiled by GOVAX FORTRAN V0.0-0 on 24-NOV-2026 14:22:47.63
+; from DUA5:[FCALC]FCNUMERIC.F90;1
+; by the command FORTRAN/G_FLOATING FCNUMERIC
+; Optimized by /OPTIMIZE's passes: do limits, one character, forward, unreachable, dead code, deferred indexes, loop invariants,
+; common subexpressions, registers, rotate, peephole, branches
+;
+; Each line of the FORTRAN source appears as a comment, with its line number, before
+; the instructions it became. An INCLUDE file's lines appear only with INCLUDE's
+; /LIST, their include depth before the number; a comment names the file either way.
+; Each routine's storage map says where its variables are.
+;
+	$DSCDEF				; descriptor codes, DSC$K_
+
+; The module FCMESSAGES's variables, 355 bytes, the most any unit in this file declares
+	.PSECT	$MOD$FCMESSAGES,PIC,OVR,REL,GBL,SHR,NOEXE,RD,WRT,LONG
+$MOD$FCMESSAGES.$BASE:
+	.BLKB	355
+
+; The module FCVALUES's variables, 12 bytes, the most any unit in this file declares
+	.PSECT	$MOD$FCVALUES,PIC,OVR,REL,GBL,SHR,NOEXE,RD,WRT,LONG
+$MOD$FCVALUES.$BASE:
+	.BLKB	12
+
+; Storage map for FCNUMERIC, a module
+;   DIGITS  INTEGER, PRIVATE  $MOD$FCVALUES+0  FCNUMERIC.DIGITS  from FCVALUES
+;
+FCNUMERIC.INDENT = $MOD$FCMESSAGES.$BASE+8 ; INDENT, in module FCMESSAGES's variables
+FCNUMERIC.LOG_UNIT = $MOD$FCMESSAGES.$BASE+12 ; LOG_UNIT, in module FCMESSAGES's variables
+FCNUMERIC.DIGITS = $MOD$FCVALUES.$BASE	; DIGITS, in module FCVALUES's variables
+FCNUMERIC.NUMBER_FORMAT = $MOD$FCVALUES.$BASE+4 ; NUMBER_FORMAT, in module FCVALUES's variables
+FCNUMERIC.NUMBER_BASE = $MOD$FCVALUES.$BASE+8 ; NUMBER_BASE, in module FCVALUES's variables
+$MOD$FCNUMERIC.7845B1EB == 0		; this module's stamp, which its users' objects refer to
+; the stamps of the modules used
+	.EXTRN	$MOD$FCMESSAGES.25BE58B3,$MOD$FCVALUES.38BED767,$MOD$FCARRAYS.F65D1CE7,$MOD$FCLEXER.26ACCCC1,$MOD$FCTREE.DFE50A2B,$MOD$FCSYMBOLS.9A59E627,$MOD$FCEVAL.CBCCF686,$MOD$FCMATRIX.B283FBC0
+
+;    1  ! fcalc: the numerical commands, SOLVE, INTEGRATE, DIFF, and ROOTS.
+;    2  !
+;    3  !     SOLVE expr [= expr] FOR x [FROM a [TO b]]
+;    4  !     INTEGRATE expr FOR x FROM a TO b
+;    5  !     DIFF expr FOR x AT a
+;    6  !     ROOTS c1, c2, ..., cn
+;    7  !
+;    8  ! Each of the first three treats an expression as a function of the
+;    9  ! variable named after FOR and evaluates it at the points its method
+;   10  ! chooses, through FCEVAL's EVALUATE_WITH: the name stands for the point,
+;   11  ! hiding any variable of that name, which the command doesn't change. Its
+;   12  ! answer is shown and kept as ANS, as an expression's value is.
+;   13  !
+;   14  ! - SOLVE finds a root of the expression (of the difference of the two
+;   15  !   sides, if there is an =). From one starting point A (0 if none is
+;   16  !   given) it uses the secant method, which may find a complex root from a
+;   17  !   complex start; from a bracket, A to B, where the expression is real and
+;   18  !   changes sign, Brent's method, which cannot fail to converge.
+;   19  ! - INTEGRATE is the definite integral from A to B, by adaptive
+;   20  !   Gauss-Kronrod quadrature.
+;   21  ! - DIFF is the derivative at A, by Ridders' method: central differences
+;   22  !   with smaller and smaller steps, extrapolated to a step of zero.
+;   23  ! - ROOTS is every root of the polynomial with the coefficients given, the
+;   24  !   highest power's first (module FCPOLY), as the function roots() is.
+;   25  !
+;   26  ! Each method's numbers are computed by FCVALUES' guarded operations, as
+;   27  ! everything in fcalc is, so nothing traps, whatever the expression's
+;   28  ! values; an error in evaluating the expression is reported at the node of
+;   29  ! the expression it arose in, as for any expression.
+;   30  !
+;   31  ! Two answers depend on the machine's last bits more than others, and each
+;   32  ! command deals with that itself, so that a VAX and an IEEE machine show
+;   33  ! the same digits:
+;   34  !
+;   35  ! - A root, integral, or derivative that is 0 is computed as a tiny number
+;   36  !   made of rounding errors. Each method knows how large its own error may
+;   37  !   be, and a part of its answer smaller than that is set to 0.
+;   38  ! - Each method's error estimate is a rounding error's size when the answer
+;   39  !   is good. INTEGRATE and DIFF show it only when it is large, in a
+;   40  !   warning, %FCALC-W-INACCURATE, to two significant digits.
+;   41  !
+;   42  ! The procedures that read the commands are written in one pattern: a DO
+;   43  ! construct with no loop control and a name, as a block that can be left.
+;   44  ! Each step that fails does EXIT out of it, and what was built is freed
+;   45  ! after the block, once, whichever step failed (as a C program might use
+;   46  ! GO TO to a cleanup label).
+;   47  module fcnumeric
+;   48    use fckinds
+;   49    use fcmessages
+;   50    use fcvalues
+;   51    use fcarrays
+;   52    use fclexer
+;   53    use fctree
+;   54    use fcsymbols
+;   55    use fceval
+;   56    use fcmatrix
+;   57    implicit none
+;   58    private
+;   59
+;   60    public :: solve_command, integrate_command, diff_command, roots_command
+;   61
+;   62    ! The readers of the commands' parts, which module FCPLOT's commands use
+;   63    ! too. VALUE is public here too: READ_BOUND's argument is one, and a
+;   64    ! public procedure's argument may not be of a type private in this module.
+;   65    public :: value
+;   66    public :: at_word, read_word, read_name, read_bound, at_end_of_line
+;   67
+;   68    ! How many steps the secant method and Brent's method may take.
+;   69    integer, parameter :: step_limit = 200
+;   70
+;   71    ! How many pieces INTEGRATE may cut its interval into, at 15 values of
+;   72    ! the expression for each piece and 30 for each cut. (A singularity at
+;   73    ! an end, as 1/SQRT(X)'s at 0, takes about 100.)
+;   74    integer, parameter :: max_pieces = 200
+;   75
+;   76    ! The Gauss-Kronrod rule of 7 and 15 points on [-1, 1] (QUADPACK's QK15):
+;   77    ! the Kronrod rule's nodes, plus and minus each of NODES(1:7), and 0; its
+;   78    ! weights for them, the last 0's; and the Gauss rule's weights for its
+;   79    ! nodes, NODES(2), NODES(4), NODES(6), and 0, the last 0's.
+;   80    real(rk), parameter :: nodes(7) = (/ 0.991455371120812639206854697526329_rk, &
+;   81      0.949107912342758524526189684047851_rk, 0.864864423359769072789712788640926_rk, &
+;   82      0.741531185599394439863864773280788_rk, 0.586087235467691130294144845693013_rk, &
+;   83      0.405845151377397166906606412076961_rk, 0.207784955007898467600689403773245_rk /)
+;   84    real(rk), parameter :: kronrod_weights(8) = (/ 0.022935322010529224963732008058970_rk, &
+;   85      0.063092092629978553290700663189204_rk, 0.104790010322250183839876322541518_rk, &
+;   86      0.140653259715525918745189590510238_rk, 0.169004726639267902826583426598550_rk, &
+;   87      0.190350578064785409913256402421014_rk, 0.204432940075298892414161999234649_rk, &
+;   88      0.209482141084727828012999174891714_rk /)
+;   89    real(rk), parameter :: gauss_weights(4) = (/ 0.129484966168869693270611432679082_rk, &
+;   90      0.279705391489276667901467771423780_rk, 0.381830050505118944950369775488975_rk, &
+;   91      0.417959183673469387755102040816327_rk /)
+;   92
+;   93    ! Ridders' method: each step is the last divided by RIDDERS_STEP, at most
+;   94    ! TABLE_SIZE steps, stopping when the error grows SAFE times past its
+;   95    ! smallest.
+;   96    real(rk), parameter :: ridders_step = 1.4_rk, safe = 2.0_rk
+;   97    integer, parameter :: table_size = 10
+;   98
+;   99  contains
+
+; Storage map for FCNUMERIC.AT_WORD, a LOGICAL function
+;   WORD     CHARACTER*(*), INTENT(IN)  argument 1  @FCNUMERIC.AT_WORD.WORD(AP)
+;   AT_WORD  LOGICAL                    $LOCAL+0    FCNUMERIC.AT_WORD.AT_WORD
+;   T        TYPE(TOKEN)                $LOCAL+8    FCNUMERIC.AT_WORD.T
+;
+FCNUMERIC.AT_WORD.WORD = 4		; WORD is argument 1
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+	.ALIGN	QUAD			; the boundary of this routine's aligned records
+FCNUMERIC.AT_WORD.AT_WORD:
+	.BLKL	1			; AT_WORD, the function's value
+	.BLKB	4
+FCNUMERIC.AT_WORD.T:
+	.BLKL	14			; T
+FCNUMERIC.AT_WORD.$T1:
+	.BLKL	14			; characters, for one statement
+FCNUMERIC.AT_WORD.$T2:
+	.BLKL	1			; temporary
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  100
+;  101    ! ------------------------------------------------------------------
+;  102    ! Reading the commands.
+;  103
+;  104    ! AT_WORD: the current token is the name WORD.
+;  105    logical function at_word(word)
+	.ENTRY	FCNUMERIC.AT_WORD,^M<R2,R3,R4,R5>
+;  106      character(len=*), intent(in) :: word
+;  107      type(token) :: t
+;  108
+;  109      t = token_at(position())
+	CALLS	#0,G^FCTREE.POSITION
+	MOVL	R0,FCNUMERIC.AT_WORD.$T2
+	PUSHAL	FCNUMERIC.AT_WORD.$T2
+	PUSHAB	FCNUMERIC.AT_WORD.$T1
+	CALLS	#2,G^FCTREE.TOKEN_AT
+	MOVC3	#56,FCNUMERIC.AT_WORD.$T1,FCNUMERIC.AT_WORD.T
+;  110      at_word = t%kind == t_name .and. t%text == word
+	MOVZWL	@FCNUMERIC.AT_WORD.WORD(AP),R0
+	MOVL	FCNUMERIC.AT_WORD.WORD(AP),R1
+	CMPC5	#31,FCNUMERIC.AT_WORD.T+8,#^A/ /,R0,@4(R1)
+	BNEQ	FCNUMERIC.AT_WORD.$1
+	MNEGL	#1,R0
+	BRB	FCNUMERIC.AT_WORD.$2
+FCNUMERIC.AT_WORD.$1:
+	CLRL	R0
+FCNUMERIC.AT_WORD.$2:
+	MOVL	R0,FCNUMERIC.AT_WORD.$T2
+;  111    end function at_word
+	CLRL	R0			; the function's value
+	CMPL	FCNUMERIC.AT_WORD.T,#2
+	BNEQ	FCNUMERIC.AT_WORD.$3
+	MNEGL	#1,R0
+FCNUMERIC.AT_WORD.$3:
+	MCOML	FCNUMERIC.AT_WORD.$T2,R1
+	BICL2	R1,R0
+	RET
+
+; Storage map for FCNUMERIC.READ_WORD, a LOGICAL function
+;   WORD       CHARACTER*(*), INTENT(IN)  argument 1  @FCNUMERIC.READ_WORD.WORD(AP)
+;   SHOWN      CHARACTER*(*), INTENT(IN)  argument 2  @FCNUMERIC.READ_WORD.SHOWN(AP)
+;   READ_WORD  LOGICAL                    R6          R6
+;
+FCNUMERIC.READ_WORD.WORD = 4		; WORD is argument 1
+FCNUMERIC.READ_WORD.SHOWN = 8		; SHOWN is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+	.BLKB	4
+FCNUMERIC.READ_WORD.$T1:
+	.BLKL	1			; temporary
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCNUMERIC.READ_WORD.$K1:
+	.LONG	1
+FCNUMERIC.READ_WORD.$K2:
+	.LONG	37
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  112
+;  113    ! READ_WORD: the current token is the name WORD, and is passed; if not,
+;  114    ! KEYWORD (with WORD in capitals, as the message shows it).
+;  115    logical function read_word(word, shown)
+	.ENTRY	FCNUMERIC.READ_WORD,^M<R6>
+;  116      character(len=*), intent(in) :: word, shown
+;  117
+;  118      read_word = at_word(word)
+	PUSHL	FCNUMERIC.READ_WORD.WORD(AP)
+	CALLS	#1,G^FCNUMERIC.AT_WORD
+	MOVL	R0,R6
+;  119      if (read_word) then
+	BLBC	R6,FCNUMERIC.READ_WORD.$1
+;  120        call advance(1)
+	PUSHAL	FCNUMERIC.READ_WORD.$K1
+	CALLS	#1,G^FCTREE.ADVANCE
+;  121      else
+	BRB	FCNUMERIC.READ_WORD.$3
+FCNUMERIC.READ_WORD.$1:
+;  122        call fail(e_keyword, current_column(), shown)
+	CALLS	#0,G^FCTREE.CURRENT_COLUMN
+	MOVL	R0,FCNUMERIC.READ_WORD.$T1
+	PUSHL	FCNUMERIC.READ_WORD.SHOWN(AP)
+	PUSHAL	FCNUMERIC.READ_WORD.$T1
+	PUSHAL	FCNUMERIC.READ_WORD.$K2
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  123      end if
+FCNUMERIC.READ_WORD.$3:
+;  124    end function read_word
+	MOVL	R6,R0			; the function's value
+	RET
+
+; Storage map for FCNUMERIC.READ_NAME, a LOGICAL function
+;   NAME       CHARACTER*(*), INTENT(OUT)  argument 1  @FCNUMERIC.READ_NAME.NAME(AP)
+;   READ_NAME  LOGICAL                     R6          R6
+;   T          TYPE(TOKEN)                 $LOCAL+8    FCNUMERIC.READ_NAME.T
+;
+FCNUMERIC.READ_NAME.NAME = 4		; NAME is argument 1
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+	.ALIGN	QUAD			; the boundary of this routine's aligned records
+	.BLKB	8
+FCNUMERIC.READ_NAME.T:
+	.BLKL	14			; T
+FCNUMERIC.READ_NAME.$T1:
+	.BLKL	14			; characters, for one statement
+FCNUMERIC.READ_NAME.$T2:
+	.BLKL	1			; temporary
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCNUMERIC.READ_NAME.$K2:
+	.LONG	20
+FCNUMERIC.READ_NAME.$K7:
+	.LONG	21
+FCNUMERIC.READ_NAME.$D1:
+	.WORD	31			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCNUMERIC.READ_NAME.T+8
+FCNUMERIC.READ_NAME.$K8:
+	.LONG	8
+FCNUMERIC.READ_NAME.$K9:
+	.LONG	1
+FCNUMERIC.READ_NAME.$K1:
+	.ASCII	/ /
+FCNUMERIC.READ_NAME.$K3:
+	.ASCII	/or/
+FCNUMERIC.READ_NAME.$K4:
+	.ASCII	/and/
+FCNUMERIC.READ_NAME.$K5:
+	.ASCII	/not/
+FCNUMERIC.READ_NAME.$K6:
+	.ASCII	/mod/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  125
+;  126    ! READ_NAME: the current token is a name a variable could have, NAME,
+;  127    ! and is passed.
+;  128    logical function read_name(name)
+	.ENTRY	FCNUMERIC.READ_NAME,^M<R2,R3,R4,R5,R6>
+;  129      character(len=*), intent(out) :: name
+;  130      type(token) :: t
+;  131
+;  132      read_name = .false.
+	CLRL	R6
+;  133      name = ' '
+	MOVZWL	@FCNUMERIC.READ_NAME.NAME(AP),R0
+	MOVL	FCNUMERIC.READ_NAME.NAME(AP),R1
+	MOVC5	#1,FCNUMERIC.READ_NAME.$K1,#^A/ /,R0,@4(R1)
+;  134      t = token_at(position())
+	CALLS	#0,G^FCTREE.POSITION
+	MOVL	R0,FCNUMERIC.READ_NAME.$T2
+	PUSHAL	FCNUMERIC.READ_NAME.$T2
+	PUSHAB	FCNUMERIC.READ_NAME.$T1
+	CALLS	#2,G^FCTREE.TOKEN_AT
+	MOVC3	#56,FCNUMERIC.READ_NAME.$T1,FCNUMERIC.READ_NAME.T
+;  135      if (t%kind /= t_name) then
+	CMPL	FCNUMERIC.READ_NAME.T,#2
+	BEQL	FCNUMERIC.READ_NAME.$1
+;  136        call fail(e_namereq, t%column)
+	PUSHL	#0
+	PUSHAL	FCNUMERIC.READ_NAME.T+4
+	PUSHAL	FCNUMERIC.READ_NAME.$K2
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  137      else if (t%text == 'or' .or. t%text == 'and' .or. t%text == 'not' .or. &
+;  138          t%text == 'mod') then
+	BRW	FCNUMERIC.READ_NAME.$3
+FCNUMERIC.READ_NAME.$1:
+	CMPC5	#31,FCNUMERIC.READ_NAME.T+8,#^A/ /,#2,FCNUMERIC.READ_NAME.$K3
+	BEQL	FCNUMERIC.READ_NAME.$5
+	CMPC5	#31,FCNUMERIC.READ_NAME.T+8,#^A/ /,#3,FCNUMERIC.READ_NAME.$K4
+	BEQL	FCNUMERIC.READ_NAME.$5
+	CMPC5	#31,FCNUMERIC.READ_NAME.T+8,#^A/ /,#3,FCNUMERIC.READ_NAME.$K5
+	BEQL	FCNUMERIC.READ_NAME.$5
+	CMPC5	#31,FCNUMERIC.READ_NAME.T+8,#^A/ /,#3,FCNUMERIC.READ_NAME.$K6
+	BNEQ	FCNUMERIC.READ_NAME.$4
+FCNUMERIC.READ_NAME.$5:
+;  139        call fail(e_reserved, t%column, t%text)
+	PUSHAQ	FCNUMERIC.READ_NAME.$D1
+	PUSHAL	FCNUMERIC.READ_NAME.T+4
+	PUSHAL	FCNUMERIC.READ_NAME.$K7
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  140      else if (is_constant(t%text)) then
+	BRB	FCNUMERIC.READ_NAME.$3
+FCNUMERIC.READ_NAME.$4:
+	PUSHAQ	FCNUMERIC.READ_NAME.$D1
+	CALLS	#1,G^FCSYMBOLS.IS_CONSTANT
+	MOVL	R0,FCNUMERIC.READ_NAME.$T2
+	BLBC	FCNUMERIC.READ_NAME.$T2,FCNUMERIC.READ_NAME.$10
+;  141        call fail(e_constant, t%column, t%text)
+	PUSHAQ	FCNUMERIC.READ_NAME.$D1
+	PUSHAL	FCNUMERIC.READ_NAME.T+4
+	PUSHAL	FCNUMERIC.READ_NAME.$K8
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  142      else
+	BRB	FCNUMERIC.READ_NAME.$3
+FCNUMERIC.READ_NAME.$10:
+;  143        name = t%text
+	MOVZWL	@FCNUMERIC.READ_NAME.NAME(AP),R0
+	MOVL	FCNUMERIC.READ_NAME.NAME(AP),R1
+	MOVC5	#31,FCNUMERIC.READ_NAME.T+8,#^A/ /,R0,@4(R1)
+;  144        call advance(1)
+	PUSHAL	FCNUMERIC.READ_NAME.$K9
+	CALLS	#1,G^FCTREE.ADVANCE
+;  145        read_name = .true.
+	MOVL	#-1,R6
+;  146      end if
+FCNUMERIC.READ_NAME.$3:
+;  147    end function read_name
+	MOVL	R6,R0			; the function's value
+	RET
+
+; Storage map for FCNUMERIC.READ_BOUND, a LOGICAL function
+;   X           TYPE(VALUE), INTENT(OUT)  argument 1  @FCNUMERIC.READ_BOUND.X(AP)
+;   REAL_ONLY   LOGICAL, INTENT(IN)       argument 2  @FCNUMERIC.READ_BOUND.REAL_ONLY(AP)
+;   COLUMN      INTEGER, INTENT(OUT)      argument 3  @FCNUMERIC.READ_BOUND.COLUMN(AP)
+;   READ_BOUND  LOGICAL                   $LOCAL+0    FCNUMERIC.READ_BOUND.READ_BOUND
+;   TREE        TYPE(NODE), POINTER       $LOCAL+16   FCNUMERIC.READ_BOUND.TREE
+;   Q           TYPE(QUANTITY)            $LOCAL+32   FCNUMERIC.READ_BOUND.Q
+;   R6 is $T2: temporary
+;
+FCNUMERIC.READ_BOUND.X = 4		; X is argument 1
+FCNUMERIC.READ_BOUND.REAL_ONLY = 8	; REAL_ONLY is argument 2
+FCNUMERIC.READ_BOUND.COLUMN = 12	; COLUMN is argument 3
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+	.ALIGN	4			; the boundary of this routine's aligned records
+FCNUMERIC.READ_BOUND.READ_BOUND:
+	.BLKL	1			; READ_BOUND, the function's value
+	.BLKB	12
+FCNUMERIC.READ_BOUND.TREE:
+	.BLKL	1			; TREE
+	.BLKB	12
+FCNUMERIC.READ_BOUND.Q:
+	.BLKL	24			; Q
+FCNUMERIC.READ_BOUND.$T1:
+	.BLKL	8			; characters, for one statement
+FCNUMERIC.READ_BOUND.$T3:
+	.BLKL	24			; characters, for one statement
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCNUMERIC.READ_BOUND.$K1:
+	.LONG	^X00000000,^X00000000	; 0D0
+FCNUMERIC.READ_BOUND.$K2:
+	.LONG	31
+FCNUMERIC.READ_BOUND.$K3:
+	.LONG	12
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  148
+;  149    ! READ_BOUND: an expression, read and evaluated (with no variable of the
+;  150    ! command's), is a scalar, X; if REAL_ONLY, a real one. COLUMN is where it
+;  151    ! starts.
+;  152    logical function read_bound(x, real_only, column)
+	.ENTRY	FCNUMERIC.READ_BOUND,^M<R2,R3,R4,R5,R6>
+;  153      type(value), intent(out) :: x
+;  154      logical, intent(in) :: real_only
+;  155      integer, intent(out) :: column
+;  156      type(node), pointer :: tree
+;  157      type(quantity) :: q
+;  158
+;  159      read_bound = .false.
+;  160      x = real_value(0.0_rk)
+	PUSHAG	FCNUMERIC.READ_BOUND.$K1
+	PUSHAB	FCNUMERIC.READ_BOUND.$T1
+	CALLS	#2,G^FCVALUES.REAL_VALUE
+	MOVC3	#32,FCNUMERIC.READ_BOUND.$T1,@FCNUMERIC.READ_BOUND.X(AP)
+;  161      column = current_column()
+	CALLS	#0,G^FCTREE.CURRENT_COLUMN
+	MOVL	R0,@FCNUMERIC.READ_BOUND.COLUMN(AP)
+;  162      tree => parse_expression()
+	CALLS	#0,G^FCTREE.PARSE_EXPRESSION
+	MOVL	R0,R6
+	MOVL	R6,FCNUMERIC.READ_BOUND.TREE
+;  163      if (failed()) return
+	CALLS	#0,G^FCMESSAGES.FAILED
+	MOVL	R0,R6
+	BLBC	R6,FCNUMERIC.READ_BOUND.$1
+	CLRL	R0			; the function's value
+	RET
+FCNUMERIC.READ_BOUND.$1:
+;  164      q = evaluate(tree)
+	PUSHL	#0
+	PUSHAL	FCNUMERIC.READ_BOUND.TREE
+	PUSHAB	FCNUMERIC.READ_BOUND.$T3
+	CALLS	#3,G^FCEVAL.EVALUATE
+	MOVC3	#96,FCNUMERIC.READ_BOUND.$T3,FCNUMERIC.READ_BOUND.Q
+;  165      call free_tree(tree)
+	PUSHAL	FCNUMERIC.READ_BOUND.TREE
+	CALLS	#1,G^FCTREE.FREE_TREE
+;  166      if (failed()) then
+	CALLS	#0,G^FCMESSAGES.FAILED
+	MOVL	R0,R6
+	BLBC	R6,FCNUMERIC.READ_BOUND.$3
+;  167        call release(q)
+	PUSHAB	FCNUMERIC.READ_BOUND.Q
+	CALLS	#1,G^FCARRAYS.RELEASE
+;  168        return
+	CLRL	R0			; the function's value
+	RET
+FCNUMERIC.READ_BOUND.$3:
+;  169      end if
+;  170      if (is_array(q)) then
+	PUSHAB	FCNUMERIC.READ_BOUND.Q
+	CALLS	#1,G^FCARRAYS.IS_ARRAY
+	MOVL	R0,R6
+	BLBC	R6,FCNUMERIC.READ_BOUND.$5
+;  171        call fail(e_notscalar, column)
+	PUSHL	#0
+	PUSHAL	@FCNUMERIC.READ_BOUND.COLUMN(AP)
+	PUSHAL	FCNUMERIC.READ_BOUND.$K2
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  172        call release(q)
+	PUSHAB	FCNUMERIC.READ_BOUND.Q
+	CALLS	#1,G^FCARRAYS.RELEASE
+;  173        return
+	CLRL	R0			; the function's value
+	RET
+FCNUMERIC.READ_BOUND.$5:
+;  174      end if
+;  175      if (real_only .and. .not. is_real(q%s)) then
+	PUSHAB	FCNUMERIC.READ_BOUND.Q+16
+	CALLS	#1,G^FCVALUES.IS_REAL
+	MOVL	R0,R6
+	BLBC	@FCNUMERIC.READ_BOUND.REAL_ONLY(AP),FCNUMERIC.READ_BOUND.$7
+	BLBS	R6,FCNUMERIC.READ_BOUND.$7
+;  176        call fail(e_notreal, column)
+	PUSHL	#0
+	PUSHAL	@FCNUMERIC.READ_BOUND.COLUMN(AP)
+	PUSHAL	FCNUMERIC.READ_BOUND.$K3
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  177        return
+	CLRL	R0			; the function's value
+	RET
+FCNUMERIC.READ_BOUND.$7:
+;  178      end if
+;  179      x = q%s
+	MOVC3	#32,FCNUMERIC.READ_BOUND.Q+16,@FCNUMERIC.READ_BOUND.X(AP)
+;  180      read_bound = .true.
+;  181    end function read_bound
+	MOVL	#-1,R0			; the function's value
+	RET
+
+; Storage map for FCNUMERIC.AT_END_OF_LINE, a LOGICAL function
+;   AT_END_OF_LINE  LOGICAL  R6     R6
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+	.BLKB	4
+FCNUMERIC.AT_END_OF_LINE.$T1:
+	.BLKL	1			; temporary
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCNUMERIC.AT_END_OF_LINE.$K1:
+	.LONG	5
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  182
+;  183    ! AT_END_OF_LINE: nothing is left of the line; if something is, EXTRA.
+;  184    logical function at_end_of_line()
+	.ENTRY	FCNUMERIC.AT_END_OF_LINE,^M<R6>
+;  185      at_end_of_line = at_end()
+	CALLS	#0,G^FCTREE.AT_END
+	MOVL	R0,R6
+;  186      if (.not. at_end_of_line) call fail(e_extra, current_column())
+	BLBS	R6,FCNUMERIC.AT_END_OF_LINE.$1
+	CALLS	#0,G^FCTREE.CURRENT_COLUMN
+	MOVL	R0,FCNUMERIC.AT_END_OF_LINE.$T1
+	PUSHL	#0
+	PUSHAL	FCNUMERIC.AT_END_OF_LINE.$T1
+	PUSHAL	FCNUMERIC.AT_END_OF_LINE.$K1
+	CALLS	#3,G^FCMESSAGES.FAIL
+FCNUMERIC.AT_END_OF_LINE.$1:
+;  187    end function at_end_of_line
+	MOVL	R6,R0			; the function's value
+	RET
+
+; Storage map for FCNUMERIC.VALUE_AT, a TYPE(VALUE) function
+;   V       TYPE(VALUE)                hidden argument 1  @FCNUMERIC.VALUE_AT.V(AP)
+;   P       TYPE(NODE), POINTER        argument 2         @FCNUMERIC.VALUE_AT.P(AP)
+;   Q       TYPE(NODE), POINTER        argument 3         @FCNUMERIC.VALUE_AT.Q(AP)
+;   NAME    CHARACTER*(*), INTENT(IN)  argument 4         @FCNUMERIC.VALUE_AT.NAME(AP)
+;   X       TYPE(VALUE), INTENT(IN)    argument 5         @FCNUMERIC.VALUE_AT.X(AP)
+;   COLUMN  INTEGER, INTENT(IN)        an argument        @FCNUMERIC.VALUE_AT.$A6
+;   A       TYPE(QUANTITY)             $LOCAL+0           FCNUMERIC.VALUE_AT.A
+;   B       TYPE(QUANTITY)             $LOCAL+96          FCNUMERIC.VALUE_AT.B
+;   R6 is $T2: temporary
+;
+FCNUMERIC.VALUE_AT.V = 4		; V's value goes through hidden argument 1
+FCNUMERIC.VALUE_AT.P = 8		; P is argument 2
+FCNUMERIC.VALUE_AT.Q = 12		; Q is argument 3
+FCNUMERIC.VALUE_AT.NAME = 16		; NAME is argument 4
+FCNUMERIC.VALUE_AT.X = 20		; X is argument 5
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+	.ALIGN	4			; the boundary of this routine's aligned records
+FCNUMERIC.VALUE_AT.A:
+	.BLKL	24			; A
+FCNUMERIC.VALUE_AT.B:
+	.BLKL	24			; B
+FCNUMERIC.VALUE_AT.$A6:
+	.BLKL	1			; COLUMN's longword of the argument list, set at each entry point
+FCNUMERIC.VALUE_AT.$T1:
+	.BLKL	24			; characters, for one statement
+FCNUMERIC.VALUE_AT.$T3:
+	.BLKL	8			; characters, for one statement
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  188
+;  189    ! ------------------------------------------------------------------
+;  190    ! Evaluating the expression.
+;  191
+;  192    ! VALUE_AT is the scalar value of the tree P with NAME standing for X,
+;  193    ! and of P less Q if Q is associated (SOLVE's two sides); its error is
+;  194    ! set if evaluating either failed (when FAIL has recorded where), or if
+;  195    ! the value is an array (NOTSCALAR, recorded here at COLUMN, the
+;  196    ! expression's start).
+;  197    function value_at(p, q, name, x, column) result(v)
+	.ENTRY	FCNUMERIC.VALUE_AT,^M<R2,R3,R4,R5,R6>
+	MOVL	24(AP),FCNUMERIC.VALUE_AT.$A6 ; COLUMN is argument 6
+;  198      type(node), pointer :: p, q
+;  199      character(len=*), intent(in) :: name
+;  200      type(value), intent(in) :: x
+;  201      integer, intent(in) :: column
+;  202      type(value) :: v
+;  203      type(quantity) :: a, b
+;  204
+;  205      a = evaluate_with(p, name, x)
+	PUSHAB	@FCNUMERIC.VALUE_AT.X(AP)
+	PUSHL	FCNUMERIC.VALUE_AT.NAME(AP)
+	PUSHAL	@FCNUMERIC.VALUE_AT.P(AP)
+	PUSHAB	FCNUMERIC.VALUE_AT.$T1
+	CALLS	#4,G^FCEVAL.EVALUATE_WITH
+	MOVC3	#96,FCNUMERIC.VALUE_AT.$T1,FCNUMERIC.VALUE_AT.A
+;  206      if (.not. scalar_of(a, v)) return
+	PUSHAB	@FCNUMERIC.VALUE_AT.V(AP)
+	PUSHAB	FCNUMERIC.VALUE_AT.A
+	CALLS	#2,FCNUMERIC.VALUE_AT.SCALAR_OF
+	MOVL	R0,R6
+	BLBS	R6,FCNUMERIC.VALUE_AT.$1
+	RET
+FCNUMERIC.VALUE_AT.$1:
+;  207      if (associated(q)) then
+	TSTL	@FCNUMERIC.VALUE_AT.Q(AP)
+	BNEQ	FCNUMERIC.VALUE_AT.$4
+	RET
+FCNUMERIC.VALUE_AT.$4:
+;  208        b = evaluate_with(q, name, x)
+	PUSHAB	@FCNUMERIC.VALUE_AT.X(AP)
+	PUSHL	FCNUMERIC.VALUE_AT.NAME(AP)
+	PUSHAL	@FCNUMERIC.VALUE_AT.Q(AP)
+	PUSHAB	FCNUMERIC.VALUE_AT.$T1
+	CALLS	#4,G^FCEVAL.EVALUATE_WITH
+	MOVC3	#96,FCNUMERIC.VALUE_AT.$T1,FCNUMERIC.VALUE_AT.B
+;  209        if (.not. scalar_of(b, v)) return
+	PUSHAB	@FCNUMERIC.VALUE_AT.V(AP)
+	PUSHAB	FCNUMERIC.VALUE_AT.B
+	CALLS	#2,FCNUMERIC.VALUE_AT.SCALAR_OF
+	MOVL	R0,R6
+	BLBS	R6,FCNUMERIC.VALUE_AT.$5
+	RET
+FCNUMERIC.VALUE_AT.$5:
+;  210        v = a%s - b%s
+	PUSHAB	FCNUMERIC.VALUE_AT.B+16
+	PUSHAB	FCNUMERIC.VALUE_AT.A+16
+	PUSHAB	FCNUMERIC.VALUE_AT.$T3
+	CALLS	#3,G^FCVALUES.V_SUB
+	MOVC3	#32,FCNUMERIC.VALUE_AT.$T3,@FCNUMERIC.VALUE_AT.V(AP)
+;  211        if (v%err /= 0) call fail(v%err, column)
+	MOVL	FCNUMERIC.VALUE_AT.V(AP),R0
+	TSTL	16(R0)
+	BEQL	FCNUMERIC.VALUE_AT.$7
+	PUSHL	#0
+	PUSHAL	@FCNUMERIC.VALUE_AT.$A6
+	MOVL	FCNUMERIC.VALUE_AT.V(AP),R0
+	PUSHAL	16(R0)
+	CALLS	#3,G^FCMESSAGES.FAIL
+FCNUMERIC.VALUE_AT.$7:
+;  212      end if
+;  213
+;  214    contains
+	RET
+
+; Storage map for FCNUMERIC.VALUE_AT.SCALAR_OF, a LOGICAL function
+;   Y          TYPE(QUANTITY), INTENT(INOUT)  argument 1  @FCNUMERIC.VALUE_AT.SCALAR_OF.Y(AP)
+;   V          TYPE(VALUE), INTENT(OUT)       argument 2  @FCNUMERIC.VALUE_AT.SCALAR_OF.V(AP)
+;   SCALAR_OF  LOGICAL                        R6          R6
+;   FCNUMERIC.VALUE_AT.SCALAR_O.$N1 is FCNUMERIC.VALUE_AT.SCALAR_OF.$T1
+;   FCNUMERIC.VALUE_AT.SCALAR_O.$N2 is FCNUMERIC.VALUE_AT.SCALAR_OF.$T2
+;   FCNUMERIC.VALUE_AT.SCALAR_O.$N3 is FCNUMERIC.VALUE_AT.SCALAR_OF.$K1
+;
+FCNUMERIC.VALUE_AT.SCALAR_OF.Y = 4	; Y is argument 1
+FCNUMERIC.VALUE_AT.SCALAR_OF.V = 8	; V is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+	.BLKB	4
+FCNUMERIC.VALUE_AT.SCALAR_O.$N1:
+	.BLKL	1			; temporary
+FCNUMERIC.VALUE_AT.SCALAR_O.$N2:
+	.BLKL	8			; characters, for one statement
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCNUMERIC.VALUE_AT.SCALAR_O.$N3:
+	.LONG	31
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  215
+;  216      ! SCALAR_OF: the quantity Y is a scalar without an error, V; if not,
+;  217      ! V is a value with the error, and Y is released. (An internal
+;  218      ! procedure of an internal procedure isn't allowed: SCALAR_OF is one of
+;  219      ! VALUE_AT, a module procedure, and sees COLUMN by host association.)
+;  220      logical function scalar_of(y, v)
+FCNUMERIC.VALUE_AT.SCALAR_OF:
+	.WORD	^M<R2,R3,R4,R5,R6>	; internal procedure SCALAR_OF of FCNUMERIC.VALUE_AT
+;  221        type(quantity), intent(inout) :: y
+;  222        type(value), intent(out) :: v
+;  223
+;  224        scalar_of = .false.
+	CLRL	R6
+;  225        if (quantity_error(y) /= 0) then
+	PUSHAB	@FCNUMERIC.VALUE_AT.SCALAR_OF.Y(AP)
+	CALLS	#1,G^FCARRAYS.QUANTITY_ERROR
+	MOVL	R0,FCNUMERIC.VALUE_AT.SCALAR_O.$N1
+	BEQL	FCNUMERIC.VALUE_AT.SCALAR_OF.$1
+;  226          v = error_value(quantity_error(y))
+	PUSHAB	@FCNUMERIC.VALUE_AT.SCALAR_OF.Y(AP)
+	CALLS	#1,G^FCARRAYS.QUANTITY_ERROR
+	MOVL	R0,FCNUMERIC.VALUE_AT.SCALAR_O.$N1
+	PUSHAL	FCNUMERIC.VALUE_AT.SCALAR_O.$N1
+	PUSHAB	FCNUMERIC.VALUE_AT.SCALAR_O.$N2
+	CALLS	#2,G^FCVALUES.ERROR_VALUE
+	MOVC3	#32,FCNUMERIC.VALUE_AT.SCALAR_O.$N2,@FCNUMERIC.VALUE_AT.SCALAR_OF.V(AP)
+;  227        else if (is_array(y)) then
+	BRB	FCNUMERIC.VALUE_AT.SCALAR_OF.$3
+FCNUMERIC.VALUE_AT.SCALAR_OF.$1:
+	PUSHAB	@FCNUMERIC.VALUE_AT.SCALAR_OF.Y(AP)
+	CALLS	#1,G^FCARRAYS.IS_ARRAY
+	MOVL	R0,FCNUMERIC.VALUE_AT.SCALAR_O.$N1
+	BLBC	FCNUMERIC.VALUE_AT.SCALAR_O.$N1,FCNUMERIC.VALUE_AT.SCALAR_OF.$4
+;  228          call fail(e_notscalar, column)
+	PUSHL	#0
+	PUSHAL	@FCNUMERIC.VALUE_AT.$A6
+	PUSHAL	FCNUMERIC.VALUE_AT.SCALAR_O.$N3
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  229          call release(y)
+	PUSHAB	@FCNUMERIC.VALUE_AT.SCALAR_OF.Y(AP)
+	CALLS	#1,G^FCARRAYS.RELEASE
+;  230          v = error_value(e_notscalar)
+	PUSHAL	FCNUMERIC.VALUE_AT.SCALAR_O.$N3
+	PUSHAB	FCNUMERIC.VALUE_AT.SCALAR_O.$N2
+	CALLS	#2,G^FCVALUES.ERROR_VALUE
+	MOVC3	#32,FCNUMERIC.VALUE_AT.SCALAR_O.$N2,@FCNUMERIC.VALUE_AT.SCALAR_OF.V(AP)
+;  231        else
+	BRB	FCNUMERIC.VALUE_AT.SCALAR_OF.$3
+FCNUMERIC.VALUE_AT.SCALAR_OF.$4:
+;  232          v = y%s
+	MOVL	FCNUMERIC.VALUE_AT.SCALAR_OF.Y(AP),R0
+	MOVC3	#32,16(R0),@FCNUMERIC.VALUE_AT.SCALAR_OF.V(AP)
+;  233          scalar_of = .true.
+	MOVL	#-1,R6
+;  234        end if
+FCNUMERIC.VALUE_AT.SCALAR_OF.$3:
+;  235      end function scalar_of
+	MOVL	R6,R0			; the function's value
+	RET
+
+; Storage map for FCNUMERIC.SHOW_ANSWER, a subroutine
+;   V     TYPE(VALUE), INTENT(IN)    argument 1  @FCNUMERIC.SHOW_ANSWER.V(AP)
+;   NAME  CHARACTER*(*), INTENT(IN)  argument 2  @FCNUMERIC.SHOW_ANSWER.NAME(AP)
+;   Q     TYPE(QUANTITY)             $LOCAL+0    FCNUMERIC.SHOW_ANSWER.Q
+;
+FCNUMERIC.SHOW_ANSWER.V = 4		; V is argument 1
+FCNUMERIC.SHOW_ANSWER.NAME = 8		; NAME is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+	.ALIGN	4			; the boundary of this routine's aligned records
+FCNUMERIC.SHOW_ANSWER.Q:
+	.BLKL	24			; Q
+FCNUMERIC.SHOW_ANSWER.$T1:
+	.BLKL	24			; characters, for one statement
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCNUMERIC.SHOW_ANSWER.$D1:
+	.WORD	3			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCNUMERIC.SHOW_ANSWER.$K1
+FCNUMERIC.SHOW_ANSWER.$K1:
+	.ASCII	/ans/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  236    end function value_at
+;  237
+;  238    ! SHOW_ANSWER shows the answer V, after NAME = if NAME isn't blank, and
+;  239    ! keeps it as ANS.
+;  240    subroutine show_answer(v, name)
+	.ENTRY	FCNUMERIC.SHOW_ANSWER,^M<R2,R3,R4,R5>
+;  241      type(value), intent(in) :: v
+;  242      character(len=*), intent(in) :: name
+;  243      type(quantity) :: q
+;  244
+;  245      q = scalar_quantity(v)
+	PUSHAB	@FCNUMERIC.SHOW_ANSWER.V(AP)
+	PUSHAB	FCNUMERIC.SHOW_ANSWER.$T1
+	CALLS	#2,G^FCARRAYS.SCALAR_QUANTITY
+	MOVC3	#96,FCNUMERIC.SHOW_ANSWER.$T1,FCNUMERIC.SHOW_ANSWER.Q
+;  246      call show_quantity(q, name)
+	PUSHL	FCNUMERIC.SHOW_ANSWER.NAME(AP)
+	PUSHAB	FCNUMERIC.SHOW_ANSWER.Q
+	CALLS	#2,G^FCARRAYS.SHOW_QUANTITY
+;  247      call set_variable('ans', q)
+	PUSHAB	FCNUMERIC.SHOW_ANSWER.Q
+	PUSHAQ	FCNUMERIC.SHOW_ANSWER.$D1
+	CALLS	#2,G^FCSYMBOLS.SET_VARIABLE
+;  248    end subroutine show_answer
+	RET
+
+; Storage map for FCNUMERIC.WITHOUT_NOISE, a TYPE(VALUE) function
+;   W      TYPE(VALUE)              hidden argument 1  @FCNUMERIC.WITHOUT_NOISE.W(AP)
+;   V      TYPE(VALUE), INTENT(IN)  argument 2         @FCNUMERIC.WITHOUT_NOISE.V(AP)
+;   LEVEL  REAL*8, INTENT(IN)       argument 3         @FCNUMERIC.WITHOUT_NOISE.LEVEL(AP)
+;   X      REAL*8                   $LOCAL+0           FCNUMERIC.WITHOUT_NOISE.X
+;   Y      REAL*8                   $LOCAL+8           FCNUMERIC.WITHOUT_NOISE.Y
+;   R6 is $T1: temporary
+;
+FCNUMERIC.WITHOUT_NOISE.W = 4		; W's value goes through hidden argument 1
+FCNUMERIC.WITHOUT_NOISE.V = 8		; V is argument 2
+FCNUMERIC.WITHOUT_NOISE.LEVEL = 12	; LEVEL is argument 3
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+FCNUMERIC.WITHOUT_NOISE.X:
+	.BLKL	2			; X
+FCNUMERIC.WITHOUT_NOISE.Y:
+	.BLKL	2			; Y
+FCNUMERIC.WITHOUT_NOISE.$T2:
+	.BLKL	8			; characters, for one statement
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  249
+;  250    ! WITHOUT_NOISE is V with each part no larger than LEVEL set to 0.
+;  251    function without_noise(v, level) result(w)
+	.ENTRY	FCNUMERIC.WITHOUT_NOISE,^M<R2,R3,R4,R5,R6,R7>
+;  252      type(value), intent(in) :: v
+;  253      real(rk), intent(in) :: level
+;  254      type(value) :: w
+;  255      real(rk) :: x, y
+;  256
+;  257      x = real(v%z, rk)
+	MOVG	@FCNUMERIC.WITHOUT_NOISE.V(AP),FCNUMERIC.WITHOUT_NOISE.X
+;  258      y = aimag(v%z)
+	MOVL	FCNUMERIC.WITHOUT_NOISE.V(AP),R0
+	MOVG	8(R0),FCNUMERIC.WITHOUT_NOISE.Y
+;  259      if (abs(x) <= level) x = 0
+	MOVG	FCNUMERIC.WITHOUT_NOISE.X,R6
+	BGEQ	FCNUMERIC.WITHOUT_NOISE.$1
+	MNEGG	R6,R6
+FCNUMERIC.WITHOUT_NOISE.$1:
+	CMPG	R6,@FCNUMERIC.WITHOUT_NOISE.LEVEL(AP)
+	BGTR	FCNUMERIC.WITHOUT_NOISE.$3
+	CLRG	FCNUMERIC.WITHOUT_NOISE.X
+FCNUMERIC.WITHOUT_NOISE.$3:
+;  260      if (abs(y) <= level) y = 0
+	MOVG	FCNUMERIC.WITHOUT_NOISE.Y,R6
+	BGEQ	FCNUMERIC.WITHOUT_NOISE.$5
+	MNEGG	R6,R6
+FCNUMERIC.WITHOUT_NOISE.$5:
+	CMPG	R6,@FCNUMERIC.WITHOUT_NOISE.LEVEL(AP)
+	BGTR	FCNUMERIC.WITHOUT_NOISE.$7
+	CLRG	FCNUMERIC.WITHOUT_NOISE.Y
+FCNUMERIC.WITHOUT_NOISE.$7:
+;  261      w = complex_value(x, y)
+	PUSHAG	FCNUMERIC.WITHOUT_NOISE.Y
+	PUSHAG	FCNUMERIC.WITHOUT_NOISE.X
+	PUSHAB	FCNUMERIC.WITHOUT_NOISE.$T2
+	CALLS	#3,G^FCVALUES.COMPLEX_VALUE
+	MOVC3	#32,FCNUMERIC.WITHOUT_NOISE.$T2,@FCNUMERIC.WITHOUT_NOISE.W(AP)
+;  262    end function without_noise
+	RET
+
+; Storage map for FCNUMERIC.WARN_INACCURATE, a subroutine
+;   ERROR   REAL*8, INTENT(IN)   argument 1  @FCNUMERIC.WARN_INACCURATE.ERROR(AP)
+;   COLUMN  INTEGER, INTENT(IN)  argument 2  @FCNUMERIC.WARN_INACCURATE.$N4(AP)
+;   KEPT    INTEGER              $LOCAL+0    FCNUMERIC.WARN_INACCURATE.KEPT
+;   R8 is $T3: temporary
+;   R7 is $T4: temporary
+;   R6 is $T5: temporary
+;   FCNUMERIC.WARN_INACCURATE.$N4 is FCNUMERIC.WARN_INACCURATE.COLUMN
+;
+FCNUMERIC.WARN_INACCURATE.ERROR = 4	; ERROR is argument 1
+FCNUMERIC.WARN_INACCURATE.$N4 = 8	; COLUMN is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+FCNUMERIC.WARN_INACCURATE.KEPT:
+	.BLKL	1			; KEPT
+FCNUMERIC.WARN_INACCURATE.$T1:
+	.BLKL	30			; characters, for one statement
+FCNUMERIC.WARN_INACCURATE.$T2:
+	.BLKL	8			; characters, for one statement
+FCNUMERIC.WARN_INACCURATE.$D2:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCNUMERIC.WARN_INACCURATE.$K1:
+	.LONG	40
+FCNUMERIC.WARN_INACCURATE.$D1:
+	.WORD	120			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCNUMERIC.WARN_INACCURATE.$T1
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  263
+;  264    ! WARN_INACCURATE gives the warning INACCURATE with the estimate ERROR, to
+;  265    ! two significant digits, at COLUMN.
+;  266    subroutine warn_inaccurate(error, column)
+	.ENTRY	FCNUMERIC.WARN_INACCURATE,^M<R6,R7,R8>
+;  267      real(rk), intent(in) :: error
+;  268      integer, intent(in) :: column
+;  269      integer :: kept
+;  270
+;  271      kept = digits
+	MOVL	FCNUMERIC.DIGITS,FCNUMERIC.WARN_INACCURATE.KEPT
+;  272      digits = 2
+	MOVL	#2,FCNUMERIC.DIGITS
+;  273      call fail(w_inaccurate, column, trim(format_value(real_value(error))))
+	PUSHAG	@FCNUMERIC.WARN_INACCURATE.ERROR(AP)
+	PUSHAB	FCNUMERIC.WARN_INACCURATE.$T2
+	CALLS	#2,G^FCVALUES.REAL_VALUE
+	PUSHL	#0
+	PUSHAB	FCNUMERIC.WARN_INACCURATE.$T2
+	PUSHAQ	FCNUMERIC.WARN_INACCURATE.$D1
+	CALLS	#3,G^FCVALUES.FORMAT_VALUE
+	MOVAB	FCNUMERIC.WARN_INACCURATE.$T1,R8
+	MOVAB	(R8),R7
+	MOVL	#120,R6
+	BRB	FCNUMERIC.WARN_INACCURATE.$1
+FCNUMERIC.WARN_INACCURATE.$2:
+	CMPB	-1(R7)[R6],#32
+	BNEQ	FCNUMERIC.WARN_INACCURATE.$3
+	DECL	R6
+FCNUMERIC.WARN_INACCURATE.$1:
+	TSTL	R6			; from line 273
+	BNEQ	FCNUMERIC.WARN_INACCURATE.$2
+FCNUMERIC.WARN_INACCURATE.$3:
+	CVTLW	R6,FCNUMERIC.WARN_INACCURATE.$D2
+	MOVAB	(R8),FCNUMERIC.WARN_INACCURATE.$D2+4
+	PUSHAQ	FCNUMERIC.WARN_INACCURATE.$D2
+	PUSHAL	@FCNUMERIC.WARN_INACCURATE.$N4(AP)
+	PUSHAL	FCNUMERIC.WARN_INACCURATE.$K1
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  274      digits = kept
+	MOVL	FCNUMERIC.WARN_INACCURATE.KEPT,FCNUMERIC.DIGITS
+;  275    end subroutine warn_inaccurate
+	RET
+
+; Storage map for FCNUMERIC.SCALED, a REAL*8 function
+;   X       REAL*8, INTENT(IN)  argument 1  @FCNUMERIC.SCALED.X(AP)
+;   Y       REAL*8, INTENT(IN)  argument 2  @FCNUMERIC.SCALED.Y(AP)
+;   SCALED  REAL*8              $LOCAL+0    FCNUMERIC.SCALED.SCALED
+;   ERR     INTEGER             $LOCAL+8    FCNUMERIC.SCALED.ERR
+;
+FCNUMERIC.SCALED.X = 4			; X is argument 1
+FCNUMERIC.SCALED.Y = 8			; Y is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+FCNUMERIC.SCALED.SCALED:
+	.BLKL	2			; SCALED, the function's value
+FCNUMERIC.SCALED.ERR:
+	.BLKL	1			; ERR
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  276
+;  277    ! SCALED is X times Y, or 0 if that is smaller than SMALL: R_MUL, with
+;  278    ! an overflow (which tolerances and steps never reach) ignored.
+;  279    real(rk) function scaled(x, y)
+	.ENTRY	FCNUMERIC.SCALED,^M<>
+;  280      real(rk), intent(in) :: x, y
+;  281      integer :: err
+;  282
+;  283      err = 0
+	CLRL	FCNUMERIC.SCALED.ERR
+;  284      scaled = r_mul(x, y, err)
+	PUSHAL	FCNUMERIC.SCALED.ERR
+	PUSHAG	@FCNUMERIC.SCALED.Y(AP)
+	PUSHAG	@FCNUMERIC.SCALED.X(AP)
+	CALLS	#3,G^FCVALUES.R_MUL
+	MOVG	R0,FCNUMERIC.SCALED.SCALED
+;  285    end function scaled
+	MOVG	FCNUMERIC.SCALED.SCALED,R0 ; the function's value
+	RET
+
+; Storage map for FCNUMERIC.SOLVE_COMMAND, a subroutine
+;   LEFT         TYPE(NODE), POINTER  $LOCAL+0    FCNUMERIC.SOLVE_COMMAND.LEFT
+;   RIGHT        TYPE(NODE), POINTER  $LOCAL+16   FCNUMERIC.SOLVE_COMMAND.RIGHT
+;   NAME         CHARACTER*31         $LOCAL+20   FCNUMERIC.SOLVE_COMMAND.NAME
+;   A            TYPE(VALUE)          $LOCAL+64   FCNUMERIC.SOLVE_COMMAND.A
+;   B            TYPE(VALUE)          $LOCAL+96   FCNUMERIC.SOLVE_COMMAND.B
+;   ROOT         TYPE(VALUE)          $LOCAL+128  FCNUMERIC.SOLVE_COMMAND.ROOT
+;   START        INTEGER              $LOCAL+160  FCNUMERIC.SOLVE_COMMAND.START
+;   FROM_COLUMN  INTEGER              $LOCAL+164  FCNUMERIC.SOLVE_COMMAND.$N5
+;   COLUMN       INTEGER              $LOCAL+168  FCNUMERIC.SOLVE_COMMAND.COLUMN
+;   BRACKET      LOGICAL              $LOCAL+172  FCNUMERIC.SOLVE_COMMAND.BRACKET
+;   FOUND        LOGICAL              $LOCAL+176  FCNUMERIC.SOLVE_COMMAND.FOUND
+;   R6 is $T2: temporary
+;   FCNUMERIC.SOLVE_COMMAND.$N5 is FCNUMERIC.SOLVE_COMMAND.FROM_COLUMN
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+	.ALIGN	4			; the boundary of this routine's aligned records
+FCNUMERIC.SOLVE_COMMAND.LEFT:
+	.BLKL	1			; LEFT
+	.BLKB	12
+FCNUMERIC.SOLVE_COMMAND.RIGHT:
+	.BLKL	1			; RIGHT
+FCNUMERIC.SOLVE_COMMAND.NAME:
+	.BLKB	31			; NAME
+	.BLKB	13
+FCNUMERIC.SOLVE_COMMAND.A:
+	.BLKL	8			; A
+FCNUMERIC.SOLVE_COMMAND.B:
+	.BLKL	8			; B
+FCNUMERIC.SOLVE_COMMAND.ROOT:
+	.BLKL	8			; ROOT
+FCNUMERIC.SOLVE_COMMAND.START:
+	.BLKL	1			; START
+FCNUMERIC.SOLVE_COMMAND.$N5:
+	.BLKL	1			; FROM_COLUMN
+FCNUMERIC.SOLVE_COMMAND.COLUMN:
+	.BLKL	1			; COLUMN
+FCNUMERIC.SOLVE_COMMAND.BRACKET:
+	.BLKL	1			; BRACKET
+FCNUMERIC.SOLVE_COMMAND.FOUND:
+	.BLKL	1			; FOUND
+FCNUMERIC.SOLVE_COMMAND.$T1:
+	.BLKL	8			; characters, for one statement
+FCNUMERIC.SOLVE_COMMAND.$T3:
+	.BLKL	2			; temporary
+FCNUMERIC.SOLVE_COMMAND.$T4:
+	.BLKL	2			; temporary
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCNUMERIC.SOLVE_COMMAND.$K1:
+	.LONG	^X00000000,^X00000000	; 0D0
+FCNUMERIC.SOLVE_COMMAND.$K2:
+	.LONG	1
+FCNUMERIC.SOLVE_COMMAND.$D1:
+	.WORD	1			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCNUMERIC.SOLVE_COMMAND.$K3
+FCNUMERIC.SOLVE_COMMAND.$D2:
+	.WORD	3			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCNUMERIC.SOLVE_COMMAND.$K4
+FCNUMERIC.SOLVE_COMMAND.$D3:
+	.WORD	3			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCNUMERIC.SOLVE_COMMAND.$K5
+FCNUMERIC.SOLVE_COMMAND.$D4:
+	.WORD	31			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCNUMERIC.SOLVE_COMMAND.NAME
+FCNUMERIC.SOLVE_COMMAND.$D5:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCNUMERIC.SOLVE_COMMAND.$K6
+FCNUMERIC.SOLVE_COMMAND.$K7:
+	.LONG	0
+FCNUMERIC.SOLVE_COMMAND.$D6:
+	.WORD	2			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCNUMERIC.SOLVE_COMMAND.$K8
+FCNUMERIC.SOLVE_COMMAND.$K9:
+	.LONG	12
+FCNUMERIC.SOLVE_COMMAND.$K10:
+	.LONG	-1
+FCNUMERIC.SOLVE_COMMAND.$K3:
+	.ASCII	/=/
+FCNUMERIC.SOLVE_COMMAND.$K4:
+	.ASCII	/for/
+FCNUMERIC.SOLVE_COMMAND.$K5:
+	.ASCII	/FOR/
+FCNUMERIC.SOLVE_COMMAND.$K6:
+	.ASCII	/from/
+FCNUMERIC.SOLVE_COMMAND.$K8:
+	.ASCII	/to/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  286
+;  287    ! ------------------------------------------------------------------
+;  288    ! SOLVE.
+;  289
+;  290    subroutine solve_command()
+	.ENTRY	FCNUMERIC.SOLVE_COMMAND,^M<R2,R3,R4,R5,R6>
+;  291      type(node), pointer :: left, right
+;  292      character(len=name_length) :: name
+;  293      type(value) :: a, b, root
+;  294      integer :: start, from_column, column
+;  295      logical :: bracket, found
+;  296
+;  297      nullify (left, right)
+	CLRL	FCNUMERIC.SOLVE_COMMAND.LEFT
+	CLRL	FCNUMERIC.SOLVE_COMMAND.RIGHT
+;  298      bracket = .false.
+	CLRL	FCNUMERIC.SOLVE_COMMAND.BRACKET
+;  299      found = .false.
+	CLRL	FCNUMERIC.SOLVE_COMMAND.FOUND
+;  300      a = real_value(0.0_rk)
+	PUSHAG	FCNUMERIC.SOLVE_COMMAND.$K1
+	PUSHAB	FCNUMERIC.SOLVE_COMMAND.$T1
+	CALLS	#2,G^FCVALUES.REAL_VALUE
+	MOVC3	#32,FCNUMERIC.SOLVE_COMMAND.$T1,FCNUMERIC.SOLVE_COMMAND.A
+;  301      b = a
+	MOVC3	#32,FCNUMERIC.SOLVE_COMMAND.A,FCNUMERIC.SOLVE_COMMAND.B
+;  302      call advance(1)
+	PUSHAL	FCNUMERIC.SOLVE_COMMAND.$K2
+	CALLS	#1,G^FCTREE.ADVANCE
+;  303      start = current_column()
+	CALLS	#0,G^FCTREE.CURRENT_COLUMN
+	MOVL	R0,FCNUMERIC.SOLVE_COMMAND.START
+;  304
+;  305      ! The command, read: a block left by EXIT at the first error.
+;  306      read: do
+;  307        left => parse_expression()
+	CALLS	#0,G^FCTREE.PARSE_EXPRESSION
+	MOVL	R0,R6
+	MOVL	R6,FCNUMERIC.SOLVE_COMMAND.LEFT
+;  308        if (failed()) exit read
+	CALLS	#0,G^FCMESSAGES.FAILED
+	MOVL	R0,R6
+	BLBC	R6,FCNUMERIC.SOLVE_COMMAND.$2
+	BRW	FCNUMERIC.SOLVE_COMMAND.$1
+FCNUMERIC.SOLVE_COMMAND.$2:
+;  309        if (is_operator('=')) then
+	PUSHAQ	FCNUMERIC.SOLVE_COMMAND.$D1
+	CALLS	#1,G^FCTREE.IS_OPERATOR
+	MOVL	R0,R6
+	BLBC	R6,FCNUMERIC.SOLVE_COMMAND.$3
+;  310          call advance(1)
+	PUSHAL	FCNUMERIC.SOLVE_COMMAND.$K2
+	CALLS	#1,G^FCTREE.ADVANCE
+;  311          right => parse_expression()
+	CALLS	#0,G^FCTREE.PARSE_EXPRESSION
+	MOVL	R0,R6
+	MOVL	R6,FCNUMERIC.SOLVE_COMMAND.RIGHT
+;  312          if (failed()) exit read
+	CALLS	#0,G^FCMESSAGES.FAILED
+	MOVL	R0,R6
+	BLBC	R6,FCNUMERIC.SOLVE_COMMAND.$5
+	BRW	FCNUMERIC.SOLVE_COMMAND.$1
+FCNUMERIC.SOLVE_COMMAND.$5:
+;  313        end if
+FCNUMERIC.SOLVE_COMMAND.$3:
+;  314        if (.not. read_word('for', 'FOR')) exit read
+	PUSHAQ	FCNUMERIC.SOLVE_COMMAND.$D3
+	PUSHAQ	FCNUMERIC.SOLVE_COMMAND.$D2
+	CALLS	#2,G^FCNUMERIC.READ_WORD
+	MOVL	R0,R6
+	BLBS	R6,FCNUMERIC.SOLVE_COMMAND.$6
+	BRW	FCNUMERIC.SOLVE_COMMAND.$1
+FCNUMERIC.SOLVE_COMMAND.$6:
+;  315        if (.not. read_name(name)) exit read
+	PUSHAQ	FCNUMERIC.SOLVE_COMMAND.$D4
+	CALLS	#1,G^FCNUMERIC.READ_NAME
+	MOVL	R0,R6
+	BLBS	R6,FCNUMERIC.SOLVE_COMMAND.$7
+	BRW	FCNUMERIC.SOLVE_COMMAND.$1
+FCNUMERIC.SOLVE_COMMAND.$7:
+;  316        from_column = current_column()
+	CALLS	#0,G^FCTREE.CURRENT_COLUMN
+	MOVL	R0,FCNUMERIC.SOLVE_COMMAND.$N5
+;  317        if (at_word('from')) then
+	PUSHAQ	FCNUMERIC.SOLVE_COMMAND.$D5
+	CALLS	#1,G^FCNUMERIC.AT_WORD
+	MOVL	R0,R6
+	BLBS	R6,FCNUMERIC.SOLVE_COMMAND.$9
+	BRW	FCNUMERIC.SOLVE_COMMAND.$8
+FCNUMERIC.SOLVE_COMMAND.$9:
+;  318          call advance(1)
+	PUSHAL	FCNUMERIC.SOLVE_COMMAND.$K2
+	CALLS	#1,G^FCTREE.ADVANCE
+;  319          if (.not. read_bound(a, .false., column)) exit read
+	PUSHAL	FCNUMERIC.SOLVE_COMMAND.COLUMN
+	PUSHAL	FCNUMERIC.SOLVE_COMMAND.$K7
+	PUSHAB	FCNUMERIC.SOLVE_COMMAND.A
+	CALLS	#3,G^FCNUMERIC.READ_BOUND
+	MOVL	R0,R6
+	BLBS	R6,FCNUMERIC.SOLVE_COMMAND.$10
+	BRW	FCNUMERIC.SOLVE_COMMAND.$1
+FCNUMERIC.SOLVE_COMMAND.$10:
+;  320          if (at_word('to')) then
+	PUSHAQ	FCNUMERIC.SOLVE_COMMAND.$D6
+	CALLS	#1,G^FCNUMERIC.AT_WORD
+	MOVL	R0,R6
+	BLBC	R6,FCNUMERIC.SOLVE_COMMAND.$11
+;  321            call advance(1)
+	PUSHAL	FCNUMERIC.SOLVE_COMMAND.$K2
+	CALLS	#1,G^FCTREE.ADVANCE
+;  322            bracket = .true.
+	MOVL	#-1,FCNUMERIC.SOLVE_COMMAND.BRACKET
+;  323            if (.not. is_real(a)) then
+	PUSHAB	FCNUMERIC.SOLVE_COMMAND.A
+	CALLS	#1,G^FCVALUES.IS_REAL
+	MOVL	R0,R6
+	BLBS	R6,FCNUMERIC.SOLVE_COMMAND.$13
+;  324              call fail(e_notreal, column)
+	PUSHL	#0
+	PUSHAL	FCNUMERIC.SOLVE_COMMAND.COLUMN
+	PUSHAL	FCNUMERIC.SOLVE_COMMAND.$K9
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  325              exit read
+	BRW	FCNUMERIC.SOLVE_COMMAND.$1
+FCNUMERIC.SOLVE_COMMAND.$13:
+;  326            end if
+;  327            if (.not. read_bound(b, .true., column)) exit read
+	PUSHAL	FCNUMERIC.SOLVE_COMMAND.COLUMN
+	PUSHAL	FCNUMERIC.SOLVE_COMMAND.$K10
+	PUSHAB	FCNUMERIC.SOLVE_COMMAND.B
+	CALLS	#3,G^FCNUMERIC.READ_BOUND
+	MOVL	R0,R6
+	BLBS	R6,FCNUMERIC.SOLVE_COMMAND.$15
+	BRW	FCNUMERIC.SOLVE_COMMAND.$1
+FCNUMERIC.SOLVE_COMMAND.$15:
+;  328          end if
+FCNUMERIC.SOLVE_COMMAND.$11:
+;  329        end if
+FCNUMERIC.SOLVE_COMMAND.$8:
+;  330        if (.not. at_end_of_line()) exit read
+	CALLS	#0,G^FCNUMERIC.AT_END_OF_LINE
+	MOVL	R0,R6
+	BLBS	R6,FCNUMERIC.SOLVE_COMMAND.$16
+	BRW	FCNUMERIC.SOLVE_COMMAND.$1
+FCNUMERIC.SOLVE_COMMAND.$16:
+;  331
+;  332        if (bracket) then
+	BLBC	FCNUMERIC.SOLVE_COMMAND.BRACKET,FCNUMERIC.SOLVE_COMMAND.$17
+;  333          found = brent(left, right, name, real(a%z, rk), real(b%z, rk), start, from_column, root)
+	MOVG	FCNUMERIC.SOLVE_COMMAND.A,FCNUMERIC.SOLVE_COMMAND.$T3
+	MOVG	FCNUMERIC.SOLVE_COMMAND.B,FCNUMERIC.SOLVE_COMMAND.$T4
+	PUSHAB	FCNUMERIC.SOLVE_COMMAND.ROOT
+	PUSHAL	FCNUMERIC.SOLVE_COMMAND.$N5
+	PUSHAL	FCNUMERIC.SOLVE_COMMAND.START
+	PUSHAG	FCNUMERIC.SOLVE_COMMAND.$T4
+	PUSHAG	FCNUMERIC.SOLVE_COMMAND.$T3
+	PUSHAQ	FCNUMERIC.SOLVE_COMMAND.$D4
+	PUSHAL	FCNUMERIC.SOLVE_COMMAND.RIGHT
+	PUSHAL	FCNUMERIC.SOLVE_COMMAND.LEFT
+	CALLS	#8,G^FCNUMERIC.BRENT
+	MOVL	R0,FCNUMERIC.SOLVE_COMMAND.FOUND
+;  334        else
+	BRB	FCNUMERIC.SOLVE_COMMAND.$19
+FCNUMERIC.SOLVE_COMMAND.$17:
+;  335          found = secant(left, right, name, a, start, root)
+	PUSHAB	FCNUMERIC.SOLVE_COMMAND.ROOT
+	PUSHAL	FCNUMERIC.SOLVE_COMMAND.START
+	PUSHAB	FCNUMERIC.SOLVE_COMMAND.A
+	PUSHAQ	FCNUMERIC.SOLVE_COMMAND.$D4
+	PUSHAL	FCNUMERIC.SOLVE_COMMAND.RIGHT
+	PUSHAL	FCNUMERIC.SOLVE_COMMAND.LEFT
+	CALLS	#6,G^FCNUMERIC.SECANT
+	MOVL	R0,FCNUMERIC.SOLVE_COMMAND.FOUND
+;  336        end if
+FCNUMERIC.SOLVE_COMMAND.$19:
+;  337        exit read
+FCNUMERIC.SOLVE_COMMAND.$1:
+;  338      end do read
+;  339
+;  340      call free_tree(left)
+	PUSHAL	FCNUMERIC.SOLVE_COMMAND.LEFT
+	CALLS	#1,G^FCTREE.FREE_TREE
+;  341      call free_tree(right)
+	PUSHAL	FCNUMERIC.SOLVE_COMMAND.RIGHT
+	CALLS	#1,G^FCTREE.FREE_TREE
+;  342      if (found) call show_answer(root, name)
+	BLBC	FCNUMERIC.SOLVE_COMMAND.FOUND,FCNUMERIC.SOLVE_COMMAND.$20
+	PUSHAQ	FCNUMERIC.SOLVE_COMMAND.$D4
+	PUSHAB	FCNUMERIC.SOLVE_COMMAND.ROOT
+	CALLS	#2,G^FCNUMERIC.SHOW_ANSWER
+FCNUMERIC.SOLVE_COMMAND.$20:
+;  343    end subroutine solve_command
+	RET
+
+; Storage map for FCNUMERIC.SECANT, a LOGICAL function
+;   LEFT   TYPE(NODE), POINTER        argument 1  @FCNUMERIC.SECANT.LEFT(AP)
+;   RIGHT  TYPE(NODE), POINTER        argument 2  @FCNUMERIC.SECANT.RIGHT(AP)
+;   NAME   CHARACTER*(*), INTENT(IN)  argument 3  @FCNUMERIC.SECANT.NAME(AP)
+;   A      TYPE(VALUE), INTENT(IN)    argument 4  @FCNUMERIC.SECANT.A(AP)
+;   START  INTEGER, INTENT(IN)        argument 5  @FCNUMERIC.SECANT.START(AP)
+;   ROOT   TYPE(VALUE), INTENT(OUT)   argument 6  @FCNUMERIC.SECANT.ROOT(AP)
+;   FOUND  LOGICAL                    $LOCAL+0    FCNUMERIC.SECANT.FOUND
+;   X0     TYPE(VALUE)                $LOCAL+16   FCNUMERIC.SECANT.X0
+;   X1     TYPE(VALUE)                $LOCAL+48   FCNUMERIC.SECANT.X1
+;   F0     TYPE(VALUE)                $LOCAL+80   FCNUMERIC.SECANT.F0
+;   F1     TYPE(VALUE)                $LOCAL+112  FCNUMERIC.SECANT.F1
+;   STEP   TYPE(VALUE)                $LOCAL+144  FCNUMERIC.SECANT.STEP
+;   K      INTEGER                    $LOCAL+176  FCNUMERIC.SECANT.K
+;   R7 is $T5: temporary
+;   R6 is $R1: K, during a loop
+;   R9 is $R2: LEFT's address
+;   R10 is $R3: RIGHT's address
+;   R11 is $R4: START's address
+;
+FCNUMERIC.SECANT.LEFT = 4		; LEFT is argument 1
+FCNUMERIC.SECANT.RIGHT = 8		; RIGHT is argument 2
+FCNUMERIC.SECANT.NAME = 12		; NAME is argument 3
+FCNUMERIC.SECANT.A = 16			; A is argument 4
+FCNUMERIC.SECANT.START = 20		; START is argument 5
+FCNUMERIC.SECANT.ROOT = 24		; ROOT is argument 6
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+	.ALIGN	4			; the boundary of this routine's aligned records
+FCNUMERIC.SECANT.FOUND:
+	.BLKL	1			; FOUND, the function's value
+	.BLKB	12
+FCNUMERIC.SECANT.X0:
+	.BLKL	8			; X0
+FCNUMERIC.SECANT.X1:
+	.BLKL	8			; X1
+FCNUMERIC.SECANT.F0:
+	.BLKL	8			; F0
+FCNUMERIC.SECANT.F1:
+	.BLKL	8			; F1
+FCNUMERIC.SECANT.STEP:
+	.BLKL	8			; STEP
+FCNUMERIC.SECANT.K:
+	.BLKL	1			; K
+FCNUMERIC.SECANT.$T1:
+	.BLKL	8			; characters, for one statement
+FCNUMERIC.SECANT.$T2:
+	.BLKL	8			; characters, for one statement
+FCNUMERIC.SECANT.$T3:
+	.BLKL	2			; temporary
+FCNUMERIC.SECANT.$T4:
+	.BLKL	2			; temporary
+FCNUMERIC.SECANT.$T6:
+	.BLKL	8			; characters, for one statement
+FCNUMERIC.SECANT.$T7:
+	.BLKL	8			; characters, for one statement
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCNUMERIC.SECANT.$K1:
+	.LONG	^X624D3F70,^XA9FCD2F1	; 0.001D0
+FCNUMERIC.SECANT.$K2:
+	.LONG	^X00003CF0,^X00000000	; 8.881784197001252D-16
+FCNUMERIC.SECANT.$K3:
+	.LONG	38
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  344
+;  345    ! SECANT: ROOT is a root of the expression found by the secant method
+;  346    ! from A, false if none was. Each step draws the line through the last
+;  347    ! two points, (x0, f0) and (x1, f1), and takes where it crosses zero as
+;  348    ! the next point:
+;  349    !
+;  350    !     x2 = x1 - f1 (x1 - x0) / (f1 - f0)
+;  351    !
+;  352    ! Near a simple root each step about squares the error (strictly, raises
+;  353    ! it to the power 1.618, the golden ratio), so a dozen steps reach the
+;  354    ! machine's precision. In complex arithmetic the same step finds complex
+;  355    ! roots, from a complex start; from a real start, a real expression stays
+;  356    ! on the real line.
+;  357    logical function secant(left, right, name, a, start, root) result(found)
+	.ENTRY	FCNUMERIC.SECANT,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+;  358      type(node), pointer :: left, right
+;  359      character(len=*), intent(in) :: name
+;  360      type(value), intent(in) :: a
+;  361      integer, intent(in) :: start
+;  362      type(value), intent(out) :: root
+;  363      type(value) :: x0, x1, f0, f1, step
+;  364      integer :: k
+;  365
+;  366      found = .false.
+;  367      root = a
+	MOVC3	#32,@FCNUMERIC.SECANT.A(AP),@FCNUMERIC.SECANT.ROOT(AP)
+;  368
+;  369      ! The second point is a little way from the first.
+;  370      x0 = a
+	MOVC3	#32,@FCNUMERIC.SECANT.A(AP),FCNUMERIC.SECANT.X0
+;  371      x1 = a + real_value(scaled(1.0e-3_rk, max(c_abs(a%z), 1.0_rk)))
+	PUSHAO	@FCNUMERIC.SECANT.A(AP)
+	CALLS	#1,G^FCVALUES.C_ABS
+	MOVG	R0,R7
+	MOVG	R7,FCNUMERIC.SECANT.$T4
+	CMPG	S^#1.0,FCNUMERIC.SECANT.$T4
+	BLEQ	FCNUMERIC.SECANT.$1
+	MOVG	S^#1.0,FCNUMERIC.SECANT.$T4 ; 1D0
+FCNUMERIC.SECANT.$1:
+	PUSHAG	FCNUMERIC.SECANT.$T4
+	PUSHAG	FCNUMERIC.SECANT.$K1
+	CALLS	#2,G^FCNUMERIC.SCALED
+	MOVG	R0,FCNUMERIC.SECANT.$T3
+	PUSHAG	FCNUMERIC.SECANT.$T3
+	PUSHAB	FCNUMERIC.SECANT.$T2
+	CALLS	#2,G^FCVALUES.REAL_VALUE
+	PUSHAB	FCNUMERIC.SECANT.$T2
+	PUSHAB	@FCNUMERIC.SECANT.A(AP)
+	PUSHAB	FCNUMERIC.SECANT.$T1
+	CALLS	#3,G^FCVALUES.V_ADD
+	MOVC3	#32,FCNUMERIC.SECANT.$T1,FCNUMERIC.SECANT.X1
+;  372      f0 = value_at(left, right, name, x0, start)
+	PUSHAL	@FCNUMERIC.SECANT.START(AP)
+	PUSHAB	FCNUMERIC.SECANT.X0
+	PUSHL	FCNUMERIC.SECANT.NAME(AP)
+	PUSHAL	@FCNUMERIC.SECANT.RIGHT(AP)
+	PUSHAL	@FCNUMERIC.SECANT.LEFT(AP)
+	PUSHAB	FCNUMERIC.SECANT.$T2
+	CALLS	#6,G^FCNUMERIC.VALUE_AT
+	MOVC3	#32,FCNUMERIC.SECANT.$T2,FCNUMERIC.SECANT.F0
+;  373      if (f0%err /= 0) return
+	TSTL	FCNUMERIC.SECANT.F0+16
+	BEQL	FCNUMERIC.SECANT.$3
+	CLRL	R0			; the function's value
+	RET
+FCNUMERIC.SECANT.$3:
+;  374      if (f0%z == (0.0_rk, 0.0_rk)) then
+	TSTG	FCNUMERIC.SECANT.F0
+	BNEQ	FCNUMERIC.SECANT.$5
+	TSTG	FCNUMERIC.SECANT.F0+8
+	BNEQ	FCNUMERIC.SECANT.$5
+;  375        found = .true.
+;  376        return
+	MOVL	#-1,R0			; the function's value
+	RET
+FCNUMERIC.SECANT.$5:
+;  377      end if
+;  378      f1 = value_at(left, right, name, x1, start)
+	PUSHAL	@FCNUMERIC.SECANT.START(AP)
+	PUSHAB	FCNUMERIC.SECANT.X1
+	PUSHL	FCNUMERIC.SECANT.NAME(AP)
+	PUSHAL	@FCNUMERIC.SECANT.RIGHT(AP)
+	PUSHAL	@FCNUMERIC.SECANT.LEFT(AP)
+	PUSHAB	FCNUMERIC.SECANT.$T2
+	CALLS	#6,G^FCNUMERIC.VALUE_AT
+	MOVC3	#32,FCNUMERIC.SECANT.$T2,FCNUMERIC.SECANT.F1
+;  379      if (f1%err /= 0) return
+	TSTL	FCNUMERIC.SECANT.F1+16
+	BEQL	FCNUMERIC.SECANT.$8
+	CLRL	R0			; the function's value
+	RET
+FCNUMERIC.SECANT.$8:
+;  380
+;  381      do k = 1, step_limit
+	MOVL	#1,FCNUMERIC.SECANT.K
+	MOVL	FCNUMERIC.SECANT.K,R6
+	MOVL	FCNUMERIC.SECANT.LEFT(AP),R9
+	MOVL	FCNUMERIC.SECANT.RIGHT(AP),R10
+	MOVL	FCNUMERIC.SECANT.START(AP),R11
+FCNUMERIC.SECANT.$10:			; DO (line 381)'s body
+;  382        if (f1%z == (0.0_rk, 0.0_rk)) then
+	TSTG	FCNUMERIC.SECANT.F1
+	BNEQ	FCNUMERIC.SECANT.$11
+	TSTG	FCNUMERIC.SECANT.F1+8
+	BNEQ	FCNUMERIC.SECANT.$11
+	MOVL	R6,FCNUMERIC.SECANT.K
+;  383          root = x1
+	MOVC3	#32,FCNUMERIC.SECANT.X1,@FCNUMERIC.SECANT.ROOT(AP)
+;  384          found = .true.
+;  385          return
+	MOVL	#-1,R0			; the function's value
+	RET
+FCNUMERIC.SECANT.$11:
+;  386        end if
+;  387        ! A line parallel to the axis crosses it nowhere: no root this way.
+;  388        if (f1%z == f0%z) exit
+	CMPG	FCNUMERIC.SECANT.F1,FCNUMERIC.SECANT.F0
+	BNEQ	FCNUMERIC.SECANT.$15
+	CMPG	FCNUMERIC.SECANT.F1+8,FCNUMERIC.SECANT.F0+8
+	BNEQ	FCNUMERIC.SECANT.$17
+	BRW	FCNUMERIC.SECANT.$14
+FCNUMERIC.SECANT.$17:
+FCNUMERIC.SECANT.$15:
+;  389
+;  390        step = f1 * (x1 - x0) / (f1 - f0)
+	PUSHAB	FCNUMERIC.SECANT.X0
+	PUSHAB	FCNUMERIC.SECANT.X1
+	PUSHAB	FCNUMERIC.SECANT.$T6
+	CALLS	#3,G^FCVALUES.V_SUB
+	PUSHAB	FCNUMERIC.SECANT.$T6
+	PUSHAB	FCNUMERIC.SECANT.F1
+	PUSHAB	FCNUMERIC.SECANT.$T1
+	CALLS	#3,G^FCVALUES.V_MUL
+	PUSHAB	FCNUMERIC.SECANT.F0
+	PUSHAB	FCNUMERIC.SECANT.F1
+	PUSHAB	FCNUMERIC.SECANT.$T7
+	CALLS	#3,G^FCVALUES.V_SUB
+	PUSHAB	FCNUMERIC.SECANT.$T7
+	PUSHAB	FCNUMERIC.SECANT.$T1
+	PUSHAB	FCNUMERIC.SECANT.$T2
+	CALLS	#3,G^FCVALUES.V_DIV
+	MOVC3	#32,FCNUMERIC.SECANT.$T2,FCNUMERIC.SECANT.STEP
+;  391        if (step%err /= 0) exit
+	TSTL	FCNUMERIC.SECANT.STEP+16
+	BEQL	FCNUMERIC.SECANT.$19
+	BRW	FCNUMERIC.SECANT.$18
+FCNUMERIC.SECANT.$19:
+;  392        x0 = x1
+	MOVC3	#32,FCNUMERIC.SECANT.X1,FCNUMERIC.SECANT.X0
+;  393        f0 = f1
+	MOVC3	#32,FCNUMERIC.SECANT.F1,FCNUMERIC.SECANT.F0
+;  394        x1 = x1 - step
+	PUSHAB	FCNUMERIC.SECANT.STEP
+	PUSHAB	FCNUMERIC.SECANT.X1
+	PUSHAB	FCNUMERIC.SECANT.$T7
+	CALLS	#3,G^FCVALUES.V_SUB
+	MOVC3	#32,FCNUMERIC.SECANT.$T7,FCNUMERIC.SECANT.X1
+;  395        if (x1%err /= 0) exit
+	TSTL	FCNUMERIC.SECANT.X1+16
+	BEQL	FCNUMERIC.SECANT.$21
+	BRW	FCNUMERIC.SECANT.$20
+FCNUMERIC.SECANT.$21:
+;  396        f1 = value_at(left, right, name, x1, start)
+	PUSHAL	(R11)
+	PUSHAB	FCNUMERIC.SECANT.X1
+	PUSHL	FCNUMERIC.SECANT.NAME(AP)
+	PUSHAL	(R10)
+	PUSHAL	(R9)
+	PUSHAB	FCNUMERIC.SECANT.$T7
+	CALLS	#6,G^FCNUMERIC.VALUE_AT
+	MOVC3	#32,FCNUMERIC.SECANT.$T7,FCNUMERIC.SECANT.F1
+;  397        if (f1%err /= 0) return
+	TSTL	FCNUMERIC.SECANT.F1+16
+	BEQL	FCNUMERIC.SECANT.$22
+	MOVL	R6,FCNUMERIC.SECANT.K
+	CLRL	R0			; the function's value
+	RET
+FCNUMERIC.SECANT.$22:
+;  398
+;  399        ! Done when the step is a rounding error's size beside the root.
+;  400        if (c_abs(step%z) <= scaled(4 * eps, c_abs(x1%z))) then
+	PUSHAO	FCNUMERIC.SECANT.STEP
+	CALLS	#1,G^FCVALUES.C_ABS
+	MOVG	R0,R7
+	PUSHAO	FCNUMERIC.SECANT.X1
+	CALLS	#1,G^FCVALUES.C_ABS
+	MOVG	R0,FCNUMERIC.SECANT.$T3
+	PUSHAG	FCNUMERIC.SECANT.$T3
+	PUSHAG	FCNUMERIC.SECANT.$K2
+	CALLS	#2,G^FCNUMERIC.SCALED
+	MOVG	R0,FCNUMERIC.SECANT.$T4
+	CMPG	R7,FCNUMERIC.SECANT.$T4
+	BGTR	FCNUMERIC.SECANT.$24
+	MOVL	R6,FCNUMERIC.SECANT.K
+;  401          root = x1
+	MOVC3	#32,FCNUMERIC.SECANT.X1,@FCNUMERIC.SECANT.ROOT(AP)
+;  402          found = .true.
+;  403          return
+	MOVL	#-1,R0			; the function's value
+	RET
+FCNUMERIC.SECANT.$24:
+;  404        end if
+;  405      end do
+	ACBL	#200,#1,R6,FCNUMERIC.SECANT.$10
+	MOVL	R6,FCNUMERIC.SECANT.K
+FCNUMERIC.SECANT.$27:
+;  406      call fail(e_noroot, start)
+	PUSHL	#0
+	PUSHAL	@FCNUMERIC.SECANT.START(AP)
+	PUSHAL	FCNUMERIC.SECANT.$K3
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  407    end function secant
+	CLRL	R0			; the function's value
+	RET
+FCNUMERIC.SECANT.$14:			; leaving the loop
+	MOVL	R6,FCNUMERIC.SECANT.K
+	BRB	FCNUMERIC.SECANT.$27
+FCNUMERIC.SECANT.$18:			; leaving the loop
+	MOVL	R6,FCNUMERIC.SECANT.K
+	BRB	FCNUMERIC.SECANT.$27
+FCNUMERIC.SECANT.$20:			; leaving the loop
+	MOVL	R6,FCNUMERIC.SECANT.K
+	BRB	FCNUMERIC.SECANT.$27
+
+; Storage map for FCNUMERIC.BRENT, a LOGICAL function
+;   LEFT         TYPE(NODE), POINTER        an argument  @FCNUMERIC.BRENT.$A1
+;   RIGHT        TYPE(NODE), POINTER        an argument  @FCNUMERIC.BRENT.$A2
+;   NAME         CHARACTER*(*), INTENT(IN)  an argument  @FCNUMERIC.BRENT.$A3
+;   A0           REAL*8, INTENT(IN)         argument 4   @FCNUMERIC.BRENT.A0(AP)
+;   B0           REAL*8, INTENT(IN)         argument 5   @FCNUMERIC.BRENT.B0(AP)
+;   START        INTEGER, INTENT(IN)        an argument  @FCNUMERIC.BRENT.$A6
+;   FROM_COLUMN  INTEGER, INTENT(IN)        argument 7   @FCNUMERIC.BRENT.FROM_COLUMN(AP)
+;   ROOT         TYPE(VALUE), INTENT(OUT)   argument 8   @FCNUMERIC.BRENT.ROOT(AP)
+;   FOUND        LOGICAL                    R6           R6
+;   A            REAL*8                     $LOCAL+4     FCNUMERIC.BRENT.A
+;   B            REAL*8                     $LOCAL+12    FCNUMERIC.BRENT.B
+;   C            REAL*8                     $LOCAL+20    FCNUMERIC.BRENT.C
+;   D            REAL*8                     $LOCAL+28    FCNUMERIC.BRENT.D
+;   E            REAL*8                     $LOCAL+36    FCNUMERIC.BRENT.E
+;   FA           REAL*8                     $LOCAL+44    FCNUMERIC.BRENT.FA
+;   FB           REAL*8                     $LOCAL+52    FCNUMERIC.BRENT.FB
+;   FC           REAL*8                     $LOCAL+60    FCNUMERIC.BRENT.FC
+;   P            REAL*8                     $LOCAL+68    FCNUMERIC.BRENT.P
+;   Q            REAL*8                     $LOCAL+76    FCNUMERIC.BRENT.Q
+;   R            REAL*8                     $LOCAL+84    FCNUMERIC.BRENT.R
+;   S            REAL*8                     $LOCAL+92    FCNUMERIC.BRENT.S
+;   TOL          REAL*8                     $LOCAL+100   FCNUMERIC.BRENT.TOL
+;   XM           REAL*8                     $LOCAL+108   FCNUMERIC.BRENT.XM
+;   WIDTH        REAL*8                     $LOCAL+116   FCNUMERIC.BRENT.WIDTH
+;   K            INTEGER                    $LOCAL+124   FCNUMERIC.BRENT.K
+;   ERR          INTEGER                    $LOCAL+128   FCNUMERIC.BRENT.ERR
+;   R7 is $T2: temporary
+;   R6 is $R1: K, during a loop
+;   R8 is $R2: R, during a loop
+;
+FCNUMERIC.BRENT.A0 = 16			; A0 is argument 4
+FCNUMERIC.BRENT.B0 = 20			; B0 is argument 5
+FCNUMERIC.BRENT.FROM_COLUMN = 28	; FROM_COLUMN is argument 7
+FCNUMERIC.BRENT.ROOT = 32		; ROOT is argument 8
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+	.BLKB	4
+FCNUMERIC.BRENT.A:
+	.BLKL	2			; A
+FCNUMERIC.BRENT.B:
+	.BLKL	2			; B
+FCNUMERIC.BRENT.C:
+	.BLKL	2			; C
+FCNUMERIC.BRENT.D:
+	.BLKL	2			; D
+FCNUMERIC.BRENT.E:
+	.BLKL	2			; E
+FCNUMERIC.BRENT.FA:
+	.BLKL	2			; FA
+FCNUMERIC.BRENT.FB:
+	.BLKL	2			; FB
+FCNUMERIC.BRENT.FC:
+	.BLKL	2			; FC
+FCNUMERIC.BRENT.P:
+	.BLKL	2			; P
+FCNUMERIC.BRENT.Q:
+	.BLKL	2			; Q
+FCNUMERIC.BRENT.R:
+	.BLKL	2			; R
+FCNUMERIC.BRENT.S:
+	.BLKL	2			; S
+FCNUMERIC.BRENT.TOL:
+	.BLKL	2			; TOL
+FCNUMERIC.BRENT.XM:
+	.BLKL	2			; XM
+FCNUMERIC.BRENT.WIDTH:
+	.BLKL	2			; WIDTH
+FCNUMERIC.BRENT.K:
+	.BLKL	1			; K
+FCNUMERIC.BRENT.ERR:
+	.BLKL	1			; ERR
+FCNUMERIC.BRENT.$A1:
+	.BLKL	1			; LEFT's longword of the argument list, set at each entry point
+FCNUMERIC.BRENT.$A2:
+	.BLKL	1			; RIGHT's longword of the argument list, set at each entry point
+FCNUMERIC.BRENT.$A3:
+	.BLKL	1			; NAME's longword of the argument list, set at each entry point
+FCNUMERIC.BRENT.$A6:
+	.BLKL	1			; START's longword of the argument list, set at each entry point
+FCNUMERIC.BRENT.$T1:
+	.BLKL	8			; characters, for one statement
+FCNUMERIC.BRENT.$T3:
+	.BLKL	2			; temporary
+FCNUMERIC.BRENT.$T4:
+	.BLKL	2			; temporary
+FCNUMERIC.BRENT.$T5:
+	.BLKL	2			; temporary
+FCNUMERIC.BRENT.$T6:
+	.BLKL	2			; temporary
+FCNUMERIC.BRENT.$T7:
+	.BLKL	2			; temporary
+FCNUMERIC.BRENT.$T8:
+	.BLKL	2			; temporary
+FCNUMERIC.BRENT.$T9:
+	.BLKL	2			; temporary
+FCNUMERIC.BRENT.$T10:
+	.BLKL	2			; temporary
+FCNUMERIC.BRENT.$T11:
+	.BLKL	2			; temporary
+FCNUMERIC.BRENT.$T12:
+	.BLKL	2			; temporary
+FCNUMERIC.BRENT.$T13:
+	.BLKL	2			; temporary
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCNUMERIC.BRENT.$K1:
+	.LONG	^X00000000,^X00000000	; 0D0
+FCNUMERIC.BRENT.$K2:
+	.LONG	39
+FCNUMERIC.BRENT.$K3:
+	.LONG	^X00003CD0,^X00000000	; 2.220446049250313D-16
+FCNUMERIC.BRENT.$K4:
+	.LONG	^X00003CE0,^X00000000	; 4.440892098500626D-16
+FCNUMERIC.BRENT.$K5:
+	.LONG	^X00004000,^X00000000	; 0.5D0
+FCNUMERIC.BRENT.$K6:
+	.LONG	38
+FCNUMERIC.BRENT.$K7:
+	.LONG	^X00004020,^X00000000	; 2D0
+FCNUMERIC.BRENT.$K8:
+	.LONG	^X00004028,^X00000000	; 3D0
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  408
+;  409    ! BRENT: ROOT is a root of the expression between A and B, where it must
+;  410    ! be real and change sign, found by Brent's method (R. P. Brent,
+;  411    ! "Algorithms for Minimization without Derivatives", 1973), in the form
+;  412    ! many libraries give it.
+;  413    !
+;  414    ! The method keeps a bracket, B and C, the root between them, B the end
+;  415    ! whose value is smaller, and A the last B. Each step tries to guess the
+;  416    ! root from the last points, by inverse quadratic interpolation through
+;  417    ! (A, fA), (B, fB), (C, fC) (x as a quadratic in f, evaluated at f = 0),
+;  418    ! or the secant through two; and takes the guess only if it lands well
+;  419    ! inside the bracket and shrinks it quickly enough, bisecting the bracket
+;  420    ! otherwise. So it is as fast as the secant method near a simple root, yet
+;  421    ! never slower than bisection, which always converges: a bracket of width
+;  422    ! w is narrowed below t in at most about log2(w/t) bisections, and the
+;  423    ! steps between them are faster still.
+;  424    !
+;  425    ! Every operation is guarded: near a root the values are tiny, and their
+;  426    ! products could underflow.
+;  427    logical function brent(left, right, name, a0, b0, start, from_column, root) result(found)
+	.ENTRY	FCNUMERIC.BRENT,^M<R2,R3,R4,R5,R6,R7,R8,R9>
+	MOVL	4(AP),FCNUMERIC.BRENT.$A1 ; LEFT is argument 1
+	MOVL	8(AP),FCNUMERIC.BRENT.$A2 ; RIGHT is argument 2
+	MOVL	12(AP),FCNUMERIC.BRENT.$A3 ; NAME is argument 3
+	MOVL	24(AP),FCNUMERIC.BRENT.$A6 ; START is argument 6
+;  428      type(node), pointer :: left, right
+;  429      character(len=*), intent(in) :: name
+;  430      real(rk), intent(in) :: a0, b0
+;  431      integer, intent(in) :: start, from_column
+;  432      type(value), intent(out) :: root
+;  433      real(rk) :: a, b, c, d, e, fa, fb, fc, p, q, r, s, tol, xm, width
+;  434      integer :: k, err
+;  435
+;  436      found = .false.
+;  437      root = real_value(0.0_rk)
+	PUSHAG	FCNUMERIC.BRENT.$K1
+	PUSHAB	FCNUMERIC.BRENT.$T1
+	CALLS	#2,G^FCVALUES.REAL_VALUE
+	MOVC3	#32,FCNUMERIC.BRENT.$T1,@FCNUMERIC.BRENT.ROOT(AP)
+;  438      err = 0
+	CLRL	FCNUMERIC.BRENT.ERR
+;  439      a = a0
+	MOVG	@FCNUMERIC.BRENT.A0(AP),FCNUMERIC.BRENT.A
+;  440      b = b0
+	MOVG	@FCNUMERIC.BRENT.B0(AP),FCNUMERIC.BRENT.B
+;  441      if (.not. real_value_at(a, fa)) return
+	PUSHAG	FCNUMERIC.BRENT.FA
+	PUSHAG	FCNUMERIC.BRENT.A
+	CALLS	#2,FCNUMERIC.BRENT.REAL_VALUE_AT
+	MOVL	R0,R7
+	BLBS	R7,FCNUMERIC.BRENT.$1
+	CLRL	R0			; the function's value
+	RET
+FCNUMERIC.BRENT.$1:
+;  442      if (.not. real_value_at(b, fb)) return
+	PUSHAG	FCNUMERIC.BRENT.FB
+	PUSHAG	FCNUMERIC.BRENT.B
+	CALLS	#2,FCNUMERIC.BRENT.REAL_VALUE_AT
+	MOVL	R0,R7
+	BLBS	R7,FCNUMERIC.BRENT.$3
+	CLRL	R0			; the function's value
+	RET
+FCNUMERIC.BRENT.$3:
+;  443      if (fa == 0) then
+	TSTG	FCNUMERIC.BRENT.FA
+	BNEQ	FCNUMERIC.BRENT.$5
+;  444        root = real_value(a)
+	PUSHAG	FCNUMERIC.BRENT.A
+	PUSHAB	FCNUMERIC.BRENT.$T1
+	CALLS	#2,G^FCVALUES.REAL_VALUE
+	MOVC3	#32,FCNUMERIC.BRENT.$T1,@FCNUMERIC.BRENT.ROOT(AP)
+;  445        found = .true.
+;  446        return
+	MOVL	#-1,R0			; the function's value
+	RET
+FCNUMERIC.BRENT.$5:
+;  447      end if
+;  448      if (fb == 0) then
+	TSTG	FCNUMERIC.BRENT.FB
+	BNEQ	FCNUMERIC.BRENT.$7
+;  449        root = real_value(b)
+	PUSHAG	FCNUMERIC.BRENT.B
+	PUSHAB	FCNUMERIC.BRENT.$T1
+	CALLS	#2,G^FCVALUES.REAL_VALUE
+	MOVC3	#32,FCNUMERIC.BRENT.$T1,@FCNUMERIC.BRENT.ROOT(AP)
+;  450        found = .true.
+;  451        return
+	MOVL	#-1,R0			; the function's value
+	RET
+FCNUMERIC.BRENT.$7:
+;  452      end if
+;  453      if ((fa > 0) .eqv. (fb > 0)) then
+	CLRL	R0
+	TSTG	FCNUMERIC.BRENT.FA
+	BLEQ	FCNUMERIC.BRENT.$10
+	MNEGL	#1,R0
+FCNUMERIC.BRENT.$10:
+	CLRL	R1
+	TSTG	FCNUMERIC.BRENT.FB
+	BLEQ	FCNUMERIC.BRENT.$11
+	MNEGL	#1,R1
+FCNUMERIC.BRENT.$11:
+	XORL2	R1,R0
+	BLBS	R0,FCNUMERIC.BRENT.$9
+;  454        call fail(e_samesign, from_column)
+	PUSHL	#0
+	PUSHAL	@FCNUMERIC.BRENT.FROM_COLUMN(AP)
+	PUSHAL	FCNUMERIC.BRENT.$K2
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  455        return
+	CLRL	R0			; the function's value
+	RET
+FCNUMERIC.BRENT.$9:
+;  456      end if
+;  457
+;  458      ! WIDTH, a rounding error's size beside the bracket's ends: a root
+;  459      ! closer to 0 than that is 0, as far as the bracket can tell.
+;  460      width = scaled(eps, max(abs(a), abs(b)))
+	MOVG	FCNUMERIC.BRENT.A,FCNUMERIC.BRENT.$T4
+	BGEQ	FCNUMERIC.BRENT.$13
+	MNEGG	FCNUMERIC.BRENT.$T4,FCNUMERIC.BRENT.$T4
+FCNUMERIC.BRENT.$13:
+	MOVG	FCNUMERIC.BRENT.$T4,FCNUMERIC.BRENT.$T3
+	MOVG	FCNUMERIC.BRENT.B,FCNUMERIC.BRENT.$T5
+	BGEQ	FCNUMERIC.BRENT.$15
+	MNEGG	FCNUMERIC.BRENT.$T5,FCNUMERIC.BRENT.$T5
+FCNUMERIC.BRENT.$15:
+	CMPG	FCNUMERIC.BRENT.$T5,FCNUMERIC.BRENT.$T3
+	BLEQ	FCNUMERIC.BRENT.$17
+	MOVG	FCNUMERIC.BRENT.$T5,FCNUMERIC.BRENT.$T3
+FCNUMERIC.BRENT.$17:
+	PUSHAG	FCNUMERIC.BRENT.$T3
+	PUSHAG	FCNUMERIC.BRENT.$K3
+	CALLS	#2,G^FCNUMERIC.SCALED
+	MOVG	R0,FCNUMERIC.BRENT.WIDTH
+;  461
+;  462      c = b
+	MOVG	FCNUMERIC.BRENT.B,FCNUMERIC.BRENT.C
+;  463      fc = fb
+	MOVG	FCNUMERIC.BRENT.FB,FCNUMERIC.BRENT.FC
+;  464      d = r_add(b, -a, err)
+	MNEGG	FCNUMERIC.BRENT.A,FCNUMERIC.BRENT.$T5
+	PUSHAL	FCNUMERIC.BRENT.ERR
+	PUSHAG	FCNUMERIC.BRENT.$T5
+	PUSHAG	FCNUMERIC.BRENT.B
+	CALLS	#3,G^FCVALUES.R_ADD
+	MOVG	R0,FCNUMERIC.BRENT.D
+;  465      e = d
+	MOVG	FCNUMERIC.BRENT.D,FCNUMERIC.BRENT.E
+;  466      do k = 1, step_limit
+	MOVL	#1,FCNUMERIC.BRENT.K
+	MOVL	FCNUMERIC.BRENT.K,R6
+	MOVQ	FCNUMERIC.BRENT.R,R8
+FCNUMERIC.BRENT.$19:			; DO (line 466)'s body
+;  467        ! C is the end of the bracket opposite B.
+;  468        if ((fb > 0) .eqv. (fc > 0)) then
+	CLRL	R0
+	TSTG	FCNUMERIC.BRENT.FB
+	BLEQ	FCNUMERIC.BRENT.$21
+	MNEGL	#1,R0
+FCNUMERIC.BRENT.$21:
+	CLRL	R1
+	TSTG	FCNUMERIC.BRENT.FC
+	BLEQ	FCNUMERIC.BRENT.$22
+	MNEGL	#1,R1
+FCNUMERIC.BRENT.$22:
+	XORL2	R1,R0
+	BLBS	R0,FCNUMERIC.BRENT.$20
+;  469          c = a
+	MOVG	FCNUMERIC.BRENT.A,FCNUMERIC.BRENT.C
+;  470          fc = fa
+	MOVG	FCNUMERIC.BRENT.FA,FCNUMERIC.BRENT.FC
+;  471          d = r_add(b, -a, err)
+	MNEGG	FCNUMERIC.BRENT.A,FCNUMERIC.BRENT.$T5
+	PUSHAL	FCNUMERIC.BRENT.ERR
+	PUSHAG	FCNUMERIC.BRENT.$T5
+	PUSHAG	FCNUMERIC.BRENT.B
+	CALLS	#3,G^FCVALUES.R_ADD
+	MOVG	R0,FCNUMERIC.BRENT.D
+;  472          e = d
+	MOVG	FCNUMERIC.BRENT.D,FCNUMERIC.BRENT.E
+;  473        end if
+FCNUMERIC.BRENT.$20:
+;  474        ! B is the end whose value is smaller.
+;  475        if (abs(fc) < abs(fb)) then
+	MOVG	FCNUMERIC.BRENT.FC,FCNUMERIC.BRENT.$T5
+	BGEQ	FCNUMERIC.BRENT.$24
+	MNEGG	FCNUMERIC.BRENT.$T5,FCNUMERIC.BRENT.$T5
+FCNUMERIC.BRENT.$24:
+	MOVG	FCNUMERIC.BRENT.FB,FCNUMERIC.BRENT.$T4
+	BGEQ	FCNUMERIC.BRENT.$26
+	MNEGG	FCNUMERIC.BRENT.$T4,FCNUMERIC.BRENT.$T4
+FCNUMERIC.BRENT.$26:
+	CMPG	FCNUMERIC.BRENT.$T5,FCNUMERIC.BRENT.$T4
+	BGEQ	FCNUMERIC.BRENT.$28
+;  476          a = b
+	MOVG	FCNUMERIC.BRENT.B,FCNUMERIC.BRENT.A
+;  477          b = c
+	MOVG	FCNUMERIC.BRENT.C,FCNUMERIC.BRENT.B
+;  478          c = a
+	MOVG	FCNUMERIC.BRENT.A,FCNUMERIC.BRENT.C
+;  479          fa = fb
+	MOVG	FCNUMERIC.BRENT.FB,FCNUMERIC.BRENT.FA
+;  480          fb = fc
+	MOVG	FCNUMERIC.BRENT.FC,FCNUMERIC.BRENT.FB
+;  481          fc = fa
+	MOVG	FCNUMERIC.BRENT.FA,FCNUMERIC.BRENT.FC
+;  482        end if
+FCNUMERIC.BRENT.$28:
+;  483
+;  484        ! Done when the bracket's half width, XM, is within TOL, two rounding
+;  485        ! errors beside B (and half of WIDTH, for a root at 0).
+;  486        tol = r_add(scaled(2 * eps, abs(b)), scaled(0.5_rk, width), err)
+	MOVG	FCNUMERIC.BRENT.B,FCNUMERIC.BRENT.$T5
+	BGEQ	FCNUMERIC.BRENT.$30
+	MNEGG	FCNUMERIC.BRENT.$T5,FCNUMERIC.BRENT.$T5
+FCNUMERIC.BRENT.$30:
+	PUSHAG	FCNUMERIC.BRENT.$T5
+	PUSHAG	FCNUMERIC.BRENT.$K4
+	CALLS	#2,G^FCNUMERIC.SCALED
+	MOVG	R0,FCNUMERIC.BRENT.$T4
+	PUSHAG	FCNUMERIC.BRENT.WIDTH
+	PUSHAG	FCNUMERIC.BRENT.$K5
+	CALLS	#2,G^FCNUMERIC.SCALED
+	MOVG	R0,FCNUMERIC.BRENT.$T3
+	PUSHAL	FCNUMERIC.BRENT.ERR
+	PUSHAG	FCNUMERIC.BRENT.$T3
+	PUSHAG	FCNUMERIC.BRENT.$T4
+	CALLS	#3,G^FCVALUES.R_ADD
+	MOVG	R0,FCNUMERIC.BRENT.TOL
+;  487        xm = scaled(0.5_rk, r_add(c, -b, err))
+	MNEGG	FCNUMERIC.BRENT.B,FCNUMERIC.BRENT.$T5
+	PUSHAL	FCNUMERIC.BRENT.ERR
+	PUSHAG	FCNUMERIC.BRENT.$T5
+	PUSHAG	FCNUMERIC.BRENT.C
+	CALLS	#3,G^FCVALUES.R_ADD
+	MOVG	R0,FCNUMERIC.BRENT.$T3
+	PUSHAG	FCNUMERIC.BRENT.$T3
+	PUSHAG	FCNUMERIC.BRENT.$K5
+	CALLS	#2,G^FCNUMERIC.SCALED
+	MOVG	R0,FCNUMERIC.BRENT.XM
+;  488        if (abs(xm) <= tol .or. fb == 0) then
+	MOVG	FCNUMERIC.BRENT.XM,FCNUMERIC.BRENT.$T5
+	BGEQ	FCNUMERIC.BRENT.$32
+	MNEGG	FCNUMERIC.BRENT.$T5,FCNUMERIC.BRENT.$T5
+FCNUMERIC.BRENT.$32:
+	CMPG	FCNUMERIC.BRENT.$T5,FCNUMERIC.BRENT.TOL
+	BLEQ	FCNUMERIC.BRENT.$35
+	TSTG	FCNUMERIC.BRENT.FB
+	BEQL	FCNUMERIC.BRENT.$37
+	BRW	FCNUMERIC.BRENT.$34
+FCNUMERIC.BRENT.$37:
+FCNUMERIC.BRENT.$35:
+	MOVL	R6,FCNUMERIC.BRENT.K
+	MOVQ	R8,FCNUMERIC.BRENT.R
+;  489          if (abs(b) <= width) b = 0
+	MOVG	FCNUMERIC.BRENT.B,FCNUMERIC.BRENT.$T5
+	BGEQ	FCNUMERIC.BRENT.$38
+	MNEGG	FCNUMERIC.BRENT.$T5,FCNUMERIC.BRENT.$T5
+FCNUMERIC.BRENT.$38:
+	CMPG	FCNUMERIC.BRENT.$T5,FCNUMERIC.BRENT.WIDTH
+	BGTR	FCNUMERIC.BRENT.$40
+	CLRG	FCNUMERIC.BRENT.B
+FCNUMERIC.BRENT.$40:
+;  490          root = real_value(b)
+	PUSHAG	FCNUMERIC.BRENT.B
+	PUSHAB	FCNUMERIC.BRENT.$T1
+	CALLS	#2,G^FCVALUES.REAL_VALUE
+	MOVC3	#32,FCNUMERIC.BRENT.$T1,@FCNUMERIC.BRENT.ROOT(AP)
+;  491          found = err == 0
+	CLRL	R0
+	TSTL	FCNUMERIC.BRENT.ERR
+	BNEQ	FCNUMERIC.BRENT.$42
+	MNEGL	#1,R0
+FCNUMERIC.BRENT.$42:
+	MOVL	R0,R6
+;  492          if (.not. found) call fail(e_noroot, start)
+	BLBS	R6,FCNUMERIC.BRENT.$43
+	PUSHL	#0
+	PUSHAL	@FCNUMERIC.BRENT.$A6
+	PUSHAL	FCNUMERIC.BRENT.$K6
+	CALLS	#3,G^FCMESSAGES.FAIL
+FCNUMERIC.BRENT.$43:
+;  493          return
+	MOVL	R6,R0			; the function's value
+	RET
+FCNUMERIC.BRENT.$34:
+;  494        end if
+;  495
+;  496        if (abs(e) >= tol .and. abs(fa) > abs(fb)) then
+	MOVG	FCNUMERIC.BRENT.E,FCNUMERIC.BRENT.$T5
+	BGEQ	FCNUMERIC.BRENT.$45
+	MNEGG	FCNUMERIC.BRENT.$T5,FCNUMERIC.BRENT.$T5
+FCNUMERIC.BRENT.$45:
+	MOVG	FCNUMERIC.BRENT.FA,FCNUMERIC.BRENT.$T3
+	BGEQ	FCNUMERIC.BRENT.$47
+	MNEGG	FCNUMERIC.BRENT.$T3,FCNUMERIC.BRENT.$T3
+FCNUMERIC.BRENT.$47:
+	MOVG	FCNUMERIC.BRENT.FB,FCNUMERIC.BRENT.$T4
+	BGEQ	FCNUMERIC.BRENT.$49
+	MNEGG	FCNUMERIC.BRENT.$T4,FCNUMERIC.BRENT.$T4
+FCNUMERIC.BRENT.$49:
+	CMPG	FCNUMERIC.BRENT.$T5,FCNUMERIC.BRENT.TOL
+	BGEQ	FCNUMERIC.BRENT.$52
+	BRW	FCNUMERIC.BRENT.$51
+FCNUMERIC.BRENT.$52:
+	CMPG	FCNUMERIC.BRENT.$T3,FCNUMERIC.BRENT.$T4
+	BGTR	FCNUMERIC.BRENT.$53
+	BRW	FCNUMERIC.BRENT.$51
+FCNUMERIC.BRENT.$53:
+;  497          ! Interpolate: P / Q is the step from B.
+;  498          s = r_div(fb, fa, err)
+	PUSHAL	FCNUMERIC.BRENT.ERR
+	PUSHAG	FCNUMERIC.BRENT.FA
+	PUSHAG	FCNUMERIC.BRENT.FB
+	CALLS	#3,G^FCVALUES.R_DIV
+	MOVG	R0,FCNUMERIC.BRENT.S
+;  499          if (a == c) then
+	CMPG	FCNUMERIC.BRENT.A,FCNUMERIC.BRENT.C
+	BNEQ	FCNUMERIC.BRENT.$54
+;  500            ! Two points: the secant.
+;  501            p = r_mul(scaled(2.0_rk, xm), s, err)
+	PUSHAG	FCNUMERIC.BRENT.XM
+	PUSHAG	FCNUMERIC.BRENT.$K7
+	CALLS	#2,G^FCNUMERIC.SCALED
+	MOVG	R0,FCNUMERIC.BRENT.$T4
+	PUSHAL	FCNUMERIC.BRENT.ERR
+	PUSHAG	FCNUMERIC.BRENT.S
+	PUSHAG	FCNUMERIC.BRENT.$T4
+	CALLS	#3,G^FCVALUES.R_MUL
+	MOVG	R0,FCNUMERIC.BRENT.P
+;  502            q = 1 - s
+	SUBG3	FCNUMERIC.BRENT.S,S^#1.0,FCNUMERIC.BRENT.Q
+;  503          else
+	BRW	FCNUMERIC.BRENT.$56
+FCNUMERIC.BRENT.$54:
+;  504            ! Three: inverse quadratic interpolation.
+;  505            q = r_div(fa, fc, err)
+	PUSHAL	FCNUMERIC.BRENT.ERR
+	PUSHAG	FCNUMERIC.BRENT.FC
+	PUSHAG	FCNUMERIC.BRENT.FA
+	CALLS	#3,G^FCVALUES.R_DIV
+	MOVG	R0,FCNUMERIC.BRENT.Q
+;  506            r = r_div(fb, fc, err)
+	PUSHAL	FCNUMERIC.BRENT.ERR
+	PUSHAG	FCNUMERIC.BRENT.FC
+	PUSHAG	FCNUMERIC.BRENT.FB
+	CALLS	#3,G^FCVALUES.R_DIV
+	MOVG	R0,R8
+;  507            p = r_mul(s, r_add(r_mul(r_mul(scaled(2.0_rk, xm), q, err), r_add(q, -r, err), err), &
+;  508              -r_mul(r_add(b, -a, err), r - 1, err), err), err)
+	PUSHAG	FCNUMERIC.BRENT.XM
+	PUSHAG	FCNUMERIC.BRENT.$K7
+	CALLS	#2,G^FCNUMERIC.SCALED
+	MOVG	R0,FCNUMERIC.BRENT.$T6
+	PUSHAL	FCNUMERIC.BRENT.ERR
+	PUSHAG	FCNUMERIC.BRENT.Q
+	PUSHAG	FCNUMERIC.BRENT.$T6
+	CALLS	#3,G^FCVALUES.R_MUL
+	MOVG	R0,FCNUMERIC.BRENT.$T5
+	MNEGG	R8,FCNUMERIC.BRENT.$T8
+	PUSHAL	FCNUMERIC.BRENT.ERR
+	PUSHAG	FCNUMERIC.BRENT.$T8
+	PUSHAG	FCNUMERIC.BRENT.Q
+	CALLS	#3,G^FCVALUES.R_ADD
+	MOVG	R0,FCNUMERIC.BRENT.$T7
+	PUSHAL	FCNUMERIC.BRENT.ERR
+	PUSHAG	FCNUMERIC.BRENT.$T7
+	PUSHAG	FCNUMERIC.BRENT.$T5
+	CALLS	#3,G^FCVALUES.R_MUL
+	MOVG	R0,FCNUMERIC.BRENT.$T3
+	MNEGG	FCNUMERIC.BRENT.A,FCNUMERIC.BRENT.$T11
+	PUSHAL	FCNUMERIC.BRENT.ERR
+	PUSHAG	FCNUMERIC.BRENT.$T11
+	PUSHAG	FCNUMERIC.BRENT.B
+	CALLS	#3,G^FCVALUES.R_ADD
+	MOVG	R0,FCNUMERIC.BRENT.$T10
+	SUBG3	S^#1.0,R8,FCNUMERIC.BRENT.$T12
+	PUSHAL	FCNUMERIC.BRENT.ERR
+	PUSHAG	FCNUMERIC.BRENT.$T12
+	PUSHAG	FCNUMERIC.BRENT.$T10
+	CALLS	#3,G^FCVALUES.R_MUL
+	MOVG	R0,FCNUMERIC.BRENT.$T9
+	MNEGG	FCNUMERIC.BRENT.$T9,FCNUMERIC.BRENT.$T13
+	PUSHAL	FCNUMERIC.BRENT.ERR
+	PUSHAG	FCNUMERIC.BRENT.$T13
+	PUSHAG	FCNUMERIC.BRENT.$T3
+	CALLS	#3,G^FCVALUES.R_ADD
+	MOVG	R0,FCNUMERIC.BRENT.$T4
+	PUSHAL	FCNUMERIC.BRENT.ERR
+	PUSHAG	FCNUMERIC.BRENT.$T4
+	PUSHAG	FCNUMERIC.BRENT.S
+	CALLS	#3,G^FCVALUES.R_MUL
+	MOVG	R0,FCNUMERIC.BRENT.P
+;  509            q = r_mul(r_mul(q - 1, r - 1, err), s - 1, err)
+	SUBG3	S^#1.0,FCNUMERIC.BRENT.Q,FCNUMERIC.BRENT.$T12
+	SUBG3	S^#1.0,R8,FCNUMERIC.BRENT.$T11
+	PUSHAL	FCNUMERIC.BRENT.ERR
+	PUSHAG	FCNUMERIC.BRENT.$T11
+	PUSHAG	FCNUMERIC.BRENT.$T12
+	CALLS	#3,G^FCVALUES.R_MUL
+	MOVG	R0,FCNUMERIC.BRENT.$T13
+	SUBG3	S^#1.0,FCNUMERIC.BRENT.S,FCNUMERIC.BRENT.$T10
+	PUSHAL	FCNUMERIC.BRENT.ERR
+	PUSHAG	FCNUMERIC.BRENT.$T10
+	PUSHAG	FCNUMERIC.BRENT.$T13
+	CALLS	#3,G^FCVALUES.R_MUL
+	MOVG	R0,FCNUMERIC.BRENT.Q
+;  510          end if
+FCNUMERIC.BRENT.$56:
+;  511          if (p > 0) q = -q
+	TSTG	FCNUMERIC.BRENT.P
+	BLEQ	FCNUMERIC.BRENT.$57
+	MNEGG	FCNUMERIC.BRENT.Q,FCNUMERIC.BRENT.Q
+FCNUMERIC.BRENT.$57:
+;  512          p = abs(p)
+	MOVG	FCNUMERIC.BRENT.P,FCNUMERIC.BRENT.$T10
+	BGEQ	FCNUMERIC.BRENT.$59
+	MNEGG	FCNUMERIC.BRENT.$T10,FCNUMERIC.BRENT.$T10
+FCNUMERIC.BRENT.$59:
+	MOVG	FCNUMERIC.BRENT.$T10,FCNUMERIC.BRENT.P
+;  513          ! Take the step only if it lands within three quarters of the way
+;  514          ! across the bracket, and is less than half the step before last
+;  515          ! (else bisection would do better).
+;  516          if (scaled(2.0_rk, p) < min(r_add(scaled(3.0_rk, r_mul(xm, q, err)), &
+;  517              -abs(scaled(tol, q)), err), abs(r_mul(e, q, err)))) then
+	PUSHAG	FCNUMERIC.BRENT.P
+	PUSHAG	FCNUMERIC.BRENT.$K7
+	CALLS	#2,G^FCNUMERIC.SCALED
+	MOVG	R0,FCNUMERIC.BRENT.$T10
+	PUSHAL	FCNUMERIC.BRENT.ERR
+	PUSHAG	FCNUMERIC.BRENT.Q
+	PUSHAG	FCNUMERIC.BRENT.XM
+	CALLS	#3,G^FCVALUES.R_MUL
+	MOVG	R0,FCNUMERIC.BRENT.$T9
+	PUSHAG	FCNUMERIC.BRENT.$T9
+	PUSHAG	FCNUMERIC.BRENT.$K8
+	CALLS	#2,G^FCNUMERIC.SCALED
+	MOVG	R0,FCNUMERIC.BRENT.$T13
+	PUSHAG	FCNUMERIC.BRENT.Q
+	PUSHAG	FCNUMERIC.BRENT.TOL
+	CALLS	#2,G^FCNUMERIC.SCALED
+	MOVG	R0,FCNUMERIC.BRENT.$T8
+	MOVG	FCNUMERIC.BRENT.$T8,FCNUMERIC.BRENT.$T7
+	BGEQ	FCNUMERIC.BRENT.$61
+	MNEGG	FCNUMERIC.BRENT.$T7,FCNUMERIC.BRENT.$T7
+FCNUMERIC.BRENT.$61:
+	MNEGG	FCNUMERIC.BRENT.$T7,FCNUMERIC.BRENT.$T6
+	PUSHAL	FCNUMERIC.BRENT.ERR
+	PUSHAG	FCNUMERIC.BRENT.$T6
+	PUSHAG	FCNUMERIC.BRENT.$T13
+	CALLS	#3,G^FCVALUES.R_ADD
+	MOVG	R0,FCNUMERIC.BRENT.$T12
+	MOVG	FCNUMERIC.BRENT.$T12,FCNUMERIC.BRENT.$T11
+	PUSHAL	FCNUMERIC.BRENT.ERR
+	PUSHAG	FCNUMERIC.BRENT.Q
+	PUSHAG	FCNUMERIC.BRENT.E
+	CALLS	#3,G^FCVALUES.R_MUL
+	MOVG	R0,FCNUMERIC.BRENT.$T5
+	MOVG	FCNUMERIC.BRENT.$T5,FCNUMERIC.BRENT.$T3
+	BGEQ	FCNUMERIC.BRENT.$63
+	MNEGG	FCNUMERIC.BRENT.$T3,FCNUMERIC.BRENT.$T3
+FCNUMERIC.BRENT.$63:
+	CMPG	FCNUMERIC.BRENT.$T3,FCNUMERIC.BRENT.$T11
+	BGEQ	FCNUMERIC.BRENT.$65
+	MOVG	FCNUMERIC.BRENT.$T3,FCNUMERIC.BRENT.$T11
+FCNUMERIC.BRENT.$65:
+	CMPG	FCNUMERIC.BRENT.$T10,FCNUMERIC.BRENT.$T11
+	BGEQ	FCNUMERIC.BRENT.$67
+;  518            e = d
+	MOVG	FCNUMERIC.BRENT.D,FCNUMERIC.BRENT.E
+;  519            d = r_div(p, q, err)
+	PUSHAL	FCNUMERIC.BRENT.ERR
+	PUSHAG	FCNUMERIC.BRENT.Q
+	PUSHAG	FCNUMERIC.BRENT.P
+	CALLS	#3,G^FCVALUES.R_DIV
+	MOVG	R0,FCNUMERIC.BRENT.D
+;  520          else
+	BRB	FCNUMERIC.BRENT.$70
+FCNUMERIC.BRENT.$67:
+;  521            d = xm
+	MOVG	FCNUMERIC.BRENT.XM,FCNUMERIC.BRENT.D
+;  522            e = d
+	MOVG	FCNUMERIC.BRENT.D,FCNUMERIC.BRENT.E
+;  523          end if
+;  524        else
+	BRB	FCNUMERIC.BRENT.$70
+FCNUMERIC.BRENT.$51:
+;  525          ! Bisect.
+;  526          d = xm
+	MOVG	FCNUMERIC.BRENT.XM,FCNUMERIC.BRENT.D
+;  527          e = d
+	MOVG	FCNUMERIC.BRENT.D,FCNUMERIC.BRENT.E
+;  528        end if
+FCNUMERIC.BRENT.$70:
+;  529        if (err /= 0) exit
+	TSTL	FCNUMERIC.BRENT.ERR
+	BEQL	FCNUMERIC.BRENT.$72
+	BRW	FCNUMERIC.BRENT.$71
+FCNUMERIC.BRENT.$72:
+;  530
+;  531        a = b
+	MOVG	FCNUMERIC.BRENT.B,FCNUMERIC.BRENT.A
+;  532        fa = fb
+	MOVG	FCNUMERIC.BRENT.FB,FCNUMERIC.BRENT.FA
+;  533        ! A step at least TOL long, so B moves.
+;  534        if (abs(d) > tol) then
+	MOVG	FCNUMERIC.BRENT.D,FCNUMERIC.BRENT.$T3
+	BGEQ	FCNUMERIC.BRENT.$73
+	MNEGG	FCNUMERIC.BRENT.$T3,FCNUMERIC.BRENT.$T3
+FCNUMERIC.BRENT.$73:
+	CMPG	FCNUMERIC.BRENT.$T3,FCNUMERIC.BRENT.TOL
+	BLEQ	FCNUMERIC.BRENT.$75
+;  535          b = r_add(b, d, err)
+	PUSHAL	FCNUMERIC.BRENT.ERR
+	PUSHAG	FCNUMERIC.BRENT.D
+	PUSHAG	FCNUMERIC.BRENT.B
+	CALLS	#3,G^FCVALUES.R_ADD
+	MOVG	R0,FCNUMERIC.BRENT.B
+;  536        else
+	BRB	FCNUMERIC.BRENT.$77
+FCNUMERIC.BRENT.$75:
+;  537          b = r_add(b, sign(tol, xm), err)
+	MOVG	FCNUMERIC.BRENT.TOL,FCNUMERIC.BRENT.$T3
+	TSTG	FCNUMERIC.BRENT.XM
+	BLSS	FCNUMERIC.BRENT.$78
+	TSTG	FCNUMERIC.BRENT.$T3
+	BGEQ	FCNUMERIC.BRENT.$82
+	BRB	FCNUMERIC.BRENT.$80
+FCNUMERIC.BRENT.$78:
+	TSTG	FCNUMERIC.BRENT.$T3
+	BLEQ	FCNUMERIC.BRENT.$82
+FCNUMERIC.BRENT.$80:
+	MNEGG	FCNUMERIC.BRENT.$T3,FCNUMERIC.BRENT.$T3
+FCNUMERIC.BRENT.$82:
+	PUSHAL	FCNUMERIC.BRENT.ERR
+	PUSHAG	FCNUMERIC.BRENT.$T3
+	PUSHAG	FCNUMERIC.BRENT.B
+	CALLS	#3,G^FCVALUES.R_ADD
+	MOVG	R0,FCNUMERIC.BRENT.B
+;  538        end if
+FCNUMERIC.BRENT.$77:
+;  539        if (.not. real_value_at(b, fb)) return
+	PUSHAG	FCNUMERIC.BRENT.FB
+	PUSHAG	FCNUMERIC.BRENT.B
+	CALLS	#2,FCNUMERIC.BRENT.REAL_VALUE_AT
+	MOVL	R0,R7
+	BLBS	R7,FCNUMERIC.BRENT.$84
+	MOVL	R6,FCNUMERIC.BRENT.K
+	MOVQ	R8,FCNUMERIC.BRENT.R
+	CLRL	R0			; the function's value
+	RET
+FCNUMERIC.BRENT.$84:
+;  540      end do
+	ACBL	#200,#1,R6,FCNUMERIC.BRENT.$19
+	MOVL	R6,FCNUMERIC.BRENT.K
+	MOVQ	R8,FCNUMERIC.BRENT.R
+FCNUMERIC.BRENT.$87:
+;  541      call fail(e_noroot, start)
+	PUSHL	#0
+	PUSHAL	@FCNUMERIC.BRENT.$A6
+	PUSHAL	FCNUMERIC.BRENT.$K6
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  542
+;  543    contains
+	CLRL	R0			; the function's value
+	RET
+FCNUMERIC.BRENT.$71:			; leaving the loop
+	MOVL	R6,FCNUMERIC.BRENT.K
+	MOVQ	R8,FCNUMERIC.BRENT.R
+	BRB	FCNUMERIC.BRENT.$87
+
+; Storage map for FCNUMERIC.BRENT.REAL_VALUE_AT, a LOGICAL function
+;   X     REAL*8, INTENT(IN)   argument 1  @FCNUMERIC.BRENT.REAL_VALUE_AT.X(AP)
+;   FX    REAL*8, INTENT(OUT)  argument 2  @FCNUMERIC.BRENT.REAL_VALUE_.$N6(AP)
+;   OK    LOGICAL              $LOCAL+0    FCNUMERIC.BRENT.REAL_VALUE.$N15
+;   V     TYPE(VALUE)          $LOCAL+16   FCNUMERIC.BRENT.REAL_VALUE_AT.V
+;   FCNUMERIC.BRENT.REAL_VALUE_.$N6 is FCNUMERIC.BRENT.REAL_VALUE_AT.FX
+;   FCNUMERIC.BRENT.REAL_VALUE_.$N7 is FCNUMERIC.BRENT.REAL_VALUE_AT.$T2
+;   FCNUMERIC.BRENT.REAL_VALUE_.$N8 is FCNUMERIC.BRENT.REAL_VALUE_AT.$T1
+;   FCNUMERIC.BRENT.REAL_VALUE_.$N9 is FCNUMERIC.BRENT.REAL_VALUE_AT.$1
+;   FCNUMERIC.BRENT.REAL_VALUE.$N10 is FCNUMERIC.BRENT.REAL_VALUE_AT.$2
+;   FCNUMERIC.BRENT.REAL_VALUE.$N11 is FCNUMERIC.BRENT.REAL_VALUE_AT.$T3
+;   FCNUMERIC.BRENT.REAL_VALUE.$N12 is FCNUMERIC.BRENT.REAL_VALUE_AT.$3
+;   FCNUMERIC.BRENT.REAL_VALUE.$N13 is FCNUMERIC.BRENT.REAL_VALUE_AT.$4
+;   FCNUMERIC.BRENT.REAL_VALUE.$N14 is FCNUMERIC.BRENT.REAL_VALUE_AT.$K1
+;   FCNUMERIC.BRENT.REAL_VALUE.$N15 is FCNUMERIC.BRENT.REAL_VALUE_AT.OK
+;
+FCNUMERIC.BRENT.REAL_VALUE_AT.X = 4	; X is argument 1
+FCNUMERIC.BRENT.REAL_VALUE_.$N6 = 8	; FX is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+	.ALIGN	4			; the boundary of this routine's aligned records
+FCNUMERIC.BRENT.REAL_VALUE.$N15:
+	.BLKL	1			; OK, the function's value
+	.BLKB	12
+FCNUMERIC.BRENT.REAL_VALUE_AT.V:
+	.BLKL	8			; V
+FCNUMERIC.BRENT.REAL_VALUE_.$N8:
+	.BLKL	8			; characters, for one statement
+FCNUMERIC.BRENT.REAL_VALUE_.$N7:
+	.BLKL	8			; characters, for one statement
+FCNUMERIC.BRENT.REAL_VALUE.$N11:
+	.BLKL	1			; temporary
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCNUMERIC.BRENT.REAL_VALUE.$N14:
+	.LONG	12
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  544
+;  545      ! REAL_VALUE_AT: the expression's value at X is real, FX; NOTREAL if
+;  546      ! not (recorded at the expression's start).
+;  547      logical function real_value_at(x, fx) result(ok)
+FCNUMERIC.BRENT.REAL_VALUE_AT:
+	.WORD	^M<R2,R3,R4,R5>		; internal procedure REAL_VALUE_AT of FCNUMERIC.BRENT
+;  548        real(rk), intent(in) :: x
+;  549        real(rk), intent(out) :: fx
+;  550        type(value) :: v
+;  551
+;  552        ok = .false.
+;  553        fx = 0
+	CLRG	@FCNUMERIC.BRENT.REAL_VALUE_.$N6(AP)
+;  554        v = value_at(left, right, name, real_value(x), start)
+	PUSHAG	@FCNUMERIC.BRENT.REAL_VALUE_AT.X(AP)
+	PUSHAB	FCNUMERIC.BRENT.REAL_VALUE_.$N7
+	CALLS	#2,G^FCVALUES.REAL_VALUE
+	PUSHAL	@FCNUMERIC.BRENT.$A6
+	PUSHAB	FCNUMERIC.BRENT.REAL_VALUE_.$N7
+	PUSHL	FCNUMERIC.BRENT.$A3
+	PUSHAL	@FCNUMERIC.BRENT.$A2
+	PUSHAL	@FCNUMERIC.BRENT.$A1
+	PUSHAB	FCNUMERIC.BRENT.REAL_VALUE_.$N8
+	CALLS	#6,G^FCNUMERIC.VALUE_AT
+	MOVC3	#32,FCNUMERIC.BRENT.REAL_VALUE_.$N8,FCNUMERIC.BRENT.REAL_VALUE_AT.V
+;  555        if (v%err /= 0) return
+	TSTL	FCNUMERIC.BRENT.REAL_VALUE_AT.V+16
+	BEQL	FCNUMERIC.BRENT.REAL_VALUE_.$N9
+	CLRL	R0			; the function's value
+	RET
+FCNUMERIC.BRENT.REAL_VALUE_.$N9:
+;  556        if (.not. is_real(v)) then
+	PUSHAB	FCNUMERIC.BRENT.REAL_VALUE_AT.V
+	CALLS	#1,G^FCVALUES.IS_REAL
+	MOVL	R0,FCNUMERIC.BRENT.REAL_VALUE.$N11
+	BLBS	FCNUMERIC.BRENT.REAL_VALUE.$N11,FCNUMERIC.BRENT.REAL_VALUE.$N12
+;  557          call fail(e_notreal, start)
+	PUSHL	#0
+	PUSHAL	@FCNUMERIC.BRENT.$A6
+	PUSHAL	FCNUMERIC.BRENT.REAL_VALUE.$N14
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  558          return
+	CLRL	R0			; the function's value
+	RET
+FCNUMERIC.BRENT.REAL_VALUE.$N12:
+;  559        end if
+;  560        fx = real(v%z, rk)
+	MOVG	FCNUMERIC.BRENT.REAL_VALUE_AT.V,@FCNUMERIC.BRENT.REAL_VALUE_.$N6(AP)
+;  561        ok = .true.
+;  562      end function real_value_at
+	MOVL	#-1,R0			; the function's value
+	RET
+
+; Storage map for FCNUMERIC.INTEGRATE_COMMAND, a subroutine
+;   TREE    TYPE(NODE), POINTER  $LOCAL+0    FCNUMERIC.INTEGRATE_COMMAN.$N16
+;   NAME    CHARACTER*31         $LOCAL+4    FCNUMERIC.INTEGRATE_COMMAN.$N21
+;   A       TYPE(VALUE)          $LOCAL+48   FCNUMERIC.INTEGRATE_COMMAND.A
+;   B       TYPE(VALUE)          $LOCAL+80   FCNUMERIC.INTEGRATE_COMMAND.B
+;   RESULT  TYPE(VALUE)          $LOCAL+112  FCNUMERIC.INTEGRATE_COMMAN.$N20
+;   START   INTEGER              $LOCAL+144  FCNUMERIC.INTEGRATE_COMMAN.$N18
+;   COLUMN  INTEGER              $LOCAL+148  FCNUMERIC.INTEGRATE_COMMAN.$N19
+;   DONE    LOGICAL              $LOCAL+152  FCNUMERIC.INTEGRATE_COMMAN.$N17
+;   R6 is $T1: temporary
+;   FCNUMERIC.INTEGRATE_COMMAN.$N16 is FCNUMERIC.INTEGRATE_COMMAND.TREE
+;   FCNUMERIC.INTEGRATE_COMMAN.$N17 is FCNUMERIC.INTEGRATE_COMMAND.DONE
+;   FCNUMERIC.INTEGRATE_COMMAN.$N18 is FCNUMERIC.INTEGRATE_COMMAND.START
+;   FCNUMERIC.INTEGRATE_COMMAN.$N19 is FCNUMERIC.INTEGRATE_COMMAND.COLUMN
+;   FCNUMERIC.INTEGRATE_COMMAN.$N20 is FCNUMERIC.INTEGRATE_COMMAND.RESULT
+;   FCNUMERIC.INTEGRATE_COMMAN.$N21 is FCNUMERIC.INTEGRATE_COMMAND.NAME
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+	.ALIGN	4			; the boundary of this routine's aligned records
+FCNUMERIC.INTEGRATE_COMMAN.$N16:
+	.BLKL	1			; TREE
+FCNUMERIC.INTEGRATE_COMMAN.$N21:
+	.BLKB	31			; NAME
+	.BLKB	13
+FCNUMERIC.INTEGRATE_COMMAND.A:
+	.BLKL	8			; A
+FCNUMERIC.INTEGRATE_COMMAND.B:
+	.BLKL	8			; B
+FCNUMERIC.INTEGRATE_COMMAN.$N20:
+	.BLKL	8			; RESULT
+FCNUMERIC.INTEGRATE_COMMAN.$N18:
+	.BLKL	1			; START
+FCNUMERIC.INTEGRATE_COMMAN.$N19:
+	.BLKL	1			; COLUMN
+FCNUMERIC.INTEGRATE_COMMAN.$N17:
+	.BLKL	1			; DONE
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCNUMERIC.INTEGRATE_COMMAND.$K1:
+	.LONG	1
+FCNUMERIC.INTEGRATE_COMMAND.$D1:
+	.WORD	3			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCNUMERIC.INTEGRATE_COMMAND.$K2
+FCNUMERIC.INTEGRATE_COMMAND.$D2:
+	.WORD	3			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCNUMERIC.INTEGRATE_COMMAND.$K3
+FCNUMERIC.INTEGRATE_COMMAND.$D3:
+	.WORD	31			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCNUMERIC.INTEGRATE_COMMAN.$N21
+FCNUMERIC.INTEGRATE_COMMAND.$D4:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCNUMERIC.INTEGRATE_COMMAND.$K4
+FCNUMERIC.INTEGRATE_COMMAND.$D5:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCNUMERIC.INTEGRATE_COMMAND.$K5
+FCNUMERIC.INTEGRATE_COMMAND.$K6:
+	.LONG	-1
+FCNUMERIC.INTEGRATE_COMMAND.$D6:
+	.WORD	2			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCNUMERIC.INTEGRATE_COMMAND.$K7
+FCNUMERIC.INTEGRATE_COMMAND.$D7:
+	.WORD	2			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCNUMERIC.INTEGRATE_COMMAND.$K8
+FCNUMERIC.INTEGRATE_COMMAND.$D8:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCNUMERIC.INTEGRATE_COMMAND.$K9
+FCNUMERIC.INTEGRATE_COMMAND.$K2:
+	.ASCII	/for/
+FCNUMERIC.INTEGRATE_COMMAND.$K3:
+	.ASCII	/FOR/
+FCNUMERIC.INTEGRATE_COMMAND.$K4:
+	.ASCII	/from/
+FCNUMERIC.INTEGRATE_COMMAND.$K5:
+	.ASCII	/FROM/
+FCNUMERIC.INTEGRATE_COMMAND.$K7:
+	.ASCII	/to/
+FCNUMERIC.INTEGRATE_COMMAND.$K8:
+	.ASCII	/TO/
+FCNUMERIC.INTEGRATE_COMMAND.$K9:
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  563    end function brent
+;  564
+;  565    ! ------------------------------------------------------------------
+;  566    ! INTEGRATE.
+;  567
+;  568    subroutine integrate_command()
+	.ENTRY	FCNUMERIC.INTEGRATE_COMMAND,^M<R6>
+;  569      type(node), pointer :: tree
+;  570      character(len=name_length) :: name
+;  571      type(value) :: a, b, result
+;  572      integer :: start, column
+;  573      logical :: done
+;  574
+;  575      nullify (tree)
+	CLRL	FCNUMERIC.INTEGRATE_COMMAN.$N16
+;  576      done = .false.
+	CLRL	FCNUMERIC.INTEGRATE_COMMAN.$N17
+;  577      call advance(1)
+	PUSHAL	FCNUMERIC.INTEGRATE_COMMAND.$K1
+	CALLS	#1,G^FCTREE.ADVANCE
+;  578      start = current_column()
+	CALLS	#0,G^FCTREE.CURRENT_COLUMN
+	MOVL	R0,FCNUMERIC.INTEGRATE_COMMAN.$N18
+;  579
+;  580      read: do
+;  581        tree => parse_expression()
+	CALLS	#0,G^FCTREE.PARSE_EXPRESSION
+	MOVL	R0,R6
+	MOVL	R6,FCNUMERIC.INTEGRATE_COMMAN.$N16
+;  582        if (failed()) exit read
+	CALLS	#0,G^FCMESSAGES.FAILED
+	MOVL	R0,R6
+	BLBC	R6,FCNUMERIC.INTEGRATE_COMMAND.$2
+	BRW	FCNUMERIC.INTEGRATE_COMMAND.$1
+FCNUMERIC.INTEGRATE_COMMAND.$2:
+;  583        if (.not. read_word('for', 'FOR')) exit read
+	PUSHAQ	FCNUMERIC.INTEGRATE_COMMAND.$D2
+	PUSHAQ	FCNUMERIC.INTEGRATE_COMMAND.$D1
+	CALLS	#2,G^FCNUMERIC.READ_WORD
+	MOVL	R0,R6
+	BLBS	R6,FCNUMERIC.INTEGRATE_COMMAND.$3
+	BRW	FCNUMERIC.INTEGRATE_COMMAND.$1
+FCNUMERIC.INTEGRATE_COMMAND.$3:
+;  584        if (.not. read_name(name)) exit read
+	PUSHAQ	FCNUMERIC.INTEGRATE_COMMAND.$D3
+	CALLS	#1,G^FCNUMERIC.READ_NAME
+	MOVL	R0,R6
+	BLBS	R6,FCNUMERIC.INTEGRATE_COMMAND.$4
+	BRW	FCNUMERIC.INTEGRATE_COMMAND.$1
+FCNUMERIC.INTEGRATE_COMMAND.$4:
+;  585        if (.not. read_word('from', 'FROM')) exit read
+	PUSHAQ	FCNUMERIC.INTEGRATE_COMMAND.$D5
+	PUSHAQ	FCNUMERIC.INTEGRATE_COMMAND.$D4
+	CALLS	#2,G^FCNUMERIC.READ_WORD
+	MOVL	R0,R6
+	BLBS	R6,FCNUMERIC.INTEGRATE_COMMAND.$5
+	BRW	FCNUMERIC.INTEGRATE_COMMAND.$1
+FCNUMERIC.INTEGRATE_COMMAND.$5:
+;  586        if (.not. read_bound(a, .true., column)) exit read
+	PUSHAL	FCNUMERIC.INTEGRATE_COMMAN.$N19
+	PUSHAL	FCNUMERIC.INTEGRATE_COMMAND.$K6
+	PUSHAB	FCNUMERIC.INTEGRATE_COMMAND.A
+	CALLS	#3,G^FCNUMERIC.READ_BOUND
+	MOVL	R0,R6
+	BLBC	R6,FCNUMERIC.INTEGRATE_COMMAND.$1
+;  587        if (.not. read_word('to', 'TO')) exit read
+	PUSHAQ	FCNUMERIC.INTEGRATE_COMMAND.$D7
+	PUSHAQ	FCNUMERIC.INTEGRATE_COMMAND.$D6
+	CALLS	#2,G^FCNUMERIC.READ_WORD
+	MOVL	R0,R6
+	BLBC	R6,FCNUMERIC.INTEGRATE_COMMAND.$1
+;  588        if (.not. read_bound(b, .true., column)) exit read
+	PUSHAL	FCNUMERIC.INTEGRATE_COMMAN.$N19
+	PUSHAL	FCNUMERIC.INTEGRATE_COMMAND.$K6
+	PUSHAB	FCNUMERIC.INTEGRATE_COMMAND.B
+	CALLS	#3,G^FCNUMERIC.READ_BOUND
+	MOVL	R0,R6
+	BLBC	R6,FCNUMERIC.INTEGRATE_COMMAND.$1
+;  589        if (.not. at_end_of_line()) exit read
+	CALLS	#0,G^FCNUMERIC.AT_END_OF_LINE
+	MOVL	R0,R6
+	BLBC	R6,FCNUMERIC.INTEGRATE_COMMAND.$1
+;  590        done = integral(tree, name, a, b, start, result)
+	PUSHAB	FCNUMERIC.INTEGRATE_COMMAN.$N20
+	PUSHAL	FCNUMERIC.INTEGRATE_COMMAN.$N18
+	PUSHAB	FCNUMERIC.INTEGRATE_COMMAND.B
+	PUSHAB	FCNUMERIC.INTEGRATE_COMMAND.A
+	PUSHAQ	FCNUMERIC.INTEGRATE_COMMAND.$D3
+	PUSHAL	FCNUMERIC.INTEGRATE_COMMAN.$N16
+	CALLS	#6,G^FCNUMERIC.INTEGRAL
+	MOVL	R0,FCNUMERIC.INTEGRATE_COMMAN.$N17
+;  591        exit read
+FCNUMERIC.INTEGRATE_COMMAND.$1:
+;  592      end do read
+;  593
+;  594      call free_tree(tree)
+	PUSHAL	FCNUMERIC.INTEGRATE_COMMAN.$N16
+	CALLS	#1,G^FCTREE.FREE_TREE
+;  595      if (done) call show_answer(result, '')
+	BLBC	FCNUMERIC.INTEGRATE_COMMAN.$N17,FCNUMERIC.INTEGRATE_COMMAND.$10
+	PUSHAQ	FCNUMERIC.INTEGRATE_COMMAND.$D8
+	PUSHAB	FCNUMERIC.INTEGRATE_COMMAN.$N20
+	CALLS	#2,G^FCNUMERIC.SHOW_ANSWER
+FCNUMERIC.INTEGRATE_COMMAND.$10:
+;  596    end subroutine integrate_command
+	RET
+
+; Storage map for FCNUMERIC.INTEGRAL, a LOGICAL function
+;   TREE       TYPE(NODE), POINTER           an argument               @FCNUMERIC.INTEGRAL.$A1
+;   NAME       CHARACTER*(*), INTENT(IN)     an argument               @FCNUMERIC.INTEGRAL.$A2
+;   A          TYPE(VALUE), INTENT(IN)       argument 3                @FCNUMERIC.INTEGRAL.A(AP)
+;   B          TYPE(VALUE), INTENT(IN)       argument 4                @FCNUMERIC.INTEGRAL.B(AP)
+;   START      INTEGER, INTENT(IN)           an argument               @FCNUMERIC.INTEGRAL.$A5
+;   RESULT     TYPE(VALUE), INTENT(OUT)      argument 6                @FCNUMERIC.INTEGRAL.RESULT(AP)
+;   DONE       LOGICAL                       $LOCAL+0                  FCNUMERIC.INTEGRAL.DONE
+;   NONE       TYPE(NODE), POINTER           $LOCAL+16                 FCNUMERIC.INTEGRAL.NONE
+;   LO         REAL*8, ALLOCATABLE (:)       descriptor at $LOCAL+20   FCNUMERIC.INTEGRAL.LO
+;   HI         REAL*8, ALLOCATABLE (:)       descriptor at $LOCAL+52   FCNUMERIC.INTEGRAL.HI
+;   ERROR      REAL*8, ALLOCATABLE (:)       descriptor at $LOCAL+84   FCNUMERIC.INTEGRAL.ERROR
+;   MAGNITUDE  REAL*8, ALLOCATABLE (:)       descriptor at $LOCAL+116  FCNUMERIC.INTEGRAL.MAGNITUDE
+;   PART       TYPE(VALUE), ALLOCATABLE (:)  descriptor at $LOCAL+160  FCNUMERIC.INTEGRAL.PART
+;   TOL        REAL*8                        $LOCAL+192                FCNUMERIC.INTEGRAL.TOL
+;   MIDDLE     REAL*8                        $LOCAL+200                FCNUMERIC.INTEGRAL.MIDDLE
+;   N          INTEGER                       $LOCAL+208                FCNUMERIC.INTEGRAL.N
+;   K          INTEGER                       $LOCAL+212                FCNUMERIC.INTEGRAL.K
+;   WORST      INTEGER (1)                   $LOCAL+216                FCNUMERIC.INTEGRAL.WORST
+;   R6 is $T2: temporary
+;   R6 is $I1: an array statement's loop index
+;   R6 is $T4: temporary
+;   R7 is $L1: array (line 661), dimension 1's limit
+;   R7 is $L2: array (line 662), dimension 1's limit
+;   R6 is $I2: an array statement's loop index
+;   R7 is $T6: temporary
+;   R8 is $T7: temporary
+;   R9 is $L3: array (line 666), dimension 1's limit
+;   R6 is $C5: DO (line 680)'s count
+;   R7 is $L6: array (line 689), dimension 1's limit
+;   R7 is $L7: array (line 689), dimension 1's limit
+;   R10 is $R1: MIDDLE, during a loop
+;   R7 is $R2: RESULT's address
+;
+FCNUMERIC.INTEGRAL.A = 12		; A is argument 3
+FCNUMERIC.INTEGRAL.B = 16		; B is argument 4
+FCNUMERIC.INTEGRAL.RESULT = 24		; RESULT is argument 6
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+	.ALIGN	4			; the boundary of this routine's aligned records
+FCNUMERIC.INTEGRAL.DONE:
+	.BLKL	1			; DONE, the function's value
+	.BLKB	12
+FCNUMERIC.INTEGRAL.NONE:
+	.BLKL	1			; NONE
+FCNUMERIC.INTEGRAL.LO:
+	.WORD	8			; length
+	.BYTE	DSC$K_DTYPE_G,DSC$K_CLASS_NCA
+	.LONG	0			; LO: not allocated
+	.BYTE	0,0,0,1			; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; strides, in bytes
+	.LONG	0,0			; bounds
+FCNUMERIC.INTEGRAL.HI:
+	.WORD	8			; length
+	.BYTE	DSC$K_DTYPE_G,DSC$K_CLASS_NCA
+	.LONG	0			; HI: not allocated
+	.BYTE	0,0,0,1			; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; strides, in bytes
+	.LONG	0,0			; bounds
+FCNUMERIC.INTEGRAL.ERROR:
+	.WORD	8			; length
+	.BYTE	DSC$K_DTYPE_G,DSC$K_CLASS_NCA
+	.LONG	0			; ERROR: not allocated
+	.BYTE	0,0,0,1			; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; strides, in bytes
+	.LONG	0,0			; bounds
+FCNUMERIC.INTEGRAL.MAGNITUDE:
+	.WORD	8			; length
+	.BYTE	DSC$K_DTYPE_G,DSC$K_CLASS_NCA
+	.LONG	0			; MAGNITUDE: not allocated
+	.BYTE	0,0,0,1			; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; strides, in bytes
+	.LONG	0,0			; bounds
+	.BLKB	12
+FCNUMERIC.INTEGRAL.PART:
+	.WORD	32			; length
+	.BYTE	DSC$K_DTYPE_Z,DSC$K_CLASS_NCA
+	.LONG	0			; PART: not allocated
+	.BYTE	0,0,0,1			; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; strides, in bytes
+	.LONG	0,0			; bounds
+FCNUMERIC.INTEGRAL.TOL:
+	.BLKL	2			; TOL
+FCNUMERIC.INTEGRAL.MIDDLE:
+	.BLKL	2			; MIDDLE
+FCNUMERIC.INTEGRAL.N:
+	.BLKL	1			; N
+FCNUMERIC.INTEGRAL.K:
+	.BLKL	1			; K
+FCNUMERIC.INTEGRAL.WORST:
+	.BLKL	1			; WORST, INTEGER (1)
+FCNUMERIC.INTEGRAL.$A1:
+	.BLKL	1			; TREE's longword of the argument list, set at each entry point
+FCNUMERIC.INTEGRAL.$A2:
+	.BLKL	1			; NAME's longword of the argument list, set at each entry point
+FCNUMERIC.INTEGRAL.$A5:
+	.BLKL	1			; START's longword of the argument list, set at each entry point
+FCNUMERIC.INTEGRAL.$T1:
+	.BLKL	8			; characters, for one statement
+FCNUMERIC.INTEGRAL.$T3:
+	.BLKL	2			; temporary
+FCNUMERIC.INTEGRAL.$T5:
+	.BLKL	2			; temporary
+FCNUMERIC.INTEGRAL.$W1:
+	.BLKL	1			; an array temporary of 4 bytes, for one statement
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCNUMERIC.INTEGRAL.$K1:
+	.LONG	^X00000000,^X00000000	; 0D0
+FCNUMERIC.INTEGRAL.$K2:
+	.LONG	1
+FCNUMERIC.INTEGRAL.$K3:
+	.LONG	^X00004000,^X00000000	; 0.5D0
+FCNUMERIC.INTEGRAL.$KF1:
+	.LONG	^X00004044,^X00000000	; 10D0
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  597
+;  598    ! INTEGRAL: RESULT is the integral of the expression from A to B, by
+;  599    ! adaptive Gauss-Kronrod quadrature, as QUADPACK's QAG routine does it
+;  600    ! (R. Piessens and others, "QUADPACK", 1983).
+;  601    !
+;  602    ! A Gauss rule of n points integrates a polynomial of degree 2n - 1
+;  603    ! exactly, the best n points can do, so for a smooth function it is very
+;  604    ! accurate. Kronrod's extension adds n + 1 points to the Gauss rule's n,
+;  605    ! for a rule of 2n + 1 points exact to degree 3n + 1; the two rules share
+;  606    ! the Gauss points, so both come from the same 2n + 1 values, and their
+;  607    ! difference is an estimate (a pessimistic one) of the Gauss rule's error,
+;  608    ! and so a bound on the Kronrod rule's. Here n is 7: 15 values a piece.
+;  609    !
+;  610    ! The interval starts as one piece. While the pieces' errors add up to
+;  611    ! more than the tolerance, the piece with the largest error is cut in two,
+;  612    ! so the work goes where the function is hard: near a kink, a jump, or a
+;  613    ! singularity at an end, where the pieces shrink, and nowhere else. The
+;  614    ! tolerance is relative, 10 to the -(DIGITS+1) of the integral of |f|
+;  615    ! (which the same values estimate): one relative to the integral itself
+;  616    ! would never be met by an integral of 0. No piece's error counts as less
+;  617    ! than a rounding error's size, 50 EPS times its integral of |f|, which is
+;  618    ! all the arithmetic can promise.
+;  619    !
+;  620    ! The rule never evaluates the function at a piece's ends, so it can
+;  621    ! integrate a function infinite at an end, 1/SQRT(X) from 0, as long as
+;  622    ! the integral is finite. If the pieces run out (MAX_PIECES) first, the
+;  623    ! answer is the best there is, and the warning INACCURATE gives the error.
+;  624    !
+;  625    ! The pieces are kept in allocatable arrays, made the size of the most
+;  626    ! there may be: LO and HI, each piece's ends; PART, its integral; ERROR,
+;  627    ! its error; and MAGNITUDE, its integral of |f|. SUM, MAXLOC, and array
+;  628    ! sections do the bookkeeping.
+;  629    logical function integral(tree, name, a, b, start, result) result(done)
+	.ENTRY	FCNUMERIC.INTEGRAL,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVL	4(AP),FCNUMERIC.INTEGRAL.$A1 ; TREE is argument 1
+	MOVL	8(AP),FCNUMERIC.INTEGRAL.$A2 ; NAME is argument 2
+	MOVL	20(AP),FCNUMERIC.INTEGRAL.$A5 ; START is argument 5
+	CLRL	FCNUMERIC.INTEGRAL.LO+4
+	CLRL	FCNUMERIC.INTEGRAL.HI+4
+	CLRL	FCNUMERIC.INTEGRAL.ERROR+4
+	CLRL	FCNUMERIC.INTEGRAL.MAGNITUDE+4
+	CLRL	FCNUMERIC.INTEGRAL.PART+4
+;  630      type(node), pointer :: tree
+;  631      character(len=*), intent(in) :: name
+;  632      type(value), intent(in) :: a, b
+;  633      integer, intent(in) :: start
+;  634      type(value), intent(out) :: result
+;  635      type(node), pointer :: none
+;  636      real(rk), allocatable :: lo(:), hi(:), error(:), magnitude(:)
+;  637      type(value), allocatable :: part(:)
+;  638      real(rk) :: tol, middle
+;  639      integer :: n, k, worst(1)
+;  640
+;  641      ! NONE points to no tree: VALUE_AT's second side, for an expression
+;  642      ! that has only one. (Fortran 95's NULL() would do; in Fortran 90 a
+;  643      ! pointer is made to point nowhere by NULLIFY, and a pointer argument
+;  644      ! must be a pointer variable, not a function's value.)
+;  645      nullify (none)
+	CLRL	FCNUMERIC.INTEGRAL.NONE
+;  646      done = .false.
+	CLRL	FCNUMERIC.INTEGRAL.DONE
+;  647      result = real_value(0.0_rk)
+	PUSHAG	FCNUMERIC.INTEGRAL.$K1
+	PUSHAB	FCNUMERIC.INTEGRAL.$T1
+	CALLS	#2,G^FCVALUES.REAL_VALUE
+	MOVC3	#32,FCNUMERIC.INTEGRAL.$T1,@FCNUMERIC.INTEGRAL.RESULT(AP)
+;  648      if (a%z == b%z) then
+	CMPG	@FCNUMERIC.INTEGRAL.A(AP),@FCNUMERIC.INTEGRAL.B(AP)
+	BEQL	FCNUMERIC.INTEGRAL.$2
+	BRW	FCNUMERIC.INTEGRAL.$1
+FCNUMERIC.INTEGRAL.$2:
+	MOVL	FCNUMERIC.INTEGRAL.A(AP),R0
+	MOVL	FCNUMERIC.INTEGRAL.B(AP),R1
+	CMPG	8(R0),8(R1)
+	BNEQ	FCNUMERIC.INTEGRAL.$1
+;  649        done = .true.
+;  650        return
+	TSTL	FCNUMERIC.INTEGRAL.LO+4
+	BEQL	FCNUMERIC.INTEGRAL.$4
+	PUSHL	#0
+	PUSHAQ	FCNUMERIC.INTEGRAL.LO
+	CALLS	#2,G^FTN$DEALLOCATE
+FCNUMERIC.INTEGRAL.$4:
+	TSTL	FCNUMERIC.INTEGRAL.HI+4
+	BEQL	FCNUMERIC.INTEGRAL.$6
+	PUSHL	#0
+	PUSHAQ	FCNUMERIC.INTEGRAL.HI
+	CALLS	#2,G^FTN$DEALLOCATE
+FCNUMERIC.INTEGRAL.$6:
+	TSTL	FCNUMERIC.INTEGRAL.ERROR+4
+	BEQL	FCNUMERIC.INTEGRAL.$8
+	PUSHL	#0
+	PUSHAQ	FCNUMERIC.INTEGRAL.ERROR
+	CALLS	#2,G^FTN$DEALLOCATE
+FCNUMERIC.INTEGRAL.$8:
+	TSTL	FCNUMERIC.INTEGRAL.MAGNITUDE+4
+	BEQL	FCNUMERIC.INTEGRAL.$10
+	PUSHL	#0
+	PUSHAQ	FCNUMERIC.INTEGRAL.MAGNITUDE
+	CALLS	#2,G^FTN$DEALLOCATE
+FCNUMERIC.INTEGRAL.$10:
+	TSTL	FCNUMERIC.INTEGRAL.PART+4
+	BEQL	FCNUMERIC.INTEGRAL.$12
+	PUSHL	#0
+	PUSHAQ	FCNUMERIC.INTEGRAL.PART
+	CALLS	#2,G^FTN$DEALLOCATE
+FCNUMERIC.INTEGRAL.$12:
+	MOVL	#-1,R0			; the function's value
+	RET
+FCNUMERIC.INTEGRAL.$1:
+;  651      end if
+;  652
+;  653      allocate (lo(max_pieces), hi(max_pieces), error(max_pieces), &
+;  654        magnitude(max_pieces), part(max_pieces))
+	PUSHL	#200
+	PUSHL	#1
+	PUSHL	#0
+	PUSHAQ	FCNUMERIC.INTEGRAL.LO
+	CALLS	#4,G^FTN$ALLOCATE
+	PUSHL	#200
+	PUSHL	#1
+	PUSHL	#0
+	PUSHAQ	FCNUMERIC.INTEGRAL.HI
+	CALLS	#4,G^FTN$ALLOCATE
+	PUSHL	#200
+	PUSHL	#1
+	PUSHL	#0
+	PUSHAQ	FCNUMERIC.INTEGRAL.ERROR
+	CALLS	#4,G^FTN$ALLOCATE
+	PUSHL	#200
+	PUSHL	#1
+	PUSHL	#0
+	PUSHAQ	FCNUMERIC.INTEGRAL.MAGNITUDE
+	CALLS	#4,G^FTN$ALLOCATE
+	PUSHL	#200
+	PUSHL	#1
+	PUSHL	#0
+	PUSHAQ	FCNUMERIC.INTEGRAL.PART
+	CALLS	#4,G^FTN$ALLOCATE
+;  655      n = 1
+	MOVL	#1,FCNUMERIC.INTEGRAL.N
+;  656      lo(1) = real(a%z, rk)
+	MOVL	FCNUMERIC.INTEGRAL.LO+16,R0
+	MOVG	@FCNUMERIC.INTEGRAL.A(AP),8(R0)
+;  657      hi(1) = real(b%z, rk)
+	MOVL	FCNUMERIC.INTEGRAL.HI+16,R0
+	MOVG	@FCNUMERIC.INTEGRAL.B(AP),8(R0)
+;  658      if (.not. kronrod(1)) goto 90
+	PUSHAL	FCNUMERIC.INTEGRAL.$K2
+	CALLS	#1,FCNUMERIC.INTEGRAL.KRONROD
+	MOVL	R0,R6
+	BLBS	R6,FCNUMERIC.INTEGRAL.$14
+	BRW	FCNUMERIC.INTEGRAL.L90
+FCNUMERIC.INTEGRAL.$14:
+;  659
+;  660      do
+	MOVQ	FCNUMERIC.INTEGRAL.MIDDLE,R10
+FCNUMERIC.INTEGRAL.$15:			; DO (line 660)'s body
+;  661        tol = scaled(10.0_rk ** (-digits - 1), sum(magnitude(1:n)))
+	MNEGL	FCNUMERIC.DIGITS,R0
+	DECL	R0
+	PUSHL	R0
+	MOVQ	FCNUMERIC.INTEGRAL.$KF1,-(SP)
+	CALLS	#3,G^OTS$POWGJ
+	MOVG	R0,FCNUMERIC.INTEGRAL.$T3
+	MOVL	FCNUMERIC.INTEGRAL.N,R6
+	BGEQ	FCNUMERIC.INTEGRAL.$16
+	CLRL	R6
+FCNUMERIC.INTEGRAL.$16:
+	CLRG	FCNUMERIC.INTEGRAL.$T5
+	MOVL	R6,R7			; array (line 661), dimension 1's limit
+	MOVL	#1,R6
+	CMPL	#1,R7
+	BGTR	FCNUMERIC.INTEGRAL.$18
+FCNUMERIC.INTEGRAL.$20:			; array (line 661), dimension 1's body
+	ADDG2	@FCNUMERIC.INTEGRAL.MAGNITUDE+16[R6],FCNUMERIC.INTEGRAL.$T5
+	AOBLEQ	R7,R6,FCNUMERIC.INTEGRAL.$20
+FCNUMERIC.INTEGRAL.$18:
+	PUSHAG	FCNUMERIC.INTEGRAL.$T5
+	PUSHAG	FCNUMERIC.INTEGRAL.$T3
+	CALLS	#2,G^FCNUMERIC.SCALED
+	MOVG	R0,FCNUMERIC.INTEGRAL.TOL
+;  662        if (sum(error(1:n)) <= tol .or. n == max_pieces) exit
+	MOVL	FCNUMERIC.INTEGRAL.N,R6
+	BGEQ	FCNUMERIC.INTEGRAL.$22
+	CLRL	R6
+FCNUMERIC.INTEGRAL.$22:
+	CLRG	FCNUMERIC.INTEGRAL.$T5
+	MOVL	R6,R7			; array (line 662), dimension 1's limit
+	MOVL	#1,R6
+	CMPL	#1,R7
+	BGTR	FCNUMERIC.INTEGRAL.$24
+FCNUMERIC.INTEGRAL.$26:			; array (line 662), dimension 1's body
+	ADDG2	@FCNUMERIC.INTEGRAL.ERROR+16[R6],FCNUMERIC.INTEGRAL.$T5
+	AOBLEQ	R7,R6,FCNUMERIC.INTEGRAL.$26
+FCNUMERIC.INTEGRAL.$24:
+	CMPG	FCNUMERIC.INTEGRAL.$T5,FCNUMERIC.INTEGRAL.TOL
+	BGTR	FCNUMERIC.INTEGRAL.$29
+	BRW	FCNUMERIC.INTEGRAL.$28
+FCNUMERIC.INTEGRAL.$29:
+	CMPL	FCNUMERIC.INTEGRAL.N,#200
+	BNEQ	FCNUMERIC.INTEGRAL.$30
+	BRW	FCNUMERIC.INTEGRAL.$28
+FCNUMERIC.INTEGRAL.$30:
+;  663
+;  664        ! MAXLOC is the place of the largest element, as an array of one
+;  665        ! element per dimension: WORST(1) here.
+;  666        worst = maxloc(error(1:n))
+	MOVL	FCNUMERIC.INTEGRAL.N,R6
+	BGEQ	FCNUMERIC.INTEGRAL.$31
+	CLRL	R6
+FCNUMERIC.INTEGRAL.$31:
+	CLRL	R7
+	CLRL	R8
+	MOVL	R6,R9			; array (line 666), dimension 1's limit
+	MOVL	#1,R6
+	CMPL	#1,R9
+	BGTR	FCNUMERIC.INTEGRAL.$33
+FCNUMERIC.INTEGRAL.$35:			; array (line 666), dimension 1's body
+	MOVG	@FCNUMERIC.INTEGRAL.ERROR+16[R6],FCNUMERIC.INTEGRAL.$T3
+	TSTL	R7
+	BEQL	FCNUMERIC.INTEGRAL.$36
+	CMPG	FCNUMERIC.INTEGRAL.$T3,FCNUMERIC.INTEGRAL.$T5
+	BLEQ	FCNUMERIC.INTEGRAL.$38
+FCNUMERIC.INTEGRAL.$36:
+	MOVG	FCNUMERIC.INTEGRAL.$T3,FCNUMERIC.INTEGRAL.$T5
+	MOVL	#1,R7
+	MOVL	R6,R8
+FCNUMERIC.INTEGRAL.$38:
+	AOBLEQ	R9,R6,FCNUMERIC.INTEGRAL.$35
+FCNUMERIC.INTEGRAL.$33:
+	MOVL	R8,FCNUMERIC.INTEGRAL.$W1
+	MOVL	#1,R6
+FCNUMERIC.INTEGRAL.$41:			; array (line 666), dimension 1's body
+	MOVL	FCNUMERIC.INTEGRAL.$W1-4[R6],FCNUMERIC.INTEGRAL.WORST-4[R6]
+	AOBLEQ	#1,R6,FCNUMERIC.INTEGRAL.$41
+;  667        k = worst(1)
+	MOVL	FCNUMERIC.INTEGRAL.WORST,FCNUMERIC.INTEGRAL.K
+;  668        middle = scaled(0.5_rk, lo(k)) + scaled(0.5_rk, hi(k))
+	MOVL	FCNUMERIC.INTEGRAL.K,R0
+	PUSHAG	@FCNUMERIC.INTEGRAL.LO+16[R0]
+	PUSHAG	FCNUMERIC.INTEGRAL.$K3
+	CALLS	#2,G^FCNUMERIC.SCALED
+	MOVG	R0,FCNUMERIC.INTEGRAL.$T3
+	MOVL	FCNUMERIC.INTEGRAL.K,R0
+	PUSHAG	@FCNUMERIC.INTEGRAL.HI+16[R0]
+	PUSHAG	FCNUMERIC.INTEGRAL.$K3
+	CALLS	#2,G^FCNUMERIC.SCALED
+	MOVG	R0,FCNUMERIC.INTEGRAL.$T5
+	ADDG3	FCNUMERIC.INTEGRAL.$T3,FCNUMERIC.INTEGRAL.$T5,R10
+;  669        ! A piece too narrow to cut leaves the answer as it is.
+;  670        if (middle <= min(lo(k), hi(k)) .or. middle >= max(lo(k), hi(k))) exit
+	MOVL	FCNUMERIC.INTEGRAL.K,R0
+	MOVG	@FCNUMERIC.INTEGRAL.LO+16[R0],FCNUMERIC.INTEGRAL.$T5
+	MOVL	FCNUMERIC.INTEGRAL.K,R0
+	CMPG	@FCNUMERIC.INTEGRAL.HI+16[R0],FCNUMERIC.INTEGRAL.$T5
+	BGEQ	FCNUMERIC.INTEGRAL.$43
+	MOVL	FCNUMERIC.INTEGRAL.K,R0
+	MOVG	@FCNUMERIC.INTEGRAL.HI+16[R0],FCNUMERIC.INTEGRAL.$T5
+FCNUMERIC.INTEGRAL.$43:
+	MOVL	FCNUMERIC.INTEGRAL.K,R0
+	MOVG	@FCNUMERIC.INTEGRAL.LO+16[R0],FCNUMERIC.INTEGRAL.$T3
+	MOVL	FCNUMERIC.INTEGRAL.K,R0
+	CMPG	@FCNUMERIC.INTEGRAL.HI+16[R0],FCNUMERIC.INTEGRAL.$T3
+	BLEQ	FCNUMERIC.INTEGRAL.$45
+	MOVL	FCNUMERIC.INTEGRAL.K,R0
+	MOVG	@FCNUMERIC.INTEGRAL.HI+16[R0],FCNUMERIC.INTEGRAL.$T3
+FCNUMERIC.INTEGRAL.$45:
+	CMPG	R10,FCNUMERIC.INTEGRAL.$T5
+	BGTR	FCNUMERIC.INTEGRAL.$48
+	BRW	FCNUMERIC.INTEGRAL.$47
+FCNUMERIC.INTEGRAL.$48:
+	CMPG	R10,FCNUMERIC.INTEGRAL.$T3
+	BLSS	FCNUMERIC.INTEGRAL.$49
+	BRW	FCNUMERIC.INTEGRAL.$47
+FCNUMERIC.INTEGRAL.$49:
+;  671        n = n + 1
+	INCL	FCNUMERIC.INTEGRAL.N
+;  672        lo(n) = middle
+	MOVL	FCNUMERIC.INTEGRAL.N,R0
+	MOVG	R10,@FCNUMERIC.INTEGRAL.LO+16[R0]
+;  673        hi(n) = hi(k)
+	MOVL	FCNUMERIC.INTEGRAL.K,R0
+	MOVL	FCNUMERIC.INTEGRAL.N,R1
+	MOVG	@FCNUMERIC.INTEGRAL.HI+16[R0],@FCNUMERIC.INTEGRAL.HI+16[R1]
+;  674        hi(k) = middle
+	MOVL	FCNUMERIC.INTEGRAL.K,R0
+	MOVG	R10,@FCNUMERIC.INTEGRAL.HI+16[R0]
+;  675        if (.not. kronrod(k)) goto 90
+	PUSHAL	FCNUMERIC.INTEGRAL.K
+	CALLS	#1,FCNUMERIC.INTEGRAL.KRONROD
+	MOVL	R0,R8
+	BLBS	R8,FCNUMERIC.INTEGRAL.$51
+	BRW	FCNUMERIC.INTEGRAL.$50
+FCNUMERIC.INTEGRAL.$51:
+;  676        if (.not. kronrod(n)) goto 90
+	PUSHAL	FCNUMERIC.INTEGRAL.N
+	CALLS	#1,FCNUMERIC.INTEGRAL.KRONROD
+	MOVL	R0,R8
+	BLBS	R8,FCNUMERIC.INTEGRAL.$53
+	BRW	FCNUMERIC.INTEGRAL.$52
+FCNUMERIC.INTEGRAL.$53:
+;  677      end do
+	BRW	FCNUMERIC.INTEGRAL.$15
+FCNUMERIC.INTEGRAL.$54:
+;  678
+;  679      result = real_value(0.0_rk)
+	PUSHAG	FCNUMERIC.INTEGRAL.$K1
+	PUSHAB	FCNUMERIC.INTEGRAL.$T1
+	CALLS	#2,G^FCVALUES.REAL_VALUE
+	MOVC3	#32,FCNUMERIC.INTEGRAL.$T1,@FCNUMERIC.INTEGRAL.RESULT(AP)
+;  680      do k = 1, n
+	MOVL	FCNUMERIC.INTEGRAL.N,R6	; DO (line 680)'s count
+	MOVL	#1,FCNUMERIC.INTEGRAL.K
+	TSTL	R6
+	BLEQ	FCNUMERIC.INTEGRAL.$55
+	MOVL	FCNUMERIC.INTEGRAL.RESULT(AP),R7
+FCNUMERIC.INTEGRAL.$57:			; DO (line 680)'s body
+;  681        result = result + part(k)
+	MULL3	FCNUMERIC.INTEGRAL.K,#32,R0
+	PUSHAB	@FCNUMERIC.INTEGRAL.PART+16[R0]
+	PUSHAB	(R7)
+	PUSHAB	FCNUMERIC.INTEGRAL.$T1
+	CALLS	#3,G^FCVALUES.V_ADD
+	MOVC3	#32,FCNUMERIC.INTEGRAL.$T1,(R7)
+;  682      end do
+	INCL	FCNUMERIC.INTEGRAL.K
+	SOBGTR	R6,FCNUMERIC.INTEGRAL.$57 ; one pass fewer
+FCNUMERIC.INTEGRAL.$55:
+;  683      if (result%err /= 0) then
+	MOVL	FCNUMERIC.INTEGRAL.RESULT(AP),R0
+	TSTL	16(R0)
+	BEQL	FCNUMERIC.INTEGRAL.$59
+;  684        call fail(result%err, start)
+	PUSHL	#0
+	PUSHAL	@FCNUMERIC.INTEGRAL.$A5
+	MOVL	FCNUMERIC.INTEGRAL.RESULT(AP),R0
+	PUSHAL	16(R0)
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  685        goto 90
+	BRW	FCNUMERIC.INTEGRAL.L90
+FCNUMERIC.INTEGRAL.$59:
+;  686      end if
+;  687      result = without_noise(result, tol)
+	PUSHAG	FCNUMERIC.INTEGRAL.TOL
+	PUSHAB	@FCNUMERIC.INTEGRAL.RESULT(AP)
+	PUSHAB	FCNUMERIC.INTEGRAL.$T1
+	CALLS	#3,G^FCNUMERIC.WITHOUT_NOISE
+	MOVC3	#32,FCNUMERIC.INTEGRAL.$T1,@FCNUMERIC.INTEGRAL.RESULT(AP)
+;  688      done = .true.
+	MOVL	#-1,FCNUMERIC.INTEGRAL.DONE
+;  689      if (sum(error(1:n)) > tol) call warn_inaccurate(sum(error(1:n)), start)
+	MOVL	FCNUMERIC.INTEGRAL.N,R8
+	MOVL	R8,R7
+	BGEQ	FCNUMERIC.INTEGRAL.$61
+	CLRL	R7
+FCNUMERIC.INTEGRAL.$61:
+	CLRG	FCNUMERIC.INTEGRAL.$T3
+	MOVL	#1,R6
+	CMPL	#1,R7
+	BGTR	FCNUMERIC.INTEGRAL.$63
+FCNUMERIC.INTEGRAL.$65:			; array (line 689), dimension 1's body
+	ADDG2	@FCNUMERIC.INTEGRAL.ERROR+16[R6],FCNUMERIC.INTEGRAL.$T3
+	AOBLEQ	R7,R6,FCNUMERIC.INTEGRAL.$65
+FCNUMERIC.INTEGRAL.$63:
+	CMPG	FCNUMERIC.INTEGRAL.$T3,FCNUMERIC.INTEGRAL.TOL
+	BLEQ	FCNUMERIC.INTEGRAL.$67
+	MOVL	FCNUMERIC.INTEGRAL.N,R6
+	BGEQ	FCNUMERIC.INTEGRAL.$69
+	CLRL	R6
+FCNUMERIC.INTEGRAL.$69:
+	CLRG	FCNUMERIC.INTEGRAL.$T5
+	MOVL	R6,R7			; array (line 689), dimension 1's limit
+	MOVL	#1,R6
+	CMPL	#1,R7
+	BGTR	FCNUMERIC.INTEGRAL.$71
+FCNUMERIC.INTEGRAL.$73:			; array (line 689), dimension 1's body
+	ADDG2	@FCNUMERIC.INTEGRAL.ERROR+16[R6],FCNUMERIC.INTEGRAL.$T5
+	AOBLEQ	R7,R6,FCNUMERIC.INTEGRAL.$73
+FCNUMERIC.INTEGRAL.$71:
+	PUSHAL	@FCNUMERIC.INTEGRAL.$A5
+	PUSHAG	FCNUMERIC.INTEGRAL.$T5
+	CALLS	#2,G^FCNUMERIC.WARN_INACCURATE
+FCNUMERIC.INTEGRAL.$67:
+;  690
+;  691      ! Allocatable arrays local to a procedure must be deallocated before it
+;  692      ! returns: in Fortran 90 their status is otherwise undefined afterwards
+;  693      ! (Fortran 95 deallocates them itself). Every way out comes here.
+;  694  90  deallocate (lo, hi, error, magnitude, part)
+FCNUMERIC.INTEGRAL.L90:
+	PUSHL	#0
+	PUSHAQ	FCNUMERIC.INTEGRAL.LO
+	CALLS	#2,G^FTN$DEALLOCATE
+	PUSHL	#0
+	PUSHAQ	FCNUMERIC.INTEGRAL.HI
+	CALLS	#2,G^FTN$DEALLOCATE
+	PUSHL	#0
+	PUSHAQ	FCNUMERIC.INTEGRAL.ERROR
+	CALLS	#2,G^FTN$DEALLOCATE
+	PUSHL	#0
+	PUSHAQ	FCNUMERIC.INTEGRAL.MAGNITUDE
+	CALLS	#2,G^FTN$DEALLOCATE
+	PUSHL	#0
+	PUSHAQ	FCNUMERIC.INTEGRAL.PART
+	CALLS	#2,G^FTN$DEALLOCATE
+;  695
+;  696    contains
+	TSTL	FCNUMERIC.INTEGRAL.LO+4
+	BEQL	FCNUMERIC.INTEGRAL.$75
+	PUSHL	#0
+	PUSHAQ	FCNUMERIC.INTEGRAL.LO
+	CALLS	#2,G^FTN$DEALLOCATE
+FCNUMERIC.INTEGRAL.$75:
+	TSTL	FCNUMERIC.INTEGRAL.HI+4
+	BEQL	FCNUMERIC.INTEGRAL.$77
+	PUSHL	#0
+	PUSHAQ	FCNUMERIC.INTEGRAL.HI
+	CALLS	#2,G^FTN$DEALLOCATE
+FCNUMERIC.INTEGRAL.$77:
+	TSTL	FCNUMERIC.INTEGRAL.ERROR+4
+	BEQL	FCNUMERIC.INTEGRAL.$79
+	PUSHL	#0
+	PUSHAQ	FCNUMERIC.INTEGRAL.ERROR
+	CALLS	#2,G^FTN$DEALLOCATE
+FCNUMERIC.INTEGRAL.$79:
+	TSTL	FCNUMERIC.INTEGRAL.MAGNITUDE+4
+	BEQL	FCNUMERIC.INTEGRAL.$81
+	PUSHL	#0
+	PUSHAQ	FCNUMERIC.INTEGRAL.MAGNITUDE
+	CALLS	#2,G^FTN$DEALLOCATE
+FCNUMERIC.INTEGRAL.$81:
+	TSTL	FCNUMERIC.INTEGRAL.PART+4
+	BEQL	FCNUMERIC.INTEGRAL.$83
+	PUSHL	#0
+	PUSHAQ	FCNUMERIC.INTEGRAL.PART
+	CALLS	#2,G^FTN$DEALLOCATE
+FCNUMERIC.INTEGRAL.$83:
+	MOVL	FCNUMERIC.INTEGRAL.DONE,R0 ; the function's value
+	RET
+FCNUMERIC.INTEGRAL.$28:			; leaving the loop
+	MOVQ	R10,FCNUMERIC.INTEGRAL.MIDDLE
+	BRW	FCNUMERIC.INTEGRAL.$54
+FCNUMERIC.INTEGRAL.$47:			; leaving the loop
+	MOVQ	R10,FCNUMERIC.INTEGRAL.MIDDLE
+	BRW	FCNUMERIC.INTEGRAL.$54
+FCNUMERIC.INTEGRAL.$50:			; leaving the loop
+	MOVQ	R10,FCNUMERIC.INTEGRAL.MIDDLE
+	BRW	FCNUMERIC.INTEGRAL.L90
+FCNUMERIC.INTEGRAL.$52:			; leaving the loop
+	MOVQ	R10,FCNUMERIC.INTEGRAL.MIDDLE
+	BRW	FCNUMERIC.INTEGRAL.L90
+
+; Storage map for FCNUMERIC.INTEGRAL.KRONROD, a LOGICAL function
+;   K       INTEGER, INTENT(IN)  argument 1  @FCNUMERIC.INTEGRAL.KRONROD.K(AP)
+;   OK      LOGICAL              R6          R6
+;   F       TYPE(VALUE)          $LOCAL+16   FCNUMERIC.INTEGRAL.KRONROD.F
+;   F1      TYPE(VALUE)          $LOCAL+48   FCNUMERIC.INTEGRAL.KRONROD.F1
+;   F2      TYPE(VALUE)          $LOCAL+80   FCNUMERIC.INTEGRAL.KRONROD.F2
+;   SUM15   TYPE(VALUE)          $LOCAL+112  FCNUMERIC.INTEGRAL.KRONROD.$N22
+;   SUM7    TYPE(VALUE)          $LOCAL+144  FCNUMERIC.INTEGRAL.KRONROD.SUM7
+;   C       REAL*8               $LOCAL+176  FCNUMERIC.INTEGRAL.KRONROD.C
+;   H       REAL*8               $LOCAL+184  FCNUMERIC.INTEGRAL.KRONROD.H
+;   SIZE15  REAL*8               $LOCAL+192  FCNUMERIC.INTEGRAL.KRONROD.$N23
+;   I       INTEGER              $LOCAL+200  FCNUMERIC.INTEGRAL.KRONROD.I
+;   ERR     INTEGER              $LOCAL+204  FCNUMERIC.INTEGRAL.KRONROD.ERR
+;   R6 is $R1: I, during a loop
+;   FCNUMERIC.INTEGRAL.KRONROD.$N22 is FCNUMERIC.INTEGRAL.KRONROD.SUM15
+;   FCNUMERIC.INTEGRAL.KRONROD.$N23 is FCNUMERIC.INTEGRAL.KRONROD.SIZE15
+;
+FCNUMERIC.INTEGRAL.KRONROD.K = 4	; K is argument 1
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+	.ALIGN	4			; the boundary of this routine's aligned records
+	.BLKB	16
+FCNUMERIC.INTEGRAL.KRONROD.F:
+	.BLKL	8			; F
+FCNUMERIC.INTEGRAL.KRONROD.F1:
+	.BLKL	8			; F1
+FCNUMERIC.INTEGRAL.KRONROD.F2:
+	.BLKL	8			; F2
+FCNUMERIC.INTEGRAL.KRONROD.$N22:
+	.BLKL	8			; SUM15
+FCNUMERIC.INTEGRAL.KRONROD.SUM7:
+	.BLKL	8			; SUM7
+FCNUMERIC.INTEGRAL.KRONROD.C:
+	.BLKL	2			; C
+FCNUMERIC.INTEGRAL.KRONROD.H:
+	.BLKL	2			; H
+FCNUMERIC.INTEGRAL.KRONROD.$N23:
+	.BLKL	2			; SIZE15
+FCNUMERIC.INTEGRAL.KRONROD.I:
+	.BLKL	1			; I
+FCNUMERIC.INTEGRAL.KRONROD.ERR:
+	.BLKL	1			; ERR
+FCNUMERIC.INTEGRAL.KRONROD.$T1:
+	.BLKL	2			; temporary
+FCNUMERIC.INTEGRAL.KRONROD.$T2:
+	.BLKL	2			; temporary
+FCNUMERIC.INTEGRAL.KRONROD.$T3:
+	.BLKL	8			; characters, for one statement
+FCNUMERIC.INTEGRAL.KRONROD.$T4:
+	.BLKL	8			; characters, for one statement
+FCNUMERIC.INTEGRAL.KRONROD.$T5:
+	.BLKL	2			; temporary
+FCNUMERIC.INTEGRAL.KRONROD.$T6:
+	.BLKL	8			; characters, for one statement
+FCNUMERIC.INTEGRAL.KRONROD.$T7:
+	.BLKL	8			; characters, for one statement
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCNUMERIC.INTEGRAL.KRONROD.$K1:
+	.LONG	^X00004000,^X00000000	; 0.5D0
+FCNUMERIC.INTEGRAL.KRONROD.$K2:
+	.LONG	^XD04F3FEA,^X090F9087	; 0.20948214108472782D0
+FCNUMERIC.INTEGRAL.KRONROD.$K3:
+	.LONG	^XBFD73FFA,^X2FA6E03C	; 0.4179591836734694D0
+FCNUMERIC.INTEGRAL.KRONROD.$K4:
+	.LONG	^XBA00400F,^X09B19D4D,^X5F17400E,^X62298E7C,^XACF8400B,^XBB3E27B9,^XBA9F4007,^XA1D69BE3
+	.LONG	^XC13A4002,^XFA24049D,^XF95D3FF9,^XFD62F119,^X98B23FEA,^X0C77892E
+FCNUMERIC.INTEGRAL.KRONROD.$K5:
+	.LONG	^X7C5B3FB7,^X747067D5,^X26CD3FD0,^X61C4AA7B,^XD3843FDA,^X14C6A348,^X00ED3FE2,^XE8C10F46
+	.LONG	^XA1F23FE5,^X7D5C66E4,^X5D683FE8,^X0EB161C8,^X2ADB3FEA,^X9CD8CBEC,^XD04F3FEA,^X090F9087
+FCNUMERIC.INTEGRAL.KRONROD.$K6:
+	.LONG	^X92F63FE0,^X6D579F82,^XE6B13FF1,^X8644713D,^X6FE73FF8,^X2B3D4EE3,^XBFD73FFA,^X2FA6E03C
+FCNUMERIC.INTEGRAL.KRONROD.$K7:
+	.LONG	10
+FCNUMERIC.INTEGRAL.KRONROD.$K8:
+	.LONG	^X00003D29,^X00000000	; 1.1102230246251565D-14
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  697
+;  698      ! KRONROD sets PART(K), ERROR(K), and MAGNITUDE(K) from the rules on the
+;  699      ! piece from LO(K) to HI(K); false if evaluating the expression failed.
+;  700      ! The piece's center is C and its half width H: the rules' points are C
+;  701      ! and C plus and minus H times each of NODES(1:7).
+;  702      logical function kronrod(k) result(ok)
+FCNUMERIC.INTEGRAL.KRONROD:
+	.WORD	^M<R2,R3,R4,R5,R6>	; internal procedure KRONROD of FCNUMERIC.INTEGRAL
+;  703        integer, intent(in) :: k
+;  704        type(value) :: f, f1, f2, sum15, sum7
+;  705        real(rk) :: c, h, size15
+;  706        integer :: i, err
+;  707
+;  708        ok = .false.
+;  709        err = 0
+	CLRL	FCNUMERIC.INTEGRAL.KRONROD.ERR
+;  710        c = scaled(0.5_rk, lo(k)) + scaled(0.5_rk, hi(k))
+	MOVL	@FCNUMERIC.INTEGRAL.KRONROD.K(AP),R0
+	PUSHAG	@FCNUMERIC.INTEGRAL.LO+16[R0]
+	PUSHAG	FCNUMERIC.INTEGRAL.KRONROD.$K1
+	CALLS	#2,G^FCNUMERIC.SCALED
+	MOVG	R0,FCNUMERIC.INTEGRAL.KRONROD.$T1
+	MOVL	@FCNUMERIC.INTEGRAL.KRONROD.K(AP),R0
+	PUSHAG	@FCNUMERIC.INTEGRAL.HI+16[R0]
+	PUSHAG	FCNUMERIC.INTEGRAL.KRONROD.$K1
+	CALLS	#2,G^FCNUMERIC.SCALED
+	MOVG	R0,FCNUMERIC.INTEGRAL.KRONROD.$T2
+	ADDG3	FCNUMERIC.INTEGRAL.KRONROD.$T1,FCNUMERIC.INTEGRAL.KRONROD.$T2,FCNUMERIC.INTEGRAL.KRONROD.C
+;  711        h = scaled(0.5_rk, hi(k)) - scaled(0.5_rk, lo(k))
+	MOVL	@FCNUMERIC.INTEGRAL.KRONROD.K(AP),R0
+	PUSHAG	@FCNUMERIC.INTEGRAL.HI+16[R0]
+	PUSHAG	FCNUMERIC.INTEGRAL.KRONROD.$K1
+	CALLS	#2,G^FCNUMERIC.SCALED
+	MOVG	R0,FCNUMERIC.INTEGRAL.KRONROD.$T2
+	MOVL	@FCNUMERIC.INTEGRAL.KRONROD.K(AP),R0
+	PUSHAG	@FCNUMERIC.INTEGRAL.LO+16[R0]
+	PUSHAG	FCNUMERIC.INTEGRAL.KRONROD.$K1
+	CALLS	#2,G^FCNUMERIC.SCALED
+	MOVG	R0,FCNUMERIC.INTEGRAL.KRONROD.$T1
+	SUBG3	FCNUMERIC.INTEGRAL.KRONROD.$T1,FCNUMERIC.INTEGRAL.KRONROD.$T2,FCNUMERIC.INTEGRAL.KRONROD.H
+;  712
+;  713        f = value_at(tree, none, name, real_value(c), start)
+	PUSHAG	FCNUMERIC.INTEGRAL.KRONROD.C
+	PUSHAB	FCNUMERIC.INTEGRAL.KRONROD.$T4
+	CALLS	#2,G^FCVALUES.REAL_VALUE
+	PUSHAL	@FCNUMERIC.INTEGRAL.$A5
+	PUSHAB	FCNUMERIC.INTEGRAL.KRONROD.$T4
+	PUSHL	FCNUMERIC.INTEGRAL.$A2
+	PUSHAL	FCNUMERIC.INTEGRAL.NONE
+	PUSHAL	@FCNUMERIC.INTEGRAL.$A1
+	PUSHAB	FCNUMERIC.INTEGRAL.KRONROD.$T3
+	CALLS	#6,G^FCNUMERIC.VALUE_AT
+	MOVC3	#32,FCNUMERIC.INTEGRAL.KRONROD.$T3,FCNUMERIC.INTEGRAL.KRONROD.F
+;  714        if (f%err /= 0) return
+	TSTL	FCNUMERIC.INTEGRAL.KRONROD.F+16
+	BEQL	FCNUMERIC.INTEGRAL.KRONROD.$1
+	CLRL	R0			; the function's value
+	RET
+FCNUMERIC.INTEGRAL.KRONROD.$1:
+;  715        sum15 = f * real_value(kronrod_weights(8))
+	PUSHAG	FCNUMERIC.INTEGRAL.KRONROD.$K2
+	PUSHAB	FCNUMERIC.INTEGRAL.KRONROD.$T3
+	CALLS	#2,G^FCVALUES.REAL_VALUE
+	PUSHAB	FCNUMERIC.INTEGRAL.KRONROD.$T3
+	PUSHAB	FCNUMERIC.INTEGRAL.KRONROD.F
+	PUSHAB	FCNUMERIC.INTEGRAL.KRONROD.$T4
+	CALLS	#3,G^FCVALUES.V_MUL
+	MOVC3	#32,FCNUMERIC.INTEGRAL.KRONROD.$T4,FCNUMERIC.INTEGRAL.KRONROD.$N22
+;  716        sum7 = f * real_value(gauss_weights(4))
+	PUSHAG	FCNUMERIC.INTEGRAL.KRONROD.$K3
+	PUSHAB	FCNUMERIC.INTEGRAL.KRONROD.$T4
+	CALLS	#2,G^FCVALUES.REAL_VALUE
+	PUSHAB	FCNUMERIC.INTEGRAL.KRONROD.$T4
+	PUSHAB	FCNUMERIC.INTEGRAL.KRONROD.F
+	PUSHAB	FCNUMERIC.INTEGRAL.KRONROD.$T3
+	CALLS	#3,G^FCVALUES.V_MUL
+	MOVC3	#32,FCNUMERIC.INTEGRAL.KRONROD.$T3,FCNUMERIC.INTEGRAL.KRONROD.SUM7
+;  717        size15 = c_abs(f%z) * kronrod_weights(8)
+	PUSHAO	FCNUMERIC.INTEGRAL.KRONROD.F
+	CALLS	#1,G^FCVALUES.C_ABS
+	MOVG	R0,FCNUMERIC.INTEGRAL.KRONROD.$T1
+	MULG3	FCNUMERIC.INTEGRAL.KRONROD.$T1,FCNUMERIC.INTEGRAL.KRONROD.$K2,FCNUMERIC.INTEGRAL.KRONROD.$N23
+;  718        do i = 1, 7
+	MOVL	#1,FCNUMERIC.INTEGRAL.KRONROD.I
+	MOVL	FCNUMERIC.INTEGRAL.KRONROD.I,R6
+FCNUMERIC.INTEGRAL.KRONROD.$3:		; DO (line 718)'s body
+;  719          f1 = value_at(tree, none, name, real_value(r_add(c, -scaled(h, nodes(i)), err)), start)
+	PUSHAG	FCNUMERIC.INTEGRAL.KRONROD.$K4-8[R6]
+	PUSHAG	FCNUMERIC.INTEGRAL.KRONROD.H
+	CALLS	#2,G^FCNUMERIC.SCALED
+	MOVG	R0,FCNUMERIC.INTEGRAL.KRONROD.$T2
+	MNEGG	FCNUMERIC.INTEGRAL.KRONROD.$T2,FCNUMERIC.INTEGRAL.KRONROD.$T5
+	PUSHAL	FCNUMERIC.INTEGRAL.KRONROD.ERR
+	PUSHAG	FCNUMERIC.INTEGRAL.KRONROD.$T5
+	PUSHAG	FCNUMERIC.INTEGRAL.KRONROD.C
+	CALLS	#3,G^FCVALUES.R_ADD
+	MOVG	R0,FCNUMERIC.INTEGRAL.KRONROD.$T1
+	PUSHAG	FCNUMERIC.INTEGRAL.KRONROD.$T1
+	PUSHAB	FCNUMERIC.INTEGRAL.KRONROD.$T3
+	CALLS	#2,G^FCVALUES.REAL_VALUE
+	PUSHAL	@FCNUMERIC.INTEGRAL.$A5
+	PUSHAB	FCNUMERIC.INTEGRAL.KRONROD.$T3
+	PUSHL	FCNUMERIC.INTEGRAL.$A2
+	PUSHAL	FCNUMERIC.INTEGRAL.NONE
+	PUSHAL	@FCNUMERIC.INTEGRAL.$A1
+	PUSHAB	FCNUMERIC.INTEGRAL.KRONROD.$T4
+	CALLS	#6,G^FCNUMERIC.VALUE_AT
+	MOVC3	#32,FCNUMERIC.INTEGRAL.KRONROD.$T4,FCNUMERIC.INTEGRAL.KRONROD.F1
+;  720          if (f1%err /= 0) return
+	TSTL	FCNUMERIC.INTEGRAL.KRONROD.F1+16
+	BEQL	FCNUMERIC.INTEGRAL.KRONROD.$4
+	MOVL	R6,FCNUMERIC.INTEGRAL.KRONROD.I
+	CLRL	R0			; the function's value
+	RET
+FCNUMERIC.INTEGRAL.KRONROD.$4:
+;  721          f2 = value_at(tree, none, name, real_value(r_add(c, scaled(h, nodes(i)), err)), start)
+	PUSHAG	FCNUMERIC.INTEGRAL.KRONROD.$K4-8[R6]
+	PUSHAG	FCNUMERIC.INTEGRAL.KRONROD.H
+	CALLS	#2,G^FCNUMERIC.SCALED
+	MOVG	R0,FCNUMERIC.INTEGRAL.KRONROD.$T2
+	PUSHAL	FCNUMERIC.INTEGRAL.KRONROD.ERR
+	PUSHAG	FCNUMERIC.INTEGRAL.KRONROD.$T2
+	PUSHAG	FCNUMERIC.INTEGRAL.KRONROD.C
+	CALLS	#3,G^FCVALUES.R_ADD
+	MOVG	R0,FCNUMERIC.INTEGRAL.KRONROD.$T5
+	PUSHAG	FCNUMERIC.INTEGRAL.KRONROD.$T5
+	PUSHAB	FCNUMERIC.INTEGRAL.KRONROD.$T4
+	CALLS	#2,G^FCVALUES.REAL_VALUE
+	PUSHAL	@FCNUMERIC.INTEGRAL.$A5
+	PUSHAB	FCNUMERIC.INTEGRAL.KRONROD.$T4
+	PUSHL	FCNUMERIC.INTEGRAL.$A2
+	PUSHAL	FCNUMERIC.INTEGRAL.NONE
+	PUSHAL	@FCNUMERIC.INTEGRAL.$A1
+	PUSHAB	FCNUMERIC.INTEGRAL.KRONROD.$T3
+	CALLS	#6,G^FCNUMERIC.VALUE_AT
+	MOVC3	#32,FCNUMERIC.INTEGRAL.KRONROD.$T3,FCNUMERIC.INTEGRAL.KRONROD.F2
+;  722          if (f2%err /= 0) return
+	TSTL	FCNUMERIC.INTEGRAL.KRONROD.F2+16
+	BEQL	FCNUMERIC.INTEGRAL.KRONROD.$6
+	MOVL	R6,FCNUMERIC.INTEGRAL.KRONROD.I
+	CLRL	R0			; the function's value
+	RET
+FCNUMERIC.INTEGRAL.KRONROD.$6:
+;  723          sum15 = sum15 + (f1 + f2) * real_value(kronrod_weights(i))
+	PUSHAB	FCNUMERIC.INTEGRAL.KRONROD.F2
+	PUSHAB	FCNUMERIC.INTEGRAL.KRONROD.F1
+	PUSHAB	FCNUMERIC.INTEGRAL.KRONROD.$T6
+	CALLS	#3,G^FCVALUES.V_ADD
+	PUSHAG	FCNUMERIC.INTEGRAL.KRONROD.$K5-8[R6]
+	PUSHAB	FCNUMERIC.INTEGRAL.KRONROD.$T7
+	CALLS	#2,G^FCVALUES.REAL_VALUE
+	PUSHAB	FCNUMERIC.INTEGRAL.KRONROD.$T7
+	PUSHAB	FCNUMERIC.INTEGRAL.KRONROD.$T6
+	PUSHAB	FCNUMERIC.INTEGRAL.KRONROD.$T3
+	CALLS	#3,G^FCVALUES.V_MUL
+	PUSHAB	FCNUMERIC.INTEGRAL.KRONROD.$T3
+	PUSHAB	FCNUMERIC.INTEGRAL.KRONROD.$N22
+	PUSHAB	FCNUMERIC.INTEGRAL.KRONROD.$T4
+	CALLS	#3,G^FCVALUES.V_ADD
+	MOVC3	#32,FCNUMERIC.INTEGRAL.KRONROD.$T4,FCNUMERIC.INTEGRAL.KRONROD.$N22
+;  724          size15 = size15 + (c_abs(f1%z) + c_abs(f2%z)) * kronrod_weights(i)
+	PUSHAO	FCNUMERIC.INTEGRAL.KRONROD.F1
+	CALLS	#1,G^FCVALUES.C_ABS
+	MOVG	R0,FCNUMERIC.INTEGRAL.KRONROD.$T2
+	PUSHAO	FCNUMERIC.INTEGRAL.KRONROD.F2
+	CALLS	#1,G^FCVALUES.C_ABS
+	MOVG	R0,FCNUMERIC.INTEGRAL.KRONROD.$T5
+	ADDG3	FCNUMERIC.INTEGRAL.KRONROD.$T2,FCNUMERIC.INTEGRAL.KRONROD.$T5,R0
+	MULG2	FCNUMERIC.INTEGRAL.KRONROD.$K5-8[R6],R0
+	ADDG2	R0,FCNUMERIC.INTEGRAL.KRONROD.$N23
+;  725          ! The Gauss points are the Kronrod rule's even ones.
+;  726          if (mod(i, 2) == 0) sum7 = sum7 + (f1 + f2) * real_value(gauss_weights(i / 2))
+	DIVL3	#2,R6,R0
+	MULL2	#2,R0
+	SUBL3	R0,R6,R0
+	BNEQ	FCNUMERIC.INTEGRAL.KRONROD.$8
+	PUSHAB	FCNUMERIC.INTEGRAL.KRONROD.F2
+	PUSHAB	FCNUMERIC.INTEGRAL.KRONROD.F1
+	PUSHAB	FCNUMERIC.INTEGRAL.KRONROD.$T3
+	CALLS	#3,G^FCVALUES.V_ADD
+	DIVL3	#2,R6,R0
+	PUSHAG	FCNUMERIC.INTEGRAL.KRONROD.$K6-8[R0]
+	PUSHAB	FCNUMERIC.INTEGRAL.KRONROD.$T4
+	CALLS	#2,G^FCVALUES.REAL_VALUE
+	PUSHAB	FCNUMERIC.INTEGRAL.KRONROD.$T4
+	PUSHAB	FCNUMERIC.INTEGRAL.KRONROD.$T3
+	PUSHAB	FCNUMERIC.INTEGRAL.KRONROD.$T6
+	CALLS	#3,G^FCVALUES.V_MUL
+	PUSHAB	FCNUMERIC.INTEGRAL.KRONROD.$T6
+	PUSHAB	FCNUMERIC.INTEGRAL.KRONROD.SUM7
+	PUSHAB	FCNUMERIC.INTEGRAL.KRONROD.$T7
+	CALLS	#3,G^FCVALUES.V_ADD
+	MOVC3	#32,FCNUMERIC.INTEGRAL.KRONROD.$T7,FCNUMERIC.INTEGRAL.KRONROD.SUM7
+FCNUMERIC.INTEGRAL.KRONROD.$8:
+;  727        end do
+	ACBL	#7,#1,R6,FCNUMERIC.INTEGRAL.KRONROD.$3
+	MOVL	R6,FCNUMERIC.INTEGRAL.KRONROD.I
+;  728
+;  729        part(k) = sum15 * real_value(h)
+	PUSHAG	FCNUMERIC.INTEGRAL.KRONROD.H
+	PUSHAB	FCNUMERIC.INTEGRAL.KRONROD.$T3
+	CALLS	#2,G^FCVALUES.REAL_VALUE
+	PUSHAB	FCNUMERIC.INTEGRAL.KRONROD.$T3
+	PUSHAB	FCNUMERIC.INTEGRAL.KRONROD.$N22
+	PUSHAB	FCNUMERIC.INTEGRAL.KRONROD.$T4
+	CALLS	#3,G^FCVALUES.V_MUL
+	MULL3	@FCNUMERIC.INTEGRAL.KRONROD.K(AP),#32,R0
+	MOVC3	#32,FCNUMERIC.INTEGRAL.KRONROD.$T4,@FCNUMERIC.INTEGRAL.PART+16[R0]
+;  730        f = (sum15 - sum7) * real_value(h)
+	PUSHAB	FCNUMERIC.INTEGRAL.KRONROD.SUM7
+	PUSHAB	FCNUMERIC.INTEGRAL.KRONROD.$N22
+	PUSHAB	FCNUMERIC.INTEGRAL.KRONROD.$T4
+	CALLS	#3,G^FCVALUES.V_SUB
+	PUSHAG	FCNUMERIC.INTEGRAL.KRONROD.H
+	PUSHAB	FCNUMERIC.INTEGRAL.KRONROD.$T6
+	CALLS	#2,G^FCVALUES.REAL_VALUE
+	PUSHAB	FCNUMERIC.INTEGRAL.KRONROD.$T6
+	PUSHAB	FCNUMERIC.INTEGRAL.KRONROD.$T4
+	PUSHAB	FCNUMERIC.INTEGRAL.KRONROD.$T3
+	CALLS	#3,G^FCVALUES.V_MUL
+	MOVC3	#32,FCNUMERIC.INTEGRAL.KRONROD.$T3,FCNUMERIC.INTEGRAL.KRONROD.F
+;  731        if (part(k)%err /= 0 .or. f%err /= 0) then
+	MULL3	@FCNUMERIC.INTEGRAL.KRONROD.K(AP),#8,R0
+	ADDL2	#4,R0
+	TSTL	@FCNUMERIC.INTEGRAL.PART+16[R0]
+	BNEQ	FCNUMERIC.INTEGRAL.KRONROD.$12
+	TSTL	FCNUMERIC.INTEGRAL.KRONROD.F+16
+	BEQL	FCNUMERIC.INTEGRAL.KRONROD.$11
+FCNUMERIC.INTEGRAL.KRONROD.$12:
+;  732          call fail(e_overflow, start)
+	PUSHL	#0
+	PUSHAL	@FCNUMERIC.INTEGRAL.$A5
+	PUSHAL	FCNUMERIC.INTEGRAL.KRONROD.$K7
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  733          return
+	CLRL	R0			; the function's value
+	RET
+FCNUMERIC.INTEGRAL.KRONROD.$11:
+;  734        end if
+;  735        magnitude(k) = r_mul(size15, abs(h), err)
+	MOVG	FCNUMERIC.INTEGRAL.KRONROD.H,FCNUMERIC.INTEGRAL.KRONROD.$T5
+	BGEQ	FCNUMERIC.INTEGRAL.KRONROD.$15
+	MNEGG	FCNUMERIC.INTEGRAL.KRONROD.$T5,FCNUMERIC.INTEGRAL.KRONROD.$T5
+FCNUMERIC.INTEGRAL.KRONROD.$15:
+	PUSHAL	FCNUMERIC.INTEGRAL.KRONROD.ERR
+	PUSHAG	FCNUMERIC.INTEGRAL.KRONROD.$T5
+	PUSHAG	FCNUMERIC.INTEGRAL.KRONROD.$N23
+	CALLS	#3,G^FCVALUES.R_MUL
+	MOVL	@FCNUMERIC.INTEGRAL.KRONROD.K(AP),R2
+	MOVG	R0,@FCNUMERIC.INTEGRAL.MAGNITUDE+16[R2]
+;  736        error(k) = max(c_abs(f%z), scaled(50 * eps, magnitude(k)))
+	PUSHAO	FCNUMERIC.INTEGRAL.KRONROD.F
+	CALLS	#1,G^FCVALUES.C_ABS
+	MOVG	R0,FCNUMERIC.INTEGRAL.KRONROD.$T2
+	MOVG	FCNUMERIC.INTEGRAL.KRONROD.$T2,FCNUMERIC.INTEGRAL.KRONROD.$T5
+	MOVL	@FCNUMERIC.INTEGRAL.KRONROD.K(AP),R0
+	PUSHAG	@FCNUMERIC.INTEGRAL.MAGNITUDE+16[R0]
+	PUSHAG	FCNUMERIC.INTEGRAL.KRONROD.$K8
+	CALLS	#2,G^FCNUMERIC.SCALED
+	MOVG	R0,FCNUMERIC.INTEGRAL.KRONROD.$T1
+	CMPG	FCNUMERIC.INTEGRAL.KRONROD.$T1,FCNUMERIC.INTEGRAL.KRONROD.$T5
+	BLEQ	FCNUMERIC.INTEGRAL.KRONROD.$17
+	MOVG	FCNUMERIC.INTEGRAL.KRONROD.$T1,FCNUMERIC.INTEGRAL.KRONROD.$T5
+FCNUMERIC.INTEGRAL.KRONROD.$17:
+	MOVL	@FCNUMERIC.INTEGRAL.KRONROD.K(AP),R0
+	MOVG	FCNUMERIC.INTEGRAL.KRONROD.$T5,@FCNUMERIC.INTEGRAL.ERROR+16[R0]
+;  737        ok = err == 0
+	CLRL	R0
+	TSTL	FCNUMERIC.INTEGRAL.KRONROD.ERR
+	BNEQ	FCNUMERIC.INTEGRAL.KRONROD.$19
+	MNEGL	#1,R0
+FCNUMERIC.INTEGRAL.KRONROD.$19:
+	MOVL	R0,R6
+;  738        if (.not. ok) call fail(e_overflow, start)
+	BLBS	R6,FCNUMERIC.INTEGRAL.KRONROD.$20
+	PUSHL	#0
+	PUSHAL	@FCNUMERIC.INTEGRAL.$A5
+	PUSHAL	FCNUMERIC.INTEGRAL.KRONROD.$K7
+	CALLS	#3,G^FCMESSAGES.FAIL
+FCNUMERIC.INTEGRAL.KRONROD.$20:
+;  739      end function kronrod
+	MOVL	R6,R0			; the function's value
+	RET
+
+; Storage map for FCNUMERIC.DIFF_COMMAND, a subroutine
+;   TREE    TYPE(NODE), POINTER  $LOCAL+0    FCNUMERIC.DIFF_COMMAND.TREE
+;   NAME    CHARACTER*31         $LOCAL+4    FCNUMERIC.DIFF_COMMAND.NAME
+;   A       TYPE(VALUE)          $LOCAL+48   FCNUMERIC.DIFF_COMMAND.A
+;   RESULT  TYPE(VALUE)          $LOCAL+80   FCNUMERIC.DIFF_COMMAND.RESULT
+;   START   INTEGER              $LOCAL+112  FCNUMERIC.DIFF_COMMAND.START
+;   COLUMN  INTEGER              $LOCAL+116  FCNUMERIC.DIFF_COMMAND.COLUMN
+;   DONE    LOGICAL              $LOCAL+120  FCNUMERIC.DIFF_COMMAND.DONE
+;   R6 is $T1: temporary
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+	.ALIGN	4			; the boundary of this routine's aligned records
+FCNUMERIC.DIFF_COMMAND.TREE:
+	.BLKL	1			; TREE
+FCNUMERIC.DIFF_COMMAND.NAME:
+	.BLKB	31			; NAME
+	.BLKB	13
+FCNUMERIC.DIFF_COMMAND.A:
+	.BLKL	8			; A
+FCNUMERIC.DIFF_COMMAND.RESULT:
+	.BLKL	8			; RESULT
+FCNUMERIC.DIFF_COMMAND.START:
+	.BLKL	1			; START
+FCNUMERIC.DIFF_COMMAND.COLUMN:
+	.BLKL	1			; COLUMN
+FCNUMERIC.DIFF_COMMAND.DONE:
+	.BLKL	1			; DONE
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCNUMERIC.DIFF_COMMAND.$K1:
+	.LONG	1
+FCNUMERIC.DIFF_COMMAND.$D1:
+	.WORD	3			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCNUMERIC.DIFF_COMMAND.$K2
+FCNUMERIC.DIFF_COMMAND.$D2:
+	.WORD	3			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCNUMERIC.DIFF_COMMAND.$K3
+FCNUMERIC.DIFF_COMMAND.$D3:
+	.WORD	31			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCNUMERIC.DIFF_COMMAND.NAME
+FCNUMERIC.DIFF_COMMAND.$D4:
+	.WORD	2			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCNUMERIC.DIFF_COMMAND.$K4
+FCNUMERIC.DIFF_COMMAND.$D5:
+	.WORD	2			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCNUMERIC.DIFF_COMMAND.$K5
+FCNUMERIC.DIFF_COMMAND.$K6:
+	.LONG	0
+FCNUMERIC.DIFF_COMMAND.$D6:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCNUMERIC.DIFF_COMMAND.$K7
+FCNUMERIC.DIFF_COMMAND.$K2:
+	.ASCII	/for/
+FCNUMERIC.DIFF_COMMAND.$K3:
+	.ASCII	/FOR/
+FCNUMERIC.DIFF_COMMAND.$K4:
+	.ASCII	/at/
+FCNUMERIC.DIFF_COMMAND.$K5:
+	.ASCII	/AT/
+FCNUMERIC.DIFF_COMMAND.$K7:
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  740    end function integral
+;  741
+;  742    ! ------------------------------------------------------------------
+;  743    ! DIFF.
+;  744
+;  745    subroutine diff_command()
+	.ENTRY	FCNUMERIC.DIFF_COMMAND,^M<R6>
+;  746      type(node), pointer :: tree
+;  747      character(len=name_length) :: name
+;  748      type(value) :: a, result
+;  749      integer :: start, column
+;  750      logical :: done
+;  751
+;  752      nullify (tree)
+	CLRL	FCNUMERIC.DIFF_COMMAND.TREE
+;  753      done = .false.
+	CLRL	FCNUMERIC.DIFF_COMMAND.DONE
+;  754      call advance(1)
+	PUSHAL	FCNUMERIC.DIFF_COMMAND.$K1
+	CALLS	#1,G^FCTREE.ADVANCE
+;  755      start = current_column()
+	CALLS	#0,G^FCTREE.CURRENT_COLUMN
+	MOVL	R0,FCNUMERIC.DIFF_COMMAND.START
+;  756
+;  757      read: do
+;  758        tree => parse_expression()
+	CALLS	#0,G^FCTREE.PARSE_EXPRESSION
+	MOVL	R0,R6
+	MOVL	R6,FCNUMERIC.DIFF_COMMAND.TREE
+;  759        if (failed()) exit read
+	CALLS	#0,G^FCMESSAGES.FAILED
+	MOVL	R0,R6
+	BLBC	R6,FCNUMERIC.DIFF_COMMAND.$2
+	BRW	FCNUMERIC.DIFF_COMMAND.$1
+FCNUMERIC.DIFF_COMMAND.$2:
+;  760        if (.not. read_word('for', 'FOR')) exit read
+	PUSHAQ	FCNUMERIC.DIFF_COMMAND.$D2
+	PUSHAQ	FCNUMERIC.DIFF_COMMAND.$D1
+	CALLS	#2,G^FCNUMERIC.READ_WORD
+	MOVL	R0,R6
+	BLBS	R6,FCNUMERIC.DIFF_COMMAND.$3
+	BRW	FCNUMERIC.DIFF_COMMAND.$1
+FCNUMERIC.DIFF_COMMAND.$3:
+;  761        if (.not. read_name(name)) exit read
+	PUSHAQ	FCNUMERIC.DIFF_COMMAND.$D3
+	CALLS	#1,G^FCNUMERIC.READ_NAME
+	MOVL	R0,R6
+	BLBC	R6,FCNUMERIC.DIFF_COMMAND.$1
+;  762        if (.not. read_word('at', 'AT')) exit read
+	PUSHAQ	FCNUMERIC.DIFF_COMMAND.$D5
+	PUSHAQ	FCNUMERIC.DIFF_COMMAND.$D4
+	CALLS	#2,G^FCNUMERIC.READ_WORD
+	MOVL	R0,R6
+	BLBC	R6,FCNUMERIC.DIFF_COMMAND.$1
+;  763        if (.not. read_bound(a, .false., column)) exit read
+	PUSHAL	FCNUMERIC.DIFF_COMMAND.COLUMN
+	PUSHAL	FCNUMERIC.DIFF_COMMAND.$K6
+	PUSHAB	FCNUMERIC.DIFF_COMMAND.A
+	CALLS	#3,G^FCNUMERIC.READ_BOUND
+	MOVL	R0,R6
+	BLBC	R6,FCNUMERIC.DIFF_COMMAND.$1
+;  764        if (.not. at_end_of_line()) exit read
+	CALLS	#0,G^FCNUMERIC.AT_END_OF_LINE
+	MOVL	R0,R6
+	BLBC	R6,FCNUMERIC.DIFF_COMMAND.$1
+;  765        done = derivative(tree, name, a, start, result)
+	PUSHAB	FCNUMERIC.DIFF_COMMAND.RESULT
+	PUSHAL	FCNUMERIC.DIFF_COMMAND.START
+	PUSHAB	FCNUMERIC.DIFF_COMMAND.A
+	PUSHAQ	FCNUMERIC.DIFF_COMMAND.$D3
+	PUSHAL	FCNUMERIC.DIFF_COMMAND.TREE
+	CALLS	#5,G^FCNUMERIC.DERIVATIVE
+	MOVL	R0,FCNUMERIC.DIFF_COMMAND.DONE
+;  766        exit read
+FCNUMERIC.DIFF_COMMAND.$1:
+;  767      end do read
+;  768
+;  769      call free_tree(tree)
+	PUSHAL	FCNUMERIC.DIFF_COMMAND.TREE
+	CALLS	#1,G^FCTREE.FREE_TREE
+;  770      if (done) call show_answer(result, '')
+	BLBC	FCNUMERIC.DIFF_COMMAND.DONE,FCNUMERIC.DIFF_COMMAND.$8
+	PUSHAQ	FCNUMERIC.DIFF_COMMAND.$D6
+	PUSHAB	FCNUMERIC.DIFF_COMMAND.RESULT
+	CALLS	#2,G^FCNUMERIC.SHOW_ANSWER
+FCNUMERIC.DIFF_COMMAND.$8:
+;  771    end subroutine diff_command
+	RET
+
+; Storage map for FCNUMERIC.DERIVATIVE, a LOGICAL function
+;   TREE    TYPE(NODE), POINTER        an argument  @FCNUMERIC.DERIVATIVE.$A1
+;   NAME    CHARACTER*(*), INTENT(IN)  an argument  @FCNUMERIC.DERIVATIVE.$A2
+;   X       TYPE(VALUE), INTENT(IN)    an argument  @FCNUMERIC.DERIVATIVE.$A3
+;   START   INTEGER, INTENT(IN)        an argument  @FCNUMERIC.DERIVATIVE.$A4
+;   RESULT  TYPE(VALUE), INTENT(OUT)   argument 5   @FCNUMERIC.DERIVATIVE.RESULT(AP)
+;   DONE    LOGICAL                    $LOCAL+0     FCNUMERIC.DERIVATIVE.DONE
+;   NONE    TYPE(NODE), POINTER        $LOCAL+16    FCNUMERIC.DERIVATIVE.NONE
+;   T       TYPE(VALUE) (10,10)        $LOCAL+32    FCNUMERIC.DERIVATIVE.T
+;   FACTOR  TYPE(VALUE)                $LOCAL+3232  FCNUMERIC.DERIVATIVE.FACTOR
+;   H       REAL*8                     $LOCAL+3264  FCNUMERIC.DERIVATIVE.H
+;   ERROR   REAL*8                     $LOCAL+3272  FCNUMERIC.DERIVATIVE.ERROR
+;   E1      REAL*8                     $LOCAL+3280  FCNUMERIC.DERIVATIVE.E1
+;   I       INTEGER                    $LOCAL+3288  FCNUMERIC.DERIVATIVE.I
+;   J       INTEGER                    $LOCAL+3292  FCNUMERIC.DERIVATIVE.J
+;   R6 is $T4: temporary
+;   R11 is $L2: DO (line 809)'s limit
+;   R10 is $H2: a value computed before a loop
+;   R6 is $U1: temporary
+;   R7 is $R1: an index stepped with J
+;   R9 is $R2: an index stepped with J
+;   R8 is $R3: J, during a loop
+;
+FCNUMERIC.DERIVATIVE.RESULT = 20	; RESULT is argument 5
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+	.ALIGN	4			; the boundary of this routine's aligned records
+FCNUMERIC.DERIVATIVE.DONE:
+	.BLKL	1			; DONE, the function's value
+	.BLKB	12
+FCNUMERIC.DERIVATIVE.NONE:
+	.BLKL	1			; NONE
+	.BLKB	12
+FCNUMERIC.DERIVATIVE.T:
+	.BLKL	800			; T, TYPE(VALUE) (10,10)
+FCNUMERIC.DERIVATIVE.FACTOR:
+	.BLKL	8			; FACTOR
+FCNUMERIC.DERIVATIVE.H:
+	.BLKL	2			; H
+FCNUMERIC.DERIVATIVE.ERROR:
+	.BLKL	2			; ERROR
+FCNUMERIC.DERIVATIVE.E1:
+	.BLKL	2			; E1
+FCNUMERIC.DERIVATIVE.I:
+	.BLKL	1			; I
+FCNUMERIC.DERIVATIVE.J:
+	.BLKL	1			; J
+FCNUMERIC.DERIVATIVE.$A1:
+	.BLKL	1			; TREE's longword of the argument list, set at each entry point
+FCNUMERIC.DERIVATIVE.$A2:
+	.BLKL	1			; NAME's longword of the argument list, set at each entry point
+FCNUMERIC.DERIVATIVE.$A3:
+	.BLKL	1			; X's longword of the argument list, set at each entry point
+FCNUMERIC.DERIVATIVE.$A4:
+	.BLKL	1			; START's longword of the argument list, set at each entry point
+FCNUMERIC.DERIVATIVE.$T1:
+	.BLKL	8			; characters, for one statement
+FCNUMERIC.DERIVATIVE.$T2:
+	.BLKL	2			; temporary
+FCNUMERIC.DERIVATIVE.$T3:
+	.BLKL	2			; temporary
+FCNUMERIC.DERIVATIVE.$T5:
+	.BLKL	8			; characters, for one statement
+FCNUMERIC.DERIVATIVE.$T6:
+	.BLKL	8			; characters, for one statement
+FCNUMERIC.DERIVATIVE.$T7:
+	.BLKL	8			; characters, for one statement
+FCNUMERIC.DERIVATIVE.$T8:
+	.BLKL	8			; characters, for one statement
+FCNUMERIC.DERIVATIVE.$T9:
+	.BLKL	2			; temporary
+FCNUMERIC.DERIVATIVE.$T10:
+	.BLKL	2			; temporary
+FCNUMERIC.DERIVATIVE.$H1:
+	.BLKL	1			; a value computed before a loop
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCNUMERIC.DERIVATIVE.$K1:
+	.LONG	^X00000000,^X00000000	; 0D0
+FCNUMERIC.DERIVATIVE.$K2:
+	.LONG	^X99993FD9,^X999A9999	; 0.1D0
+FCNUMERIC.DERIVATIVE.$K3:
+	.LONG	^X00004010,^X00000000	; 1D0
+FCNUMERIC.DERIVATIVE.$K4:
+	.LONG	^X00004020,^X00000000	; 2D0
+FCNUMERIC.DERIVATIVE.$K5:
+	.LONG	^X00003CD0,^X00000000	; 2.220446049250313D-16
+FCNUMERIC.DERIVATIVE.$KF1:
+	.LONG	^XFFFF7FFF,^XFFFFFFFF	; 8.988465674311579D307
+FCNUMERIC.DERIVATIVE.$KF2:
+	.LONG	^X66664016,^X66666666	; 1.4D0
+FCNUMERIC.DERIVATIVE.$KF3:
+	.LONG	^X5C28401F,^X8F5BF5C2	; 1.9599999999999997D0
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  772
+;  773    ! DERIVATIVE: RESULT is the derivative of the expression at X, by Ridders'
+;  774    ! method (C. J. F. Ridders, 1982, as "Numerical Recipes" gives it).
+;  775    !
+;  776    ! The central difference (f(x + h) - f(x - h)) / 2h is wrong by a series
+;  777    ! in even powers of h, c1 h^2 + c2 h^4 + ...; a smaller h makes it more
+;  778    ! nearly right, until rounding in f's values, divided by a smaller h,
+;  779    ! makes it worse. So instead the differences for a few h, each the last
+;  780    ! divided by 1.4, are extrapolated to h = 0 (Neville's scheme on the
+;  781    ! table T: T(1, i) is the difference for the ith h, and T(j, i) combines
+;  782    ! T(j-1, i) and T(j-1, i-1) to take away the h^(2j-2) term). Each new
+;  783    ! entry's difference from its neighbors estimates its error; the entry
+;  784    ! with the smallest is the answer, and the table stops growing once the
+;  785    ! diagonal's error is SAFE times larger than that.
+;  786    logical function derivative(tree, name, x, start, result) result(done)
+	.ENTRY	FCNUMERIC.DERIVATIVE,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVL	4(AP),FCNUMERIC.DERIVATIVE.$A1 ; TREE is argument 1
+	MOVL	8(AP),FCNUMERIC.DERIVATIVE.$A2 ; NAME is argument 2
+	MOVL	12(AP),FCNUMERIC.DERIVATIVE.$A3 ; X is argument 3
+	MOVL	16(AP),FCNUMERIC.DERIVATIVE.$A4 ; START is argument 4
+;  787      type(node), pointer :: tree
+;  788      character(len=*), intent(in) :: name
+;  789      type(value), intent(in) :: x
+;  790      integer, intent(in) :: start
+;  791      type(value), intent(out) :: result
+;  792      type(node), pointer :: none
+;  793      type(value) :: t(table_size, table_size), factor
+;  794      real(rk) :: h, error, e1
+;  795      integer :: i, j
+;  796
+;  797      nullify (none)
+	CLRL	FCNUMERIC.DERIVATIVE.NONE
+;  798      done = .false.
+;  799      result = real_value(0.0_rk)
+	PUSHAG	FCNUMERIC.DERIVATIVE.$K1
+	PUSHAB	FCNUMERIC.DERIVATIVE.$T1
+	CALLS	#2,G^FCVALUES.REAL_VALUE
+	MOVC3	#32,FCNUMERIC.DERIVATIVE.$T1,@FCNUMERIC.DERIVATIVE.RESULT(AP)
+;  800      h = scaled(0.1_rk, max(c_abs(x%z), 1.0_rk))
+	PUSHAO	@FCNUMERIC.DERIVATIVE.$A3
+	CALLS	#1,G^FCVALUES.C_ABS
+	MOVG	R0,FCNUMERIC.DERIVATIVE.$T3
+	MOVG	FCNUMERIC.DERIVATIVE.$T3,FCNUMERIC.DERIVATIVE.$T2
+	CMPG	S^#1.0,FCNUMERIC.DERIVATIVE.$T2
+	BLEQ	FCNUMERIC.DERIVATIVE.$1
+	MOVG	S^#1.0,FCNUMERIC.DERIVATIVE.$T2 ; 1D0
+FCNUMERIC.DERIVATIVE.$1:
+	PUSHAG	FCNUMERIC.DERIVATIVE.$T2
+	PUSHAG	FCNUMERIC.DERIVATIVE.$K2
+	CALLS	#2,G^FCNUMERIC.SCALED
+	MOVG	R0,FCNUMERIC.DERIVATIVE.H
+;  801      if (.not. difference(h, t(1, 1))) return
+	PUSHAB	FCNUMERIC.DERIVATIVE.T
+	PUSHAG	FCNUMERIC.DERIVATIVE.H
+	CALLS	#2,FCNUMERIC.DERIVATIVE.DIFFERENCE
+	MOVL	R0,R6
+	BLBS	R6,FCNUMERIC.DERIVATIVE.$3
+	CLRL	R0			; the function's value
+	RET
+FCNUMERIC.DERIVATIVE.$3:
+;  802      error = huge(1.0_rk)
+	MOVG	FCNUMERIC.DERIVATIVE.$KF1,FCNUMERIC.DERIVATIVE.ERROR ; 8.988465674311579D307
+;  803      result = t(1, 1)
+	MOVC3	#32,FCNUMERIC.DERIVATIVE.T,@FCNUMERIC.DERIVATIVE.RESULT(AP)
+;  804
+;  805      table: do i = 2, table_size
+	MOVL	#2,FCNUMERIC.DERIVATIVE.I
+	MOVL	FCNUMERIC.DERIVATIVE.J,R8
+FCNUMERIC.DERIVATIVE.$5:		; DO TABLE's body
+;  806        h = h / ridders_step
+	DIVG2	FCNUMERIC.DERIVATIVE.$KF2,FCNUMERIC.DERIVATIVE.H
+;  807        if (.not. difference(h, t(1, i))) return
+	MULL3	FCNUMERIC.DERIVATIVE.I,#10,R0
+	MULL2	#32,R0
+	PUSHAB	FCNUMERIC.DERIVATIVE.T-320[R0]
+	PUSHAG	FCNUMERIC.DERIVATIVE.H
+	CALLS	#2,FCNUMERIC.DERIVATIVE.DIFFERENCE
+	MOVL	R0,R6
+	BLBS	R6,FCNUMERIC.DERIVATIVE.$6
+	MOVL	R8,FCNUMERIC.DERIVATIVE.J
+	CLRL	R0			; the function's value
+	RET
+FCNUMERIC.DERIVATIVE.$6:
+;  808        factor = real_value(ridders_step ** 2)
+	MOVG	FCNUMERIC.DERIVATIVE.$KF3,FCNUMERIC.DERIVATIVE.$T3 ; 1.9599999999999997D0
+	PUSHAG	FCNUMERIC.DERIVATIVE.$T3
+	PUSHAB	FCNUMERIC.DERIVATIVE.$T1
+	CALLS	#2,G^FCVALUES.REAL_VALUE
+	MOVC3	#32,FCNUMERIC.DERIVATIVE.$T1,FCNUMERIC.DERIVATIVE.FACTOR
+;  809        do j = 2, i
+	MOVL	FCNUMERIC.DERIVATIVE.I,R11 ; DO (line 809)'s limit
+	MOVL	#2,R8
+	CMPL	#2,R11
+	BLEQ	FCNUMERIC.DERIVATIVE.$9
+	BRW	FCNUMERIC.DERIVATIVE.$8
+FCNUMERIC.DERIVATIVE.$9:
+	MULL3	FCNUMERIC.DERIVATIVE.I,#10,R10 ; from line 810
+	MULL3	FCNUMERIC.DERIVATIVE.I,#80,FCNUMERIC.DERIVATIVE.$H1 ; from line 812
+	ADDL3	R8,R10,R0
+	MULL3	R0,#32,R7
+	MULL3	R8,#8,R0
+	ADDL3	R0,FCNUMERIC.DERIVATIVE.$H1,R9
+FCNUMERIC.DERIVATIVE.$10:		; DO (line 809)'s body
+;  810          t(j, i) = (t(j - 1, i) * factor - t(j - 1, i - 1)) / (factor - real_value(1.0_rk))
+	MOVL	R7,R6
+	PUSHAB	FCNUMERIC.DERIVATIVE.FACTOR
+	PUSHAB	FCNUMERIC.DERIVATIVE.T-384[R6]
+	PUSHAB	FCNUMERIC.DERIVATIVE.$T6
+	CALLS	#3,G^FCVALUES.V_MUL
+	PUSHAB	FCNUMERIC.DERIVATIVE.T-704[R6]
+	PUSHAB	FCNUMERIC.DERIVATIVE.$T6
+	PUSHAB	FCNUMERIC.DERIVATIVE.$T5
+	CALLS	#3,G^FCVALUES.V_SUB
+	PUSHAG	FCNUMERIC.DERIVATIVE.$K3
+	PUSHAB	FCNUMERIC.DERIVATIVE.$T8
+	CALLS	#2,G^FCVALUES.REAL_VALUE
+	PUSHAB	FCNUMERIC.DERIVATIVE.$T8
+	PUSHAB	FCNUMERIC.DERIVATIVE.FACTOR
+	PUSHAB	FCNUMERIC.DERIVATIVE.$T7
+	CALLS	#3,G^FCVALUES.V_SUB
+	PUSHAB	FCNUMERIC.DERIVATIVE.$T7
+	PUSHAB	FCNUMERIC.DERIVATIVE.$T5
+	PUSHAB	FCNUMERIC.DERIVATIVE.$T1
+	CALLS	#3,G^FCVALUES.V_DIV
+	MOVC3	#32,FCNUMERIC.DERIVATIVE.$T1,FCNUMERIC.DERIVATIVE.T-352[R6]
+;  811          factor = factor * real_value(ridders_step ** 2)
+	MOVG	FCNUMERIC.DERIVATIVE.$KF3,FCNUMERIC.DERIVATIVE.$T3 ; 1.9599999999999997D0
+	PUSHAG	FCNUMERIC.DERIVATIVE.$T3
+	PUSHAB	FCNUMERIC.DERIVATIVE.$T7
+	CALLS	#2,G^FCVALUES.REAL_VALUE
+	PUSHAB	FCNUMERIC.DERIVATIVE.$T7
+	PUSHAB	FCNUMERIC.DERIVATIVE.FACTOR
+	PUSHAB	FCNUMERIC.DERIVATIVE.$T8
+	CALLS	#3,G^FCVALUES.V_MUL
+	MOVC3	#32,FCNUMERIC.DERIVATIVE.$T8,FCNUMERIC.DERIVATIVE.FACTOR
+;  812          if (t(j, i)%err /= 0) then
+	TSTL	FCNUMERIC.DERIVATIVE.T-336[R9]
+	BEQL	FCNUMERIC.DERIVATIVE.$11
+	MOVL	R8,FCNUMERIC.DERIVATIVE.J
+;  813            call fail(t(j, i)%err, start)
+	PUSHL	#0
+	PUSHAL	@FCNUMERIC.DERIVATIVE.$A4
+	MULL3	FCNUMERIC.DERIVATIVE.J,#8,R0
+	MULL3	FCNUMERIC.DERIVATIVE.I,#80,R1
+	ADDL2	R1,R0
+	PUSHAL	FCNUMERIC.DERIVATIVE.T-336[R0]
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  814            return
+	CLRL	R0			; the function's value
+	RET
+FCNUMERIC.DERIVATIVE.$11:
+;  815          end if
+;  816          e1 = max(apart(t(j, i), t(j - 1, i)), apart(t(j, i), t(j - 1, i - 1)))
+	MOVL	R7,R6
+	PUSHAB	FCNUMERIC.DERIVATIVE.T-384[R6]
+	PUSHAB	FCNUMERIC.DERIVATIVE.T-352[R6]
+	CALLS	#2,FCNUMERIC.DERIVATIVE.APART
+	MOVG	R0,FCNUMERIC.DERIVATIVE.$T2
+	MOVG	FCNUMERIC.DERIVATIVE.$T2,FCNUMERIC.DERIVATIVE.$T3
+	PUSHAB	FCNUMERIC.DERIVATIVE.T-704[R6]
+	PUSHAB	FCNUMERIC.DERIVATIVE.T-352[R6]
+	CALLS	#2,FCNUMERIC.DERIVATIVE.APART
+	MOVG	R0,FCNUMERIC.DERIVATIVE.$T9
+	CMPG	FCNUMERIC.DERIVATIVE.$T9,FCNUMERIC.DERIVATIVE.$T3
+	BLEQ	FCNUMERIC.DERIVATIVE.$13
+	MOVG	FCNUMERIC.DERIVATIVE.$T9,FCNUMERIC.DERIVATIVE.$T3
+FCNUMERIC.DERIVATIVE.$13:
+	MOVG	FCNUMERIC.DERIVATIVE.$T3,FCNUMERIC.DERIVATIVE.E1
+;  817          if (e1 <= error) then
+	CMPG	FCNUMERIC.DERIVATIVE.E1,FCNUMERIC.DERIVATIVE.ERROR
+	BGTR	FCNUMERIC.DERIVATIVE.$15
+;  818            error = e1
+	MOVG	FCNUMERIC.DERIVATIVE.E1,FCNUMERIC.DERIVATIVE.ERROR
+;  819            result = t(j, i)
+	MOVC3	#32,FCNUMERIC.DERIVATIVE.T-352[R7],@FCNUMERIC.DERIVATIVE.RESULT(AP)
+;  820          end if
+FCNUMERIC.DERIVATIVE.$15:
+;  821        end do
+	ADDL2	#32,R7
+	ADDL2	#8,R9
+	ACBL	R11,#1,R8,FCNUMERIC.DERIVATIVE.$10
+FCNUMERIC.DERIVATIVE.$8:
+;  822        if (apart(t(i, i), t(i - 1, i - 1)) >= scaled(safe, error)) exit table
+	MULL3	FCNUMERIC.DERIVATIVE.I,#10,R0
+	ADDL2	FCNUMERIC.DERIVATIVE.I,R0
+	MULL3	R0,#32,R6
+	PUSHAB	FCNUMERIC.DERIVATIVE.T-704[R6]
+	PUSHAB	FCNUMERIC.DERIVATIVE.T-352[R6]
+	CALLS	#2,FCNUMERIC.DERIVATIVE.APART
+	MOVG	R0,FCNUMERIC.DERIVATIVE.$T9
+	PUSHAG	FCNUMERIC.DERIVATIVE.ERROR
+	PUSHAG	FCNUMERIC.DERIVATIVE.$K4
+	CALLS	#2,G^FCNUMERIC.SCALED
+	MOVG	R0,FCNUMERIC.DERIVATIVE.$T2
+	CMPG	FCNUMERIC.DERIVATIVE.$T9,FCNUMERIC.DERIVATIVE.$T2
+	BLSS	FCNUMERIC.DERIVATIVE.$19
+	BRW	FCNUMERIC.DERIVATIVE.$18
+FCNUMERIC.DERIVATIVE.$19:
+;  823      end do table
+	ACBL	#10,#1,FCNUMERIC.DERIVATIVE.I,FCNUMERIC.DERIVATIVE.$5
+	MOVL	R8,FCNUMERIC.DERIVATIVE.J
+FCNUMERIC.DERIVATIVE.$21:
+;  824
+;  825      result = without_noise(result, error)
+	PUSHAG	FCNUMERIC.DERIVATIVE.ERROR
+	PUSHAB	@FCNUMERIC.DERIVATIVE.RESULT(AP)
+	PUSHAB	FCNUMERIC.DERIVATIVE.$T7
+	CALLS	#3,G^FCNUMERIC.WITHOUT_NOISE
+	MOVC3	#32,FCNUMERIC.DERIVATIVE.$T7,@FCNUMERIC.DERIVATIVE.RESULT(AP)
+;  826      done = .true.
+;  827      if (error > scaled(sqrt(eps), max(c_abs(result%z), 1.0_rk))) call warn_inaccurate(error, start)
+	PUSHAG	FCNUMERIC.DERIVATIVE.$K5
+	CALLS	#1,G^MTH$GSQRT
+	MOVG	R0,FCNUMERIC.DERIVATIVE.$T9
+	PUSHAO	@FCNUMERIC.DERIVATIVE.RESULT(AP)
+	CALLS	#1,G^FCVALUES.C_ABS
+	MOVG	R0,FCNUMERIC.DERIVATIVE.$T10
+	MOVG	FCNUMERIC.DERIVATIVE.$T10,FCNUMERIC.DERIVATIVE.$T3
+	CMPG	S^#1.0,FCNUMERIC.DERIVATIVE.$T3
+	BLEQ	FCNUMERIC.DERIVATIVE.$22
+	MOVG	S^#1.0,FCNUMERIC.DERIVATIVE.$T3 ; 1D0
+FCNUMERIC.DERIVATIVE.$22:
+	PUSHAG	FCNUMERIC.DERIVATIVE.$T3
+	PUSHAG	FCNUMERIC.DERIVATIVE.$T9
+	CALLS	#2,G^FCNUMERIC.SCALED
+	MOVG	R0,FCNUMERIC.DERIVATIVE.$T2
+	CMPG	FCNUMERIC.DERIVATIVE.ERROR,FCNUMERIC.DERIVATIVE.$T2
+	BLEQ	FCNUMERIC.DERIVATIVE.$24
+	PUSHAL	@FCNUMERIC.DERIVATIVE.$A4
+	PUSHAG	FCNUMERIC.DERIVATIVE.ERROR
+	CALLS	#2,G^FCNUMERIC.WARN_INACCURATE
+FCNUMERIC.DERIVATIVE.$24:
+;  828
+;  829    contains
+	MOVL	#-1,R0			; the function's value
+	RET
+FCNUMERIC.DERIVATIVE.$18:		; leaving the loop
+	MOVL	R8,FCNUMERIC.DERIVATIVE.J
+	BRW	FCNUMERIC.DERIVATIVE.$21
+
+; Storage map for FCNUMERIC.DERIVATIVE.DIFFERENCE, a LOGICAL function
+;   H     REAL*8, INTENT(IN)        argument 1  @FCNUMERIC.DERIVATIVE.DIFFE.$N24(AP)
+;   D     TYPE(VALUE), INTENT(OUT)  argument 2  @FCNUMERIC.DERIVATIVE.DIFFE.$N37(AP)
+;   OK    LOGICAL                   $LOCAL+0    FCNUMERIC.DERIVATIVE.DIFFE.$N40
+;   UP    TYPE(VALUE)               $LOCAL+16   FCNUMERIC.DERIVATIVE.DIFFE.$N28
+;   DOWN  TYPE(VALUE)               $LOCAL+48   FCNUMERIC.DERIVATIVE.DIFFE.$N31
+;   STEP  TYPE(VALUE)               $LOCAL+80   FCNUMERIC.DERIVATIVE.DIFFE.$N26
+;   FCNUMERIC.DERIVATIVE.DIFFE.$N24 is FCNUMERIC.DERIVATIVE.DIFFERENCE.H
+;   FCNUMERIC.DERIVATIVE.DIFFE.$N25 is FCNUMERIC.DERIVATIVE.DIFFERENCE.$T1
+;   FCNUMERIC.DERIVATIVE.DIFFE.$N26 is FCNUMERIC.DERIVATIVE.DIFFERENCE.STEP
+;   FCNUMERIC.DERIVATIVE.DIFFE.$N27 is FCNUMERIC.DERIVATIVE.DIFFERENCE.$T2
+;   FCNUMERIC.DERIVATIVE.DIFFE.$N28 is FCNUMERIC.DERIVATIVE.DIFFERENCE.UP
+;   FCNUMERIC.DERIVATIVE.DIFFE.$N29 is FCNUMERIC.DERIVATIVE.DIFFERENCE.$1
+;   FCNUMERIC.DERIVATIVE.DIFFE.$N30 is FCNUMERIC.DERIVATIVE.DIFFERENCE.$2
+;   FCNUMERIC.DERIVATIVE.DIFFE.$N31 is FCNUMERIC.DERIVATIVE.DIFFERENCE.DOWN
+;   FCNUMERIC.DERIVATIVE.DIFFE.$N32 is FCNUMERIC.DERIVATIVE.DIFFERENCE.$3
+;   FCNUMERIC.DERIVATIVE.DIFFE.$N33 is FCNUMERIC.DERIVATIVE.DIFFERENCE.$4
+;   FCNUMERIC.DERIVATIVE.DIFFE.$N34 is FCNUMERIC.DERIVATIVE.DIFFERENCE.$K1
+;   FCNUMERIC.DERIVATIVE.DIFFE.$N35 is FCNUMERIC.DERIVATIVE.DIFFERENCE.$T4
+;   FCNUMERIC.DERIVATIVE.DIFFE.$N36 is FCNUMERIC.DERIVATIVE.DIFFERENCE.$T3
+;   FCNUMERIC.DERIVATIVE.DIFFE.$N37 is FCNUMERIC.DERIVATIVE.DIFFERENCE.D
+;   FCNUMERIC.DERIVATIVE.DIFFE.$N38 is FCNUMERIC.DERIVATIVE.DIFFERENCE.$5
+;   FCNUMERIC.DERIVATIVE.DIFFE.$N39 is FCNUMERIC.DERIVATIVE.DIFFERENCE.$6
+;   FCNUMERIC.DERIVATIVE.DIFFE.$N40 is FCNUMERIC.DERIVATIVE.DIFFERENCE.OK
+;
+FCNUMERIC.DERIVATIVE.DIFFE.$N24 = 4	; H is argument 1
+FCNUMERIC.DERIVATIVE.DIFFE.$N37 = 8	; D is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+	.ALIGN	4			; the boundary of this routine's aligned records
+FCNUMERIC.DERIVATIVE.DIFFE.$N40:
+	.BLKL	1			; OK, the function's value
+	.BLKB	12
+FCNUMERIC.DERIVATIVE.DIFFE.$N28:
+	.BLKL	8			; UP
+FCNUMERIC.DERIVATIVE.DIFFE.$N31:
+	.BLKL	8			; DOWN
+FCNUMERIC.DERIVATIVE.DIFFE.$N26:
+	.BLKL	8			; STEP
+FCNUMERIC.DERIVATIVE.DIFFE.$N25:
+	.BLKL	8			; characters, for one statement
+FCNUMERIC.DERIVATIVE.DIFFE.$N27:
+	.BLKL	8			; characters, for one statement
+FCNUMERIC.DERIVATIVE.DIFFE.$N36:
+	.BLKL	8			; characters, for one statement
+FCNUMERIC.DERIVATIVE.DIFFE.$N35:
+	.BLKL	8			; characters, for one statement
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCNUMERIC.DERIVATIVE.DIFFE.$N34:
+	.LONG	^X00004020,^X00000000	; 2D0
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  830
+;  831      ! DIFFERENCE: D is the central difference with the step H; false if
+;  832      ! evaluating the expression failed.
+;  833      logical function difference(h, d) result(ok)
+FCNUMERIC.DERIVATIVE.DIFFERENCE:
+	.WORD	^M<R2,R3,R4,R5>		; internal procedure DIFFERENCE of FCNUMERIC.DERIVATIVE
+;  834        real(rk), intent(in) :: h
+;  835        type(value), intent(out) :: d
+;  836        type(value) :: up, down, step
+;  837
+;  838        ok = .false.
+;  839        step = real_value(h)
+	PUSHAG	@FCNUMERIC.DERIVATIVE.DIFFE.$N24(AP)
+	PUSHAB	FCNUMERIC.DERIVATIVE.DIFFE.$N25
+	CALLS	#2,G^FCVALUES.REAL_VALUE
+	MOVC3	#32,FCNUMERIC.DERIVATIVE.DIFFE.$N25,FCNUMERIC.DERIVATIVE.DIFFE.$N26
+;  840        up = value_at(tree, none, name, x + step, start)
+	PUSHAB	FCNUMERIC.DERIVATIVE.DIFFE.$N26
+	PUSHAB	@FCNUMERIC.DERIVATIVE.$A3
+	PUSHAB	FCNUMERIC.DERIVATIVE.DIFFE.$N27
+	CALLS	#3,G^FCVALUES.V_ADD
+	PUSHAL	@FCNUMERIC.DERIVATIVE.$A4
+	PUSHAB	FCNUMERIC.DERIVATIVE.DIFFE.$N27
+	PUSHL	FCNUMERIC.DERIVATIVE.$A2
+	PUSHAL	FCNUMERIC.DERIVATIVE.NONE
+	PUSHAL	@FCNUMERIC.DERIVATIVE.$A1
+	PUSHAB	FCNUMERIC.DERIVATIVE.DIFFE.$N25
+	CALLS	#6,G^FCNUMERIC.VALUE_AT
+	MOVC3	#32,FCNUMERIC.DERIVATIVE.DIFFE.$N25,FCNUMERIC.DERIVATIVE.DIFFE.$N28
+;  841        if (up%err /= 0) return
+	TSTL	FCNUMERIC.DERIVATIVE.DIFFE.$N28+16
+	BEQL	FCNUMERIC.DERIVATIVE.DIFFE.$N29
+	CLRL	R0			; the function's value
+	RET
+FCNUMERIC.DERIVATIVE.DIFFE.$N29:
+;  842        down = value_at(tree, none, name, x - step, start)
+	PUSHAB	FCNUMERIC.DERIVATIVE.DIFFE.$N26
+	PUSHAB	@FCNUMERIC.DERIVATIVE.$A3
+	PUSHAB	FCNUMERIC.DERIVATIVE.DIFFE.$N25
+	CALLS	#3,G^FCVALUES.V_SUB
+	PUSHAL	@FCNUMERIC.DERIVATIVE.$A4
+	PUSHAB	FCNUMERIC.DERIVATIVE.DIFFE.$N25
+	PUSHL	FCNUMERIC.DERIVATIVE.$A2
+	PUSHAL	FCNUMERIC.DERIVATIVE.NONE
+	PUSHAL	@FCNUMERIC.DERIVATIVE.$A1
+	PUSHAB	FCNUMERIC.DERIVATIVE.DIFFE.$N27
+	CALLS	#6,G^FCNUMERIC.VALUE_AT
+	MOVC3	#32,FCNUMERIC.DERIVATIVE.DIFFE.$N27,FCNUMERIC.DERIVATIVE.DIFFE.$N31
+;  843        if (down%err /= 0) return
+	TSTL	FCNUMERIC.DERIVATIVE.DIFFE.$N31+16
+	BEQL	FCNUMERIC.DERIVATIVE.DIFFE.$N32
+	CLRL	R0			; the function's value
+	RET
+FCNUMERIC.DERIVATIVE.DIFFE.$N32:
+;  844        d = (up - down) / (real_value(2.0_rk) * step)
+	PUSHAB	FCNUMERIC.DERIVATIVE.DIFFE.$N31
+	PUSHAB	FCNUMERIC.DERIVATIVE.DIFFE.$N28
+	PUSHAB	FCNUMERIC.DERIVATIVE.DIFFE.$N27
+	CALLS	#3,G^FCVALUES.V_SUB
+	PUSHAG	FCNUMERIC.DERIVATIVE.DIFFE.$N34
+	PUSHAB	FCNUMERIC.DERIVATIVE.DIFFE.$N35
+	CALLS	#2,G^FCVALUES.REAL_VALUE
+	PUSHAB	FCNUMERIC.DERIVATIVE.DIFFE.$N26
+	PUSHAB	FCNUMERIC.DERIVATIVE.DIFFE.$N35
+	PUSHAB	FCNUMERIC.DERIVATIVE.DIFFE.$N36
+	CALLS	#3,G^FCVALUES.V_MUL
+	PUSHAB	FCNUMERIC.DERIVATIVE.DIFFE.$N36
+	PUSHAB	FCNUMERIC.DERIVATIVE.DIFFE.$N27
+	PUSHAB	FCNUMERIC.DERIVATIVE.DIFFE.$N25
+	CALLS	#3,G^FCVALUES.V_DIV
+	MOVC3	#32,FCNUMERIC.DERIVATIVE.DIFFE.$N25,@FCNUMERIC.DERIVATIVE.DIFFE.$N37(AP)
+;  845        if (d%err /= 0) then
+	MOVL	FCNUMERIC.DERIVATIVE.DIFFE.$N37(AP),R0
+	TSTL	16(R0)
+	BEQL	FCNUMERIC.DERIVATIVE.DIFFE.$N38
+;  846          call fail(d%err, start)
+	PUSHL	#0
+	PUSHAL	@FCNUMERIC.DERIVATIVE.$A4
+	MOVL	FCNUMERIC.DERIVATIVE.DIFFE.$N37(AP),R0
+	PUSHAL	16(R0)
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  847          return
+	CLRL	R0			; the function's value
+	RET
+FCNUMERIC.DERIVATIVE.DIFFE.$N38:
+;  848        end if
+;  849        ok = .true.
+;  850      end function difference
+	MOVL	#-1,R0			; the function's value
+	RET
+
+; Storage map for FCNUMERIC.DERIVATIVE.APART, a REAL*8 function
+;   U      TYPE(VALUE), INTENT(IN)  argument 1  @FCNUMERIC.DERIVATIVE.APART.U(AP)
+;   V      TYPE(VALUE), INTENT(IN)  argument 2  @FCNUMERIC.DERIVATIVE.APART.V(AP)
+;   APART  REAL*8                   $LOCAL+0    FCNUMERIC.DERIVATIVE.APART.$N41
+;   W      TYPE(VALUE)              $LOCAL+16   FCNUMERIC.DERIVATIVE.APART.W
+;   FCNUMERIC.DERIVATIVE.APART.$N41 is FCNUMERIC.DERIVATIVE.APART.APART
+;
+FCNUMERIC.DERIVATIVE.APART.U = 4	; U is argument 1
+FCNUMERIC.DERIVATIVE.APART.V = 8	; V is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+	.ALIGN	4			; the boundary of this routine's aligned records
+FCNUMERIC.DERIVATIVE.APART.$N41:
+	.BLKL	2			; APART, the function's value
+	.BLKB	8
+FCNUMERIC.DERIVATIVE.APART.W:
+	.BLKL	8			; W
+FCNUMERIC.DERIVATIVE.APART.$T1:
+	.BLKL	8			; characters, for one statement
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  851
+;  852      ! APART is |U - V|. (A component of an expression's value can't be
+;  853      ! selected, (U - V)%Z: the difference goes in a variable first.)
+;  854      real(rk) function apart(u, v)
+FCNUMERIC.DERIVATIVE.APART:
+	.WORD	^M<R2,R3,R4,R5>		; internal procedure APART of FCNUMERIC.DERIVATIVE
+;  855        type(value), intent(in) :: u, v
+;  856        type(value) :: w
+;  857
+;  858        w = u - v
+	PUSHAB	@FCNUMERIC.DERIVATIVE.APART.V(AP)
+	PUSHAB	@FCNUMERIC.DERIVATIVE.APART.U(AP)
+	PUSHAB	FCNUMERIC.DERIVATIVE.APART.$T1
+	CALLS	#3,G^FCVALUES.V_SUB
+	MOVC3	#32,FCNUMERIC.DERIVATIVE.APART.$T1,FCNUMERIC.DERIVATIVE.APART.W
+;  859        apart = c_abs(w%z)
+	PUSHAO	FCNUMERIC.DERIVATIVE.APART.W
+	CALLS	#1,G^FCVALUES.C_ABS
+	MOVG	R0,FCNUMERIC.DERIVATIVE.APART.$N41
+;  860      end function apart
+	MOVG	FCNUMERIC.DERIVATIVE.APART.$N41,R0 ; the function's value
+	RET
+
+; Storage map for FCNUMERIC.ROOTS_COMMAND, a subroutine
+;   TREE    TYPE(NODE), POINTER      $LOCAL+0                  FCNUMERIC.ROOTS_COMMAND.TREE
+;   LIST    TYPE(QUANTITY) (1)       $LOCAL+16                 FCNUMERIC.ROOTS_COMMAND.LIST
+;   Q       TYPE(QUANTITY)           $LOCAL+112                FCNUMERIC.ROOTS_COMMAND.Q
+;   C       COMPLEX*16, POINTER (:)  descriptor at $LOCAL+208  FCNUMERIC.ROOTS_COMMAND.C
+;   MORE    COMPLEX*16, POINTER (:)  descriptor at $LOCAL+240  FCNUMERIC.ROOTS_COMMAND.MORE
+;   V       TYPE(VALUE)              $LOCAL+272                FCNUMERIC.ROOTS_COMMAND.V
+;   FIRST   INTEGER                  $LOCAL+304                FCNUMERIC.ROOTS_COMMAND.FIRST
+;   COLUMN  INTEGER                  $LOCAL+308                FCNUMERIC.ROOTS_COMMAND.COLUMN
+;   N       INTEGER                  $LOCAL+312                FCNUMERIC.ROOTS_COMMAND.N
+;   K       INTEGER                  $LOCAL+316                FCNUMERIC.ROOTS_COMMAND.K
+;   R8 is $T1: temporary
+;   R6 is $T3: temporary
+;   R6 is $I1: an array statement's loop index
+;   R7 is $I2: an array statement's loop index
+;   R10 is $T5: temporary
+;   R8 is $L1: array (line 901), dimension 1's limit
+;   R6 is $I3: an array statement's loop index
+;   R11 is $T7: temporary
+;   R10 is $T8: temporary
+;   R8 is $L2: array (line 901), dimension 1's limit
+;   R6 is $C3: DO (line 902)'s count
+;   R9 is $I6: an array statement's loop index
+;   R7 is $T11: temporary
+;   R6 is $T12: temporary
+;   R7 is $I7: an array statement's loop index
+;   R9 is $L7: array (line 917), dimension 1's limit
+;   R6 is $T14: temporary
+;   R7 is $T15: temporary
+;   R6 is $I9: an array statement's loop index
+;   R10 is $I10: an array statement's loop index
+;   R7 is $L9: array (line 917), dimension 1's limit
+;   R11 is $H1: a value computed before a loop
+;   R8 is $H2: a value computed before a loop
+;   R9 is $H3: a value computed before a loop
+;   R6 is $R4: an index stepped with $I2
+;   R7 is $R5: an index stepped with $I3
+;   R7 is $R6: an index stepped with $I6
+;   R11 is $R7: an index stepped with $I10
+;   R9 is $R8: N, during a loop
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+	.ALIGN	4			; the boundary of this routine's aligned records
+FCNUMERIC.ROOTS_COMMAND.TREE:
+	.BLKL	1			; TREE
+	.BLKB	12
+FCNUMERIC.ROOTS_COMMAND.LIST:
+	.BLKL	24			; LIST, TYPE(QUANTITY) (1)
+FCNUMERIC.ROOTS_COMMAND.Q:
+	.BLKL	24			; Q
+FCNUMERIC.ROOTS_COMMAND.C:
+	.WORD	16			; length
+	.BYTE	DSC$K_DTYPE_GC,DSC$K_CLASS_NCA
+	.LONG	0			; C: disassociated
+	.BYTE	0,0,0,1			; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; strides, in bytes
+	.LONG	0,0			; bounds
+FCNUMERIC.ROOTS_COMMAND.MORE:
+	.WORD	16			; length
+	.BYTE	DSC$K_DTYPE_GC,DSC$K_CLASS_NCA
+	.LONG	0			; MORE: disassociated
+	.BYTE	0,0,0,1			; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; strides, in bytes
+	.LONG	0,0			; bounds
+FCNUMERIC.ROOTS_COMMAND.V:
+	.BLKL	8			; V
+FCNUMERIC.ROOTS_COMMAND.FIRST:
+	.BLKL	1			; FIRST
+FCNUMERIC.ROOTS_COMMAND.COLUMN:
+	.BLKL	1			; COLUMN
+FCNUMERIC.ROOTS_COMMAND.N:
+	.BLKL	1			; N
+FCNUMERIC.ROOTS_COMMAND.K:
+	.BLKL	1			; K
+	.BLKB	4
+FCNUMERIC.ROOTS_COMMAND.$T2:
+	.BLKL	24			; characters, for one statement
+	.BLKB	8
+FCNUMERIC.ROOTS_COMMAND.$R1:
+	.WORD	16			; length
+	.BYTE	DSC$K_DTYPE_GC,DSC$K_CLASS_A
+	.LONG	0			; $W: not allocated
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; multipliers
+	.LONG	1,0			; bounds
+FCNUMERIC.ROOTS_COMMAND.$T4:
+	.BLKL	1			; temporary
+	.BLKB	8
+FCNUMERIC.ROOTS_COMMAND.$T6:
+	.BLKL	1			; temporary
+	.BLKB	24
+FCNUMERIC.ROOTS_COMMAND.$T9:
+	.BLKL	8			; characters, for one statement
+FCNUMERIC.ROOTS_COMMAND.$W1:
+	.BLKL	2			; an array temporary of 8 bytes, for one statement
+FCNUMERIC.ROOTS_COMMAND.$W2:
+	.BLKL	2			; an array temporary of 8 bytes, for one statement
+FCNUMERIC.ROOTS_COMMAND.$I4:
+	.BLKL	1			; an array statement's loop index
+FCNUMERIC.ROOTS_COMMAND.$C4:
+	.BLKL	1			; array (line 917), dimension 1's count
+FCNUMERIC.ROOTS_COMMAND.$R2:
+	.WORD	16			; length
+	.BYTE	DSC$K_DTYPE_GC,DSC$K_CLASS_A
+	.LONG	0			; $W: not allocated
+	.BYTE	0,0,^XE0,2		; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0,0			; multipliers
+	.LONG	1,0,1,0			; bounds
+FCNUMERIC.ROOTS_COMMAND.$I5:
+	.BLKL	1			; an array statement's loop index
+	.BLKB	4
+FCNUMERIC.ROOTS_COMMAND.$T10:
+	.BLKL	1			; temporary
+	.BLKB	4
+FCNUMERIC.ROOTS_COMMAND.$L5:
+	.BLKL	1			; array (line 917), dimension 1's limit
+	.BLKB	4
+FCNUMERIC.ROOTS_COMMAND.$T13:
+	.BLKL	1			; temporary
+	.BLKB	4
+FCNUMERIC.ROOTS_COMMAND.$I8:
+	.BLKL	1			; an array statement's loop index
+FCNUMERIC.ROOTS_COMMAND.$L6:
+	.BLKL	1			; array (line 917), dimension 2's limit
+	.BLKB	12
+FCNUMERIC.ROOTS_COMMAND.$R3:
+	.WORD	16			; length
+	.BYTE	DSC$K_DTYPE_GC,DSC$K_CLASS_A
+	.LONG	0			; $W: not allocated
+	.BYTE	0,0,^XE0,2		; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0,0			; multipliers
+	.LONG	1,0,1,0			; bounds
+	.BLKB	8
+FCNUMERIC.ROOTS_COMMAND.$T16:
+	.BLKL	1			; temporary
+FCNUMERIC.ROOTS_COMMAND.$T17:
+	.BLKL	1			; temporary
+FCNUMERIC.ROOTS_COMMAND.$L8:
+	.BLKL	1			; array (line 917), dimension 2's limit
+	.BLKB	4
+FCNUMERIC.ROOTS_COMMAND.$D2:
+	.WORD	16			; length
+	.BYTE	DSC$K_DTYPE_GC,DSC$K_CLASS_NCA
+	.LONG	0			; set when the descriptor is used
+	.BYTE	0,0,0,2			; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0,0			; strides, in bytes
+	.LONG	0,0,0,0			; bounds
+FCNUMERIC.ROOTS_COMMAND.$D4:
+	.WORD	96			; length
+	.BYTE	DSC$K_DTYPE_Z,DSC$K_CLASS_NCA
+	.LONG	0			; set when the descriptor is used
+	.BYTE	0,0,0,1			; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; strides, in bytes
+	.LONG	0,0			; bounds
+	.BLKB	12
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCNUMERIC.ROOTS_COMMAND.$K1:
+	.LONG	1
+FCNUMERIC.ROOTS_COMMAND.$K2:
+	.LONG	36
+FCNUMERIC.ROOTS_COMMAND.$D1:
+	.WORD	1			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCNUMERIC.ROOTS_COMMAND.$K3
+FCNUMERIC.ROOTS_COMMAND.$D3:
+	.WORD	5			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCNUMERIC.ROOTS_COMMAND.$K4
+FCNUMERIC.ROOTS_COMMAND.$D5:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCNUMERIC.ROOTS_COMMAND.$K5
+FCNUMERIC.ROOTS_COMMAND.$D6:
+	.WORD	3			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCNUMERIC.ROOTS_COMMAND.$K6
+FCNUMERIC.ROOTS_COMMAND.$K3:
+	.ASCII	/,/
+FCNUMERIC.ROOTS_COMMAND.$K4:
+	.ASCII	/roots/
+FCNUMERIC.ROOTS_COMMAND.$K5:
+FCNUMERIC.ROOTS_COMMAND.$K6:
+	.ASCII	/ans/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  861    end function derivative
+;  862
+;  863    ! ------------------------------------------------------------------
+;  864    ! ROOTS.
+;  865
+;  866    ! ROOTS c1, c2, ..., cn: the roots of the polynomial with these
+;  867    ! coefficients, highest power first. Each may be a vector, its elements
+;  868    ! joined to the list, so ROOTS p takes a vector p of coefficients. The
+;  869    ! roots are the function roots()'s (module FCPOLY), a column.
+;  870    subroutine roots_command()
+	.ENTRY	FCNUMERIC.ROOTS_COMMAND,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+;  871      type(node), pointer :: tree
+;  872      type(quantity) :: list(1), q
+;  873      complex(rk), pointer :: c(:), more(:)
+;  874      type(value) :: v
+;  875      integer :: first, column, n, k
+;  876
+;  877      nullify (c)
+	CLRL	FCNUMERIC.ROOTS_COMMAND.C+4
+;  878      n = 0
+	CLRL	FCNUMERIC.ROOTS_COMMAND.N
+;  879      call advance(1)
+	PUSHAL	FCNUMERIC.ROOTS_COMMAND.$K1
+	CALLS	#1,G^FCTREE.ADVANCE
+;  880      first = current_column()
+	CALLS	#0,G^FCTREE.CURRENT_COLUMN
+	MOVL	R0,FCNUMERIC.ROOTS_COMMAND.FIRST
+;  881
+;  882      read: do
+	MOVL	FCNUMERIC.ROOTS_COMMAND.N,R9
+	BRW	FCNUMERIC.ROOTS_COMMAND.$1
+FCNUMERIC.ROOTS_COMMAND.$2:
+;  883        column = current_column()
+;  884        tree => parse_expression()
+;  885        if (failed()) exit read
+;  886        q = evaluate(tree)
+	PUSHL	#0
+	PUSHAL	FCNUMERIC.ROOTS_COMMAND.TREE
+	PUSHAB	FCNUMERIC.ROOTS_COMMAND.$T2
+	CALLS	#3,G^FCEVAL.EVALUATE
+	MOVC3	#96,FCNUMERIC.ROOTS_COMMAND.$T2,FCNUMERIC.ROOTS_COMMAND.Q
+;  887        call free_tree(tree)
+	PUSHAL	FCNUMERIC.ROOTS_COMMAND.TREE
+	CALLS	#1,G^FCTREE.FREE_TREE
+;  888        if (failed()) then
+	CALLS	#0,G^FCMESSAGES.FAILED
+	MOVL	R0,R8
+	BLBC	R8,FCNUMERIC.ROOTS_COMMAND.$3
+	MOVL	R9,FCNUMERIC.ROOTS_COMMAND.N
+;  889          call release(q)
+	PUSHAB	FCNUMERIC.ROOTS_COMMAND.Q
+	CALLS	#1,G^FCARRAYS.RELEASE
+;  890          exit read
+	BRW	FCNUMERIC.ROOTS_COMMAND.$5
+FCNUMERIC.ROOTS_COMMAND.$3:
+;  891        end if
+;  892
+;  893        if (is_array(q) .and. .not. is_vector(q)) then
+	PUSHAB	FCNUMERIC.ROOTS_COMMAND.Q
+	CALLS	#1,G^FCARRAYS.IS_ARRAY
+	MOVL	R0,R8
+	PUSHAB	FCNUMERIC.ROOTS_COMMAND.Q
+	CALLS	#1,G^FCARRAYS.IS_VECTOR
+	MOVL	R0,R6
+	BLBC	R8,FCNUMERIC.ROOTS_COMMAND.$6
+	BLBS	R6,FCNUMERIC.ROOTS_COMMAND.$6
+	MOVL	R9,FCNUMERIC.ROOTS_COMMAND.N
+;  894          call fail(e_notvector, column)
+	PUSHL	#0
+	PUSHAL	FCNUMERIC.ROOTS_COMMAND.COLUMN
+	PUSHAL	FCNUMERIC.ROOTS_COMMAND.$K2
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  895          call release(q)
+	PUSHAB	FCNUMERIC.ROOTS_COMMAND.Q
+	CALLS	#1,G^FCARRAYS.RELEASE
+;  896          exit read
+	BRW	FCNUMERIC.ROOTS_COMMAND.$5
+FCNUMERIC.ROOTS_COMMAND.$6:
+;  897        end if
+;  898
+;  899        ! C grows to hold Q's elements too: a new array, the old copied in.
+;  900        allocate (more(n + numel(q)))
+	PUSHAB	FCNUMERIC.ROOTS_COMMAND.Q
+	CALLS	#1,G^FCARRAYS.NUMEL
+	MOVL	R0,R6
+	ADDL3	R9,R6,R0
+	PUSHL	R0
+	PUSHL	#1
+	PUSHL	#2
+	PUSHAQ	FCNUMERIC.ROOTS_COMMAND.MORE
+	CALLS	#4,G^FTN$ALLOCATE
+;  901        if (n > 0) more(1:n) = c
+	TSTL	R9
+	BGTR	FCNUMERIC.ROOTS_COMMAND.$10
+	BRW	FCNUMERIC.ROOTS_COMMAND.$9
+FCNUMERIC.ROOTS_COMMAND.$10:
+	MOVL	R9,R6
+	MOVL	R6,R8
+	BGEQ	FCNUMERIC.ROOTS_COMMAND.$11
+	CLRL	R8
+FCNUMERIC.ROOTS_COMMAND.$11:
+	MOVL	R8,FCNUMERIC.ROOTS_COMMAND.$R1+20
+	MOVL	FCNUMERIC.ROOTS_COMMAND.$R1+20,FCNUMERIC.ROOTS_COMMAND.$R1+28
+	MULL3	#16,FCNUMERIC.ROOTS_COMMAND.$R1+20,FCNUMERIC.ROOTS_COMMAND.$R1+12
+	MOVL	SP,FCNUMERIC.ROOTS_COMMAND.$T4 ; where the statement's storage starts
+	CMPL	FCNUMERIC.ROOTS_COMMAND.$R1+12,#65536
+	BGTR	FCNUMERIC.ROOTS_COMMAND.$13
+	SUBL2	FCNUMERIC.ROOTS_COMMAND.$R1+12,SP ; storage of a size known only now
+	BICL2	#3,SP
+	MOVL	SP,FCNUMERIC.ROOTS_COMMAND.$R1+4
+	BRB	FCNUMERIC.ROOTS_COMMAND.$15
+FCNUMERIC.ROOTS_COMMAND.$13:
+	PUSHAQ	FCNUMERIC.ROOTS_COMMAND.$R1
+	CALLS	#1,G^FTN$GET_TEMP
+FCNUMERIC.ROOTS_COMMAND.$15:
+	MOVL	FCNUMERIC.ROOTS_COMMAND.$R1+4,R0
+	MOVAO	-16(R0),FCNUMERIC.ROOTS_COMMAND.$R1+16
+	SUBL3	#1,FCNUMERIC.ROOTS_COMMAND.C+24,R10
+	MOVL	FCNUMERIC.ROOTS_COMMAND.$R1+20,FCNUMERIC.ROOTS_COMMAND.$T6
+	BGEQ	FCNUMERIC.ROOTS_COMMAND.$16
+	CLRL	FCNUMERIC.ROOTS_COMMAND.$T6
+FCNUMERIC.ROOTS_COMMAND.$16:
+	MOVL	FCNUMERIC.ROOTS_COMMAND.$T6,R8 ; array (line 901), dimension 1's limit
+	MOVL	#1,R7
+	CMPL	#1,R8
+	BGTR	FCNUMERIC.ROOTS_COMMAND.$18
+	ADDL3	R7,R10,R0
+	MULL2	FCNUMERIC.ROOTS_COMMAND.C+20,R0
+	ADDL3	FCNUMERIC.ROOTS_COMMAND.C+16,R0,R6
+FCNUMERIC.ROOTS_COMMAND.$20:		; array (line 901), dimension 1's body
+	MOVO	(R6),@FCNUMERIC.ROOTS_COMMAND.$R1+16[R7]
+	ADDL2	FCNUMERIC.ROOTS_COMMAND.C+20,R6
+	AOBLEQ	R8,R7,FCNUMERIC.ROOTS_COMMAND.$20
+FCNUMERIC.ROOTS_COMMAND.$18:
+	MOVL	R9,R11
+	MOVL	R11,R10
+	BGEQ	FCNUMERIC.ROOTS_COMMAND.$22
+	CLRL	R10
+FCNUMERIC.ROOTS_COMMAND.$22:
+	MOVL	R10,R8			; array (line 901), dimension 1's limit
+	MOVL	#1,R6
+	CMPL	#1,R8
+	BGTR	FCNUMERIC.ROOTS_COMMAND.$24
+	MULL3	R6,FCNUMERIC.ROOTS_COMMAND.MORE+20,R0
+	ADDL3	FCNUMERIC.ROOTS_COMMAND.MORE+16,R0,R7
+FCNUMERIC.ROOTS_COMMAND.$26:		; array (line 901), dimension 1's body
+	MOVO	@FCNUMERIC.ROOTS_COMMAND.$R1+16[R6],(R7)
+	ADDL2	FCNUMERIC.ROOTS_COMMAND.MORE+20,R7
+	AOBLEQ	R8,R6,FCNUMERIC.ROOTS_COMMAND.$26
+FCNUMERIC.ROOTS_COMMAND.$24:
+	CMPL	FCNUMERIC.ROOTS_COMMAND.$R1+12,#65536
+	BLEQ	FCNUMERIC.ROOTS_COMMAND.$28
+	PUSHL	#0
+	PUSHAQ	FCNUMERIC.ROOTS_COMMAND.$R1
+	CALLS	#2,G^FTN$DEALLOCATE
+FCNUMERIC.ROOTS_COMMAND.$28:
+	MOVL	FCNUMERIC.ROOTS_COMMAND.$T4,SP ; the statement's storage given back
+FCNUMERIC.ROOTS_COMMAND.$9:
+;  902        do k = 1, numel(q)
+	PUSHAB	FCNUMERIC.ROOTS_COMMAND.Q
+	CALLS	#1,G^FCARRAYS.NUMEL
+	MOVL	R0,R10
+	MOVL	R10,R6			; DO (line 902)'s count
+	MOVL	#1,FCNUMERIC.ROOTS_COMMAND.K
+	TSTL	R6
+	BLEQ	FCNUMERIC.ROOTS_COMMAND.$30
+FCNUMERIC.ROOTS_COMMAND.$32:		; DO (line 902)'s body
+;  903          v = element_at(q, k)
+	PUSHAL	FCNUMERIC.ROOTS_COMMAND.K
+	PUSHAB	FCNUMERIC.ROOTS_COMMAND.Q
+	PUSHAB	FCNUMERIC.ROOTS_COMMAND.$T9
+	CALLS	#3,G^FCARRAYS.ELEMENT_AT
+	MOVC3	#32,FCNUMERIC.ROOTS_COMMAND.$T9,FCNUMERIC.ROOTS_COMMAND.V
+;  904          more(n + k) = v%z
+	ADDL3	R9,FCNUMERIC.ROOTS_COMMAND.K,R0
+	MULL2	FCNUMERIC.ROOTS_COMMAND.MORE+20,R0
+	ADDL2	FCNUMERIC.ROOTS_COMMAND.MORE+16,R0
+	MOVO	FCNUMERIC.ROOTS_COMMAND.V,(R0)
+;  905        end do
+	INCL	FCNUMERIC.ROOTS_COMMAND.K
+	SOBGTR	R6,FCNUMERIC.ROOTS_COMMAND.$32 ; one pass fewer
+FCNUMERIC.ROOTS_COMMAND.$30:
+;  906        n = n + numel(q)
+	PUSHAB	FCNUMERIC.ROOTS_COMMAND.Q
+	CALLS	#1,G^FCARRAYS.NUMEL
+	MOVL	R0,R10
+	ADDL2	R10,R9
+;  907        if (associated(c)) deallocate (c)
+	TSTL	FCNUMERIC.ROOTS_COMMAND.C+4
+	BEQL	FCNUMERIC.ROOTS_COMMAND.$34
+	PUSHL	#2
+	PUSHAQ	FCNUMERIC.ROOTS_COMMAND.C
+	CALLS	#2,G^FTN$DEALLOCATE
+FCNUMERIC.ROOTS_COMMAND.$34:
+;  908        c => more
+	MOVL	FCNUMERIC.ROOTS_COMMAND.MORE+4,FCNUMERIC.ROOTS_COMMAND.C+4
+	MOVL	FCNUMERIC.ROOTS_COMMAND.MORE+8,FCNUMERIC.ROOTS_COMMAND.C+8
+	MOVL	FCNUMERIC.ROOTS_COMMAND.MORE+12,FCNUMERIC.ROOTS_COMMAND.C+12
+	MOVL	FCNUMERIC.ROOTS_COMMAND.MORE+16,FCNUMERIC.ROOTS_COMMAND.C+16
+	MOVL	FCNUMERIC.ROOTS_COMMAND.MORE+20,FCNUMERIC.ROOTS_COMMAND.C+20
+	MOVL	FCNUMERIC.ROOTS_COMMAND.MORE+24,FCNUMERIC.ROOTS_COMMAND.C+24
+	MOVL	FCNUMERIC.ROOTS_COMMAND.MORE+28,FCNUMERIC.ROOTS_COMMAND.C+28
+;  909        call release(q)
+	PUSHAB	FCNUMERIC.ROOTS_COMMAND.Q
+	CALLS	#1,G^FCARRAYS.RELEASE
+;  910
+;  911        if (is_operator(',')) then
+	PUSHAQ	FCNUMERIC.ROOTS_COMMAND.$D1
+	CALLS	#1,G^FCTREE.IS_OPERATOR
+	MOVL	R0,R10
+	BLBS	R10,FCNUMERIC.ROOTS_COMMAND.$37
+	BRW	FCNUMERIC.ROOTS_COMMAND.$36
+FCNUMERIC.ROOTS_COMMAND.$37:
+;  912          call advance(1)
+	PUSHAL	FCNUMERIC.ROOTS_COMMAND.$K1
+	CALLS	#1,G^FCTREE.ADVANCE
+;  913          cycle read
+FCNUMERIC.ROOTS_COMMAND.$1:		; DO READ's body
+	CALLS	#0,G^FCTREE.CURRENT_COLUMN ; from line 883
+	MOVL	R0,FCNUMERIC.ROOTS_COMMAND.COLUMN
+	CALLS	#0,G^FCTREE.PARSE_EXPRESSION
+	MOVL	R0,R8
+	MOVL	R8,FCNUMERIC.ROOTS_COMMAND.TREE
+	CALLS	#0,G^FCMESSAGES.FAILED
+	MOVL	R0,R8
+	BLBS	R8,FCNUMERIC.ROOTS_COMMAND.$38
+	BRW	FCNUMERIC.ROOTS_COMMAND.$2
+FCNUMERIC.ROOTS_COMMAND.$38:
+	MOVL	R9,FCNUMERIC.ROOTS_COMMAND.N
+	BRW	FCNUMERIC.ROOTS_COMMAND.$5
+FCNUMERIC.ROOTS_COMMAND.$39:
+;  914        end if
+;  915        if (.not. at_end_of_line()) exit read
+	CALLS	#0,G^FCNUMERIC.AT_END_OF_LINE
+	MOVL	R0,R10
+	BLBS	R10,FCNUMERIC.ROOTS_COMMAND.$40
+	BRW	FCNUMERIC.ROOTS_COMMAND.$5
+FCNUMERIC.ROOTS_COMMAND.$40:
+;  916
+;  917        list(1) = array_of(reshape(c, (/ 1, n /)))
+	MOVL	#1,FCNUMERIC.ROOTS_COMMAND.$W2
+	MOVL	FCNUMERIC.ROOTS_COMMAND.N,FCNUMERIC.ROOTS_COMMAND.$W2+4
+	MOVL	#1,R6
+FCNUMERIC.ROOTS_COMMAND.$41:		; array (line 917), dimension 1's body
+	MOVL	FCNUMERIC.ROOTS_COMMAND.$W2-4[R6],FCNUMERIC.ROOTS_COMMAND.$W1-4[R6]
+	AOBLEQ	#2,R6,FCNUMERIC.ROOTS_COMMAND.$41
+	MOVL	FCNUMERIC.ROOTS_COMMAND.$W1,R10
+	BGEQ	FCNUMERIC.ROOTS_COMMAND.$43
+	CLRL	R10
+FCNUMERIC.ROOTS_COMMAND.$43:
+	MOVL	FCNUMERIC.ROOTS_COMMAND.$W1+4,R11
+	BGEQ	FCNUMERIC.ROOTS_COMMAND.$45
+	CLRL	R11
+FCNUMERIC.ROOTS_COMMAND.$45:
+	MOVL	R10,FCNUMERIC.ROOTS_COMMAND.$R2+20
+	MOVL	FCNUMERIC.ROOTS_COMMAND.$R2+20,FCNUMERIC.ROOTS_COMMAND.$R2+32
+	MOVL	R11,FCNUMERIC.ROOTS_COMMAND.$R2+24
+	MOVL	FCNUMERIC.ROOTS_COMMAND.$R2+24,FCNUMERIC.ROOTS_COMMAND.$R2+40
+	MULL3	#16,FCNUMERIC.ROOTS_COMMAND.$R2+20,R0
+	MULL3	R0,FCNUMERIC.ROOTS_COMMAND.$R2+24,FCNUMERIC.ROOTS_COMMAND.$R2+12
+	MOVL	SP,FCNUMERIC.ROOTS_COMMAND.$T6 ; where the statement's storage starts
+	CMPL	FCNUMERIC.ROOTS_COMMAND.$R2+12,#65536
+	BGTR	FCNUMERIC.ROOTS_COMMAND.$47
+	SUBL2	FCNUMERIC.ROOTS_COMMAND.$R2+12,SP ; storage of a size known only now
+	BICL2	#3,SP
+	MOVL	SP,FCNUMERIC.ROOTS_COMMAND.$R2+4
+	BRB	FCNUMERIC.ROOTS_COMMAND.$49
+FCNUMERIC.ROOTS_COMMAND.$47:
+	PUSHAQ	FCNUMERIC.ROOTS_COMMAND.$R2
+	CALLS	#1,G^FTN$GET_TEMP
+FCNUMERIC.ROOTS_COMMAND.$49:
+	MNEGL	FCNUMERIC.ROOTS_COMMAND.$R2+20,R0
+	DECL	R0
+	MOVAO	@FCNUMERIC.ROOTS_COMMAND.$R2+4[R0],FCNUMERIC.ROOTS_COMMAND.$R2+16
+	SUBL3	FCNUMERIC.ROOTS_COMMAND.C+24,FCNUMERIC.ROOTS_COMMAND.C+28,R0
+	ADDL3	R0,#1,FCNUMERIC.ROOTS_COMMAND.$T4
+	BGEQ	FCNUMERIC.ROOTS_COMMAND.$50
+	CLRL	FCNUMERIC.ROOTS_COMMAND.$T4
+FCNUMERIC.ROOTS_COMMAND.$50:
+	MOVL	FCNUMERIC.ROOTS_COMMAND.$T4,R8
+	MOVL	R8,FCNUMERIC.ROOTS_COMMAND.$R1+20
+	MOVL	FCNUMERIC.ROOTS_COMMAND.$R1+20,FCNUMERIC.ROOTS_COMMAND.$R1+28
+	MULL3	#16,FCNUMERIC.ROOTS_COMMAND.$R1+20,FCNUMERIC.ROOTS_COMMAND.$R1+12
+	CMPL	FCNUMERIC.ROOTS_COMMAND.$R1+12,#65536
+	BGTR	FCNUMERIC.ROOTS_COMMAND.$52
+	SUBL2	FCNUMERIC.ROOTS_COMMAND.$R1+12,SP ; storage of a size known only now
+	BICL2	#3,SP
+	MOVL	SP,FCNUMERIC.ROOTS_COMMAND.$R1+4
+	BRB	FCNUMERIC.ROOTS_COMMAND.$54
+FCNUMERIC.ROOTS_COMMAND.$52:
+	PUSHAQ	FCNUMERIC.ROOTS_COMMAND.$R1
+	CALLS	#1,G^FTN$GET_TEMP
+FCNUMERIC.ROOTS_COMMAND.$54:
+	MOVL	FCNUMERIC.ROOTS_COMMAND.$R1+4,R0
+	MOVAO	-16(R0),FCNUMERIC.ROOTS_COMMAND.$R1+16
+	CLRL	R6
+	SUBL3	#1,FCNUMERIC.ROOTS_COMMAND.C+24,FCNUMERIC.ROOTS_COMMAND.$T10
+	SUBL3	FCNUMERIC.ROOTS_COMMAND.C+24,FCNUMERIC.ROOTS_COMMAND.C+28,R0
+	ADDL3	R0,#1,R7
+	BGEQ	FCNUMERIC.ROOTS_COMMAND.$55
+	CLRL	R7
+FCNUMERIC.ROOTS_COMMAND.$55:
+	MOVL	R7,FCNUMERIC.ROOTS_COMMAND.$L5 ; array (line 917), dimension 1's limit
+	MOVL	#1,R9
+	CMPL	#1,FCNUMERIC.ROOTS_COMMAND.$L5
+	BGTR	FCNUMERIC.ROOTS_COMMAND.$57
+	ADDL3	R9,FCNUMERIC.ROOTS_COMMAND.$T10,R0
+	MULL2	FCNUMERIC.ROOTS_COMMAND.C+20,R0
+	ADDL3	FCNUMERIC.ROOTS_COMMAND.C+16,R0,R7
+FCNUMERIC.ROOTS_COMMAND.$59:		; array (line 917), dimension 1's body
+	INCL	R6
+	MOVO	(R7),@FCNUMERIC.ROOTS_COMMAND.$R1+16[R6]
+	ADDL2	FCNUMERIC.ROOTS_COMMAND.C+20,R7
+	AOBLEQ	FCNUMERIC.ROOTS_COMMAND.$L5,R9,FCNUMERIC.ROOTS_COMMAND.$59
+FCNUMERIC.ROOTS_COMMAND.$57:
+	CLRL	R6
+	MOVL	R11,FCNUMERIC.ROOTS_COMMAND.$L6 ; array (line 917), dimension 2's limit
+	MOVL	#1,FCNUMERIC.ROOTS_COMMAND.$I8
+	CMPL	#1,FCNUMERIC.ROOTS_COMMAND.$L6
+	BGTR	FCNUMERIC.ROOTS_COMMAND.$61
+FCNUMERIC.ROOTS_COMMAND.$63:		; array (line 917), dimension 2's body
+	MOVL	R10,R9			; array (line 917), dimension 1's limit
+	MOVL	#1,R7
+	CMPL	#1,R9
+	BGTR	FCNUMERIC.ROOTS_COMMAND.$64
+	MULL3	FCNUMERIC.ROOTS_COMMAND.$I8,FCNUMERIC.ROOTS_COMMAND.$R2+20,R11 ; from line 917
+FCNUMERIC.ROOTS_COMMAND.$66:		; array (line 917), dimension 1's body
+	INCL	R6
+	CMPL	R6,R8
+	BGTR	FCNUMERIC.ROOTS_COMMAND.$67
+	ADDL3	R11,R7,R0
+	MOVO	@FCNUMERIC.ROOTS_COMMAND.$R1+16[R6],@FCNUMERIC.ROOTS_COMMAND.$R2+16[R0]
+FCNUMERIC.ROOTS_COMMAND.$67:
+	AOBLEQ	R9,R7,FCNUMERIC.ROOTS_COMMAND.$66
+FCNUMERIC.ROOTS_COMMAND.$64:
+	AOBLEQ	FCNUMERIC.ROOTS_COMMAND.$L6,FCNUMERIC.ROOTS_COMMAND.$I8,FCNUMERIC.ROOTS_COMMAND.$63
+FCNUMERIC.ROOTS_COMMAND.$61:
+	MOVL	FCNUMERIC.ROOTS_COMMAND.$R2+20,R6
+	BGEQ	FCNUMERIC.ROOTS_COMMAND.$72
+	CLRL	R6
+FCNUMERIC.ROOTS_COMMAND.$72:
+	MOVL	FCNUMERIC.ROOTS_COMMAND.$R2+24,R7
+	BGEQ	FCNUMERIC.ROOTS_COMMAND.$74
+	CLRL	R7
+FCNUMERIC.ROOTS_COMMAND.$74:
+	MOVL	R6,FCNUMERIC.ROOTS_COMMAND.$R3+20
+	MOVL	FCNUMERIC.ROOTS_COMMAND.$R3+20,FCNUMERIC.ROOTS_COMMAND.$R3+32
+	MOVL	R7,FCNUMERIC.ROOTS_COMMAND.$R3+24
+	MOVL	FCNUMERIC.ROOTS_COMMAND.$R3+24,FCNUMERIC.ROOTS_COMMAND.$R3+40
+	MULL3	#16,FCNUMERIC.ROOTS_COMMAND.$R3+20,R0
+	MULL3	R0,FCNUMERIC.ROOTS_COMMAND.$R3+24,FCNUMERIC.ROOTS_COMMAND.$R3+12
+	CMPL	FCNUMERIC.ROOTS_COMMAND.$R3+12,#65536
+	BGTR	FCNUMERIC.ROOTS_COMMAND.$76
+	SUBL2	FCNUMERIC.ROOTS_COMMAND.$R3+12,SP ; storage of a size known only now
+	BICL2	#3,SP
+	MOVL	SP,FCNUMERIC.ROOTS_COMMAND.$R3+4
+	BRB	FCNUMERIC.ROOTS_COMMAND.$78
+FCNUMERIC.ROOTS_COMMAND.$76:
+	PUSHAQ	FCNUMERIC.ROOTS_COMMAND.$R3
+	CALLS	#1,G^FTN$GET_TEMP
+FCNUMERIC.ROOTS_COMMAND.$78:
+	MNEGL	FCNUMERIC.ROOTS_COMMAND.$R3+20,R0
+	DECL	R0
+	MOVAO	@FCNUMERIC.ROOTS_COMMAND.$R3+4[R0],FCNUMERIC.ROOTS_COMMAND.$R3+16
+	MOVL	FCNUMERIC.ROOTS_COMMAND.$R3+20,FCNUMERIC.ROOTS_COMMAND.$T16
+	BGEQ	FCNUMERIC.ROOTS_COMMAND.$79
+	CLRL	FCNUMERIC.ROOTS_COMMAND.$T16
+FCNUMERIC.ROOTS_COMMAND.$79:
+	MOVL	FCNUMERIC.ROOTS_COMMAND.$R3+24,FCNUMERIC.ROOTS_COMMAND.$T17
+	BGEQ	FCNUMERIC.ROOTS_COMMAND.$81
+	CLRL	FCNUMERIC.ROOTS_COMMAND.$T17
+FCNUMERIC.ROOTS_COMMAND.$81:
+	MOVL	FCNUMERIC.ROOTS_COMMAND.$T17,FCNUMERIC.ROOTS_COMMAND.$L8 ; array (line 917), dimension 2's limit
+	MOVL	#1,R10
+	CMPL	#1,FCNUMERIC.ROOTS_COMMAND.$L8
+	BGTR	FCNUMERIC.ROOTS_COMMAND.$83
+	MULL3	R10,FCNUMERIC.ROOTS_COMMAND.$R2+20,R11
+FCNUMERIC.ROOTS_COMMAND.$85:		; array (line 917), dimension 2's body
+	MOVL	FCNUMERIC.ROOTS_COMMAND.$T16,R7 ; array (line 917), dimension 1's limit
+	MOVL	#1,R6
+	CMPL	#1,R7
+	BGTR	FCNUMERIC.ROOTS_COMMAND.$86
+	MOVL	R11,R9			; from line 917
+	MULL3	R10,FCNUMERIC.ROOTS_COMMAND.$R3+20,R8 ; from line 917
+FCNUMERIC.ROOTS_COMMAND.$88:		; array (line 917), dimension 1's body
+	ADDL3	R9,R6,R0
+	ADDL3	R8,R6,R1
+	MOVO	@FCNUMERIC.ROOTS_COMMAND.$R2+16[R0],@FCNUMERIC.ROOTS_COMMAND.$R3+16[R1]
+	AOBLEQ	R7,R6,FCNUMERIC.ROOTS_COMMAND.$88
+FCNUMERIC.ROOTS_COMMAND.$86:
+	ADDL2	FCNUMERIC.ROOTS_COMMAND.$R2+20,R11
+	AOBLEQ	FCNUMERIC.ROOTS_COMMAND.$L8,R10,FCNUMERIC.ROOTS_COMMAND.$85
+FCNUMERIC.ROOTS_COMMAND.$83:
+	MOVAO	@FCNUMERIC.ROOTS_COMMAND.$R3+4,FCNUMERIC.ROOTS_COMMAND.$D2+4
+	MOVL	#16,FCNUMERIC.ROOTS_COMMAND.$D2+20
+	MOVL	#1,FCNUMERIC.ROOTS_COMMAND.$D2+28
+	MOVL	FCNUMERIC.ROOTS_COMMAND.$R3+32,FCNUMERIC.ROOTS_COMMAND.$D2+32
+	MULL3	#16,FCNUMERIC.ROOTS_COMMAND.$R3+20,FCNUMERIC.ROOTS_COMMAND.$D2+24
+	MOVL	#1,FCNUMERIC.ROOTS_COMMAND.$D2+36
+	MOVL	FCNUMERIC.ROOTS_COMMAND.$R3+40,FCNUMERIC.ROOTS_COMMAND.$D2+40
+	SUBL3	FCNUMERIC.ROOTS_COMMAND.$D2+24,FCNUMERIC.ROOTS_COMMAND.$D2+4,R0
+	SUBL3	#16,R0,FCNUMERIC.ROOTS_COMMAND.$D2+16
+	MULL3	FCNUMERIC.ROOTS_COMMAND.$D2+24,FCNUMERIC.ROOTS_COMMAND.$R3+24,FCNUMERIC.ROOTS_COMMAND.$D2+12
+	PUSHAQ	FCNUMERIC.ROOTS_COMMAND.$D2
+	PUSHAB	FCNUMERIC.ROOTS_COMMAND.$T2
+	CALLS	#2,G^FCARRAYS.ARRAY_OF
+	MOVC3	#96,FCNUMERIC.ROOTS_COMMAND.$T2,FCNUMERIC.ROOTS_COMMAND.LIST
+	CMPL	FCNUMERIC.ROOTS_COMMAND.$R3+12,#65536
+	BLEQ	FCNUMERIC.ROOTS_COMMAND.$91
+	PUSHL	#0
+	PUSHAQ	FCNUMERIC.ROOTS_COMMAND.$R3
+	CALLS	#2,G^FTN$DEALLOCATE
+FCNUMERIC.ROOTS_COMMAND.$91:
+	CMPL	FCNUMERIC.ROOTS_COMMAND.$R1+12,#65536
+	BLEQ	FCNUMERIC.ROOTS_COMMAND.$93
+	PUSHL	#0
+	PUSHAQ	FCNUMERIC.ROOTS_COMMAND.$R1
+	CALLS	#2,G^FTN$DEALLOCATE
+FCNUMERIC.ROOTS_COMMAND.$93:
+	CMPL	FCNUMERIC.ROOTS_COMMAND.$R2+12,#65536
+	BLEQ	FCNUMERIC.ROOTS_COMMAND.$95
+	PUSHL	#0
+	PUSHAQ	FCNUMERIC.ROOTS_COMMAND.$R2
+	CALLS	#2,G^FTN$DEALLOCATE
+FCNUMERIC.ROOTS_COMMAND.$95:
+	MOVL	FCNUMERIC.ROOTS_COMMAND.$T6,SP ; the statement's storage given back
+;  918        q = apply_matrix(matrix_index('roots'), list)
+	PUSHAQ	FCNUMERIC.ROOTS_COMMAND.$D3
+	CALLS	#1,G^FCMATRIX.MATRIX_INDEX
+	MOVL	R0,FCNUMERIC.ROOTS_COMMAND.$T17
+	MOVAB	FCNUMERIC.ROOTS_COMMAND.LIST,FCNUMERIC.ROOTS_COMMAND.$D4+4
+	MOVL	#96,FCNUMERIC.ROOTS_COMMAND.$D4+20
+	MOVL	#1,FCNUMERIC.ROOTS_COMMAND.$D4+24
+	MOVL	#1,FCNUMERIC.ROOTS_COMMAND.$D4+28
+	SUBL3	#96,FCNUMERIC.ROOTS_COMMAND.$D4+4,FCNUMERIC.ROOTS_COMMAND.$D4+16
+	MOVL	#96,FCNUMERIC.ROOTS_COMMAND.$D4+12
+	PUSHAQ	FCNUMERIC.ROOTS_COMMAND.$D4
+	PUSHAL	FCNUMERIC.ROOTS_COMMAND.$T17
+	PUSHAB	FCNUMERIC.ROOTS_COMMAND.$T2
+	CALLS	#3,G^FCMATRIX.APPLY_MATRIX
+	MOVC3	#96,FCNUMERIC.ROOTS_COMMAND.$T2,FCNUMERIC.ROOTS_COMMAND.Q
+;  919        call release(list(1))
+	PUSHAB	FCNUMERIC.ROOTS_COMMAND.LIST
+	CALLS	#1,G^FCARRAYS.RELEASE
+;  920        if (quantity_error(q) /= 0) then
+	PUSHAB	FCNUMERIC.ROOTS_COMMAND.Q
+	CALLS	#1,G^FCARRAYS.QUANTITY_ERROR
+	MOVL	R0,FCNUMERIC.ROOTS_COMMAND.$T17
+	BEQL	FCNUMERIC.ROOTS_COMMAND.$97
+;  921          call fail(quantity_error(q), first)
+	PUSHAB	FCNUMERIC.ROOTS_COMMAND.Q
+	CALLS	#1,G^FCARRAYS.QUANTITY_ERROR
+	MOVL	R0,FCNUMERIC.ROOTS_COMMAND.$T17
+	PUSHL	#0
+	PUSHAL	FCNUMERIC.ROOTS_COMMAND.FIRST
+	PUSHAL	FCNUMERIC.ROOTS_COMMAND.$T17
+	CALLS	#3,G^FCMESSAGES.FAIL
+;  922          exit read
+	BRB	FCNUMERIC.ROOTS_COMMAND.$5
+FCNUMERIC.ROOTS_COMMAND.$97:
+;  923        end if
+;  924        call show_quantity(q, '')
+	PUSHAQ	FCNUMERIC.ROOTS_COMMAND.$D5
+	PUSHAB	FCNUMERIC.ROOTS_COMMAND.Q
+	CALLS	#2,G^FCARRAYS.SHOW_QUANTITY
+;  925        call set_variable('ans', q)
+	PUSHAB	FCNUMERIC.ROOTS_COMMAND.Q
+	PUSHAQ	FCNUMERIC.ROOTS_COMMAND.$D6
+	CALLS	#2,G^FCSYMBOLS.SET_VARIABLE
+;  926        exit read
+FCNUMERIC.ROOTS_COMMAND.$5:
+;  927      end do read
+;  928
+;  929      if (associated(c)) deallocate (c)
+	TSTL	FCNUMERIC.ROOTS_COMMAND.C+4
+	BEQL	FCNUMERIC.ROOTS_COMMAND.$99
+	PUSHL	#2
+	PUSHAQ	FCNUMERIC.ROOTS_COMMAND.C
+	CALLS	#2,G^FTN$DEALLOCATE
+FCNUMERIC.ROOTS_COMMAND.$99:
+;  930    end subroutine roots_command
+	RET
+FCNUMERIC.ROOTS_COMMAND.$36:		; leaving the loop
+	MOVL	R9,FCNUMERIC.ROOTS_COMMAND.N
+	BRW	FCNUMERIC.ROOTS_COMMAND.$39
+;  931  end module fcnumeric
+
+	.END

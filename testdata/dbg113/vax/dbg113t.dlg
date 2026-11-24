@@ -1,0 +1,206 @@
+@DBG113T.DBG
+!%DEBUG-I-VERIFYICF, entering command procedure DBG113T.DBG
+! ! DBG113T.DBG - eventpoints (README.md): SHOW BREAK's order, CANCEL of what
+! ! isn't set, tracepoints that meet at one PC, and /AFTER and WHEN on
+! ! tracepoints and watchpoints.
+! !> CANCEL TRACE/ALL with none set
+! CANCEL TRACE/ALL
+!%DEBUG-I-NOTRACES, no tracepoints are set, no opcode tracing
+! !> CANCEL WATCH/ALL with none set
+! CANCEL WATCH/ALL
+!%DEBUG-I-NOWATCHES, no watchpoints are set
+! !> CANCEL TRACE of an address with none set
+! CANCEL TRACE LOOPTOP
+!%DEBUG-I-NOTRACES, no tracepoints are set, no opcode tracing
+! !> CANCEL WATCH of a location not watched
+! CANCEL WATCH WATCHL
+!%DEBUG-I-NOWATCHES, no watchpoints are set
+! !> SHOW BREAK's order: set out of address order, of every kind
+! SET BREAK ENDLP
+! SET BREAK INE, LOOPTOP
+! SET BREAK/AFTER:2 ENDC
+! SET BREAK/TEMPORARY AFTERA
+! SET BREAK/RETURN SUBB2
+! SET BREAK/CALL
+! SET BREAK INA WHEN (.COUNT EQL 3)
+! SHOW BREAK
+!breakpoint at DBG113\LOOP\ENDLP
+!breakpoint at DBG113\LOOP\LOOPTOP
+!breakpoint at DBG113\SUBE\INE
+!breakpoint at DBG113\SUBC\ENDC
+!   /after: 2
+!breakpoint at DBG113\SUBA\AFTERA [temporary]
+!breakpoint on return from routine DBG113\SUBB2
+!breakpoint on calls:
+! BSBB     BSBW     CALLG    CALLS    JSB      RET      RSB     
+!breakpoint at DBG113\SUBA\INA
+!   when (.COUNT EQL 3)
+! SET TRACE ENDE
+! SET TRACE SUBC, MID1
+! SHOW TRACE
+!tracepoint at DBG113\SUBE\ENDE
+!tracepoint at DBG113\SUBB1\MID1
+!tracepoint at routine DBG113\SUBC
+! CANCEL BREAK/ALL
+! CANCEL TRACE/ALL
+! !> Tracepoints meeting at LOOPTOP: an address, the lines, and the branches
+! SET BREAK LOOP
+! GO
+!break at routine DBG113\LOOP
+!   125:         CLRL    COUNT
+! SET TRACE/LINE
+! SET TRACE/BRANCH
+! SET TRACE LOOPTOP
+! SHOW TRACE
+!tracepoint on lines
+!tracepoint on branches:
+! ACBB     ACBD     ACBF     ACBG     ACBH     ACBL     ACBW     AOBLEQ  
+! AOBLSS   BBC      BBCC     BBCCI    BBCS     BBS      BBSC     BBSS    
+! BBSSI    BCC      BCS      BEQL     BEQLU    BGEQ     BGEQU    BGTR    
+! BGTRU    BLBC     BLBS     BLEQ     BLEQU    BLSS     BLSSU    BNEQ    
+! BNEQU    BRB      BRW      BVC      BVS      CASEB    CASEL    CASEW   
+! JMP      SOBGEQ   SOBGTR  
+!tracepoint at DBG113\LOOP\LOOPTOP
+! SET BREAK ENDLP
+! GO
+!trace on lines at DBG113\LOOP\%LINE 126
+!   126:         CLRL    WATCHL
+!trace on lines at DBG113\LOOP\%LINE 127
+!   127:         MOVAL   WATCHL, R2
+!trace on lines at DBG113\LOOP\%LINE 128
+!   128:         CLRL    R3
+!trace on lines at DBG113\LOOP\LOOPTOP
+!   129: LOOPTOP: INCL   COUNT                   ; the pass, 1 to 3
+!trace at DBG113\LOOP\LOOPTOP
+!trace on lines at DBG113\LOOP\LOOPADD
+!   130: LOOPADD: ADDL2  #2, WATCHL              ; watched: 2, 4, 6
+!trace on lines at DBG113\LOOP\%LINE 131
+!   131:         MOVL    @4(AP), R0              ; deferred: WATCHL again
+!trace on lines at DBG113\LOOP\%LINE 132
+!   132:         MOVAL   DEPTH[R3], R1           ; indexed
+!trace on lines at DBG113\LOOP\%LINE 133
+!   133:         MOVL    (R2)+, R0               ; autoincrement
+!trace on lines at DBG113\LOOP\%LINE 134
+!   134:         MOVL    -(R2), R0               ; autodecrement
+!trace on lines at DBG113\LOOP\%LINE 135
+!   135:         CMPL    COUNT, #3               ; a literal
+!trace on branches at DBG113\LOOP\%LINE 136
+!   136:         BLSS    LOOPTOP                 ; a branch
+!trace on lines at DBG113\LOOP\%LINE 136
+!trace on lines at DBG113\LOOP\LOOPTOP
+!   129: LOOPTOP: INCL   COUNT                   ; the pass, 1 to 3
+!trace at DBG113\LOOP\LOOPTOP
+!trace on lines at DBG113\LOOP\LOOPADD
+!   130: LOOPADD: ADDL2  #2, WATCHL              ; watched: 2, 4, 6
+!trace on lines at DBG113\LOOP\%LINE 131
+!   131:         MOVL    @4(AP), R0              ; deferred: WATCHL again
+!trace on lines at DBG113\LOOP\%LINE 132
+!   132:         MOVAL   DEPTH[R3], R1           ; indexed
+!trace on lines at DBG113\LOOP\%LINE 133
+!   133:         MOVL    (R2)+, R0               ; autoincrement
+!trace on lines at DBG113\LOOP\%LINE 134
+!   134:         MOVL    -(R2), R0               ; autodecrement
+!trace on lines at DBG113\LOOP\%LINE 135
+!   135:         CMPL    COUNT, #3               ; a literal
+!trace on branches at DBG113\LOOP\%LINE 136
+!   136:         BLSS    LOOPTOP                 ; a branch
+!trace on lines at DBG113\LOOP\%LINE 136
+!trace on lines at DBG113\LOOP\LOOPTOP
+!   129: LOOPTOP: INCL   COUNT                   ; the pass, 1 to 3
+!trace at DBG113\LOOP\LOOPTOP
+!trace on lines at DBG113\LOOP\LOOPADD
+!   130: LOOPADD: ADDL2  #2, WATCHL              ; watched: 2, 4, 6
+!trace on lines at DBG113\LOOP\%LINE 131
+!   131:         MOVL    @4(AP), R0              ; deferred: WATCHL again
+!trace on lines at DBG113\LOOP\%LINE 132
+!   132:         MOVAL   DEPTH[R3], R1           ; indexed
+!trace on lines at DBG113\LOOP\%LINE 133
+!   133:         MOVL    (R2)+, R0               ; autoincrement
+!trace on lines at DBG113\LOOP\%LINE 134
+!   134:         MOVL    -(R2), R0               ; autodecrement
+!trace on lines at DBG113\LOOP\%LINE 135
+!   135:         CMPL    COUNT, #3               ; a literal
+!trace on branches at DBG113\LOOP\%LINE 136
+!   136:         BLSS    LOOPTOP                 ; a branch
+!trace on lines at DBG113\LOOP\%LINE 136
+!trace on lines at DBG113\LOOP\ENDLP
+!   137: ENDLP:  RET
+!break at DBG113\LOOP\ENDLP
+! CANCEL TRACE/ALL
+! CANCEL BREAK/ALL
+! !> /AFTER and WHEN on tracepoints and watchpoints, in LOOP's second run
+! SET BREAK LOOP
+! GO
+!break at routine DBG113\LOOP
+!   125:         CLRL    COUNT
+! SET TRACE/AFTER:2 LOOPTOP
+! SET TRACE ENDLP WHEN (.COUNT EQL 3)
+! SET TRACE LOOPADD WHEN (.COUNT EQL 2)
+! SET WATCH/AFTER:2 WATCHL
+! SET WATCH COUNT WHEN (.COUNT EQL 2)
+! SHOW TRACE
+!tracepoint at DBG113\LOOP\LOOPTOP
+!   /after: 2
+!tracepoint at DBG113\LOOP\ENDLP
+!   when (.COUNT EQL 3)
+!tracepoint at DBG113\LOOP\LOOPADD
+!   when (.COUNT EQL 2)
+! SHOW WATCH
+!watchpoint of DBG113\WATCHL
+!   /after: 2
+!watchpoint of DBG113\COUNT
+!   when (.COUNT EQL 2)
+! SET BREAK AFTERA
+! GO
+!%DEBUG-E-NOACCESSR, no read access to address 00000000
+!watch of DBG113\COUNT at routine DBG113\LOOP
+!   125:         CLRL    COUNT
+!   old value: 00000003
+!   new value: 00000000
+!break at DBG113\LOOP\%LINE 126
+!   126:         CLRL    WATCHL
+! GO
+!%DEBUG-E-NOACCESSR, no read access to address 00000001
+!watch of DBG113\COUNT at DBG113\LOOP\LOOPTOP
+!   129: LOOPTOP: INCL   COUNT                   ; the pass, 1 to 3
+!   old value: 00000000
+!   new value: 00000001
+!break at DBG113\LOOP\LOOPADD
+!   130: LOOPADD: ADDL2  #2, WATCHL              ; watched: 2, 4, 6
+!%DEBUG-E-NOACCESSR, no read access to address 00000001
+!trace at DBG113\LOOP\LOOPADD
+! GO
+!watch of DBG113\WATCHL at DBG113\LOOP\LOOPADD
+!   130: LOOPADD: ADDL2  #2, WATCHL              ; watched: 2, 4, 6
+!   old value: 00000000
+!   new value: 00000002
+!break at DBG113\LOOP\%LINE 131
+!   131:         MOVL    @4(AP), R0              ; deferred: WATCHL again
+! GO
+!trace at DBG113\LOOP\LOOPTOP
+!   129: LOOPTOP: INCL   COUNT                   ; the pass, 1 to 3
+!%DEBUG-E-NOACCESSR, no read access to address 00000002
+!watch of DBG113\COUNT at DBG113\LOOP\LOOPTOP
+!   129: LOOPTOP: INCL   COUNT                   ; the pass, 1 to 3
+!   old value: 00000001
+!   new value: 00000002
+!break at DBG113\LOOP\LOOPADD
+!   130: LOOPADD: ADDL2  #2, WATCHL              ; watched: 2, 4, 6
+!%DEBUG-E-NOACCESSR, no read access to address 00000002
+!trace at DBG113\LOOP\LOOPADD
+! GO
+!watch of DBG113\WATCHL at DBG113\LOOP\LOOPADD
+!   130: LOOPADD: ADDL2  #2, WATCHL              ; watched: 2, 4, 6
+!   old value: 00000002
+!   new value: 00000004
+!break at DBG113\LOOP\%LINE 131
+!   131:         MOVL    @4(AP), R0              ; deferred: WATCHL again
+! SHOW WATCH
+!watchpoint of DBG113\WATCHL
+!watchpoint of DBG113\COUNT
+!   when (.COUNT EQL 2)
+! CANCEL WATCH/ALL
+! CANCEL TRACE/ALL
+! CANCEL BREAK/ALL
+!%DEBUG-I-VERIFYICF, exiting command procedure DBG113T.DBG
+EXIT

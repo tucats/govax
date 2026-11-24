@@ -6,6 +6,8 @@ $ !     @ERR113/OUTPUT=ERR113.LOG [scratch-device]
 $ !
 $ ! P1 is the scratch disk, DUA3: when not given. Its volume is initialized here
 $ ! (on govax, where the test mounts it first, it is used as it is).
+$ ! P2, if given, is a section to start at (SVC113, INI113, MAC113A, DCL, NOCC,
+$ ! FULL, INDEX), for a rerun after a section that had to be stopped.
 $ !
 $ SET NOON
 $ SCRATCH = P1
@@ -13,6 +15,7 @@ $ IF SCRATCH .EQS. "" THEN SCRATCH = "DUA3:"
 $ HOME = F$ENVIRONMENT("DEFAULT")
 $ SET DEFAULT [ERR113]
 $ HERE = F$ENVIRONMENT("DEFAULT")
+$ IF P2 .NES. "" THEN GOTO START_'P2'
 $ !
 $ ! STR$'s arithmetic, and STR$MATCH_WILD with "%" (testdata/str113).
 $ WRITE SYS$OUTPUT "==== STR113"
@@ -24,6 +27,7 @@ $ SHOW SYMBOL $STATUS
 $ !
 $ ! The UTC and device information services (testdata/svc113). DEF_DIB.OBJ goes
 $ ! back for its $DIBDEF values.
+$ START_SVC113:
 $ WRITE SYS$OUTPUT "==== SVC113"
 $ MACRO/NOLIST DEF_DIB
 $ MACRO/NOLIST SVC113
@@ -34,6 +38,7 @@ $ SHOW SYMBOL $STATUS
 $ !
 $ ! LIB$INITIALIZE: a main image's routines, a shareable image's, their
 $ ! arguments, the init-coroutine, and an image linked /NOTRACEBACK.
+$ START_INI113:
 $ WRITE SYS$OUTPUT "==== INI113"
 $ MACRO/NOLIST INI113S
 $ LINK/NOMAP/SHAREABLE INI113S,INI113S/OPTIONS
@@ -51,6 +56,7 @@ $ SHOW SYMBOL $STATUS
 $ DEASSIGN INI113S
 $ !
 $ ! MACRO: register names as data, ";" in <...>, .WARN and .ERROR, and A+B.
+$ START_MAC113A:
 $ WRITE SYS$OUTPUT "==== MAC113A"
 $ MACRO/LIST MAC113A
 $ SHOW SYMBOL $STATUS
@@ -65,6 +71,7 @@ $ MACRO/LIST=MAC113D/OBJECT=MAC113D MAC113D1+MAC113D2
 $ SHOW SYMBOL $STATUS
 $ !
 $ ! DCL's messages and statuses that Phase 113's subtask 11 chose.
+$ START_DCL:
 $ WRITE SYS$OUTPUT "==== DCL"
 $ CREATE DCLX.TXT
 A line.
@@ -84,6 +91,7 @@ $ DELETE DCLX.TXT;*
 $ !
 $ ! TYPE of a file whose records have no carriage control, into the log (the
 $ ! README asks for the same at the terminal).
+$ START_NOCC:
 $ WRITE SYS$OUTPUT "==== NOCC"
 $ CREATE/FDL=NOCC.FDL NOCC.DAT
 $ OPEN/APPEND F NOCC.DAT
@@ -96,6 +104,7 @@ $ WRITE SYS$OUTPUT "AFTER"
 $ !
 $ ! The scratch volume: initialized, then filled by COPY, by DCL's WRITE, CREATE,
 $ ! and MACRO, each message the question; then emptied again.
+$ START_FULL:
 $ WRITE SYS$OUTPUT "==== FULL"
 $ IF .NOT. F$GETDVI(SCRATCH,"MNT") THEN -
      INITIALIZE/HEADERS=16/EXTENSION=1 'SCRATCH' SCR113
@@ -151,6 +160,7 @@ $ !
 $ ! The index file: a header and a data block a file, until the index file's
 $ ! extents fill its header, or 3,000 files. How does VMS take the index file
 $ ! past its header (an extension header, or HEADERFULL)?
+$ START_INDEX:
 $ WRITE SYS$OUTPUT "==== INDEX"
 $ CREATE/DIRECTORY 'SCRATCH'[FILES]
 $ N = 0

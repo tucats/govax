@@ -1,0 +1,32 @@
+$ RUN FOR81T
+#0 type a line of 250 characters (READ unit 5, (Q,A))
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+=c 0018813C n=9 a=00000003 00000005
+=u
+#1 type a line of 100 characters (READ unit 5, (Q,A))
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+=IO_END r=00000000
+=Q r=0000006B
+  0000: 7878787878787878787878787878787878787878787878787878787878787878
+#2 type a short line (READ unit 6, (Q,A))
+short line
+=IO_END r=00000000
+=Q r=0000000A
+  0000: 73686F7274206C696E6520202020202020202020202020202020202020202020
+ errsns n=39 sts=000181B8 stv=00000000 u=5 c=0018813C
+#3 type a short line (ACCEPT, unit -3 or -4)
+short line
+=IO_END r=00000000
+=Q r=0000000A
+  0000: 73686F7274206C696E6520202020202020202020202020202020202020202020
+ errsns n=0 sts=00000000 stv=00000000 u=0 c=00000000
+#4 WRITE of 140 and 200 characters to unit 6
+=c 00188214 n=9 a=00000003 00000006
+=u
+ errsns n=66 sts=00000000 stv=00000000 u=6 c=00188214
+=c 00188214 n=9 a=00000003 00000006
+=u
+ errsns n=66 sts=00000000 stv=00000000 u=6 c=00188214
+##### the end of the cases
+$ 
+

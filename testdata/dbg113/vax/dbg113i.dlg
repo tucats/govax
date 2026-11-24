@@ -1,0 +1,176 @@
+@DBG113I.DBG
+!%DEBUG-I-VERIFYICF, entering command procedure DBG113I.DBG
+! ! DBG113I.DBG - instructions (README.md): short literals in F, D, G, and H
+! ! instructions, registers holding an instruction, an entry mask's next
+! ! location, and EXAMINE/OPERANDS of operands of every kind.
+! !> The short literals
+! EXAMINE/INSTRUCTION FLOATS:INFLT
+!DBG113\FLOATS:  entry mask ^M<R2,R3>
+!DBG113\FLOATS\%LINE 100:        MOVF     S^#1.500000,R0
+!DBG113\FLOATS\%LINE 101:        MOVD     S^#3.750000,R0
+!DBG113\FLOATS\%LINE 102:        MOVG     S^#0.5000000,R0
+!DBG113\FLOATS\%LINE 103:        MOVG     S^#120.0000,R0
+!DBG113\FLOATS\%LINE 104:        MOVH     S^#3.750000,R0
+!DBG113\FLOATS\%LINE 105:        MOVH     S^#0.5625000,R0
+!DBG113\FLOATS\%LINE 106:        ADDG3    S^#1.500000,S^#2.000000,R0
+!DBG113\FLOATS\%LINE 107:        ADDH3    S^#0.6250000,S^#7.500000,R0
+!DBG113\FLOATS\INFLT:    RET     
+! EXAMINE/G_FLOAT GVAL
+!DBG113\GVAL:    2.50000000000000
+! EXAMINE/H_FLOAT HVAL
+!DBG113\HVAL:    2.50000000000000000000000000000000
+! !> An entry mask, then EXAMINE with no location
+! EXAMINE START
+!DBG113\START:   entry mask ^M<R2,R3,R4,R5>
+! EXAMINE
+!DBG113\START\%LINE 47:  PUSHAB   L^DBG113\EXHBLK
+! EXAMINE/INSTRUCTION START
+!DBG113\START:   entry mask ^M<R2,R3,R4,R5>
+! EXAMINE
+!DBG113\START\%LINE 47:  PUSHAB   L^DBG113\EXHBLK
+! EXAMINE/WORD LOOP
+!DBG113\LOOP:    000C
+! EXAMINE
+!DBG113\LOOP\%LINE 125:  CLRL     L^DBG113\COUNT
+! SET BREAK INREG
+! GO
+!break at DBG113\REGINS\INREG
+!   118: INREG:  NOP
+! !> EXAMINE/INSTRUCTION R5, past its four bytes
+! EXAMINE/INSTRUCTION R5
+!DBG113\REGINS\%R5:      MOVL     I^#12345678,R0
+! !> EXAMINE/INSTRUCTION R6
+! EXAMINE/INSTRUCTION R6
+!DBG113\REGINS\%R6:      MOVP     S^#12,R0,S^#01
+! !> EXAMINE/INSTRUCTION R7, within its bytes
+! EXAMINE/INSTRUCTION R7
+!DBG113\REGINS\%R7:      CVTWD    S^#04,S^#0.5000000
+! !> EXAMINE/INSTRUCTION R11, past it into AP
+! EXAMINE/INSTRUCTION R11
+!DBG113\REGINS\%R11:     MOVL     I^#53481234,L^0ED530C7F(FP)
+! !> EXAMINE/INSTRUCTION R5 then EXAMINE
+! EXAMINE/INSTRUCTION R5
+!DBG113\REGINS\%R5:      MOVL     I^#12345678,R0
+! EXAMINE
+!DBG113\REGINS\%R5+1:    CASEB    -(R8),R6,S^#34
+!                (more than 20 branch displacements)
+! SET BREAK ENDLP
+! GO
+!break at DBG113\LOOP\ENDLP
+!   137: ENDLP:  RET
+! !> EXAMINE/OPERANDS (brief) of each kind
+! EXAMINE/OPERANDS LOOPTOP
+!%DEBUG-I-NOTCURPC, target of EXAMINE/OPERANDS is not the current PC 
+	results may be unexpected
+!DBG113\LOOP\LOOPTOP:    INCL     L^DBG113\COUNT
+!     L^DBG113\COUNT
+!                DBG113\COUNT (address 00000204) contains 00000003
+! EXAMINE/OPERANDS
+!%DEBUG-I-NOTCURPC, target of EXAMINE/OPERANDS is not the current PC 
+	results may be unexpected
+!DBG113\LOOP\LOOPADD:    ADDL2    S^#02,L^DBG113\WATCHL
+!     L^DBG113\WATCHL
+!                DBG113\WATCHL (address 00000200) contains 00000006
+! EXAMINE/OPERANDS
+!%DEBUG-I-NOTCURPC, target of EXAMINE/OPERANDS is not the current PC 
+	results may be unexpected
+!DBG113\LOOP\%LINE 131:  MOVL     @B^04(AP),R0
+!     @B^04(AP)  DBG113\WATCHL (address 00000200) contains 00000006
+!     R0         R0 contains 00000006
+! EXAMINE/OPERANDS
+!%DEBUG-I-NOTCURPC, target of EXAMINE/OPERANDS is not the current PC 
+	results may be unexpected
+!DBG113\LOOP\%LINE 132:  MOVAL    L^DBG113\DEPTH[R3],R1
+!     L^DBG113\DEPTH[R3]
+!                DBG113\DEPTH (address 00000208) contains 00000003
+!     R1         R1 contains 00000208
+! EXAMINE/OPERANDS
+!%DEBUG-I-NOTCURPC, target of EXAMINE/OPERANDS is not the current PC 
+	results may be unexpected
+!DBG113\LOOP\%LINE 133:  MOVL     (R2)+,R0
+!     (R2)+      DBG113\WATCHL (address 00000200) contains 00000006
+!     R0         R0 contains 00000006
+! EXAMINE/OPERANDS
+!%DEBUG-I-NOTCURPC, target of EXAMINE/OPERANDS is not the current PC 
+	results may be unexpected
+!DBG113\LOOP\%LINE 134:  MOVL     -(R2),R0
+!     -(R2)      000001FC contains (no read access)
+!     R0         R0 contains 00000006
+! EXAMINE/OPERANDS
+!%DEBUG-I-NOTCURPC, target of EXAMINE/OPERANDS is not the current PC 
+	results may be unexpected
+!DBG113\LOOP\%LINE 135:  CMPL     L^DBG113\COUNT,S^#03
+!     L^DBG113\COUNT
+!                DBG113\COUNT (address 00000204) contains 00000003
+! EXAMINE/OPERANDS
+!%DEBUG-I-NOTCURPC, target of EXAMINE/OPERANDS is not the current PC 
+	results may be unexpected
+!DBG113\LOOP\%LINE 136:  BLSS     DBG113\LOOP\LOOPTOP
+! EXAMINE/OPERANDS
+!DBG113\LOOP\ENDLP:      RET     
+! !> EXAMINE/OPERANDS=FULL of each kind
+! EXAMINE/OPERANDS=FULL LOOPTOP
+!%DEBUG-I-NOTCURPC, target of EXAMINE/OPERANDS is not the current PC 
+	results may be unexpected
+!DBG113\LOOP\LOOPTOP:    INCL     L^DBG113\COUNT
+!     L^DBG113\COUNT
+!                DBG113\COUNT (address 00000204) contains 00000003
+! EXAMINE/OPERANDS=FULL
+!%DEBUG-I-NOTCURPC, target of EXAMINE/OPERANDS is not the current PC 
+	results may be unexpected
+!DBG113\LOOP\LOOPADD:    ADDL2    S^#02,L^DBG113\WATCHL
+!     S^#02      02 (constant)
+!     L^DBG113\WATCHL
+!                DBG113\WATCHL (address 00000200) contains 00000006
+! EXAMINE/OPERANDS=FULL
+!%DEBUG-I-NOTCURPC, target of EXAMINE/OPERANDS is not the current PC 
+	results may be unexpected
+!DBG113\LOOP\%LINE 131:  MOVL     @B^04(AP),R0
+!     @B^04(AP)  AP contains 7FED5344, @B^04(7FED5344) evaluates to @7FED5348, which contains DBG113\WATCHL (address 00000200), which contains 00000006
+!     R0         R0 contains 00000006
+! EXAMINE/OPERANDS=FULL
+!%DEBUG-I-NOTCURPC, target of EXAMINE/OPERANDS is not the current PC 
+	results may be unexpected
+!DBG113\LOOP\%LINE 132:  MOVAL    L^DBG113\DEPTH[R3],R1
+!     L^DBG113\DEPTH[R3]
+!                DBG113\DEPTH (address 00000208) (constant).  R3 contains 00000000.  00000208[00000000 * 4] evaluates to DBG113\DEPTH (address 00000208), which contains 00000003
+!     R1         R1 contains 00000208
+! EXAMINE/OPERANDS=FULL
+!%DEBUG-I-NOTCURPC, target of EXAMINE/OPERANDS is not the current PC 
+	results may be unexpected
+!DBG113\LOOP\%LINE 133:  MOVL     (R2)+,R0
+!     (R2)+      R2 contains DBG113\WATCHL (address 00000200).  (00000200)+  evaluates to DBG113\WATCHL (address 00000200), which contains 00000006
+!     R0         R0 contains 00000006
+! EXAMINE/OPERANDS=FULL
+!%DEBUG-I-NOTCURPC, target of EXAMINE/OPERANDS is not the current PC 
+	results may be unexpected
+!DBG113\LOOP\%LINE 134:  MOVL     -(R2),R0
+!     -(R2)      R2 contains DBG113\WATCHL (address 00000200).  -(00000200)  evaluates to 000001FC, which contains (no read access)
+!     R0         R0 contains 00000006
+! EXAMINE/OPERANDS=FULL
+!%DEBUG-I-NOTCURPC, target of EXAMINE/OPERANDS is not the current PC 
+	results may be unexpected
+!DBG113\LOOP\%LINE 135:  CMPL     L^DBG113\COUNT,S^#03
+!     L^DBG113\COUNT
+!                DBG113\COUNT (address 00000204) contains 00000003
+!     S^#03      03 (constant)
+! EXAMINE/OPERANDS=FULL
+!%DEBUG-I-NOTCURPC, target of EXAMINE/OPERANDS is not the current PC 
+	results may be unexpected
+!DBG113\LOOP\%LINE 136:  BLSS     DBG113\LOOP\LOOPTOP
+! EXAMINE/OPERANDS=FULL
+!DBG113\LOOP\ENDLP:      RET     
+! !> SET MODE OPERANDS=FULL, then EXAMINE/INSTRUCTION
+! SET MODE OPERANDS=FULL
+! EXAMINE/INSTRUCTION LOOPTOP
+!%DEBUG-I-NOTCURPC, target of EXAMINE/OPERANDS is not the current PC 
+	results may be unexpected
+!DBG113\LOOP\LOOPTOP:    INCL     L^DBG113\COUNT
+!     L^DBG113\COUNT
+!                DBG113\COUNT (address 00000204) contains 00000003
+! EXAMINE/INSTRUCTION .PC
+!DBG113\LOOP\ENDLP:      RET     
+! SET MODE NOOPERANDS
+! CANCEL BREAK/ALL
+!%DEBUG-I-VERIFYICF, exiting command procedure DBG113I.DBG
+EXIT

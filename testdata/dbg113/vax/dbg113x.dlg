@@ -1,0 +1,44 @@
+@DBG113X.DBG
+!%DEBUG-I-VERIFYICF, entering command procedure DBG113X.DBG
+! ! DBG113X.DBG - exception breaks (README.md): the location the break names,
+! ! with the step by lines and by instructions; SHOW LANGUAGE there.
+! SET BREAK/EXCEPTION
+! SHOW STEP
+!step type: source, nosilent, by line,
+!           over routine calls
+! GO
+!%SYSTEM-W-ENDOFFILE, end of file
+!break on exception preceding DBG113\SIGNAL\SIG1
+!   179: SIG1:   PUSHL   #^X870
+! !> SHOW LANGUAGE at an exception break
+! SHOW LANGUAGE
+!language: MACRO
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBG113          SIGNAL             178               0000000F         000005B9
+!*DBG113          START               64               00000086         00000486
+! GO
+!%SYSTEM-W-ENDOFFILE, end of file
+!break on unhandled exception preceding DBG113\SIGNAL\SIG1
+!   179: SIG1:   PUSHL   #^X870
+! SET STEP INSTRUCTION
+! SHOW STEP
+!step type: source, nosilent, by instruction,
+!           over routine calls
+! GO
+!%SYSTEM-W-ENDOFFILE, end of file
+!break on exception preceding DBG113\SIGNAL\SIG2: RET     
+!   181: SIG2:   RET
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBG113          SIGNAL             180               0000001C         000005C6
+!*DBG113          START               64               00000086         00000486
+! GO
+!%SYSTEM-W-ENDOFFILE, end of file
+!break on unhandled exception preceding DBG113\SIGNAL\SIG2: RET     
+!   181: SIG2:   RET
+! !> GO to the program's end: its own lines and the exit handler's, for EXIT and QUIT to be compared with
+! GO
+!%DEBUG-I-EXITSTATUS, is '%SYSTEM-S-NORMAL, normal successful completion'
+!%DEBUG-I-VERIFYICF, exiting command procedure DBG113X.DBG
+EXIT

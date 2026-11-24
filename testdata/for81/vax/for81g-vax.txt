@@ -1,0 +1,1109 @@
+$ SET NOVERIFY
+##### setup: the files the cases read
+#0 make the relative files, four records each
+=OPEN r=00000001
+=IO_END r=00000000
+=IO_END r=00000000
+=IO_END r=00000000
+=IO_END r=00000000
+=CLOSE r=00000001
+=OPEN r=00000001
+=IO_END r=00000000
+=IO_END r=00000000
+=IO_END r=00000000
+=IO_END r=00000000
+=CLOSE r=00000001
+=OPEN r=00000001
+=IO_END r=00000000
+=IO_END r=00000000
+=IO_END r=00000000
+=IO_END r=00000000
+=CLOSE r=00000001
+=OPEN r=00000001
+=IO_END r=00000000
+=IO_END r=00000000
+=IO_END r=00000000
+=IO_END r=00000000
+=CLOSE r=00000001
+=OPEN r=00000001
+=IO_END r=00000000
+=IO_END r=00000000
+=IO_END r=00000000
+=IO_END r=00000000
+=CLOSE r=00000001
+=OPEN r=00000001
+=IO_END r=00000000
+=IO_END r=00000000
+=IO_END r=00000000
+=IO_END r=00000000
+=CLOSE r=00000001
+=OPEN r=00000001
+=IO_END r=00000000
+=IO_END r=00000000
+=IO_END r=00000000
+=IO_END r=00000000
+=CLOSE r=00000001
+#1 make the sequential FIX files, four records each
+=OPEN r=00000001
+=IO_END r=00000000
+=IO_END r=00000000
+=IO_END r=00000000
+=IO_END r=00000000
+=CLOSE r=00000001
+=OPEN r=00000001
+=IO_END r=00000000
+=IO_END r=00000000
+=IO_END r=00000000
+=IO_END r=00000000
+=CLOSE r=00000001
+=OPEN r=00000001
+=IO_END r=00000000
+=IO_END r=00000000
+=IO_END r=00000000
+=IO_END r=00000000
+=CLOSE r=00000001
+=OPEN r=00000001
+=IO_END r=00000000
+=IO_END r=00000000
+=IO_END r=00000000
+=IO_END r=00000000
+=CLOSE r=00000001
+#2 make FOR017.DAT and ABC.DAT
+=OPEN r=00000001
+=IO_END r=00000000
+=CLOSE r=00000001
+=OPEN r=00000001
+=IO_END r=00000000
+=IO_END r=00000000
+=CLOSE r=00000001
+##### the current record after REWIND, BACKSPACE, ENDFILE, and UNLOCK (Phase 81)
+#3 DELETE after two reads and FOR$REWIND, sequential access
+=OPEN r=00000001
+=IO_END r=00000000
+  0000: 0001020304050607
+=IO_END r=00000000
+  0000: 0001020304050607
+=c 001880A4 n=9 a=00000003 0000000A
+=u
+=DELETE r=00000000
+ errsns n=20 sts=00000000 stv=00000000 u=10 c=001880A4
+=IO_END r=00000000
+  0000: 0001020304050607
+=CLOSE r=00000001
+ stat RC1.DAT: org=10 rfm=01 rat=00 mrs=8 mrn=2147483647 alq=3 deq=0 bks=1 fop=00000000 lrl=8 hbk=3 ebk=4 ffb=0
+ rec 1: r=00010001 n=8
+  0000: 0001020304050607
+ rec 2: r=00010001 n=8
+  0000: 0001020304050607
+ rec 3: r=00010001 n=8
+  0000: 0001020304050607
+ rec 4: r=0001827A n=0
+#4 REWRITE after two reads and FOR$REWIND, a sequential FIX file
+=OPEN r=00000001
+=IO_END r=00000000
+  0000: 0001020304050607
+=IO_END r=00000000
+  0000: 0001020304050607
+=REWIND r=00000000
+=c 001881AC n=9 a=00000003 0000000A
+=u
+ errsns n=53 sts=000184B4 stv=00000000 u=10 c=001881AC
+=IO_END r=00000000
+  0000: 0001020304050607
+=CLOSE r=00000001
+ stat RW1.DAT: org=00 rfm=01 rat=00 mrs=8 mrn=0 alq=3 deq=0 bks=0 fop=00000000 lrl=8 hbk=3 ebk=1 ffb=32
+ rec 1: r=00010001 n=8
+  0000: 0001020304050607
+ rec 2: r=00010001 n=8
+  0000: 0001020304050607
+ rec 3: r=00010001 n=8
+  0000: 0001020304050607
+ rec 4: r=00010001 n=8
+  0000: 0001020304050607
+ rec 5: r=0001827A n=0
+#5 DELETE after two reads and FOR$BACKSPACE, sequential access
+=OPEN r=00000001
+=IO_END r=00000000
+  0000: 0001020304050607
+=IO_END r=00000000
+  0000: 0001020304050607
+=c 001880BC n=11 a=00000003 0000000A
+=u
+=DELETE r=00000000
+ errsns n=23 sts=00000000 stv=00000000 u=10 c=001880BC
+=IO_END r=00000000
+  0000: 0001020304050607
+=CLOSE r=00000001
+ stat RC2.DAT: org=10 rfm=01 rat=00 mrs=8 mrn=2147483647 alq=3 deq=0 bks=1 fop=00000000 lrl=8 hbk=3 ebk=4 ffb=0
+ rec 1: r=00010001 n=8
+  0000: 0001020304050607
+ rec 2: r=00010001 n=8
+  0000: 0001020304050607
+ rec 3: r=00010001 n=8
+  0000: 0001020304050607
+ rec 4: r=0001827A n=0
+#6 REWRITE after two reads and FOR$BACKSPACE, a sequential FIX file
+=OPEN r=00000001
+=IO_END r=00000000
+  0000: 0001020304050607
+=IO_END r=00000000
+  0000: 0001020304050607
+=BACKSPACE r=00000000
+=IO_END r=00000000
+ errsns n=0 sts=00000000 stv=00000000 u=0 c=00000000
+=IO_END r=00000000
+  0000: 0001020304050607
+=CLOSE r=00000001
+ stat RW2.DAT: org=00 rfm=01 rat=00 mrs=8 mrn=0 alq=3 deq=0 bks=0 fop=00000000 lrl=8 hbk=3 ebk=1 ffb=32
+ rec 1: r=00010001 n=8
+  0000: 0001020304050607
+ rec 2: r=00010001 n=8
+  0000: 0001020304050607
+ rec 3: r=00010001 n=8
+  0000: 0001020304050607
+ rec 4: r=00010001 n=8
+  0000: 0001020304050607
+ rec 5: r=0001827A n=0
+#7 DELETE after two reads and FOR$ENDFILE, sequential access
+=OPEN r=00000001
+=IO_END r=00000000
+  0000: 0001020304050607
+=IO_END r=00000000
+  0000: 0001020304050607
+=c 0018810C n=9 a=00000003 0000000A
+=u
+=DELETE r=00000000
+ errsns n=33 sts=00000000 stv=00000000 u=10 c=0018810C
+=IO_END r=00000000
+  0000: 0001020304050607
+=CLOSE r=00000001
+ stat RC3.DAT: org=10 rfm=01 rat=00 mrs=8 mrn=2147483647 alq=3 deq=0 bks=1 fop=00000000 lrl=8 hbk=3 ebk=4 ffb=0
+ rec 1: r=00010001 n=8
+  0000: 0001020304050607
+ rec 2: r=00010001 n=8
+  0000: 0001020304050607
+ rec 3: r=00010001 n=8
+  0000: 0001020304050607
+ rec 4: r=0001827A n=0
+#8 REWRITE after two reads and FOR$ENDFILE, a sequential FIX file
+=OPEN r=00000001
+=IO_END r=00000000
+  0000: 0001020304050607
+=IO_END r=00000000
+  0000: 0001020304050607
+=c 0018810C n=9 a=00000003 0000000A
+=u
+=IO_END r=00000000
+ errsns n=33 sts=00000000 stv=00000000 u=10 c=0018810C
+=IO_END r=00000000
+  0000: 0001020304050607
+=CLOSE r=00000001
+ stat RW3.DAT: org=00 rfm=01 rat=00 mrs=8 mrn=0 alq=3 deq=0 bks=0 fop=00000000 lrl=8 hbk=3 ebk=1 ffb=32
+ rec 1: r=00010001 n=8
+  0000: 0001020304050607
+ rec 2: r=00010001 n=8
+  0000: 0001020304050607
+ rec 3: r=00010001 n=8
+  0000: 0001020304050607
+ rec 4: r=00010001 n=8
+  0000: 0001020304050607
+ rec 5: r=0001827A n=0
+#9 DELETE after two reads and FOR$UNLOCK, sequential access
+=OPEN r=00000001
+=IO_END r=00000000
+  0000: 0001020304050607
+=IO_END r=00000000
+  0000: 0001020304050607
+=UNLOCK r=00000000
+=DELETE r=00000000
+ errsns n=0 sts=00000000 stv=00000000 u=0 c=00000000
+=IO_END r=00000000
+  0000: 0001020304050607
+=CLOSE r=00000001
+ stat RC4.DAT: org=10 rfm=01 rat=00 mrs=8 mrn=2147483647 alq=3 deq=0 bks=1 fop=00000000 lrl=8 hbk=3 ebk=4 ffb=0
+ rec 1: r=00010001 n=8
+  0000: 0001020304050607
+ rec 2: r=00010001 n=8
+  0000: 0001020304050607
+ rec 3: r=00010001 n=8
+  0000: 0001020304050607
+ rec 4: r=0001827A n=0
+#10 REWRITE after two reads and FOR$UNLOCK, a sequential FIX file
+=OPEN r=00000001
+=IO_END r=00000000
+  0000: 0001020304050607
+=IO_END r=00000000
+  0000: 0001020304050607
+=UNLOCK r=00000000
+=IO_END r=00000000
+ errsns n=0 sts=00000000 stv=00000000 u=0 c=00000000
+=IO_END r=00000000
+  0000: 0001020304050607
+=CLOSE r=00000001
+ stat RW4.DAT: org=00 rfm=01 rat=00 mrs=8 mrn=0 alq=3 deq=0 bks=0 fop=00000000 lrl=8 hbk=3 ebk=1 ffb=32
+ rec 1: r=00010001 n=8
+  0000: 0001020304050607
+ rec 2: r=00010001 n=8
+  0000: 0001020304050607
+ rec 3: r=00010001 n=8
+  0000: 0001020304050607
+ rec 4: r=00010001 n=8
+  0000: 0001020304050607
+ rec 5: r=0001827A n=0
+#11 DELETE after a direct READ and UNLOCK
+=OPEN r=00000001
+=IO_END r=00000000
+  0000: 0001020304050607
+=UNLOCK r=00000000
+=c 001881BC n=9 a=00000003 0000000A
+=u
+ errsns n=55 sts=000181A0 stv=00000000 u=10 c=001881BC
+=CLOSE r=00000001
+ stat RM.DAT: org=10 rfm=01 rat=00 mrs=8 mrn=2147483647 alq=3 deq=0 bks=1 fop=00000000 lrl=8 hbk=3 ebk=4 ffb=0
+ rec 1: r=00010001 n=8
+  0000: 0001020304050607
+ rec 2: r=00010001 n=8
+  0000: 0001020304050607
+ rec 3: r=00010001 n=8
+  0000: 0001020304050607
+ rec 4: r=00010001 n=8
+  0000: 0001020304050607
+ rec 5: r=0001827A n=0
+##### DELETE by number (Phase 81)
+#12 on a unit not open
+=c 001881BC n=9 a=00000003 0000000C
+=u
+ errsns n=55 sts=00000000 stv=00000000 u=12 c=001881BC
+ q29 r=00000001 v=12345678
+ q30 r=00000001 v=FFFFFFFF
+ q31 r=00000001 v=00000000
+ q32 r=00000001 v=0000000C
+ q33 r=00000001 v=00000000
+ q34 r=00000001 |                                                                |
+ q35 r=00000001 |UNKNOWN                                                         |
+ q36 r=00000001 |UNKNOWN                                                         |
+ q37 r=00000001 |UNKNOWN                                                         |
+ q38 r=00000001 |UNKNOWN                                                         |
+ q39 r=00000001 |UNKNOWN                                                         |
+ q40 r=00000001 |UNKNOWN                                                         |
+ q41 r=00000001 v=00000000
+ q42 r=00000001 v=00000000
+ q43 r=00000001 |UNKNOWN                                                         |
+ q44 r=00000001 |UNKNOWN                                                         |
+ q45 r=00000001 |UNKNOWN                                                         |
+ q46 r=00000001 |UNKNOWN                                                         |
+ q47 r=00000001 |UNKNOWN                                                         |
+ q48 r=00000001 |UNKNOWN                                                         |
+#13 on a sequential-access relative unit
+=OPEN r=00000001
+ fab fac=1F shr=00 org=10 rfm=01 rat=00 mrs=8 mrn=2147483647 alq=3 deq=0 fop=00000420 bks=1 bls=0 fsz=0
+ rab rop=00010602 rac=0 mbc=0 mbf=0 rsz=0 usz=8 ksz=0
+=c 001880D4 n=9 a=00000003 0000000A
+=u
+ errsns n=26 sts=00000000 stv=00000000 u=10 c=001880D4
+=IO_END r=00000000
+  0000: 0001020304050607
+=IO_END r=00000000
+  0000: 0001020304050607
+=IO_END r=00000000
+  0000: 0001020304050607
+=CLOSE r=00000001
+ stat DN.DAT: org=10 rfm=01 rat=00 mrs=8 mrn=2147483647 alq=3 deq=0 bks=1 fop=00000000 lrl=8 hbk=3 ebk=4 ffb=0
+ rec 1: r=00010001 n=8
+  0000: 0001020304050607
+ rec 2: r=00010001 n=8
+  0000: 0001020304050607
+ rec 3: r=00010001 n=8
+  0000: 0001020304050607
+ rec 4: r=00010001 n=8
+  0000: 0001020304050607
+ rec 5: r=0001827A n=0
+#14 the associated variable after DELETE by number
+=OPEN r=00000001
+ asv=12345678
+=DELETE_D r=00000000
+ asv=00000004
+=c 00188124 n=9 a=00000003 0000000A
+=u
+ asv=FFFFFFFF
+=IO_END r=00000000
+  0000: 0001020304050607
+ asv=00000002
+=DELETE_D r=00000000
+ asv=00000003
+=FIND r=00000000
+ asv=00000004
+=CLOSE r=00000001
+##### record -1 and record 0 (Phase 81): RMS's status by ERRSNS
+#15 on a relative unit
+=OPEN r=00000001
+=c 001880CC n=9 a=00000003 0000000A
+=u
+ errsns n=25 sts=00000000 stv=00000000 u=10 c=001880CC
+=c 001880CC n=9 a=00000003 0000000A
+=u
+ errsns n=25 sts=00000000 stv=00000000 u=10 c=001880CC
+=c 001880CC n=9 a=00000003 0000000A
+=u
+ errsns n=25 sts=00000000 stv=00000000 u=10 c=001880CC
+=c 001880CC n=9 a=00000003 0000000A
+=u
+ errsns n=25 sts=00000000 stv=00000000 u=10 c=001880CC
+=c 001880CC n=9 a=00000003 0000000A
+=u
+ errsns n=25 sts=00000000 stv=00000000 u=10 c=001880CC
+=c 001880CC n=9 a=00000003 0000000A
+=u
+ errsns n=25 sts=00000000 stv=00000000 u=10 c=001880CC
+=c 001880CC n=9 a=00000003 0000000A
+=u
+ errsns n=25 sts=00000000 stv=00000000 u=10 c=001880CC
+=c 001880CC n=9 a=00000003 0000000A
+=u
+ errsns n=25 sts=00000000 stv=00000000 u=10 c=001880CC
+=CLOSE r=00000001
+#16 on a sequential FIX direct unit
+=OPEN r=00000001
+=IO_END r=00000000
+=c 0018813C n=9 a=00000003 0000000A
+=u
+ errsns n=39 sts=00018594 stv=00000000 u=10 c=0018813C
+=c 00188134 n=9 a=00000003 0000000A
+=u
+ errsns n=38 sts=00018594 stv=00000000 u=10 c=00188134
+=c 001880CC n=9 a=00000003 0000000A
+=u
+ errsns n=25 sts=00000000 stv=00000000 u=10 c=001880CC
+=c 001880CC n=9 a=00000003 0000000A
+=u
+ errsns n=25 sts=00000000 stv=00000000 u=10 c=001880CC
+=CLOSE r=00000001
+#17 RMS's keyed $GET of a relative file and a sequential FIX file
+ rms $GET RC1.DAT key -1: sts=00018594 stv=00000000 rsz=0
+ rms $GET RC1.DAT key 0: sts=00018594 stv=00000000 rsz=0
+ rms $GET RC1.DAT key 1: sts=00010001 stv=00000000 rsz=8
+ rms $GET RC1.DAT key 2: sts=000182B2 stv=00000000 rsz=0
+ rms $GET RC1.DAT key 5: sts=000182B2 stv=00000000 rsz=0
+ rms $GET RC1.DAT key 70000: sts=000182B2 stv=00000000 rsz=0
+ rms $GET FX.DAT key -1: sts=00018594 stv=00000000 rsz=0
+ rms $GET FX.DAT key 0: sts=00018594 stv=00000000 rsz=0
+ rms $GET FX.DAT key 1: sts=00010001 stv=00000000 rsz=8
+ rms $GET FX.DAT key 2: sts=0001827A stv=00000000 rsz=0
+ rms $GET FX.DAT key 5: sts=0001827A stv=00000000 rsz=0
+ rms $GET FX.DAT key 70000: sts=0001827A stv=00000000 rsz=0
+##### an implicit OPEN's FAB (Phase 81)
+#18 an implicit READ of an existing FOR017.DAT
+=IO_END r=00000000
+  0000: 534556454E5445454E
+ fab fac=1F shr=00 org=00 rfm=02 rat=01 mrs=0 mrn=0 alq=3 deq=0 fop=00000420 bks=0 bls=512 fsz=0
+ rab rop=00010602 rac=0 mbc=0 mbf=0 rsz=9 usz=133 ksz=0
+ q29 r=00000001 v=12345678
+ q30 r=00000001 v=FFFFFFFF
+ q31 r=00000001 v=FFFFFFFF
+ q32 r=00000001 v=00000011
+ q33 r=00000001 v=FFFFFFFF
+ q34 r=00000001 |DUA1:[FOR81G]FOR017.DAT;1                                       |
+ q35 r=00000001 |SEQUENTIAL                                                      |
+ q36 r=00000001 |YES                                                             |
+ q37 r=00000001 |NO                                                              |
+ q38 r=00000001 |FORMATTED                                                       |
+ q39 r=00000001 |YES                                                             |
+ q40 r=00000001 |YES                                                             |
+ q41 r=00000001 v=00000085
+ q42 r=00000001 v=00000000
+ q43 r=00000001 |ZERO                                                            |
+ q44 r=00000001 |SEQUENTIAL                                                      |
+ q45 r=00000001 |VARIABLE                                                        |
+ q46 r=00000001 |NO                                                              |
+ q47 r=00000001 |FORTRAN                                                         |
+ q48 r=00000001 |UNKNOWN                                                         |
+#19 an implicit WRITE of unit 16
+=IO_END r=00000000
+ fab fac=1F shr=00 org=00 rfm=02 rat=01 mrs=0 mrn=0 alq=0 deq=0 fop=00000420 bks=0 bls=512 fsz=0
+ rab rop=00010602 rac=0 mbc=0 mbf=0 rsz=7 usz=133 ksz=0
+##### a last FIX record the end of file cuts short (Phase 81, round 1's #38)
+#20 make SHORT.DAT: FIX 24, one block by $WRITE, so 21 records and 8 bytes
+=MKSHORT r=00010001
+ stat SHORT.DAT: org=00 rfm=01 rat=00 mrs=24 mrn=0 alq=3 deq=0 bks=0 fop=00000000 lrl=24 hbk=3 ebk=2 ffb=0
+ rec 1: r=00010001 n=24
+  0000: 000102030405060708090A0B0C0D0E0F1011121314151617
+ rec 2: r=00010001 n=24
+  0000: 18191A1B1C1D1E1F202122232425262728292A2B2C2D2E2F
+ rec 3: r=00010001 n=24
+  0000: 303132333435363738393A3B3C3D3E3F4041424344454647
+ rec 4: r=00010001 n=24
+  0000: 48494A4B4C4D4E4F505152535455565758595A5B5C5D5E5F
+ rec 5: r=00010001 n=24
+  0000: 606162636465666768696A6B6C6D6E6F7071727374757677
+ rec 6: r=00010001 n=24
+  0000: 78797A7B7C7D7E7F808182838485868788898A8B8C8D8E8F
+ rec 7: r=00010001 n=24
+  0000: 909192939495969798999A9B9C9D9E9FA0A1A2A3A4A5A6A7
+ rec 8: r=00010001 n=24
+  0000: A8A9AAABACADAEAFB0B1B2B3B4B5B6B7B8B9BABBBCBDBEBF
+ rec 9: r=00010001 n=24
+  0000: C0C1C2C3C4C5C6C7C8C9CACBCCCDCECFD0D1D2D3D4D5D6D7
+ rec 10: r=00010001 n=24
+  0000: D8D9DADBDCDDDEDFE0E1E2E3E4E5E6E7E8E9EAEBECEDEEEF
+ rec 11: r=00010001 n=24
+  0000: F0F1F2F3F4F5F6F7F8F9FAFBFCFDFEFF0001020304050607
+ rec 12: r=00010001 n=24
+  0000: 08090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F
+ rec 13: r=00010001 n=24
+  0000: 202122232425262728292A2B2C2D2E2F3031323334353637
+ rec 14: r=00010001 n=24
+  0000: 38393A3B3C3D3E3F404142434445464748494A4B4C4D4E4F
+ rec 15: r=00010001 n=24
+  0000: 505152535455565758595A5B5C5D5E5F6061626364656667
+ rec 16: r=00010001 n=24
+  0000: 68696A6B6C6D6E6F707172737475767778797A7B7C7D7E7F
+ rec 17: r=00010001 n=24
+  0000: 808182838485868788898A8B8C8D8E8F9091929394959697
+ rec 18: r=00010001 n=24
+  0000: 98999A9B9C9D9E9FA0A1A2A3A4A5A6A7A8A9AAABACADAEAF
+ rec 19: r=00010001 n=24
+  0000: B0B1B2B3B4B5B6B7B8B9BABBBCBDBEBFC0C1C2C3C4C5C6C7
+ rec 20: r=00010001 n=24
+  0000: C8C9CACBCCCDCECFD0D1D2D3D4D5D6D7D8D9DADBDCDDDEDF
+ rec 21: r=00010001 n=24
+  0000: E0E1E2E3E4E5E6E7E8E9EAEBECEDEEEFF0F1F2F3F4F5F6F7
+ rec 22: r=00010001 n=24
+  0000: F8F9FAFBFCFDFEFF00000000000000000000000000000000
+ rec 23: r=0001827A n=0
+#21 read it formatted
+=OPEN r=00000001
+ fab fac=00 shr=00 org=00 rfm=01 rat=00 mrs=24 mrn=0 alq=3 deq=0 fop=00000420 bks=0 bls=512 fsz=0
+ rab rop=00010602 rac=0 mbc=0 mbf=0 rsz=0 usz=24 ksz=0
+=IO_END r=00000000
+  0000: F8F9FAFBFCFDFEFF00000000000000000000000000000000
+ errsns n=0 sts=00000000 stv=00000000 u=0 c=00000000
+=c 001880C4 n=9 a=00000003 0000000A
+=u
+ errsns n=24 sts=0001827A stv=00000000 u=10 c=001880C4
+=CLOSE r=00000001
+#22 read it unformatted
+=OPEN r=00000001
+ fab fac=00 shr=00 org=00 rfm=01 rat=00 mrs=24 mrn=0 alq=3 deq=0 fop=00000420 bks=0 bls=512 fsz=0
+ rab rop=00010602 rac=0 mbc=0 mbf=0 rsz=0 usz=24 ksz=0
+=IO_END r=00000000
+  0000: F8F9FAFBFCFDFEFF00000000000000000000000000000000
+ errsns n=0 sts=00000000 stv=00000000 u=0 c=00000000
+=c 001880C4 n=9 a=00000003 0000000A
+=u
+ errsns n=24 sts=0001827A stv=00000000 u=10 c=001880C4
+=CLOSE r=00000001
+#23 read it direct
+=OPEN r=00000001
+ fab fac=00 shr=00 org=00 rfm=01 rat=00 mrs=24 mrn=0 alq=3 deq=0 fop=00000420 bks=0 bls=512 fsz=0
+ rab rop=00010612 rac=1 mbc=0 mbf=0 rsz=0 usz=24 ksz=0
+=IO_END r=00000000
+  0000: E0E1E2E3E4E5E6E7E8E9EAEBECEDEEEFF0F1F2F3F4F5F6F7
+=IO_END r=00000000
+  0000: F8F9FAFBFCFDFEFF00000000000000000000000000000000
+ errsns n=0 sts=00000000 stv=00000000 u=0 c=00000000
+=c 00188124 n=9 a=00000003 0000000A
+=u
+ errsns n=36 sts=0001827A stv=00000000 u=10 c=00188124
+=CLOSE r=00000001
+##### a relative file's growth (Phase 81)
+#24 RECL 2 longwords, record 1 alone
+=OPEN r=00000001
+=IO_END r=00000000
+=CLOSE r=00000001
+ stat GR2_1.DAT: org=10 rfm=01 rat=00 mrs=8 mrn=2147483647 alq=3 deq=0 bks=1 fop=00000000 lrl=8 hbk=3 ebk=4 ffb=0
+#25 RECL 2 longwords, record 100 alone
+=OPEN r=00000001
+=IO_END r=00000000
+=CLOSE r=00000001
+ stat GR2_100.DAT: org=10 rfm=01 rat=00 mrs=8 mrn=2147483647 alq=3 deq=0 bks=1 fop=00000000 lrl=8 hbk=3 ebk=4 ffb=0
+#26 RECL 2 longwords, record 1000 alone
+=OPEN r=00000001
+=IO_END r=00000000
+=CLOSE r=00000001
+ stat GR2_1000.DAT: org=10 rfm=01 rat=00 mrs=8 mrn=2147483647 alq=21 deq=0 bks=1 fop=00000000 lrl=8 hbk=21 ebk=22 ffb=0
+#27 RECL 2 longwords, record 5000 alone
+=OPEN r=00000001
+=IO_END r=00000000
+=CLOSE r=00000001
+ stat GR2_5000.DAT: org=10 rfm=01 rat=00 mrs=8 mrn=2147483647 alq=93 deq=0 bks=1 fop=00000000 lrl=8 hbk=93 ebk=94 ffb=0
+#28 RECL 100 longwords, record 50 alone
+=OPEN r=00000001
+=IO_END r=00000000
+=CLOSE r=00000001
+ stat GR100_50.DAT: org=10 rfm=01 rat=00 mrs=400 mrn=2147483647 alq=51 deq=0 bks=1 fop=00000000 lrl=400 hbk=51 ebk=52 ffb=0
+#29 RECL 100 longwords, record 600 alone
+=OPEN r=00000001
+=IO_END r=00000000
+=CLOSE r=00000001
+ stat GR100_600.DAT: org=10 rfm=01 rat=00 mrs=400 mrn=2147483647 alq=603 deq=0 bks=1 fop=00000000 lrl=400 hbk=603 ebk=604 ffb=0
+#30 RECL 2, records 1 to 300 in order
+=OPEN r=00000001
+=CLOSE r=00000001
+ stat GRSEQ.DAT: org=10 rfm=01 rat=00 mrs=8 mrn=2147483647 alq=9 deq=0 bks=1 fop=00000000 lrl=8 hbk=9 ebk=10 ffb=0
+##### segment words (Phase 81's SEGRECFOR): VAR records read as SEGMENTED
+#31 S1: one whole segment (3)
+=OPEN r=00000001
+=IO_END r=00000000
+=CLOSE r=00000001
+ stat S1.DAT: org=00 rfm=02 rat=00 mrs=0 mrn=0 alq=3 deq=0 bks=0 fop=00000000 lrl=6 hbk=3 ebk=1 ffb=8
+ rec 1: r=00010001 n=6
+  0000: 030041424344
+ rec 2: r=0001827A n=0
+=OPEN r=00000001
+ fab fac=1F shr=00 org=00 rfm=02 rat=00 mrs=0 mrn=0 alq=3 deq=0 fop=00000420 bks=0 bls=512 fsz=0
+ rab rop=00010602 rac=0 mbc=0 mbf=0 rsz=0 usz=2044 ksz=0
+=IO_END r=00000000
+  0000: 41424344
+ errsns n=0 sts=00000000 stv=00000000 u=0 c=00000000
+=c 001880C4 n=9 a=00000003 0000000A
+=u
+ errsns n=24 sts=0001827A stv=00000000 u=10 c=001880C4
+=BACKSPACE r=00000000
+=IO_END r=00000000
+  0000: 41424344
+=CLOSE r=00000001
+#32 S2: first (1), then last (2)
+=OPEN r=00000001
+=IO_END r=00000000
+=IO_END r=00000000
+=CLOSE r=00000001
+ stat S2.DAT: org=00 rfm=02 rat=00 mrs=0 mrn=0 alq=3 deq=0 bks=0 fop=00000000 lrl=4 hbk=3 ebk=1 ffb=12
+ rec 1: r=00010001 n=4
+  0000: 01004142
+ rec 2: r=00010001 n=4
+  0000: 02004344
+ rec 3: r=0001827A n=0
+=OPEN r=00000001
+ fab fac=1F shr=00 org=00 rfm=02 rat=00 mrs=0 mrn=0 alq=3 deq=0 fop=00000420 bks=0 bls=512 fsz=0
+ rab rop=00010602 rac=0 mbc=0 mbf=0 rsz=0 usz=2044 ksz=0
+=IO_END r=00000000
+  0000: 41424344
+ errsns n=0 sts=00000000 stv=00000000 u=0 c=00000000
+=c 001880C4 n=9 a=00000003 0000000A
+=u
+ errsns n=24 sts=0001827A stv=00000000 u=10 c=001880C4
+=BACKSPACE r=00000000
+=IO_END r=00000000
+  0000: 41424344
+=CLOSE r=00000001
+#33 S3: first, first again, last
+=OPEN r=00000001
+=IO_END r=00000000
+=IO_END r=00000000
+=IO_END r=00000000
+=CLOSE r=00000001
+ stat S3.DAT: org=00 rfm=02 rat=00 mrs=0 mrn=0 alq=3 deq=0 bks=0 fop=00000000 lrl=4 hbk=3 ebk=1 ffb=18
+ rec 1: r=00010001 n=4
+  0000: 01004142
+ rec 2: r=00010001 n=4
+  0000: 01004142
+ rec 3: r=00010001 n=4
+  0000: 02004344
+ rec 4: r=0001827A n=0
+=OPEN r=00000001
+ fab fac=1F shr=00 org=00 rfm=02 rat=00 mrs=0 mrn=0 alq=3 deq=0 fop=00000420 bks=0 bls=512 fsz=0
+ rab rop=00010602 rac=0 mbc=0 mbf=0 rsz=0 usz=2044 ksz=0
+=IO_END r=00000000
+  0000: 414241424344
+ errsns n=0 sts=00000000 stv=00000000 u=0 c=00000000
+=c 001880C4 n=9 a=00000003 0000000A
+=u
+ errsns n=24 sts=0001827A stv=00000000 u=10 c=001880C4
+=BACKSPACE r=00000000
+=IO_END r=00000000
+  0000: 414241424344
+=CLOSE r=00000001
+#34 S4: a last segment first
+=OPEN r=00000001
+=IO_END r=00000000
+=CLOSE r=00000001
+ stat S4.DAT: org=00 rfm=02 rat=00 mrs=0 mrn=0 alq=3 deq=0 bks=0 fop=00000000 lrl=4 hbk=3 ebk=1 ffb=6
+ rec 1: r=00010001 n=4
+  0000: 02004344
+ rec 2: r=0001827A n=0
+=OPEN r=00000001
+ fab fac=1F shr=00 org=00 rfm=02 rat=00 mrs=0 mrn=0 alq=3 deq=0 fop=00000420 bks=0 bls=512 fsz=0
+ rab rop=00010602 rac=0 mbc=0 mbf=0 rsz=0 usz=2044 ksz=0
+=IO_END r=00000000
+  0000: 4344
+ errsns n=0 sts=00000000 stv=00000000 u=0 c=00000000
+=c 001880C4 n=9 a=00000003 0000000A
+=u
+ errsns n=24 sts=0001827A stv=00000000 u=10 c=001880C4
+=BACKSPACE r=00000000
+=IO_END r=00000000
+  0000: 4344
+=CLOSE r=00000001
+#35 S5: a middle segment (0) first, then last
+=OPEN r=00000001
+=IO_END r=00000000
+=IO_END r=00000000
+=CLOSE r=00000001
+ stat S5.DAT: org=00 rfm=02 rat=00 mrs=0 mrn=0 alq=3 deq=0 bks=0 fop=00000000 lrl=4 hbk=3 ebk=1 ffb=12
+ rec 1: r=00010001 n=4
+  0000: 00004546
+ rec 2: r=00010001 n=4
+  0000: 02004344
+ rec 3: r=0001827A n=0
+=OPEN r=00000001
+ fab fac=1F shr=00 org=00 rfm=02 rat=00 mrs=0 mrn=0 alq=3 deq=0 fop=00000420 bks=0 bls=512 fsz=0
+ rab rop=00010602 rac=0 mbc=0 mbf=0 rsz=0 usz=2044 ksz=0
+=IO_END r=00000000
+  0000: 45464344
+ errsns n=0 sts=00000000 stv=00000000 u=0 c=00000000
+=c 001880C4 n=9 a=00000003 0000000A
+=u
+ errsns n=24 sts=0001827A stv=00000000 u=10 c=001880C4
+=BACKSPACE r=00000000
+=IO_END r=00000000
+  0000: 45464344
+=CLOSE r=00000001
+#36 S6: a word of 4
+=OPEN r=00000001
+=IO_END r=00000000
+=CLOSE r=00000001
+ stat S6.DAT: org=00 rfm=02 rat=00 mrs=0 mrn=0 alq=3 deq=0 bks=0 fop=00000000 lrl=4 hbk=3 ebk=1 ffb=6
+ rec 1: r=00010001 n=4
+  0000: 04004748
+ rec 2: r=0001827A n=0
+=OPEN r=00000001
+ fab fac=1F shr=00 org=00 rfm=02 rat=00 mrs=0 mrn=0 alq=3 deq=0 fop=00000420 bks=0 bls=512 fsz=0
+ rab rop=00010602 rac=0 mbc=0 mbf=0 rsz=0 usz=2044 ksz=0
+=c 0018811C n=9 a=00000003 0000000A
+=u
+ errsns n=35 sts=00000000 stv=00000000 u=10 c=0018811C
+=c 001880C4 n=9 a=00000003 0000000A
+=u
+ errsns n=24 sts=0001827A stv=00000000 u=10 c=001880C4
+=BACKSPACE r=00000000
+=c 0018811C n=9 a=00000003 0000000A
+=u
+=CLOSE r=00000001
+#37 S7: a word of 7
+=OPEN r=00000001
+=IO_END r=00000000
+=CLOSE r=00000001
+ stat S7.DAT: org=00 rfm=02 rat=00 mrs=0 mrn=0 alq=3 deq=0 bks=0 fop=00000000 lrl=4 hbk=3 ebk=1 ffb=6
+ rec 1: r=00010001 n=4
+  0000: 0700494A
+ rec 2: r=0001827A n=0
+=OPEN r=00000001
+ fab fac=1F shr=00 org=00 rfm=02 rat=00 mrs=0 mrn=0 alq=3 deq=0 fop=00000420 bks=0 bls=512 fsz=0
+ rab rop=00010602 rac=0 mbc=0 mbf=0 rsz=0 usz=2044 ksz=0
+=c 0018811C n=9 a=00000003 0000000A
+=u
+ errsns n=35 sts=00000000 stv=00000000 u=10 c=0018811C
+=c 001880C4 n=9 a=00000003 0000000A
+=u
+ errsns n=24 sts=0001827A stv=00000000 u=10 c=001880C4
+=BACKSPACE r=00000000
+=c 0018811C n=9 a=00000003 0000000A
+=u
+=CLOSE r=00000001
+#38 S8: a record of one byte
+=OPEN r=00000001
+=IO_END r=00000000
+=CLOSE r=00000001
+ stat S8.DAT: org=00 rfm=02 rat=00 mrs=0 mrn=0 alq=3 deq=0 bks=0 fop=00000000 lrl=1 hbk=3 ebk=1 ffb=4
+ rec 1: r=00010001 n=1
+  0000: 01
+ rec 2: r=0001827A n=0
+=OPEN r=00000001
+ fab fac=1F shr=00 org=00 rfm=02 rat=00 mrs=0 mrn=0 alq=3 deq=0 fop=00000420 bks=0 bls=512 fsz=0
+ rab rop=00010602 rac=0 mbc=0 mbf=0 rsz=0 usz=2044 ksz=0
+=c 0018811C n=9 a=00000003 0000000A
+=u
+ errsns n=35 sts=00000000 stv=00000000 u=10 c=0018811C
+=c 001880C4 n=9 a=00000003 0000000A
+=u
+ errsns n=24 sts=0001827A stv=00000000 u=10 c=001880C4
+=BACKSPACE r=00000000
+=c 0018811C n=9 a=00000003 0000000A
+=u
+=CLOSE r=00000001
+#39 S9: a first segment, then the end of file
+=OPEN r=00000001
+=IO_END r=00000000
+=CLOSE r=00000001
+ stat S9.DAT: org=00 rfm=02 rat=00 mrs=0 mrn=0 alq=3 deq=0 bks=0 fop=00000000 lrl=4 hbk=3 ebk=1 ffb=6
+ rec 1: r=00010001 n=4
+  0000: 01004142
+ rec 2: r=0001827A n=0
+=OPEN r=00000001
+ fab fac=1F shr=00 org=00 rfm=02 rat=00 mrs=0 mrn=0 alq=3 deq=0 fop=00000420 bks=0 bls=512 fsz=0
+ rab rop=00010602 rac=0 mbc=0 mbf=0 rsz=0 usz=2044 ksz=0
+=c 001880C4 n=9 a=00000003 0000000A
+=u
+ errsns n=24 sts=0001827A stv=00000000 u=10 c=001880C4
+=c 001880C4 n=9 a=00000003 0000000A
+=u
+ errsns n=24 sts=0001827A stv=00000000 u=10 c=001880C4
+=BACKSPACE r=00000000
+=c 001880C4 n=9 a=00000003 0000000A
+=u
+=CLOSE r=00000001
+#40 S10: first, then a whole one (3)
+=OPEN r=00000001
+=IO_END r=00000000
+=IO_END r=00000000
+=CLOSE r=00000001
+ stat S10.DAT: org=00 rfm=02 rat=00 mrs=0 mrn=0 alq=3 deq=0 bks=0 fop=00000000 lrl=6 hbk=3 ebk=1 ffb=14
+ rec 1: r=00010001 n=4
+  0000: 01004142
+ rec 2: r=00010001 n=6
+  0000: 030041424344
+ rec 3: r=0001827A n=0
+=OPEN r=00000001
+ fab fac=1F shr=00 org=00 rfm=02 rat=00 mrs=0 mrn=0 alq=3 deq=0 fop=00000420 bks=0 bls=512 fsz=0
+ rab rop=00010602 rac=0 mbc=0 mbf=0 rsz=0 usz=2044 ksz=0
+=IO_END r=00000000
+  0000: 414241424344
+ errsns n=24 sts=0001827A stv=00000000 u=10 c=001880C4
+=c 001880C4 n=9 a=00000003 0000000A
+=u
+ errsns n=24 sts=0001827A stv=00000000 u=10 c=001880C4
+=BACKSPACE r=00000000
+=IO_END r=00000000
+  0000: 414241424344
+=CLOSE r=00000001
+#41 S11: a whole segment with only its word
+=OPEN r=00000001
+=IO_END r=00000000
+=CLOSE r=00000001
+ stat S11.DAT: org=00 rfm=02 rat=00 mrs=0 mrn=0 alq=3 deq=0 bks=0 fop=00000000 lrl=2 hbk=3 ebk=1 ffb=4
+ rec 1: r=00010001 n=2
+  0000: 0300
+ rec 2: r=0001827A n=0
+=OPEN r=00000001
+ fab fac=1F shr=00 org=00 rfm=02 rat=00 mrs=0 mrn=0 alq=3 deq=0 fop=00000420 bks=0 bls=512 fsz=0
+ rab rop=00010602 rac=0 mbc=0 mbf=0 rsz=0 usz=2044 ksz=0
+=c 0018821C n=9 a=00000003 0000000A
+=u
+ errsns n=67 sts=00000000 stv=00000000 u=10 c=0018821C
+=c 001880C4 n=9 a=00000003 0000000A
+=u
+ errsns n=24 sts=0001827A stv=00000000 u=10 c=001880C4
+=BACKSPACE r=00000000
+=c 0018821C n=9 a=00000003 0000000A
+=u
+=CLOSE r=00000001
+#42 S12: first, middle, middle, last
+=OPEN r=00000001
+=IO_END r=00000000
+=IO_END r=00000000
+=IO_END r=00000000
+=IO_END r=00000000
+=CLOSE r=00000001
+ stat S12.DAT: org=00 rfm=02 rat=00 mrs=0 mrn=0 alq=3 deq=0 bks=0 fop=00000000 lrl=4 hbk=3 ebk=1 ffb=24
+ rec 1: r=00010001 n=4
+  0000: 01004142
+ rec 2: r=00010001 n=4
+  0000: 00004546
+ rec 3: r=00010001 n=4
+  0000: 00004546
+ rec 4: r=00010001 n=4
+  0000: 02004344
+ rec 5: r=0001827A n=0
+=OPEN r=00000001
+ fab fac=1F shr=00 org=00 rfm=02 rat=00 mrs=0 mrn=0 alq=3 deq=0 fop=00000420 bks=0 bls=512 fsz=0
+ rab rop=00010602 rac=0 mbc=0 mbf=0 rsz=0 usz=2044 ksz=0
+=IO_END r=00000000
+  0000: 4142454645464344
+ errsns n=67 sts=00000000 stv=00000000 u=10 c=0018821C
+=c 001880C4 n=9 a=00000003 0000000A
+=u
+ errsns n=24 sts=0001827A stv=00000000 u=10 c=001880C4
+=BACKSPACE r=00000000
+=IO_END r=00000000
+  0000: 4142454645464344
+=CLOSE r=00000001
+#43 S13: an empty record
+=OPEN r=00000001
+=IO_END r=00000000
+=CLOSE r=00000001
+ stat S13.DAT: org=00 rfm=02 rat=00 mrs=0 mrn=0 alq=3 deq=0 bks=0 fop=00000000 lrl=0 hbk=3 ebk=1 ffb=2
+ rec 1: r=00010001 n=0
+ rec 2: r=0001827A n=0
+=OPEN r=00000001
+ fab fac=1F shr=00 org=00 rfm=02 rat=00 mrs=0 mrn=0 alq=3 deq=0 fop=00000420 bks=0 bls=512 fsz=0
+ rab rop=00010602 rac=0 mbc=0 mbf=0 rsz=0 usz=2044 ksz=0
+=c 0018811C n=9 a=00000003 0000000A
+=u
+ errsns n=35 sts=00000000 stv=00000000 u=10 c=0018811C
+=c 001880C4 n=9 a=00000003 0000000A
+=u
+ errsns n=24 sts=0001827A stv=00000000 u=10 c=001880C4
+=BACKSPACE r=00000000
+=c 0018811C n=9 a=00000003 0000000A
+=u
+=CLOSE r=00000001
+##### ERRSNS after a specifier took the error (Phase 80)
+#44 OPEN with ERR=
+ errsns n=35 sts=00000000 stv=00000000 u=10 c=0018811C
+=OPEN r=001880EC
+ errsns n=29 sts=00018292 stv=00000910 u=10 c=001880EC
+ errsns n=0 sts=00000000 stv=00000000 u=0 c=00000000
+#45 OPEN with IOSTAT=
+=OPEN r=001880EC
+ asv=0000001D
+ errsns n=29 sts=00018292 stv=00000910 u=10 c=001880EC
+#46 CLOSE and INQUIRE with ERR=
+=CLOSE r=00188104
+ errsns n=32 sts=00000000 stv=00000000 u=120 c=00188104
+=INQUIRE r=00000001
+ errsns n=0 sts=00000000 stv=00000000 u=0 c=00000000
+#47 OPEN with neither, signaled
+=c 001880EC n=9 a=00000003 0000000A
+=u
+ errsns n=29 sts=00018292 stv=00000910 u=10 c=001880EC
+#48 a second error after the first, then ERRSNS
+=OPEN r=001880EC
+=OPEN r=0018815C
+ errsns n=43 sts=000186D4 stv=00000000 u=10 c=0018815C
+##### the PC of an error an item's call finds (Phase 80): b=, i=, e= are the PC less the place after the begin call, the item's call, and FOR$IO_END's
+#49 OUTCONERR: (I2) of 12345, one item
+ pc b=185511 i=185498 e=185491
+ user pc b=20 i=7 e=0
+=c 001881FA n=9 a=00000003 0000000D
+=IO_END r=0000003F
+#50 OUTCONERR in the first of two items
+ pc b=185420 i=185407 e=185391
+ user pc b=29 i=16 e=0
+=c 001881FA n=9 a=00000003 0000000D
+=IO_END r=0000003F
+#51 FORVARMIS: (I5) of a REAL
+ pc b=185320 i=185307 e=185300
+ user pc b=20 i=7 e=0
+=c 001881EC n=9 a=00000003 0000000D
+=u
+#52 INPCONERR: (I4) of ABCD
+=OPEN r=00000001
+ pc b=185163 i=185150 e=185143
+ user pc b=13 i=0 e=-7
+=c 00188204 n=13 a=00000003 0000000E
+=u
+ errsns n=64 sts=00000000 stv=00000000 u=14 c=00188204
+=CLOSE r=00000001
+#53 INPCONERR in the first of two items
+=OPEN r=00000001
+ pc b=184964 i=184951 e=184931
+ user pc b=13 i=0 e=-20
+=c 00188204 n=13 a=00000003 0000000E
+=u
+=CLOSE r=00000001
+#54 ENDDURREA: a third READ of a file of two records
+=OPEN r=00000001
+=IO_END r=00000000
+  0000: 41424344
+=IO_END r=00000000
+  0000: 3132333435363738
+ pc b=184578 i=184551 e=184544
+ user pc b=0 i=-27 e=-34
+=c 001880C4 n=9 a=00000003 0000000E
+=u
+=CLOSE r=00000001
+#55 FMTSYN: a format with an error, at the begin call
+ pc b=184431 i=184422 e=184415
+ user pc b=0 i=-9 e=-16
+=c 001881F4 n=9 a=00000003 0000000D
+=u
+##### zero widths on output (Fortran 95; Phase 112's I0 of zero and F0.d's sign)
+#56 I0, each between bars
+I0 0 ||
+=c 001881FA n=9 a=00000003 00000006
+=IO_END r=0000003F
+I0 7 ||
+=c 001881FA n=9 a=00000003 00000006
+=IO_END r=0000003F
+I0 -123 ||
+=c 001881FA n=9 a=00000003 00000006
+=IO_END r=0000003F
+I0 2147483647 ||
+=c 001881FA n=9 a=00000003 00000006
+=IO_END r=0000003F
+I0 -2147483648 ||
+=c 001881FA n=9 a=00000003 00000006
+=IO_END r=0000003F
+#57 Iw.m with w 0, each between bars
+I0.0 0 ||
+=IO_END r=00000000
+I0.0 5 ||
+=c 001881FA n=9 a=00000003 00000006
+=IO_END r=0000003F
+I0.3 5 ||
+=c 001881FA n=9 a=00000003 00000006
+=IO_END r=0000003F
+I0.3 -5 ||
+=c 001881FA n=9 a=00000003 00000006
+=IO_END r=0000003F
+I0.3 12345 ||
+=c 001881FA n=9 a=00000003 00000006
+=IO_END r=0000003F
+#58 B0, O0, Z0, each between bars
+=c 001881F4 n=9 a=00000003 00000006
+=u
+=c 001881F4 n=9 a=00000003 00000006
+=u
+=c 001881F4 n=9 a=00000003 00000006
+=u
+O0 0 0|
+=c 001881FA n=9 a=00000003 00000006
+=IO_END r=0000003F
+O0 8 ||
+=c 001881FA n=9 a=00000003 00000006
+=IO_END r=0000003F
+O0 -1 ||
+=c 001881FA n=9 a=00000003 00000006
+=IO_END r=0000003F
+Z0 0 0|
+=c 001881FA n=9 a=00000003 00000006
+=IO_END r=0000003F
+Z0 255 ||
+=c 001881FA n=9 a=00000003 00000006
+=IO_END r=0000003F
+Z0 -1 ||
+=c 001881FA n=9 a=00000003 00000006
+=IO_END r=0000003F
+Z0.4 10 ||
+=c 001881FA n=9 a=00000003 00000006
+=IO_END r=0000003F
+#59 F0.d, each between bars
+F0.2 3.14159 ||
+=c 001881FA n=9 a=00000003 00000006
+=IO_END r=0000003F
+F0.2 -0.5 ||
+=c 001881FA n=9 a=00000003 00000006
+=IO_END r=0000003F
+F0.2 0.0 ||
+=c 001881FA n=9 a=00000003 00000006
+=IO_END r=0000003F
+F0.2 1234.5 ||
+=c 001881FA n=9 a=00000003 00000006
+=IO_END r=0000003F
+F0.2 0.004 ||
+=c 001881FA n=9 a=00000003 00000006
+=IO_END r=0000003F
+F0.2 -0.004 ||
+=c 001881FA n=9 a=00000003 00000006
+=IO_END r=0000003F
+F0.0 2.5 ||
+=c 001881FA n=9 a=00000003 00000006
+=IO_END r=0000003F
+F0.0 -0.4 ||
+=c 001881FA n=9 a=00000003 00000006
+=IO_END r=0000003F
+F0.0 0.0 ||
+=c 001881FA n=9 a=00000003 00000006
+=IO_END r=0000003F
+F0.3 1.0E10 ||
+=c 001881FA n=9 a=00000003 00000006
+=IO_END r=0000003F
+#60 zero widths among others, each between bars
+|  |
+=c 001881FA n=9 a=00000003 00000006
+=IO_END r=0000003F
+#61 other edits with w 0, each between bars
+E0.3 1.5 ||
+=c 001881FA n=9 a=00000003 00000006
+=IO_END r=0000003F
+G0.3 1.5 ||
+=c 001881FA n=9 a=00000003 00000006
+=IO_END r=0000003F
+L0 1 ||
+=c 001881FA n=9 a=00000003 00000006
+=IO_END r=0000003F
+A0 1 ||
+=IO_END r=00000000
+D0.3 1.5 ||
+=c 001881FA n=9 a=00000003 00000006
+=IO_END r=0000003F
+##### a longword on a word key (Phase 88)
+#62 an indexed file keyed on a signed word, read by longwords and words
+=OPEN r=00000001
+ fab fac=1F shr=00 org=20 rfm=01 rat=00 mrs=8 mrn=0 alq=3 deq=0 fop=00000420 bks=2 bls=0 fsz=0
+ rab rop=00010602 rac=1 mbc=0 mbf=0 rsz=0 usz=8 ksz=0
+=IO_END r=00000000
+=IO_END r=00000000
+=IO_END r=00000000
+KDL5
+=IO_END r=00000000
+  0000: 0500464956452020
+ errsns n=63 sts=00000000 stv=00000000 u=6 c=001881FA
+KDW5
+=IO_END r=00000000
+  0000: 0500464956452020
+ errsns n=0 sts=00000000 stv=00000000 u=0 c=00000000
+KDL70
+=IO_END r=00000000
+  0000: 46005345564E5459
+ errsns n=0 sts=00000000 stv=00000000 u=0 c=00000000
+KDLM3
+=IO_END r=00000000
+  0000: FDFF4D494E555333
+ errsns n=0 sts=00000000 stv=00000000 u=0 c=00000000
+KDL70005
+=c 0018818C n=9 a=00000003 0000000A
+=u
+ errsns n=49 sts=00000000 stv=00000000 u=10 c=0018818C
+KDL65541
+=c 0018818C n=9 a=00000003 0000000A
+=u
+ errsns n=49 sts=00000000 stv=00000000 u=10 c=0018818C
+KDB5
+=c 0018818C n=9 a=00000003 0000000A
+=u
+ errsns n=49 sts=000185A4 stv=00000000 u=10 c=0018818C
+=CLOSE r=00000001
+##### units -1 to -4: which logical name each opens (FOR81G.COM defines them)
+#63 WRITE to -1 and -2, READ from -3 and -4
+=IO_END r=00000000
+ errsns n=0 sts=00000000 stv=00000000 u=0 c=00000000
+=IO_END r=00000000
+ errsns n=0 sts=00000000 stv=00000000 u=0 c=00000000
+=IO_END r=00000000
+  0000: 46524F4D20464F522441434345505420
+ errsns n=0 sts=00000000 stv=00000000 u=0 c=00000000
+=IO_END r=00000000
+  0000: 46524F4D20464F522452454144202020
+ errsns n=0 sts=00000000 stv=00000000 u=0 c=00000000
+ q29 r=00000001 v=12345678
+ q30 r=00000001 v=00000000
+ q31 r=00000001 v=00000000
+ q32 r=00000001 v=00000000
+ q33 r=00000001 v=00000000
+ q34 r=00000001 |                                                                |
+ q35 r=00000001 |UNKNOWN                                                         |
+ q36 r=00000001 |UNKNOWN                                                         |
+ q37 r=00000001 |UNKNOWN                                                         |
+ q38 r=00000001 |UNKNOWN                                                         |
+ q39 r=00000001 |UNKNOWN                                                         |
+ q40 r=00000001 |UNKNOWN                                                         |
+ q41 r=00000001 v=00000000
+ q42 r=00000001 v=00000000
+ q43 r=00000001 |UNKNOWN                                                         |
+ q44 r=00000001 |UNKNOWN                                                         |
+ q45 r=00000001 |UNKNOWN                                                         |
+ q46 r=00000001 |UNKNOWN                                                         |
+ q47 r=00000001 |UNKNOWN                                                         |
+ q48 r=00000001 |UNKNOWN                                                         |
+ q29 r=00000001 v=12345678
+ q30 r=00000001 v=00000000
+ q31 r=00000001 v=00000000
+ q32 r=00000001 v=00000000
+ q33 r=00000001 v=00000000
+ q34 r=00000001 |                                                                |
+ q35 r=00000001 |UNKNOWN                                                         |
+ q36 r=00000001 |UNKNOWN                                                         |
+ q37 r=00000001 |UNKNOWN                                                         |
+ q38 r=00000001 |UNKNOWN                                                         |
+ q39 r=00000001 |UNKNOWN                                                         |
+ q40 r=00000001 |UNKNOWN                                                         |
+ q41 r=00000001 v=00000000
+ q42 r=00000001 v=00000000
+ q43 r=00000001 |UNKNOWN                                                         |
+ q44 r=00000001 |UNKNOWN                                                         |
+ q45 r=00000001 |UNKNOWN                                                         |
+ q46 r=00000001 |UNKNOWN                                                         |
+ q47 r=00000001 |UNKNOWN                                                         |
+ q48 r=00000001 |UNKNOWN                                                         |
+##### the end of the cases

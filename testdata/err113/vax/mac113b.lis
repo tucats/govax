@@ -1,0 +1,76 @@
+MAC113B                         a semicolon in angle brackets, .ERROR an 24-NOV-2026 10:24:07  VAX MACRO V5.4-3            Page   1
+                                                                         24-NOV-2026 14:22:39  DUA1:[ERR113]MAC113B.MAR;1        (1)
+
+                                     0000     1 	.TITLE	MAC113B	a semicolon in angle brackets, .ERROR and .WARN
+                                     0000     2 ;
+                                     0000     3 ; Phase 113's probe round (A.6.6): is a ";" inside <...> in a macro call part of the
+                                     0000     4 ; argument, or a comment? And what do .WARN, .ERROR, and .PRINT show, at the terminal
+                                     0000     5 ; and in the listing?
+                                     0000     6 ;
+                                     0000     7 	.MACRO	SHOW	A, B
+                                     0000     8 	.ASCII	/A/
+                                     0000     9 	.ASCII	/B/
+                                     0000    10 	.ENDM	SHOW
+                                     0000    11 
+                                 00000000    12 	.PSECT	DATA, NOEXE,WRT,LONG
+                                     0000    13 	SHOW	<X;Y>, Z
+                                     0004    14 	SHOW	<P ; Q>
+                                     0009    15 	SHOW	<;>, W
+%MACRO-W-GENWRN, Generated WARNING: 1  a warning's text
+                                     000B       
+%MACRO-E-GENERR, Generated ERROR: 2  an error's text
+                                     000B       
+                           00000003  000B    18 	.PRINT	3		; a printed line
+
+%MACRO-W-GENWRN, Generated WARNING:  a warning with no expression
+                                     000B       
+                                     000B    20 	.END
+MAC113B                         a semicolon in angle brackets, .ERROR an 24-NOV-2026 10:24:07  VAX MACRO V5.4-3            Page   2
+Psect synopsis                                                           24-NOV-2026 14:22:39  DUA1:[ERR113]MAC113B.MAR;1        (1)
+
+
+                                                +----------------+
+                                                ! Psect synopsis !
+                                                +----------------+
+
+PSECT name                      Allocation          PSECT No.  Attributes     
+----------                      ----------          ---------  ----------     
+.  ABS  .                       00000000  (    0.)  00 (  0.)  NOPIC   USR   CON   ABS   LCL NOSHR NOEXE NORD  NOWRT NOVEC BYTE  
+DATA                            0000000B  (   11.)  01 (  1.)  NOPIC   USR   CON   REL   LCL NOSHR NOEXE   RD    WRT NOVEC LONG  
+
+                                             +------------------------+
+                                             ! Performance indicators !
+                                             +------------------------+
+
+Phase                    Page faults    CPU Time       Elapsed Time   
+-----                    -----------    --------       ------------   
+Initialization                  430     00:00:00.00    00:00:00.00
+Command processing              935     00:00:00.00    00:00:00.01
+Pass 1                          195     00:00:00.00    00:00:00.00
+Symbol table sort                 1     00:00:00.00    00:00:00.00
+Pass 2                           90     00:00:00.00    00:00:00.01
+Symbol table output               0     00:00:00.00    00:00:00.00
+Psect synopsis output             2     00:00:00.00    00:00:00.00
+Cross-reference output            0     00:00:00.00    00:00:00.00
+Assembler run totals           1678     00:00:00.00    00:00:00.02
+
+The working set limit was 512 pages.
+473 bytes (1 page) of virtual memory were used to buffer the intermediate code.
+There were 0 pages of symbol table space allocated to hold 0 non-local and 0 local symbols.
+20 source lines were read in Pass 1, producing 10 object records in Pass 2.
+1 page of virtual memory was used to define 1 macro.
+
+                                            +--------------------------+
+                                            ! Macro library statistics !
+                                            +--------------------------+
+
+Macro library name                           Macros defined      
+------------------                           --------------      
+SYS$COMMON:[SYSLIB]STARLET.MLB;1                        0        
+
+0 GETS were required to define 0 macros.
+
+There were 1 error, 2 warnings and 0 information messages, on lines:
+   16 (1)        17 (1)        19 (1)     
+
+MACRO/LIST MAC113B

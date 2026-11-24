@@ -1,0 +1,186 @@
+@DBG113S.DBG
+!%DEBUG-I-VERIFYICF, entering command procedure DBG113S.DBG
+! ! DBG113S.DBG - the scope round (README.md): what Phase 89's probe left open.
+! ! VMS's log leaves out a command that fails, so a comment names each case first.
+! !> TYPE with no line, before any source has been shown
+!%DEBUG-W-NONXTLIN, next line for source display not defined
+! SET BREAK INLEAF
+! GO
+!break at DBG113\LEAF\INLEAF
+!    94: INLEAF: NOP
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBG113          LEAF                94               0000001A         000004F1
+!*DBG113          REC                 81               0000002E         000004C5
+!*DBG113          REC                 85               0000003B         000004D2
+!*DBG113          REC                 85               0000003B         000004D2
+!*DBG113          START               53               00000034         00000434
+! !> The PSL in each scope: LEAF's live N and DV, then what each outer scope shows
+! EXAMINE PSL
+!DBG113\LEAF\%PSL:       
+!        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+!         0   0  0   0  USER   USER    0  1  0  0 0 1 0 0 1
+! EXAMINE 1\%PSL
+!DBG113\REC\%PSL:        
+!        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+!         0   0  0   0  USER   USER    0  0  0  1 0 0 0 0 0
+! EXAMINE 2\%PSL
+!DBG113\REC 1\%PSL:      
+!        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+!         0   0  0   0  USER   USER    0  0  0  1 0 0 0 0 0
+! EXAMINE 4\%PSL
+!DBG113\START\%PSL:      
+!        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+!         0   0  0   0  USER   USER    0  0  0  0 0 0 0 0 0
+! EXAMINE 5\%PSL
+!%DEBUG-W-SYMNOTACT, non-static variable '5\%PSL' is not active
+! SET SCOPE/CURRENT 1
+! EXAMINE PSL
+!DBG113\REC\%PSL:        
+!        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+!         0   0  0   0  USER   USER    0  0  0  1 0 0 0 0 0
+! EXAMINE/PSL PSL
+!DBG113\REC\%PSL:        
+!        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+!         0   0  0   0  USER   USER    0  0  0  1 0 0 0 0 0
+! SET SCOPE/CURRENT 4
+! EXAMINE/PSL PSL
+!DBG113\START\%PSL:      
+!        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+!         0   0  0   0  USER   USER    0  0  0  0 0 0 0 0 0
+! CANCEL SCOPE
+! !> %NEXT_SCOPE_ENTRY at the last levels
+! SET SCOPE/CURRENT 4
+! EVALUATE %NEXT_SCOPE_ENTRY
+!00000004
+! SET SCOPE/CURRENT 5
+!%DEBUG-E-NOTINSCOPE, specified scope cannot be found in the default scope list
+! SHOW SCOPE
+!scope: 
+!    0 [ = DBG113\LEAF ], 
+!    1 [ = DBG113\REC ], 
+!    2 [ = DBG113\REC 1 ], 
+!    3 [ = DBG113\REC 2 ], 
+! *  4 [ = DBG113\START ]
+! EVALUATE %NEXT_SCOPE_ENTRY
+!00000004
+! SET SCOPE/CURRENT 6
+!%DEBUG-E-NOTINSCOPE, specified scope cannot be found in the default scope list
+! SHOW SCOPE
+!scope: 
+!    0 [ = DBG113\LEAF ], 
+!    1 [ = DBG113\REC ], 
+!    2 [ = DBG113\REC 1 ], 
+!    3 [ = DBG113\REC 2 ], 
+! *  4 [ = DBG113\START ]
+! EVALUATE %NEXT_SCOPE_ENTRY
+!00000004
+! SET SCOPE/CURRENT 7
+!%DEBUG-E-NOTINSCOPE, specified scope cannot be found in the default scope list
+! SHOW SCOPE
+!scope: 
+!    0 [ = DBG113\LEAF ], 
+!    1 [ = DBG113\REC ], 
+!    2 [ = DBG113\REC 1 ], 
+!    3 [ = DBG113\REC 2 ], 
+! *  4 [ = DBG113\START ]
+! EVALUATE %NEXT_SCOPE_ENTRY
+!00000004
+! CANCEL SCOPE
+! !> EXAMINE with no location after the PC, the PSL, SP, and AP
+! EXAMINE PC
+!DBG113\LEAF\%PC:        000004F1
+! EXAMINE
+!DBG113\LEAF\%PSL:       
+!        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+!         0   0  0   0  USER   USER    0  1  0  0 0 1 0 0 1
+!%DEBUG-W-NOSUCC, logical successor not defined
+! EXAMINE PSL
+!DBG113\LEAF\%PSL:       
+!        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+!         0   0  0   0  USER   USER    0  1  0  0 0 1 0 0 1
+!%DEBUG-W-NOSUCC, logical successor not defined
+! EXAMINE SP
+!DBG113\LEAF\%SP:        7FED52B8
+! EXAMINE
+!DBG113\LEAF\%PC:        000004F1
+! EXAMINE R11
+!DBG113\LEAF\%R11:       7FFE2BDC
+! EXAMINE
+!DBG113\LEAF\%AP:        7FED52D0
+! !> DEPOSIT to scope 2's R2 (saved in REC(1)'s frame) and R5 (saved by no frame)
+! SET SCOPE/CURRENT 2
+! DEPOSIT R2 = %HEX 2222
+! DEPOSIT R5 = %HEX 5555
+! EXAMINE R2
+!DBG113\REC 1\%R2:       00002222
+! EXAMINE R5
+!DBG113\REC 1\%R5:       00005555
+! !> DEPOSIT to scope 1's R6 (saved in LEAF's frame), and R2 (live)
+! SET SCOPE/CURRENT 1
+! DEPOSIT R6 = %HEX 6666
+! DEPOSIT R2 = %HEX 1212
+! EXAMINE R6
+!DBG113\REC\%R6: 00006666
+! EXAMINE R2
+!DBG113\REC\%R2: 00001212
+! !> DEPOSIT to scope 1's R0
+! DEPOSIT R0 = %HEX 1010
+!%DEBUG-W-SYMNOTACT, non-static variable 'DBG113\REC\%R0' is not active
+! !> DEPOSIT to scope 1's SP
+! DEPOSIT SP = SP
+!%DEBUG-I-NOALTERSP, deposit into register 14 (stack pointer) not allowed
+! !> DEPOSIT to scope 1's PSL
+! DEPOSIT PSL = PSL
+! !> DEPOSIT to scope 1's PC, the same value
+! DEPOSIT PC = DEEP
+! EXAMINE PC
+!1\%PC:  005001D0
+! !> Each register in scope 0 after the deposits
+! CANCEL SCOPE
+! EXAMINE R0
+!DBG113\LEAF\%R0:        00000F00
+! EXAMINE R2
+!DBG113\LEAF\%R2:        00001212
+! EXAMINE R5
+!DBG113\LEAF\%R5:        00005555
+! EXAMINE R6
+!DBG113\LEAF\%R6:        00006006
+! EXAMINE 1\%R2
+!1\%R2:  00001212
+! EXAMINE 1\%R6
+!1\%R6:  00006666
+! EXAMINE 2\%R2
+!DBG113\REC\%R2: 00002222
+! EXAMINE 2\%R5
+!DBG113\REC\%R5: 00005555
+! !> After LEAF returns to REC(1): R6 from LEAF's frame, R2 and R5
+! SET BREAK DEEP
+! GO
+!%SYSTEM-F-ACCVIO, access violation, reason mask=01, virtual address=005001D0, PC=005001D0, PSL=03C00020
+!break on unhandled exception at 005001D0
+! EXAMINE R2
+!0\%R2:  00001212
+! EXAMINE R5
+!0\%R5:  00005555
+! EXAMINE R6
+!0\%R6:  00006666
+! EXAMINE PSL
+!0\%PSL: 
+!        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+!         0   0  0   0  USER   USER    0  0  0  1 0 0 0 0 0
+! !> After REC(1) returns to REC(2): R2 from REC(1)'s frame
+! SET BREAK BACK
+! GO
+!%DEBUG-I-CONFROMEXC, WARNING: continuing after severe error; integrity not guaranteed
+!%SYSTEM-F-ACCVIO, access violation, reason mask=01, virtual address=005001D0, PC=005001D0, PSL=03C00020
+!break on unhandled exception at 005001D0
+! EXAMINE R2
+!0\%R2:  00001212
+! EXAMINE R5
+!0\%R5:  00005555
+! EXAMINE R6
+!0\%R6:  00006666
+! CANCEL BREAK/ALL
+!%DEBUG-I-VERIFYICF, exiting command procedure DBG113S.DBG
+EXIT

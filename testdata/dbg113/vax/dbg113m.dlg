@@ -1,0 +1,105 @@
+@DBG113M.DBG
+!%DEBUG-I-VERIFYICF, entering command procedure DBG113M.DBG
+! ! DBG113M.DBG - the rest (README.md): SHOW SYMBOL with /ADDRESS and /TYPE,
+! ! SHOW LANGUAGE, SET and SHOW SOURCE's wording and NOSUCHMODULE, a source
+! ! record longer than 144 columns, and EXIT at a break (the exit handler).
+! !> SHOW SYMBOL/ADDRESS/TYPE of a datum, a routine, and a label
+! SHOW SYMBOL/ADDRESS/TYPE WATCHL
+!data DBG113\WATCHL
+!    address: 00000200
+!    atomic type, longword integer, size: 4 bytes
+! SHOW SYMBOL/ADDRESS/TYPE START
+!routine DBG113\START
+!    address: 00000400, size: 00000097 bytes
+!routine START (global)
+!    address: 00000400
+! SHOW SYMBOL/ADDRESS/TYPE INLEAF
+!label DBG113\LEAF\INLEAF
+!    address: 000004F1
+! SHOW SYMBOL/TYPE/ADDRESS GVAL
+!data DBG113\GVAL
+!    address: 00000220
+!    atomic type, G_floating, size: 8 bytes
+! !> SHOW LANGUAGE at the start
+! SHOW LANGUAGE
+!language: MACRO
+! !> SET LANGUAGE FORTRAN, SHOW LANGUAGE
+! SET LANGUAGE FORTRAN
+! SHOW LANGUAGE
+!language: FORTRAN
+! SET LANGUAGE MACRO
+! !> SET LANGUAGE UNKNOWN
+! SET LANGUAGE UNKNOWN
+! SHOW LANGUAGE
+!language: UNKNOWN
+! SET LANGUAGE MACRO
+! !> SHOW SOURCE with none set
+! SHOW SOURCE
+!For EDIT:
+!    no directory search list in effect, match the latest source file version
+!For DISPLAY:
+!    no directory search list in effect, match the exact source file version
+! !> SET SOURCE [], SHOW SOURCE
+! SET SOURCE []
+! SHOW SOURCE
+!For EDIT:
+!    source directory list for all modules, match the latest source file version
+!        []
+!For DISPLAY:
+!    source directory list for all modules, match the exact source file version
+!        []
+! !> SET SOURCE/MODULE=DBG113
+! SET SOURCE/MODULE=DBG113 [], SYS$LOGIN:
+! SHOW SOURCE
+!For EDIT:
+!    source directory search list for DBG113, match the latest source file version
+!        []
+!        SYS$LOGIN:
+!             = SYS$SYSROOT:[SYSMGR]
+!    source directory list for all other modules, match the latest source file version
+!        []
+!For DISPLAY:
+!    source directory search list for DBG113, match the exact source file version
+!        []
+!        SYS$LOGIN:
+!             = SYS$SYSROOT:[SYSMGR]
+!    source directory list for all other modules, match the exact source file version
+!        []
+! !> SET SOURCE/MODULE of a module there isn't
+!%DEBUG-E-NOSUCHMODU, module NOSUCH is not in module chain
+! !> CANCEL SOURCE/MODULE=DBG113
+! CANCEL SOURCE/MODULE=DBG113
+! SHOW SOURCE
+!For EDIT:
+!    source directory list for all modules, match the latest source file version
+!        []
+!For DISPLAY:
+!    source directory list for all modules, match the exact source file version
+!        []
+! CANCEL SOURCE
+! SHOW SOURCE
+!For EDIT:
+!    no directory search list in effect, match the latest source file version
+!For DISPLAY:
+!    no directory search list in effect, match the exact source file version
+! !> SET MODULE of a module there isn't
+! SET MODULE NOSUCH
+!%DEBUG-E-NOSUCHMODU, module NOSUCH is not in module chain
+! !> TYPE of a module there isn't
+!%DEBUG-E-NOSUCHMODU, module NOSUCH is not in module chain
+! !> A source record longer than 144 columns
+! EXAMINE/SOURCE LONGLN
+!module DBG113
+!   184: LONGLN: NOP             ; 0000000001111111111222222222233333333334444444
+!     -: 444555555555566666666667777777777888888888899999999990000000000111111111
+!     -: 122222222223333333333444444444455555555556666666666
+! TYPE
+!module DBG113
+!   185: 
+! SET BREAK LOOP
+! GO
+!break at routine DBG113\LOOP
+!   125:         CLRL    COUNT
+! !> EXIT at a break: the exit handler (the procedure's log shows whether it ran)
+!%DEBUG-I-VERIFYICF, exiting command procedure DBG113M.DBG
+EXIT

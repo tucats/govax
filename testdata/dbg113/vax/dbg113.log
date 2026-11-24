@@ -1,0 +1,1421 @@
+$ !
+$ ! 1. The image.
+$ !
+$ MACRO/DEBUG/LIST DBG113
+$ LINK/DEBUG/MAP DBG113
+$ !
+$ ! 2. Debugger sessions: image, command file, log. The program's own output
+$ ! (DBG113: done, the exit handler's line) comes here, between them.
+$ !
+$ CALL DEBUG DBG113 DBG113S DBG113S
+$ DEBUG: SUBROUTINE
+$   OPEN/WRITE DBGF RUN.DBG
+$   WRITE DBGF "SET LOG DBG113S.DLG"
+$   WRITE DBGF "SET OUTPUT LOG,VERIFY"
+$   WRITE DBGF "@DBG113S.DBG"
+$   WRITE DBGF "EXIT"
+$   CLOSE DBGF
+$   DEFINE/USER_MODE DBG$INPUT RUN.DBG
+$   DEFINE/USER_MODE DBG$DECW$DISPLAY " "
+$   RUN/DEBUG DBG113
+
+         OpenVMS VAX DEBUG Version V7.1-000
+
+%DEBUG-I-INITIAL, Language: MACRO, Module: DBG113
+%DEBUG-I-VERIFYICF, entering command procedure DBG113S.DBG
+ ! DBG113S.DBG - the scope round (README.md): what Phase 89's probe left open.
+ ! VMS's log leaves out a command that fails, so a comment names each case first.
+ !> TYPE with no line, before any source has been shown
+%DEBUG-W-NONXTLIN, next line for source display not defined
+ SET BREAK INLEAF
+ GO
+break at DBG113\LEAF\INLEAF
+    94: INLEAF: NOP
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBG113          LEAF                94               0000001A         000004F1
+*DBG113          REC                 81               0000002E         000004C5
+*DBG113          REC                 85               0000003B         000004D2
+*DBG113          REC                 85               0000003B         000004D2
+*DBG113          START               53               00000034         00000434
+ !> The PSL in each scope: LEAF's live N and DV, then what each outer scope shows
+ EXAMINE PSL
+DBG113\LEAF\%PSL:       
+        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+         0   0  0   0  USER   USER    0  1  0  0 0 1 0 0 1
+ EXAMINE 1\%PSL
+DBG113\REC\%PSL:        
+        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+         0   0  0   0  USER   USER    0  0  0  1 0 0 0 0 0
+ EXAMINE 2\%PSL
+DBG113\REC 1\%PSL:      
+        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+         0   0  0   0  USER   USER    0  0  0  1 0 0 0 0 0
+ EXAMINE 4\%PSL
+DBG113\START\%PSL:      
+        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+         0   0  0   0  USER   USER    0  0  0  0 0 0 0 0 0
+ EXAMINE 5\%PSL
+%DEBUG-W-SYMNOTACT, non-static variable '5\%PSL' is not active
+ SET SCOPE/CURRENT 1
+ EXAMINE PSL
+DBG113\REC\%PSL:        
+        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+         0   0  0   0  USER   USER    0  0  0  1 0 0 0 0 0
+ EXAMINE/PSL PSL
+DBG113\REC\%PSL:        
+        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+         0   0  0   0  USER   USER    0  0  0  1 0 0 0 0 0
+ SET SCOPE/CURRENT 4
+ EXAMINE/PSL PSL
+DBG113\START\%PSL:      
+        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+         0   0  0   0  USER   USER    0  0  0  0 0 0 0 0 0
+ CANCEL SCOPE
+ !> %NEXT_SCOPE_ENTRY at the last levels
+ SET SCOPE/CURRENT 4
+ EVALUATE %NEXT_SCOPE_ENTRY
+00000004
+ SET SCOPE/CURRENT 5
+%DEBUG-E-NOTINSCOPE, specified scope cannot be found in the default scope list
+ SHOW SCOPE
+scope: 
+    0 [ = DBG113\LEAF ], 
+    1 [ = DBG113\REC ], 
+    2 [ = DBG113\REC 1 ], 
+    3 [ = DBG113\REC 2 ], 
+ *  4 [ = DBG113\START ]
+ EVALUATE %NEXT_SCOPE_ENTRY
+00000004
+ SET SCOPE/CURRENT 6
+%DEBUG-E-NOTINSCOPE, specified scope cannot be found in the default scope list
+ SHOW SCOPE
+scope: 
+    0 [ = DBG113\LEAF ], 
+    1 [ = DBG113\REC ], 
+    2 [ = DBG113\REC 1 ], 
+    3 [ = DBG113\REC 2 ], 
+ *  4 [ = DBG113\START ]
+ EVALUATE %NEXT_SCOPE_ENTRY
+00000004
+ SET SCOPE/CURRENT 7
+%DEBUG-E-NOTINSCOPE, specified scope cannot be found in the default scope list
+ SHOW SCOPE
+scope: 
+    0 [ = DBG113\LEAF ], 
+    1 [ = DBG113\REC ], 
+    2 [ = DBG113\REC 1 ], 
+    3 [ = DBG113\REC 2 ], 
+ *  4 [ = DBG113\START ]
+ EVALUATE %NEXT_SCOPE_ENTRY
+00000004
+ CANCEL SCOPE
+ !> EXAMINE with no location after the PC, the PSL, SP, and AP
+ EXAMINE PC
+DBG113\LEAF\%PC:        000004F1
+ EXAMINE
+DBG113\LEAF\%PSL:       
+        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+         0   0  0   0  USER   USER    0  1  0  0 0 1 0 0 1
+%DEBUG-W-NOSUCC, logical successor not defined
+ EXAMINE PSL
+DBG113\LEAF\%PSL:       
+        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+         0   0  0   0  USER   USER    0  1  0  0 0 1 0 0 1
+%DEBUG-W-NOSUCC, logical successor not defined
+ EXAMINE SP
+DBG113\LEAF\%SP:        7FED52B8
+ EXAMINE
+DBG113\LEAF\%PC:        000004F1
+ EXAMINE R11
+DBG113\LEAF\%R11:       7FFE2BDC
+ EXAMINE
+DBG113\LEAF\%AP:        7FED52D0
+ !> DEPOSIT to scope 2's R2 (saved in REC(1)'s frame) and R5 (saved by no frame)
+ SET SCOPE/CURRENT 2
+ DEPOSIT R2 = %HEX 2222
+ DEPOSIT R5 = %HEX 5555
+ EXAMINE R2
+DBG113\REC 1\%R2:       00002222
+ EXAMINE R5
+DBG113\REC 1\%R5:       00005555
+ !> DEPOSIT to scope 1's R6 (saved in LEAF's frame), and R2 (live)
+ SET SCOPE/CURRENT 1
+ DEPOSIT R6 = %HEX 6666
+ DEPOSIT R2 = %HEX 1212
+ EXAMINE R6
+DBG113\REC\%R6: 00006666
+ EXAMINE R2
+DBG113\REC\%R2: 00001212
+ !> DEPOSIT to scope 1's R0
+ DEPOSIT R0 = %HEX 1010
+%DEBUG-W-SYMNOTACT, non-static variable 'DBG113\REC\%R0' is not active
+ !> DEPOSIT to scope 1's SP
+ DEPOSIT SP = SP
+%DEBUG-I-NOALTERSP, deposit into register 14 (stack pointer) not allowed
+ !> DEPOSIT to scope 1's PSL
+ DEPOSIT PSL = PSL
+ !> DEPOSIT to scope 1's PC, the same value
+ DEPOSIT PC = DEEP
+ EXAMINE PC
+1\%PC:  005001D0
+ !> Each register in scope 0 after the deposits
+ CANCEL SCOPE
+ EXAMINE R0
+DBG113\LEAF\%R0:        00000F00
+ EXAMINE R2
+DBG113\LEAF\%R2:        00001212
+ EXAMINE R5
+DBG113\LEAF\%R5:        00005555
+ EXAMINE R6
+DBG113\LEAF\%R6:        00006006
+ EXAMINE 1\%R2
+1\%R2:  00001212
+ EXAMINE 1\%R6
+1\%R6:  00006666
+ EXAMINE 2\%R2
+DBG113\REC\%R2: 00002222
+ EXAMINE 2\%R5
+DBG113\REC\%R5: 00005555
+ !> After LEAF returns to REC(1): R6 from LEAF's frame, R2 and R5
+ SET BREAK DEEP
+ GO
+%SYSTEM-F-ACCVIO, access violation, reason mask=01, virtual address=005001D0, PC=005001D0, PSL=03C00020
+break on unhandled exception at 005001D0
+ EXAMINE R2
+0\%R2:  00001212
+ EXAMINE R5
+0\%R5:  00005555
+ EXAMINE R6
+0\%R6:  00006666
+ EXAMINE PSL
+0\%PSL: 
+        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+         0   0  0   0  USER   USER    0  0  0  1 0 0 0 0 0
+ !> After REC(1) returns to REC(2): R2 from REC(1)'s frame
+ SET BREAK BACK
+ GO
+%DEBUG-I-CONFROMEXC, WARNING: continuing after severe error; integrity not guaranteed
+%SYSTEM-F-ACCVIO, access violation, reason mask=01, virtual address=005001D0, PC=005001D0, PSL=03C00020
+break on unhandled exception at 005001D0
+ EXAMINE R2
+0\%R2:  00001212
+ EXAMINE R5
+0\%R5:  00005555
+ EXAMINE R6
+0\%R6:  00006666
+ CANCEL BREAK/ALL
+%DEBUG-I-VERIFYICF, exiting command procedure DBG113S.DBG
+DBG113: the exit handler ran
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10028009"
+$ ENDSUBROUTINE
+$ CALL DEBUG DBG113 DBG113A DBG113A
+$ DEBUG: SUBROUTINE
+$   OPEN/WRITE DBGF RUN.DBG
+$   WRITE DBGF "SET LOG DBG113A.DLG"
+$   WRITE DBGF "SET OUTPUT LOG,VERIFY"
+$   WRITE DBGF "@DBG113A.DBG"
+$   WRITE DBGF "EXIT"
+$   CLOSE DBGF
+$   DEFINE/USER_MODE DBG$INPUT RUN.DBG
+$   DEFINE/USER_MODE DBG$DECW$DISPLAY " "
+$   RUN/DEBUG DBG113
+
+         OpenVMS VAX DEBUG Version V7.1-000
+
+%DEBUG-I-INITIAL, Language: MACRO, Module: DBG113
+%DEBUG-I-VERIFYICF, entering command procedure DBG113A.DBG
+ ! DBG113A.DBG - a register's name in an address expression (README.md):
+ ! testdata/dbg85's @(AP+N) read AP as FFFF0030. Stopped at DEEP, in REC(1),
+ ! whose argument list is at AP.
+ SET BREAK DEEP
+ GO
+break at DBG113\REC\DEEP
+    82: DEEP:   MOVL    #1, R0
+ EXAMINE AP
+DBG113\REC\%AP: 7FED52F4
+ !> EVALUATE AP
+ EVALUATE AP
+7FED52F4
+ !> EVALUATE %AP
+ EVALUATE %AP
+7FED52F4
+ !> EVALUATE .AP
+ EVALUATE .AP
+00000001
+ !> EVALUATE/ADDRESS AP
+ EVALUATE/ADDRESS AP
+DBG113\REC\%AP
+ !> EVALUATE/ADDRESS %R0
+ EVALUATE/ADDRESS %R0
+DBG113\REC\%R0
+ !> EVALUATE/ADDRESS R5
+ EVALUATE/ADDRESS R5
+DBG113\REC\%R5
+ !> EVALUATE/ADDRESS PC
+ EVALUATE/ADDRESS PC
+DBG113\REC\%PC
+ !> EVALUATE/ADDRESS PSL
+ EVALUATE/ADDRESS PSL
+DBG113\REC\%PSL
+ !> EVALUATE AP+4
+ EVALUATE AP+4
+7FED52F8
+ !> EVALUATE .AP+4
+ EVALUATE .AP+4
+00000005
+ !> EXAMINE AP+4
+ EXAMINE AP+4
+DBG113\REC\%FP: 7FED52D4
+ !> EXAMINE R0+4
+ EXAMINE R0+4
+DBG113\REC\%R1: 00000F01
+ !> EXAMINE %R12+4
+ EXAMINE %R12+4
+DBG113\REC\%FP: 7FED52D4
+ !> EXAMINE R2+1
+ EXAMINE R2+1
+DBG113\REC\%R2+1:       03000001
+ !> EXAMINE @AP
+ EXAMINE @AP
+7FED52F4:       00000001
+ !> EXAMINE @(AP+4)
+ EXAMINE @(AP+4)
+%DEBUG-E-NOACCESSR, no read access to address FFFF0034
+ !> EXAMINE @(%AP+4)
+ EXAMINE @(%AP+4)
+%DEBUG-E-NOACCESSR, no read access to address FFFF0034
+ !> EXAMINE .(.AP+4)
+ EXAMINE .(.AP+4)
+%DEBUG-E-NOACCESSR, no read access to address 00000001
+ !> EXAMINE 0FFFF0030
+ EXAMINE 0FFFF0030
+%DEBUG-E-NOACCESSR, no read access to address FFFF0030
+ !> EXAMINE 0FFFF0008
+ EXAMINE 0FFFF0008
+%DEBUG-E-NOACCESSR, no read access to address FFFF0008
+ !> EXAMINE 0FFFF003C
+ EXAMINE 0FFFF003C
+%DEBUG-E-NOACCESSR, no read access to address FFFF003C
+ !> EXAMINE 0FFFF0040
+ EXAMINE 0FFFF0040
+%DEBUG-E-NOACCESSR, no read access to address FFFF0040
+ !> EXAMINE 0FFFF0044
+ EXAMINE 0FFFF0044
+%DEBUG-E-NOACCESSR, no read access to address FFFF0044
+ !> EXAMINE 0FFFF0030:0FFFF003C
+ EXAMINE 0FFFF0030:0FFFF003C
+%DEBUG-E-NOACCESSR, no read access to address FFFF0030
+ !> EXAMINE R2:R4
+ EXAMINE R2:R4
+DBG113\REC\%R2: 00000102
+DBG113\REC\%R3: 00000103
+DBG113\REC\%R4: 00000104
+ !> DEPOSIT 0FFFF0008 = %HEX 2828
+ DEPOSIT 0FFFF0008 = %HEX 2828
+%DEBUG-W-BADTARGET, target location protected, cannot perform deposit
+ EXAMINE R2
+DBG113\REC\%R2: 00000102
+ !> SYMBOLIZE 0FFFF0030
+ SYMBOLIZE 0FFFF0030
+address DBG113\REC\%AP:  
+    no symbols are bound to DBG113\REC\%AP
+%DEBUG-I-VERIFYICF, exiting command procedure DBG113A.DBG
+DBG113: the exit handler ran
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10028009"
+$ ENDSUBROUTINE
+$ CALL DEBUG DBG113 DBG113I DBG113I
+$ DEBUG: SUBROUTINE
+$   OPEN/WRITE DBGF RUN.DBG
+$   WRITE DBGF "SET LOG DBG113I.DLG"
+$   WRITE DBGF "SET OUTPUT LOG,VERIFY"
+$   WRITE DBGF "@DBG113I.DBG"
+$   WRITE DBGF "EXIT"
+$   CLOSE DBGF
+$   DEFINE/USER_MODE DBG$INPUT RUN.DBG
+$   DEFINE/USER_MODE DBG$DECW$DISPLAY " "
+$   RUN/DEBUG DBG113
+
+         OpenVMS VAX DEBUG Version V7.1-000
+
+%DEBUG-I-INITIAL, Language: MACRO, Module: DBG113
+%DEBUG-I-VERIFYICF, entering command procedure DBG113I.DBG
+ ! DBG113I.DBG - instructions (README.md): short literals in F, D, G, and H
+ ! instructions, registers holding an instruction, an entry mask's next
+ ! location, and EXAMINE/OPERANDS of operands of every kind.
+ !> The short literals
+ EXAMINE/INSTRUCTION FLOATS:INFLT
+DBG113\FLOATS:  entry mask ^M<R2,R3>
+DBG113\FLOATS\%LINE 100:        MOVF     S^#1.500000,R0
+DBG113\FLOATS\%LINE 101:        MOVD     S^#3.750000,R0
+DBG113\FLOATS\%LINE 102:        MOVG     S^#0.5000000,R0
+DBG113\FLOATS\%LINE 103:        MOVG     S^#120.0000,R0
+DBG113\FLOATS\%LINE 104:        MOVH     S^#3.750000,R0
+DBG113\FLOATS\%LINE 105:        MOVH     S^#0.5625000,R0
+DBG113\FLOATS\%LINE 106:        ADDG3    S^#1.500000,S^#2.000000,R0
+DBG113\FLOATS\%LINE 107:        ADDH3    S^#0.6250000,S^#7.500000,R0
+DBG113\FLOATS\INFLT:    RET     
+ EXAMINE/G_FLOAT GVAL
+DBG113\GVAL:    2.50000000000000
+ EXAMINE/H_FLOAT HVAL
+DBG113\HVAL:    2.50000000000000000000000000000000
+ !> An entry mask, then EXAMINE with no location
+ EXAMINE START
+DBG113\START:   entry mask ^M<R2,R3,R4,R5>
+ EXAMINE
+DBG113\START\%LINE 47:  PUSHAB   L^DBG113\EXHBLK
+ EXAMINE/INSTRUCTION START
+DBG113\START:   entry mask ^M<R2,R3,R4,R5>
+ EXAMINE
+DBG113\START\%LINE 47:  PUSHAB   L^DBG113\EXHBLK
+ EXAMINE/WORD LOOP
+DBG113\LOOP:    000C
+ EXAMINE
+DBG113\LOOP\%LINE 125:  CLRL     L^DBG113\COUNT
+ SET BREAK INREG
+ GO
+break at DBG113\REGINS\INREG
+   118: INREG:  NOP
+ !> EXAMINE/INSTRUCTION R5, past its four bytes
+ EXAMINE/INSTRUCTION R5
+DBG113\REGINS\%R5:      MOVL     I^#12345678,R0
+ !> EXAMINE/INSTRUCTION R6
+ EXAMINE/INSTRUCTION R6
+DBG113\REGINS\%R6:      MOVP     S^#12,R0,S^#01
+ !> EXAMINE/INSTRUCTION R7, within its bytes
+ EXAMINE/INSTRUCTION R7
+DBG113\REGINS\%R7:      CVTWD    S^#04,S^#0.5000000
+ !> EXAMINE/INSTRUCTION R11, past it into AP
+ EXAMINE/INSTRUCTION R11
+DBG113\REGINS\%R11:     MOVL     I^#53481234,L^0ED530C7F(FP)
+ !> EXAMINE/INSTRUCTION R5 then EXAMINE
+ EXAMINE/INSTRUCTION R5
+DBG113\REGINS\%R5:      MOVL     I^#12345678,R0
+ EXAMINE
+DBG113\REGINS\%R5+1:    CASEB    -(R8),R6,S^#34
+                (more than 20 branch displacements)
+ SET BREAK ENDLP
+ GO
+break at DBG113\LOOP\ENDLP
+   137: ENDLP:  RET
+ !> EXAMINE/OPERANDS (brief) of each kind
+ EXAMINE/OPERANDS LOOPTOP
+%DEBUG-I-NOTCURPC, target of EXAMINE/OPERANDS is not the current PC 
+	results may be unexpected
+DBG113\LOOP\LOOPTOP:    INCL     L^DBG113\COUNT
+     L^DBG113\COUNT
+                DBG113\COUNT (address 00000204) contains 00000003
+ EXAMINE/OPERANDS
+%DEBUG-I-NOTCURPC, target of EXAMINE/OPERANDS is not the current PC 
+	results may be unexpected
+DBG113\LOOP\LOOPADD:    ADDL2    S^#02,L^DBG113\WATCHL
+     L^DBG113\WATCHL
+                DBG113\WATCHL (address 00000200) contains 00000006
+ EXAMINE/OPERANDS
+%DEBUG-I-NOTCURPC, target of EXAMINE/OPERANDS is not the current PC 
+	results may be unexpected
+DBG113\LOOP\%LINE 131:  MOVL     @B^04(AP),R0
+     @B^04(AP)  DBG113\WATCHL (address 00000200) contains 00000006
+     R0         R0 contains 00000006
+ EXAMINE/OPERANDS
+%DEBUG-I-NOTCURPC, target of EXAMINE/OPERANDS is not the current PC 
+	results may be unexpected
+DBG113\LOOP\%LINE 132:  MOVAL    L^DBG113\DEPTH[R3],R1
+     L^DBG113\DEPTH[R3]
+                DBG113\DEPTH (address 00000208) contains 00000003
+     R1         R1 contains 00000208
+ EXAMINE/OPERANDS
+%DEBUG-I-NOTCURPC, target of EXAMINE/OPERANDS is not the current PC 
+	results may be unexpected
+DBG113\LOOP\%LINE 133:  MOVL     (R2)+,R0
+     (R2)+      DBG113\WATCHL (address 00000200) contains 00000006
+     R0         R0 contains 00000006
+ EXAMINE/OPERANDS
+%DEBUG-I-NOTCURPC, target of EXAMINE/OPERANDS is not the current PC 
+	results may be unexpected
+DBG113\LOOP\%LINE 134:  MOVL     -(R2),R0
+     -(R2)      000001FC contains (no read access)
+     R0         R0 contains 00000006
+ EXAMINE/OPERANDS
+%DEBUG-I-NOTCURPC, target of EXAMINE/OPERANDS is not the current PC 
+	results may be unexpected
+DBG113\LOOP\%LINE 135:  CMPL     L^DBG113\COUNT,S^#03
+     L^DBG113\COUNT
+                DBG113\COUNT (address 00000204) contains 00000003
+ EXAMINE/OPERANDS
+%DEBUG-I-NOTCURPC, target of EXAMINE/OPERANDS is not the current PC 
+	results may be unexpected
+DBG113\LOOP\%LINE 136:  BLSS     DBG113\LOOP\LOOPTOP
+ EXAMINE/OPERANDS
+DBG113\LOOP\ENDLP:      RET     
+ !> EXAMINE/OPERANDS=FULL of each kind
+ EXAMINE/OPERANDS=FULL LOOPTOP
+%DEBUG-I-NOTCURPC, target of EXAMINE/OPERANDS is not the current PC 
+	results may be unexpected
+DBG113\LOOP\LOOPTOP:    INCL     L^DBG113\COUNT
+     L^DBG113\COUNT
+                DBG113\COUNT (address 00000204) contains 00000003
+ EXAMINE/OPERANDS=FULL
+%DEBUG-I-NOTCURPC, target of EXAMINE/OPERANDS is not the current PC 
+	results may be unexpected
+DBG113\LOOP\LOOPADD:    ADDL2    S^#02,L^DBG113\WATCHL
+     S^#02      02 (constant)
+     L^DBG113\WATCHL
+                DBG113\WATCHL (address 00000200) contains 00000006
+ EXAMINE/OPERANDS=FULL
+%DEBUG-I-NOTCURPC, target of EXAMINE/OPERANDS is not the current PC 
+	results may be unexpected
+DBG113\LOOP\%LINE 131:  MOVL     @B^04(AP),R0
+     @B^04(AP)  AP contains 7FED5344, @B^04(7FED5344) evaluates to @7FED5348, which contains DBG113\WATCHL (address 00000200), which contains 00000006
+     R0         R0 contains 00000006
+ EXAMINE/OPERANDS=FULL
+%DEBUG-I-NOTCURPC, target of EXAMINE/OPERANDS is not the current PC 
+	results may be unexpected
+DBG113\LOOP\%LINE 132:  MOVAL    L^DBG113\DEPTH[R3],R1
+     L^DBG113\DEPTH[R3]
+                DBG113\DEPTH (address 00000208) (constant).  R3 contains 00000000.  00000208[00000000 * 4] evaluates to DBG113\DEPTH (address 00000208), which contains 00000003
+     R1         R1 contains 00000208
+ EXAMINE/OPERANDS=FULL
+%DEBUG-I-NOTCURPC, target of EXAMINE/OPERANDS is not the current PC 
+	results may be unexpected
+DBG113\LOOP\%LINE 133:  MOVL     (R2)+,R0
+     (R2)+      R2 contains DBG113\WATCHL (address 00000200).  (00000200)+  evaluates to DBG113\WATCHL (address 00000200), which contains 00000006
+     R0         R0 contains 00000006
+ EXAMINE/OPERANDS=FULL
+%DEBUG-I-NOTCURPC, target of EXAMINE/OPERANDS is not the current PC 
+	results may be unexpected
+DBG113\LOOP\%LINE 134:  MOVL     -(R2),R0
+     -(R2)      R2 contains DBG113\WATCHL (address 00000200).  -(00000200)  evaluates to 000001FC, which contains (no read access)
+     R0         R0 contains 00000006
+ EXAMINE/OPERANDS=FULL
+%DEBUG-I-NOTCURPC, target of EXAMINE/OPERANDS is not the current PC 
+	results may be unexpected
+DBG113\LOOP\%LINE 135:  CMPL     L^DBG113\COUNT,S^#03
+     L^DBG113\COUNT
+                DBG113\COUNT (address 00000204) contains 00000003
+     S^#03      03 (constant)
+ EXAMINE/OPERANDS=FULL
+%DEBUG-I-NOTCURPC, target of EXAMINE/OPERANDS is not the current PC 
+	results may be unexpected
+DBG113\LOOP\%LINE 136:  BLSS     DBG113\LOOP\LOOPTOP
+ EXAMINE/OPERANDS=FULL
+DBG113\LOOP\ENDLP:      RET     
+ !> SET MODE OPERANDS=FULL, then EXAMINE/INSTRUCTION
+ SET MODE OPERANDS=FULL
+ EXAMINE/INSTRUCTION LOOPTOP
+%DEBUG-I-NOTCURPC, target of EXAMINE/OPERANDS is not the current PC 
+	results may be unexpected
+DBG113\LOOP\LOOPTOP:    INCL     L^DBG113\COUNT
+     L^DBG113\COUNT
+                DBG113\COUNT (address 00000204) contains 00000003
+ EXAMINE/INSTRUCTION .PC
+DBG113\LOOP\ENDLP:      RET     
+ SET MODE NOOPERANDS
+ CANCEL BREAK/ALL
+%DEBUG-I-VERIFYICF, exiting command procedure DBG113I.DBG
+DBG113: the exit handler ran
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10028009"
+$ ENDSUBROUTINE
+$ CALL DEBUG DBG113 DBG113T DBG113T
+$ DEBUG: SUBROUTINE
+$   OPEN/WRITE DBGF RUN.DBG
+$   WRITE DBGF "SET LOG DBG113T.DLG"
+$   WRITE DBGF "SET OUTPUT LOG,VERIFY"
+$   WRITE DBGF "@DBG113T.DBG"
+$   WRITE DBGF "EXIT"
+$   CLOSE DBGF
+$   DEFINE/USER_MODE DBG$INPUT RUN.DBG
+$   DEFINE/USER_MODE DBG$DECW$DISPLAY " "
+$   RUN/DEBUG DBG113
+
+         OpenVMS VAX DEBUG Version V7.1-000
+
+%DEBUG-I-INITIAL, Language: MACRO, Module: DBG113
+%DEBUG-I-VERIFYICF, entering command procedure DBG113T.DBG
+ ! DBG113T.DBG - eventpoints (README.md): SHOW BREAK's order, CANCEL of what
+ ! isn't set, tracepoints that meet at one PC, and /AFTER and WHEN on
+ ! tracepoints and watchpoints.
+ !> CANCEL TRACE/ALL with none set
+ CANCEL TRACE/ALL
+%DEBUG-I-NOTRACES, no tracepoints are set, no opcode tracing
+ !> CANCEL WATCH/ALL with none set
+ CANCEL WATCH/ALL
+%DEBUG-I-NOWATCHES, no watchpoints are set
+ !> CANCEL TRACE of an address with none set
+ CANCEL TRACE LOOPTOP
+%DEBUG-I-NOTRACES, no tracepoints are set, no opcode tracing
+ !> CANCEL WATCH of a location not watched
+ CANCEL WATCH WATCHL
+%DEBUG-I-NOWATCHES, no watchpoints are set
+ !> SHOW BREAK's order: set out of address order, of every kind
+ SET BREAK ENDLP
+ SET BREAK INE, LOOPTOP
+ SET BREAK/AFTER:2 ENDC
+ SET BREAK/TEMPORARY AFTERA
+ SET BREAK/RETURN SUBB2
+ SET BREAK/CALL
+ SET BREAK INA WHEN (.COUNT EQL 3)
+ SHOW BREAK
+breakpoint at DBG113\LOOP\ENDLP
+breakpoint at DBG113\LOOP\LOOPTOP
+breakpoint at DBG113\SUBE\INE
+breakpoint at DBG113\SUBC\ENDC
+   /after: 2
+breakpoint at DBG113\SUBA\AFTERA [temporary]
+breakpoint on return from routine DBG113\SUBB2
+breakpoint on calls:
+ BSBB     BSBW     CALLG    CALLS    JSB      RET      RSB     
+breakpoint at DBG113\SUBA\INA
+   when (.COUNT EQL 3)
+ SET TRACE ENDE
+ SET TRACE SUBC, MID1
+ SHOW TRACE
+tracepoint at DBG113\SUBE\ENDE
+tracepoint at DBG113\SUBB1\MID1
+tracepoint at routine DBG113\SUBC
+ CANCEL BREAK/ALL
+ CANCEL TRACE/ALL
+ !> Tracepoints meeting at LOOPTOP: an address, the lines, and the branches
+ SET BREAK LOOP
+ GO
+break at routine DBG113\LOOP
+   125:         CLRL    COUNT
+ SET TRACE/LINE
+ SET TRACE/BRANCH
+ SET TRACE LOOPTOP
+ SHOW TRACE
+tracepoint on lines
+tracepoint on branches:
+ ACBB     ACBD     ACBF     ACBG     ACBH     ACBL     ACBW     AOBLEQ  
+ AOBLSS   BBC      BBCC     BBCCI    BBCS     BBS      BBSC     BBSS    
+ BBSSI    BCC      BCS      BEQL     BEQLU    BGEQ     BGEQU    BGTR    
+ BGTRU    BLBC     BLBS     BLEQ     BLEQU    BLSS     BLSSU    BNEQ    
+ BNEQU    BRB      BRW      BVC      BVS      CASEB    CASEL    CASEW   
+ JMP      SOBGEQ   SOBGTR  
+tracepoint at DBG113\LOOP\LOOPTOP
+ SET BREAK ENDLP
+ GO
+trace on lines at DBG113\LOOP\%LINE 126
+   126:         CLRL    WATCHL
+trace on lines at DBG113\LOOP\%LINE 127
+   127:         MOVAL   WATCHL, R2
+trace on lines at DBG113\LOOP\%LINE 128
+   128:         CLRL    R3
+trace on lines at DBG113\LOOP\LOOPTOP
+   129: LOOPTOP: INCL   COUNT                   ; the pass, 1 to 3
+trace at DBG113\LOOP\LOOPTOP
+trace on lines at DBG113\LOOP\LOOPADD
+   130: LOOPADD: ADDL2  #2, WATCHL              ; watched: 2, 4, 6
+trace on lines at DBG113\LOOP\%LINE 131
+   131:         MOVL    @4(AP), R0              ; deferred: WATCHL again
+trace on lines at DBG113\LOOP\%LINE 132
+   132:         MOVAL   DEPTH[R3], R1           ; indexed
+trace on lines at DBG113\LOOP\%LINE 133
+   133:         MOVL    (R2)+, R0               ; autoincrement
+trace on lines at DBG113\LOOP\%LINE 134
+   134:         MOVL    -(R2), R0               ; autodecrement
+trace on lines at DBG113\LOOP\%LINE 135
+   135:         CMPL    COUNT, #3               ; a literal
+trace on branches at DBG113\LOOP\%LINE 136
+   136:         BLSS    LOOPTOP                 ; a branch
+trace on lines at DBG113\LOOP\%LINE 136
+trace on lines at DBG113\LOOP\LOOPTOP
+   129: LOOPTOP: INCL   COUNT                   ; the pass, 1 to 3
+trace at DBG113\LOOP\LOOPTOP
+trace on lines at DBG113\LOOP\LOOPADD
+   130: LOOPADD: ADDL2  #2, WATCHL              ; watched: 2, 4, 6
+trace on lines at DBG113\LOOP\%LINE 131
+   131:         MOVL    @4(AP), R0              ; deferred: WATCHL again
+trace on lines at DBG113\LOOP\%LINE 132
+   132:         MOVAL   DEPTH[R3], R1           ; indexed
+trace on lines at DBG113\LOOP\%LINE 133
+   133:         MOVL    (R2)+, R0               ; autoincrement
+trace on lines at DBG113\LOOP\%LINE 134
+   134:         MOVL    -(R2), R0               ; autodecrement
+trace on lines at DBG113\LOOP\%LINE 135
+   135:         CMPL    COUNT, #3               ; a literal
+trace on branches at DBG113\LOOP\%LINE 136
+   136:         BLSS    LOOPTOP                 ; a branch
+trace on lines at DBG113\LOOP\%LINE 136
+trace on lines at DBG113\LOOP\LOOPTOP
+   129: LOOPTOP: INCL   COUNT                   ; the pass, 1 to 3
+trace at DBG113\LOOP\LOOPTOP
+trace on lines at DBG113\LOOP\LOOPADD
+   130: LOOPADD: ADDL2  #2, WATCHL              ; watched: 2, 4, 6
+trace on lines at DBG113\LOOP\%LINE 131
+   131:         MOVL    @4(AP), R0              ; deferred: WATCHL again
+trace on lines at DBG113\LOOP\%LINE 132
+   132:         MOVAL   DEPTH[R3], R1           ; indexed
+trace on lines at DBG113\LOOP\%LINE 133
+   133:         MOVL    (R2)+, R0               ; autoincrement
+trace on lines at DBG113\LOOP\%LINE 134
+   134:         MOVL    -(R2), R0               ; autodecrement
+trace on lines at DBG113\LOOP\%LINE 135
+   135:         CMPL    COUNT, #3               ; a literal
+trace on branches at DBG113\LOOP\%LINE 136
+   136:         BLSS    LOOPTOP                 ; a branch
+trace on lines at DBG113\LOOP\%LINE 136
+trace on lines at DBG113\LOOP\ENDLP
+   137: ENDLP:  RET
+break at DBG113\LOOP\ENDLP
+ CANCEL TRACE/ALL
+ CANCEL BREAK/ALL
+ !> /AFTER and WHEN on tracepoints and watchpoints, in LOOP's second run
+ SET BREAK LOOP
+ GO
+break at routine DBG113\LOOP
+   125:         CLRL    COUNT
+ SET TRACE/AFTER:2 LOOPTOP
+ SET TRACE ENDLP WHEN (.COUNT EQL 3)
+ SET TRACE LOOPADD WHEN (.COUNT EQL 2)
+ SET WATCH/AFTER:2 WATCHL
+ SET WATCH COUNT WHEN (.COUNT EQL 2)
+ SHOW TRACE
+tracepoint at DBG113\LOOP\LOOPTOP
+   /after: 2
+tracepoint at DBG113\LOOP\ENDLP
+   when (.COUNT EQL 3)
+tracepoint at DBG113\LOOP\LOOPADD
+   when (.COUNT EQL 2)
+ SHOW WATCH
+watchpoint of DBG113\WATCHL
+   /after: 2
+watchpoint of DBG113\COUNT
+   when (.COUNT EQL 2)
+ SET BREAK AFTERA
+ GO
+%DEBUG-E-NOACCESSR, no read access to address 00000000
+watch of DBG113\COUNT at routine DBG113\LOOP
+   125:         CLRL    COUNT
+   old value: 00000003
+   new value: 00000000
+break at DBG113\LOOP\%LINE 126
+   126:         CLRL    WATCHL
+ GO
+%DEBUG-E-NOACCESSR, no read access to address 00000001
+watch of DBG113\COUNT at DBG113\LOOP\LOOPTOP
+   129: LOOPTOP: INCL   COUNT                   ; the pass, 1 to 3
+   old value: 00000000
+   new value: 00000001
+break at DBG113\LOOP\LOOPADD
+   130: LOOPADD: ADDL2  #2, WATCHL              ; watched: 2, 4, 6
+%DEBUG-E-NOACCESSR, no read access to address 00000001
+trace at DBG113\LOOP\LOOPADD
+ GO
+watch of DBG113\WATCHL at DBG113\LOOP\LOOPADD
+   130: LOOPADD: ADDL2  #2, WATCHL              ; watched: 2, 4, 6
+   old value: 00000000
+   new value: 00000002
+break at DBG113\LOOP\%LINE 131
+   131:         MOVL    @4(AP), R0              ; deferred: WATCHL again
+ GO
+trace at DBG113\LOOP\LOOPTOP
+   129: LOOPTOP: INCL   COUNT                   ; the pass, 1 to 3
+%DEBUG-E-NOACCESSR, no read access to address 00000002
+watch of DBG113\COUNT at DBG113\LOOP\LOOPTOP
+   129: LOOPTOP: INCL   COUNT                   ; the pass, 1 to 3
+   old value: 00000001
+   new value: 00000002
+break at DBG113\LOOP\LOOPADD
+   130: LOOPADD: ADDL2  #2, WATCHL              ; watched: 2, 4, 6
+%DEBUG-E-NOACCESSR, no read access to address 00000002
+trace at DBG113\LOOP\LOOPADD
+ GO
+watch of DBG113\WATCHL at DBG113\LOOP\LOOPADD
+   130: LOOPADD: ADDL2  #2, WATCHL              ; watched: 2, 4, 6
+   old value: 00000002
+   new value: 00000004
+break at DBG113\LOOP\%LINE 131
+   131:         MOVL    @4(AP), R0              ; deferred: WATCHL again
+ SHOW WATCH
+watchpoint of DBG113\WATCHL
+watchpoint of DBG113\COUNT
+   when (.COUNT EQL 2)
+ CANCEL WATCH/ALL
+ CANCEL TRACE/ALL
+ CANCEL BREAK/ALL
+%DEBUG-I-VERIFYICF, exiting command procedure DBG113T.DBG
+DBG113: the exit handler ran
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10028009"
+$ ENDSUBROUTINE
+$ CALL DEBUG DBG113 DBG113R DBG113R
+$ DEBUG: SUBROUTINE
+$   OPEN/WRITE DBGF RUN.DBG
+$   WRITE DBGF "SET LOG DBG113R.DLG"
+$   WRITE DBGF "SET OUTPUT LOG,VERIFY"
+$   WRITE DBGF "@DBG113R.DBG"
+$   WRITE DBGF "EXIT"
+$   CLOSE DBGF
+$   DEFINE/USER_MODE DBG$INPUT RUN.DBG
+$   DEFINE/USER_MODE DBG$DECW$DISPLAY " "
+$   RUN/DEBUG DBG113
+
+         OpenVMS VAX DEBUG Version V7.1-000
+
+%DEBUG-I-INITIAL, Language: MACRO, Module: DBG113
+%DEBUG-I-VERIFYICF, entering command procedure DBG113R.DBG
+ ! DBG113R.DBG - STEP/RETURN interrupted by a break, then GO (README.md):
+ ! does the return's stop still come?
+ SET BREAK SUBB1
+ SET BREAK MID1
+ GO
+break at routine DBG113\SUBB1
+   157:         NOP
+ STEP/RETURN
+break at DBG113\SUBB1\MID1
+   158: MID1:   NOP
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBG113          SUBB1              158               00000003         0000059A
+*DBG113          SUBA               142               00000009         0000057F
+*DBG113          START               60               00000063         00000463
+ !> GO after the interrupted STEP/RETURN
+ GO
+stepped on return from routine DBG113\SUBB1 to DBG113\SUBB1\END1
+   159: END1:   RET
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBG113          SUBB1              159               00000004         0000059B
+*DBG113          SUBA               142               00000009         0000057F
+*DBG113          START               60               00000063         00000463
+ EXAMINE .PC
+DBG113\SUBB1\END1:      RET     
+ CANCEL BREAK/ALL
+%DEBUG-I-VERIFYICF, exiting command procedure DBG113R.DBG
+DBG113: the exit handler ran
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10028009"
+$ ENDSUBROUTINE
+$ CALL DEBUG DBG113 DBG113N DBG113N
+$ DEBUG: SUBROUTINE
+$   OPEN/WRITE DBGF RUN.DBG
+$   WRITE DBGF "SET LOG DBG113N.DLG"
+$   WRITE DBGF "SET OUTPUT LOG,VERIFY"
+$   WRITE DBGF "@DBG113N.DBG"
+$   WRITE DBGF "EXIT"
+$   CLOSE DBGF
+$   DEFINE/USER_MODE DBG$INPUT RUN.DBG
+$   DEFINE/USER_MODE DBG$DECW$DISPLAY " "
+$   RUN/DEBUG DBG113
+
+         OpenVMS VAX DEBUG Version V7.1-000
+
+%DEBUG-I-INITIAL, Language: MACRO, Module: DBG113
+%DEBUG-I-VERIFYICF, entering command procedure DBG113N.DBG
+ ! DBG113N.DBG - a second STEP/RETURN (README.md): STEP/RETURN in SUBD is
+ ! interrupted by a break in SUBB2; STEP/RETURN there; then GO. Does SUBD's
+ ! return still stop?
+ SET BREAK IND
+ SET BREAK SUBB2
+ GO
+break at DBG113\SUBD\IND
+   147: IND:    CALLS   #0, SUBB2
+ STEP/RETURN
+break at routine DBG113\SUBB2
+   162:         NOP
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBG113          SUBB2              162               00000002         0000059E
+*DBG113          SUBD               147               00000009         0000058A
+*DBG113          START               61               0000006A         0000046A
+ !> The second STEP/RETURN
+ STEP/RETURN
+stepped on return from routine DBG113\SUBB2 to DBG113\SUBB2\END2
+   164: END2:   RET
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBG113          SUBB2              164               00000004         000005A0
+*DBG113          SUBD               147               00000009         0000058A
+*DBG113          START               61               0000006A         0000046A
+ !> GO after it
+ GO
+stepped on return from DBG113\SUBD\IND to DBG113\SUBD\ENDD
+   149: ENDD:   RET
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBG113          SUBD               149               0000000A         0000058B
+*DBG113          START               61               0000006A         0000046A
+ EXAMINE .PC
+DBG113\SUBD\ENDD:       RET     
+ CANCEL BREAK/ALL
+%DEBUG-I-VERIFYICF, exiting command procedure DBG113N.DBG
+DBG113: the exit handler ran
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10028009"
+$ ENDSUBROUTINE
+$ CALL DEBUG DBG113 DBG113O DBG113O
+$ DEBUG: SUBROUTINE
+$   OPEN/WRITE DBGF RUN.DBG
+$   WRITE DBGF "SET LOG DBG113O.DLG"
+$   WRITE DBGF "SET OUTPUT LOG,VERIFY"
+$   WRITE DBGF "@DBG113O.DBG"
+$   WRITE DBGF "EXIT"
+$   CLOSE DBGF
+$   DEFINE/USER_MODE DBG$INPUT RUN.DBG
+$   DEFINE/USER_MODE DBG$DECW$DISPLAY " "
+$   RUN/DEBUG DBG113
+
+         OpenVMS VAX DEBUG Version V7.1-000
+
+%DEBUG-I-INITIAL, Language: MACRO, Module: DBG113
+%DEBUG-I-VERIFYICF, entering command procedure DBG113O.DBG
+ ! DBG113O.DBG - STEP/OVER interrupted by a break, then GO (README.md): does
+ ! the step's end still stop?
+ SET BREAK INE
+ SET BREAK MID3
+ GO
+break at DBG113\SUBE\INE
+   152: INE:    CALLS   #0, SUBB3
+ STEP/OVER
+break at DBG113\SUBB3\MID3
+   168: MID3:   NOP
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBG113          SUBB3              168               00000003         000005A4
+*DBG113          SUBE               152               00000009         00000595
+*DBG113          START               62               00000071         00000471
+ !> GO after the interrupted STEP/OVER
+ GO
+stepped to DBG113\SUBE\AFTERE
+   153: AFTERE: NOP
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBG113          SUBE               153               00000009         00000595
+*DBG113          START               62               00000071         00000471
+ EXAMINE .PC
+DBG113\SUBE\AFTERE:     NOP     
+ CANCEL BREAK/ALL
+%DEBUG-I-VERIFYICF, exiting command procedure DBG113O.DBG
+DBG113: the exit handler ran
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10028009"
+$ ENDSUBROUTINE
+$ CALL DEBUG DBG113 DBG113L DBG113L
+$ DEBUG: SUBROUTINE
+$   OPEN/WRITE DBGF RUN.DBG
+$   WRITE DBGF "SET LOG DBG113L.DLG"
+$   WRITE DBGF "SET OUTPUT LOG,VERIFY"
+$   WRITE DBGF "@DBG113L.DBG"
+$   WRITE DBGF "EXIT"
+$   CLOSE DBGF
+$   DEFINE/USER_MODE DBG$INPUT RUN.DBG
+$   DEFINE/USER_MODE DBG$DECW$DISPLAY " "
+$   RUN/DEBUG DBG113
+
+         OpenVMS VAX DEBUG Version V7.1-000
+
+%DEBUG-I-INITIAL, Language: MACRO, Module: DBG113
+%DEBUG-I-VERIFYICF, entering command procedure DBG113L.DBG
+ ! DBG113L.DBG - a line step ending at a RET whose return is in the middle of
+ ! the caller's line (README.md): TWICE is one line, two CALLS of SUBC.
+ SET BREAK ENDC
+ GO
+break at DBG113\SUBC\ENDC
+   173: ENDC:   RET
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBG113          SUBC               173               00000003         000005A9
+*DBG113          START               63               00000078         00000478
+ !> STEP from SUBC's RET: into the middle of TWICE's line
+ STEP
+stepped to DBG113\START\%LINE 63+7
+    63:         TWICE                           ; a line two calls long
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBG113          START               63               00000078         00000478
+ EXAMINE .PC
+DBG113\START\%LINE 63+7:        CALLS    S^#00,L^DBG113\SUBC
+ !> STEP again: over the second CALLS
+ STEP
+break at DBG113\SUBC\ENDC
+   173: ENDC:   RET
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBG113          SUBC               173               00000003         000005A9
+*DBG113          START               63               0000007F         0000047F
+ EXAMINE .PC
+DBG113\SUBC\ENDC:       RET     
+ CANCEL BREAK/ALL
+%DEBUG-I-VERIFYICF, exiting command procedure DBG113L.DBG
+DBG113: the exit handler ran
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10028009"
+$ ENDSUBROUTINE
+$ CALL DEBUG DBG113 DBG113X DBG113X
+$ DEBUG: SUBROUTINE
+$   OPEN/WRITE DBGF RUN.DBG
+$   WRITE DBGF "SET LOG DBG113X.DLG"
+$   WRITE DBGF "SET OUTPUT LOG,VERIFY"
+$   WRITE DBGF "@DBG113X.DBG"
+$   WRITE DBGF "EXIT"
+$   CLOSE DBGF
+$   DEFINE/USER_MODE DBG$INPUT RUN.DBG
+$   DEFINE/USER_MODE DBG$DECW$DISPLAY " "
+$   RUN/DEBUG DBG113
+
+         OpenVMS VAX DEBUG Version V7.1-000
+
+%DEBUG-I-INITIAL, Language: MACRO, Module: DBG113
+%DEBUG-I-VERIFYICF, entering command procedure DBG113X.DBG
+ ! DBG113X.DBG - exception breaks (README.md): the location the break names,
+ ! with the step by lines and by instructions; SHOW LANGUAGE there.
+ SET BREAK/EXCEPTION
+ SHOW STEP
+step type: source, nosilent, by line,
+           over routine calls
+ GO
+%SYSTEM-W-ENDOFFILE, end of file
+break on exception preceding DBG113\SIGNAL\SIG1
+   179: SIG1:   PUSHL   #^X870
+ !> SHOW LANGUAGE at an exception break
+ SHOW LANGUAGE
+language: MACRO
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBG113          SIGNAL             178               0000000F         000005B9
+*DBG113          START               64               00000086         00000486
+ GO
+%SYSTEM-W-ENDOFFILE, end of file
+break on unhandled exception preceding DBG113\SIGNAL\SIG1
+   179: SIG1:   PUSHL   #^X870
+ SET STEP INSTRUCTION
+ SHOW STEP
+step type: source, nosilent, by instruction,
+           over routine calls
+ GO
+%SYSTEM-W-ENDOFFILE, end of file
+break on exception preceding DBG113\SIGNAL\SIG2: RET     
+   181: SIG2:   RET
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBG113          SIGNAL             180               0000001C         000005C6
+*DBG113          START               64               00000086         00000486
+ GO
+%SYSTEM-W-ENDOFFILE, end of file
+break on unhandled exception preceding DBG113\SIGNAL\SIG2: RET     
+   181: SIG2:   RET
+ !> GO to the program's end: its own lines and the exit handler's, for EXIT and QUIT to be compared with
+ GO
+DBG113: done
+DBG113: the exit handler ran
+%DEBUG-I-EXITSTATUS, is '%SYSTEM-S-NORMAL, normal successful completion'
+%DEBUG-I-VERIFYICF, exiting command procedure DBG113X.DBG
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ ENDSUBROUTINE
+$ CALL DEBUG DBG113 DBG113M DBG113M
+$ DEBUG: SUBROUTINE
+$   OPEN/WRITE DBGF RUN.DBG
+$   WRITE DBGF "SET LOG DBG113M.DLG"
+$   WRITE DBGF "SET OUTPUT LOG,VERIFY"
+$   WRITE DBGF "@DBG113M.DBG"
+$   WRITE DBGF "EXIT"
+$   CLOSE DBGF
+$   DEFINE/USER_MODE DBG$INPUT RUN.DBG
+$   DEFINE/USER_MODE DBG$DECW$DISPLAY " "
+$   RUN/DEBUG DBG113
+
+         OpenVMS VAX DEBUG Version V7.1-000
+
+%DEBUG-I-INITIAL, Language: MACRO, Module: DBG113
+%DEBUG-I-VERIFYICF, entering command procedure DBG113M.DBG
+ ! DBG113M.DBG - the rest (README.md): SHOW SYMBOL with /ADDRESS and /TYPE,
+ ! SHOW LANGUAGE, SET and SHOW SOURCE's wording and NOSUCHMODULE, a source
+ ! record longer than 144 columns, and EXIT at a break (the exit handler).
+ !> SHOW SYMBOL/ADDRESS/TYPE of a datum, a routine, and a label
+ SHOW SYMBOL/ADDRESS/TYPE WATCHL
+data DBG113\WATCHL
+    address: 00000200
+    atomic type, longword integer, size: 4 bytes
+ SHOW SYMBOL/ADDRESS/TYPE START
+routine DBG113\START
+    address: 00000400, size: 00000097 bytes
+routine START (global)
+    address: 00000400
+ SHOW SYMBOL/ADDRESS/TYPE INLEAF
+label DBG113\LEAF\INLEAF
+    address: 000004F1
+ SHOW SYMBOL/TYPE/ADDRESS GVAL
+data DBG113\GVAL
+    address: 00000220
+    atomic type, G_floating, size: 8 bytes
+ !> SHOW LANGUAGE at the start
+ SHOW LANGUAGE
+language: MACRO
+ !> SET LANGUAGE FORTRAN, SHOW LANGUAGE
+ SET LANGUAGE FORTRAN
+ SHOW LANGUAGE
+language: FORTRAN
+ SET LANGUAGE MACRO
+ !> SET LANGUAGE UNKNOWN
+ SET LANGUAGE UNKNOWN
+ SHOW LANGUAGE
+language: UNKNOWN
+ SET LANGUAGE MACRO
+ !> SHOW SOURCE with none set
+ SHOW SOURCE
+For EDIT:
+    no directory search list in effect, match the latest source file version
+For DISPLAY:
+    no directory search list in effect, match the exact source file version
+ !> SET SOURCE [], SHOW SOURCE
+ SET SOURCE []
+ SHOW SOURCE
+For EDIT:
+    source directory list for all modules, match the latest source file version
+        []
+For DISPLAY:
+    source directory list for all modules, match the exact source file version
+        []
+ !> SET SOURCE/MODULE=DBG113
+ SET SOURCE/MODULE=DBG113 [], SYS$LOGIN:
+ SHOW SOURCE
+For EDIT:
+    source directory search list for DBG113, match the latest source file version
+        []
+        SYS$LOGIN:
+             = SYS$SYSROOT:[SYSMGR]
+    source directory list for all other modules, match the latest source file version
+        []
+For DISPLAY:
+    source directory search list for DBG113, match the exact source file version
+        []
+        SYS$LOGIN:
+             = SYS$SYSROOT:[SYSMGR]
+    source directory list for all other modules, match the exact source file version
+        []
+ !> SET SOURCE/MODULE of a module there isn't
+%DEBUG-E-NOSUCHMODU, module NOSUCH is not in module chain
+ !> CANCEL SOURCE/MODULE=DBG113
+ CANCEL SOURCE/MODULE=DBG113
+ SHOW SOURCE
+For EDIT:
+    source directory list for all modules, match the latest source file version
+        []
+For DISPLAY:
+    source directory list for all modules, match the exact source file version
+        []
+ CANCEL SOURCE
+ SHOW SOURCE
+For EDIT:
+    no directory search list in effect, match the latest source file version
+For DISPLAY:
+    no directory search list in effect, match the exact source file version
+ !> SET MODULE of a module there isn't
+ SET MODULE NOSUCH
+%DEBUG-E-NOSUCHMODU, module NOSUCH is not in module chain
+ !> TYPE of a module there isn't
+%DEBUG-E-NOSUCHMODU, module NOSUCH is not in module chain
+ !> A source record longer than 144 columns
+ EXAMINE/SOURCE LONGLN
+module DBG113
+   184: LONGLN: NOP             ; 0000000001111111111222222222233333333334444444
+     -: 444555555555566666666667777777777888888888899999999990000000000111111111
+     -: 122222222223333333333444444444455555555556666666666
+ TYPE
+module DBG113
+   185: 
+ SET BREAK LOOP
+ GO
+break at routine DBG113\LOOP
+   125:         CLRL    COUNT
+ !> EXIT at a break: the exit handler (the procedure's log shows whether it ran)
+%DEBUG-I-VERIFYICF, exiting command procedure DBG113M.DBG
+DBG113: the exit handler ran
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10028009"
+$ ENDSUBROUTINE
+$ CALL DEBUG DBG113 DBG113Q DBG113Q
+$ DEBUG: SUBROUTINE
+$   OPEN/WRITE DBGF RUN.DBG
+$   WRITE DBGF "SET LOG DBG113Q.DLG"
+$   WRITE DBGF "SET OUTPUT LOG,VERIFY"
+$   WRITE DBGF "@DBG113Q.DBG"
+$   WRITE DBGF "EXIT"
+$   CLOSE DBGF
+$   DEFINE/USER_MODE DBG$INPUT RUN.DBG
+$   DEFINE/USER_MODE DBG$DECW$DISPLAY " "
+$   RUN/DEBUG DBG113
+
+         OpenVMS VAX DEBUG Version V7.1-000
+
+%DEBUG-I-INITIAL, Language: MACRO, Module: DBG113
+%DEBUG-I-VERIFYICF, entering command procedure DBG113Q.DBG
+ ! DBG113Q.DBG - QUIT at a break (README.md): the procedure's log shows whether
+ ! the exit handler ran.
+ SET BREAK LOOP
+ GO
+break at routine DBG113\LOOP
+   125:         CLRL    COUNT
+ QUIT
+%DEBUG-I-VERIFYICF, exiting command procedure DBG113Q.DBG
+DBG113: the exit handler ran
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10028009"
+$ ENDSUBROUTINE
+$ !
+$ ! 3. govax's image of the same source: govax's MACRO named the source
+$ ! DUA5:[DBG113]DBG113.MAR, where EXCHANGE.CMD had the volume, so DUA5 is made
+$ ! a name for this device while VMS's debugger reads it.
+$ !
+$ DEFINE/NOLOG DUA5 DUA1:
+$ CALL DEBUG GVDBG113 DBG113S GVDBG113S
+$ DEBUG: SUBROUTINE
+$   OPEN/WRITE DBGF RUN.DBG
+$   WRITE DBGF "SET LOG GVDBG113S.DLG"
+$   WRITE DBGF "SET OUTPUT LOG,VERIFY"
+$   WRITE DBGF "@DBG113S.DBG"
+$   WRITE DBGF "EXIT"
+$   CLOSE DBGF
+$   DEFINE/USER_MODE DBG$INPUT RUN.DBG
+$   DEFINE/USER_MODE DBG$DECW$DISPLAY " "
+$   RUN/DEBUG GVDBG113
+
+         OpenVMS VAX DEBUG Version V7.1-000
+
+%DEBUG-I-INITIAL, Language: MACRO, Module: DBG113
+%DEBUG-I-VERIFYICF, entering command procedure DBG113S.DBG
+ ! DBG113S.DBG - the scope round (README.md): what Phase 89's probe left open.
+ ! VMS's log leaves out a command that fails, so a comment names each case first.
+ !> TYPE with no line, before any source has been shown
+%DEBUG-W-NONXTLIN, next line for source display not defined
+ SET BREAK INLEAF
+ GO
+break at DBG113\LEAF\INLEAF
+    94: INLEAF: NOP
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBG113          LEAF                94               0000001A         000004F1
+*DBG113          REC                 81               0000002E         000004C5
+*DBG113          REC                 85               0000003B         000004D2
+*DBG113          REC                 85               0000003B         000004D2
+*DBG113          START               53               00000034         00000434
+ !> The PSL in each scope: LEAF's live N and DV, then what each outer scope shows
+ EXAMINE PSL
+DBG113\LEAF\%PSL:       
+        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+         0   0  0   0  USER   USER    0  1  0  0 0 1 0 0 1
+ EXAMINE 1\%PSL
+DBG113\REC\%PSL:        
+        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+         0   0  0   0  USER   USER    0  0  0  1 0 0 0 0 0
+ EXAMINE 2\%PSL
+DBG113\REC 1\%PSL:      
+        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+         0   0  0   0  USER   USER    0  0  0  1 0 0 0 0 0
+ EXAMINE 4\%PSL
+DBG113\START\%PSL:      
+        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+         0   0  0   0  USER   USER    0  0  0  0 0 0 0 0 0
+ EXAMINE 5\%PSL
+%DEBUG-W-SYMNOTACT, non-static variable '5\%PSL' is not active
+ SET SCOPE/CURRENT 1
+ EXAMINE PSL
+DBG113\REC\%PSL:        
+        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+         0   0  0   0  USER   USER    0  0  0  1 0 0 0 0 0
+ EXAMINE/PSL PSL
+DBG113\REC\%PSL:        
+        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+         0   0  0   0  USER   USER    0  0  0  1 0 0 0 0 0
+ SET SCOPE/CURRENT 4
+ EXAMINE/PSL PSL
+DBG113\START\%PSL:      
+        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+         0   0  0   0  USER   USER    0  0  0  0 0 0 0 0 0
+ CANCEL SCOPE
+ !> %NEXT_SCOPE_ENTRY at the last levels
+ SET SCOPE/CURRENT 4
+ EVALUATE %NEXT_SCOPE_ENTRY
+00000004
+ SET SCOPE/CURRENT 5
+%DEBUG-E-NOTINSCOPE, specified scope cannot be found in the default scope list
+ SHOW SCOPE
+scope: 
+    0 [ = DBG113\LEAF ], 
+    1 [ = DBG113\REC ], 
+    2 [ = DBG113\REC 1 ], 
+    3 [ = DBG113\REC 2 ], 
+ *  4 [ = DBG113\START ]
+ EVALUATE %NEXT_SCOPE_ENTRY
+00000004
+ SET SCOPE/CURRENT 6
+%DEBUG-E-NOTINSCOPE, specified scope cannot be found in the default scope list
+ SHOW SCOPE
+scope: 
+    0 [ = DBG113\LEAF ], 
+    1 [ = DBG113\REC ], 
+    2 [ = DBG113\REC 1 ], 
+    3 [ = DBG113\REC 2 ], 
+ *  4 [ = DBG113\START ]
+ EVALUATE %NEXT_SCOPE_ENTRY
+00000004
+ SET SCOPE/CURRENT 7
+%DEBUG-E-NOTINSCOPE, specified scope cannot be found in the default scope list
+ SHOW SCOPE
+scope: 
+    0 [ = DBG113\LEAF ], 
+    1 [ = DBG113\REC ], 
+    2 [ = DBG113\REC 1 ], 
+    3 [ = DBG113\REC 2 ], 
+ *  4 [ = DBG113\START ]
+ EVALUATE %NEXT_SCOPE_ENTRY
+00000004
+ CANCEL SCOPE
+ !> EXAMINE with no location after the PC, the PSL, SP, and AP
+ EXAMINE PC
+DBG113\LEAF\%PC:        000004F1
+ EXAMINE
+DBG113\LEAF\%PSL:       
+        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+         0   0  0   0  USER   USER    0  1  0  0 0 1 0 0 1
+%DEBUG-W-NOSUCC, logical successor not defined
+ EXAMINE PSL
+DBG113\LEAF\%PSL:       
+        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+         0   0  0   0  USER   USER    0  1  0  0 0 1 0 0 1
+%DEBUG-W-NOSUCC, logical successor not defined
+ EXAMINE SP
+DBG113\LEAF\%SP:        7FED52B8
+ EXAMINE
+DBG113\LEAF\%PC:        000004F1
+ EXAMINE R11
+DBG113\LEAF\%R11:       7FFE2BDC
+ EXAMINE
+DBG113\LEAF\%AP:        7FED52D0
+ !> DEPOSIT to scope 2's R2 (saved in REC(1)'s frame) and R5 (saved by no frame)
+ SET SCOPE/CURRENT 2
+ DEPOSIT R2 = %HEX 2222
+ DEPOSIT R5 = %HEX 5555
+ EXAMINE R2
+DBG113\REC 1\%R2:       00002222
+ EXAMINE R5
+DBG113\REC 1\%R5:       00005555
+ !> DEPOSIT to scope 1's R6 (saved in LEAF's frame), and R2 (live)
+ SET SCOPE/CURRENT 1
+ DEPOSIT R6 = %HEX 6666
+ DEPOSIT R2 = %HEX 1212
+ EXAMINE R6
+DBG113\REC\%R6: 00006666
+ EXAMINE R2
+DBG113\REC\%R2: 00001212
+ !> DEPOSIT to scope 1's R0
+ DEPOSIT R0 = %HEX 1010
+%DEBUG-W-SYMNOTACT, non-static variable 'DBG113\REC\%R0' is not active
+ !> DEPOSIT to scope 1's SP
+ DEPOSIT SP = SP
+%DEBUG-I-NOALTERSP, deposit into register 14 (stack pointer) not allowed
+ !> DEPOSIT to scope 1's PSL
+ DEPOSIT PSL = PSL
+ !> DEPOSIT to scope 1's PC, the same value
+ DEPOSIT PC = DEEP
+ EXAMINE PC
+1\%PC:  005001D0
+ !> Each register in scope 0 after the deposits
+ CANCEL SCOPE
+ EXAMINE R0
+DBG113\LEAF\%R0:        00000F00
+ EXAMINE R2
+DBG113\LEAF\%R2:        00001212
+ EXAMINE R5
+DBG113\LEAF\%R5:        00005555
+ EXAMINE R6
+DBG113\LEAF\%R6:        00006006
+ EXAMINE 1\%R2
+1\%R2:  00001212
+ EXAMINE 1\%R6
+1\%R6:  00006666
+ EXAMINE 2\%R2
+DBG113\REC\%R2: 00002222
+ EXAMINE 2\%R5
+DBG113\REC\%R5: 00005555
+ !> After LEAF returns to REC(1): R6 from LEAF's frame, R2 and R5
+ SET BREAK DEEP
+ GO
+%SYSTEM-F-ACCVIO, access violation, reason mask=01, virtual address=005001D0, PC=005001D0, PSL=03C00020
+break on unhandled exception at 005001D0
+ EXAMINE R2
+0\%R2:  00001212
+ EXAMINE R5
+0\%R5:  00005555
+ EXAMINE R6
+0\%R6:  00006666
+ EXAMINE PSL
+0\%PSL: 
+        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+         0   0  0   0  USER   USER    0  0  0  1 0 0 0 0 0
+ !> After REC(1) returns to REC(2): R2 from REC(1)'s frame
+ SET BREAK BACK
+ GO
+%DEBUG-I-CONFROMEXC, WARNING: continuing after severe error; integrity not guaranteed
+%SYSTEM-F-ACCVIO, access violation, reason mask=01, virtual address=005001D0, PC=005001D0, PSL=03C00020
+break on unhandled exception at 005001D0
+ EXAMINE R2
+0\%R2:  00001212
+ EXAMINE R5
+0\%R5:  00005555
+ EXAMINE R6
+0\%R6:  00006666
+ CANCEL BREAK/ALL
+%DEBUG-I-VERIFYICF, exiting command procedure DBG113S.DBG
+DBG113: the exit handler ran
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10028009"
+$ ENDSUBROUTINE
+$ DEASSIGN DUA5
+$ DIRECTORY/SIZE=ALL/DATE *.*
+
+Directory DUA1:[DBG113]
+
+DBG113.COM;1               4/6        24-NOV-2026 14:22:39.71
+DBG113.EXE;1               8/9        24-NOV-2026 10:28:43.88
+DBG113.LIS;1              43/45       24-NOV-2026 10:28:43.83
+DBG113.LOG;1               0/108      24-NOV-2026 10:28:43.82
+DBG113.MAP;1              12/12       24-NOV-2026 10:28:43.87
+DBG113.MAR;1              12/12       24-NOV-2026 14:22:39.71
+DBG113.OBJ;1               6/6        24-NOV-2026 10:28:43.82
+DBG113A.DBG;1              3/3        24-NOV-2026 14:22:39.71
+DBG113A.DLG;1              6/6        24-NOV-2026 10:28:44.31
+DBG113I.DBG;1              3/3        24-NOV-2026 14:22:39.71
+DBG113I.DLG;1             16/18       24-NOV-2026 10:28:44.54
+DBG113L.DBG;1              1/3        24-NOV-2026 14:22:39.71
+DBG113L.DLG;1              3/3        24-NOV-2026 10:28:45.63
+DBG113M.DBG;1              3/3        24-NOV-2026 14:22:39.71
+DBG113M.DLG;1              8/9        24-NOV-2026 10:28:45.99
+DBG113N.DBG;1              1/3        24-NOV-2026 14:22:39.71
+DBG113N.DLG;1              4/6        24-NOV-2026 10:28:45.28
+DBG113O.DBG;1              1/3        24-NOV-2026 14:22:39.71
+DBG113O.DLG;1              3/3        24-NOV-2026 10:28:45.46
+DBG113Q.DBG;1              1/3        24-NOV-2026 14:22:39.71
+DBG113Q.DLG;1              1/3        24-NOV-2026 10:28:46.18
+DBG113R.DBG;1              1/3        24-NOV-2026 14:22:39.71
+DBG113R.DLG;1              3/3        24-NOV-2026 10:28:45.10
+DBG113S.DBG;1              4/6        24-NOV-2026 14:22:39.71
+DBG113S.DLG;1             13/15       24-NOV-2026 10:28:44.03
+DBG113T.DBG;1              3/3        24-NOV-2026 14:22:39.71
+DBG113T.DLG;1             17/18       24-NOV-2026 10:28:44.81
+DBG113X.DBG;1              1/3        24-NOV-2026 14:22:39.71
+DBG113X.DLG;1              4/6        24-NOV-2026 10:28:45.81
+GVDBG113.EXE;1             8/9        24-NOV-2026 14:22:39.72
+GVDBG113.MAP;1             9/9        24-NOV-2026 14:22:39.72
+GVDBG113.OBJ;1             6/6        24-NOV-2026 14:22:39.71
+GVDBG113S.DLG;1           13/15       24-NOV-2026 10:28:46.35
+RUN.DBG;12                 1/3        24-NOV-2026 10:28:46.20
+RUN.DBG;11                 1/3        24-NOV-2026 10:28:46.03
+RUN.DBG;10                 1/3        24-NOV-2026 10:28:45.84
+RUN.DBG;9                  1/3        24-NOV-2026 10:28:45.66
+RUN.DBG;8                  1/3        24-NOV-2026 10:28:45.49
+RUN.DBG;7                  1/3        24-NOV-2026 10:28:45.31
+RUN.DBG;6                  1/3        24-NOV-2026 10:28:45.13
+RUN.DBG;5                  1/3        24-NOV-2026 10:28:44.95
+RUN.DBG;4                  1/3        24-NOV-2026 10:28:44.67
+RUN.DBG;3                  1/3        24-NOV-2026 10:28:44.39
+RUN.DBG;2                  1/3        24-NOV-2026 10:28:44.17
+RUN.DBG;1                  1/3        24-NOV-2026 10:28:43.89
+
+Total of 45 files, 233/399 blocks.
+$ EXIT

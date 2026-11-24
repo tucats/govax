@@ -1,0 +1,34 @@
+@DBG113L.DBG
+!%DEBUG-I-VERIFYICF, entering command procedure DBG113L.DBG
+! ! DBG113L.DBG - a line step ending at a RET whose return is in the middle of
+! ! the caller's line (README.md): TWICE is one line, two CALLS of SUBC.
+! SET BREAK ENDC
+! GO
+!break at DBG113\SUBC\ENDC
+!   173: ENDC:   RET
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBG113          SUBC               173               00000003         000005A9
+!*DBG113          START               63               00000078         00000478
+! !> STEP from SUBC's RET: into the middle of TWICE's line
+! STEP
+!stepped to DBG113\START\%LINE 63+7
+!    63:         TWICE                           ; a line two calls long
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBG113          START               63               00000078         00000478
+! EXAMINE .PC
+!DBG113\START\%LINE 63+7:        CALLS    S^#00,L^DBG113\SUBC
+! !> STEP again: over the second CALLS
+! STEP
+!break at DBG113\SUBC\ENDC
+!   173: ENDC:   RET
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBG113          SUBC               173               00000003         000005A9
+!*DBG113          START               63               0000007F         0000047F
+! EXAMINE .PC
+!DBG113\SUBC\ENDC:       RET     
+! CANCEL BREAK/ALL
+!%DEBUG-I-VERIFYICF, exiting command procedure DBG113L.DBG
+EXIT

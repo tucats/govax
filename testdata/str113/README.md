@@ -33,6 +33,11 @@ routine's arguments and one example. What the manuals leave open, the cases ask:
   replaced every `%` in a case's data. Here a `%` in a text is written `<37>`, which the prefix
   leaves alone (Phase 113's subtask 12).
 
+VMS 7.1's STR$RECIP never returned from one of its 118 cases, `RECIP 6 0e-4` (a precision limit whose
+digits are `0`), so the round took it out (`gen.go` says where it was). `vax/str113-vax.txt` is
+the second run, of 117 cases; VMS's DCL wrote it after the first run's lines in the same file
+(`DEFINE/USER SYS$OUTPUT` of an existing file), which were taken off.
+
 It runs in Phase 113's probe round (subtask 12, `testdata/err113`), with the round's other programs. Until then
 `TestStr113Probe` (`internal/console/str113_test.go`) runs it on govax and holds it to the
 manuals' examples; with VMS's output in `vax/str113-vax.txt`, it holds govax to that line for

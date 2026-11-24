@@ -1,0 +1,107 @@
+
+                                                                24-NOV-2026 10:28        Linker V11-39                    Page    1
+
+                                             +------------------------+
+                                             ! Object Module Synopsis !
+                                             +------------------------+
+
+Module Name     Ident              Bytes      File                                Creation Date      Creator
+-----------     -----              -----      -----                               -------------      -------
+DBG113          01                    584 DUA1:[DBG113]DBG113.OBJ;1            24-NOV-2026 10:28  VAX MACRO V5.4-3
+
+                                            +--------------------------+
+                                            ! Program Section Synopsis !
+                                            +--------------------------+
+
+Psect Name      Module Name       Base     End           Length            Align                 Attributes
+----------      -----------       ----     ---           ------            -----                 ----------
+DATA113                         00000200 0000026F 00000070 (        112.) LONG  2 NOPIC,USR,CON,REL,LCL,NOSHR,NOEXE,  RD,  WRT,NOVEC
+                DBG113          00000200 0000026F 00000070 (        112.) LONG  2
+CODE113                         00000400 000005D7 000001D8 (        472.) LONG  2 NOPIC,USR,CON,REL,LCL,NOSHR,  EXE,  RD,NOWRT,NOVEC
+                DBG113          00000400 000005D7 000001D8 (        472.) LONG  2
+
+                                                +-----------------+
+                                                ! Symbols By Name !
+                                                +-----------------+
+
+Symbol          Value              Symbol          Value              Symbol          Value              Symbol          Value
+------          -----              ------          -----              ------          -----              ------          -----
+EXH             000005C8-R        
+FLOATS          000004F3-R        
+LEAF            000004D7-R        
+LOOP            00000536-R        
+REC             00000497-R        
+REGINS          00000516-R        
+SIGNAL          000005AA-R        
+START           00000400-R        
+SUBA            00000576-R        
+SUBB1           00000597-R        
+SUBB2           0000059C-R        
+SUBB3           000005A1-R        
+SUBC            000005A6-R        
+SUBD            00000581-R        
+SUBE            0000058C-R        
+
+
+
+	  Key for special characters above:
+		+--------------------+
+		! *  - Undefined     !
+		! A  - Alias Name    !
+		! I  - Internal Name !
+		! U  - Universal     !
+		! R  - Relocatable   !
+		! X  - External      !
+		! WK - Weak          !
+		+--------------------+
+
+DUA1:[DBG113]DBG113.EXE;1                                       24-NOV-2026 10:28        Linker V11-39                    Page    2
+
+                                                 +----------------+
+                                                 ! Image Synopsis !
+                                                 +----------------+
+
+Virtual memory allocated:                         00000200 000007FF 00000600 (1536. bytes, 3. pages)
+Stack size:                                             20. pages
+Image header virtual block limits:                       1.        1. (    1. block)
+Image binary virtual block limits:                       2.        4. (    3. blocks)
+Image name and identification:                    DBG113 01
+Number of files:                                         4.
+Number of modules:                                       3.
+Number of program sections:                              5.
+Number of global symbols:                              322.
+Number of image sections:                                6.
+User transfer address:                            00000400
+Debugger transfer address:                        7FFEDF68
+Number of code references to shareable images:           2.
+Image type:                                       EXECUTABLE.
+Map format:                                       DEFAULT in file DUA1:[DBG113]DBG113.MAP;1
+Estimated map length:                             32. blocks
+                                              +---------------------+
+                                              ! Link Run Statistics !
+                                              +---------------------+
+
+Performance Indicators                            Page Faults	CPU Time	Elapsed Time
+----------------------                            -----------	--------	------------
+    Command processing:                                   103	00:00:00.00	00:00:00.00
+    Pass 1:                                              1184	00:00:00.02	00:00:00.02
+    Allocation/Relocation:                                 76	00:00:00.00	00:00:00.00
+    Pass 2:                                               771	00:00:00.01	00:00:00.01
+    Map data after object module synopsis:                 35	00:00:00.00	00:00:00.00
+    Symbol table output:                                   18	00:00:00.00	00:00:00.00
+Total run values:                                        2187	00:00:00.03	00:00:00.03
+
+Using a working set limited to 812 pages and 112 pages of data storage (excluding image)
+
+Total number object records read (both passes):   200
+    of which 26 were in libraries and 6 were DEBUG data records containing 1192 bytes
+964 bytes of DEBUG data were written,starting at VBN 5 with 2 blocks allocated
+
+Number of modules extracted explicitly             = 0
+    with 1 extracted to resolve undefined symbols
+
+0 library searches were for symbols not in the library searched
+
+A total of 5 global symbol table records was written
+
+LINK/DEBUG/MAP DBG113
