@@ -727,7 +727,7 @@ A.8.1 is not planned.
     - 13c. ERR113's sections: LIB$INITIALIZE's arguments, MACRO's register names and
       `.WARN`/`.ERROR`/`.PRINT`, DCL's messages, TYPE without carriage control, a full volume;
       `TestErr113Procedure` held to `vax/err113.log` (done 2026-11-24).
-    - 13d. The index file's growth (A.9.1): ods2 extending INDEXF.SYS as VMS's XQP does.
+    - 13d. The index file's growth (A.9.1): ods2 extending INDEXF.SYS as VMS's XQP does (done 2026-11-24).
     - 13e. FTNRTL to the FORRTL round (`testdata/for81`'s round 3 and the terminal's limits).
     - 13f. The debugger to the debugger round (`testdata/dbg113`'s sessions).
     - 13g. The FORTRAN rounds: `TestFTN86Oracle` on `testdata/ftn86`'s round 6 and
@@ -1477,3 +1477,32 @@ Each subtask may begin with a survey of its own, as earlier phases' did.
   - MANUAL.md's TYPE, COPY, PURGE, the MACRO command, LIB$INITIALIZE, and SYS$OUTPUT files;
     HELP COPY and PURGE.
   - Subtask 13d, the index file's growth, is next.
+- **2026-11-24, subtask 13d (done):** the index file grows as VMS 7.1's does (ods2's
+  `volume/writeheader.go`, `indexFileGrowth`).
+  - *What VMS's run showed* (ERR113's INDEX section: an RD51, MAXFILES 5,400, `/HEADERS=16`,
+    3,000 one-block files): INDEXF.SYS grew by 807, 686, 583, 496, 421, and 358 blocks, each one
+    extent, and each 15% of the header slots MAXFILES still allowed (5,383, 4,576, 3,890, 3,307,
+    2,811, and 2,390 left), the fraction dropped; 3,374 blocks in eleven extents, all in its
+    one header. In FULL, with one block free, it grew by that block.
+  - *ods2*: a new header's slot past the index file's end grows it by 15% of the slots left, at
+    least what the slot needs, in one piece as long as the volume's longest free run, else what
+    the slot needs (in pieces if it must); it was 16 blocks at a time, a retrieval pointer each,
+    which is how Phase 111's volume needed the extension header VMS couldn't read. Where VMS puts
+    each piece (the 807 wasn't the first free run that fit) isn't followed: ods2 takes the first.
+    A one-block growth on a header with room for one pointer wrapped round (`blocks-first`); fixed.
+    `TestIndexFileGrowsAsVMS` makes VMS's 3,000 files and gets VMS's six extents;
+    `TestIndexFileGrowthOnAFullVolume` the one free block; `TestIndexFileGrowsIntoExtensionHeaders`
+    now takes every other cluster first, so its growths are still one block each and still fill
+    the header.
+  - *What VMS does when the header does fill* (an extension header, or HEADERFULL) is still
+    unconfirmed; ods2 still writes its own extension header there, now only on a volume too
+    fragmented to give the pieces whole (DEVIATIONS.md's Phase 111 entry, updated).
+  - `TestErr113Procedure` checks INDEX's 3,000 files and INDEXF.SYS's size, 3,373 blocks: VMS's
+    less the block its index file grew by in FULL (govax has no DUMP/HEADER or
+    ANALYZE/DISK_STRUCTURE for the rest). FULL's MORE.TXT difference stays with a new reason:
+    VMS's REST.DAT left one block free (why is unconfirmed), and govax's fills the volume, so
+    there is no block for the header.
+  - `TestLib58Oracle`'s "FTN unused header" differences are gone: file number 200's slot is
+    inside govax's index file now, as it was inside VMS's 829 blocks (SS$_FILESTRUCT); Phase 58's
+    log marked.
+  - Subtask 13e, FTNRTL to the FORRTL round, is next.

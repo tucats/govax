@@ -2093,9 +2093,13 @@ nothing is changed until a program needs it. `TestLink82Oracle` lists the case.
   extension header, and which of these VMS objects to (or whether it reads one at all at mount), is unconfirmed:
   no VMS-made one is at hand. Phase 89's log thought VMS had read such a header on its round's volume; the copy
   VMS left suggests it never had one.
-- **Status**: open. Gone round, not fixed: a volume meant for VMS is made with INITIALIZE/CONTAINER's `/HEADERS`
-  big enough that its index file never grows (`testdata/f90r`'s `/HEADERS=6000`). A probe would settle it: let
-  VMS grow an index file past its header on a scratch volume, and compare its extension header with ods2's.
+- **Status**: open, but rarely reached. Phase 113's probe (`testdata/err113`, the INDEX section) let VMS grow an
+  index file to 3,374 blocks with 3,000 files: it never needed an extension header, since VMS grows INDEXF.SYS by
+  15% of the header slots MAXFILES still allows, in one extent (807, 686, 583, ... blocks), where ods2 grew it by 16
+  blocks at a time, a retrieval pointer each. ods2 now grows it VMS's way (`indexFileGrowth`, subtask 13d), so its
+  header fills only on a volume too fragmented to give the pieces whole. What VMS does then (an extension header
+  of its own form, or HEADERFULL) is still unconfirmed, and ods2 still writes its own extension header there. A
+  volume meant for VMS can still be made with a large `/HEADERS` (`testdata/f90r`'s `/HEADERS=6000`).
 
 ### [Phase 111] VMS MACRO stores an occasional byte of a long immediate run through the stack
 

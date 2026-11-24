@@ -30,13 +30,6 @@ var expectedLib58Differences = map[string]string{
 	// address past the argument list: on VMS a longword of the stack's,
 	// whose fault shows that address, in govax 0.
 	"FFE no arguments/FFE": "the stack's contents",
-
-	// File number 200 was a header slot never used: VMS had extended
-	// INDEXF.SYS to 829 blocks by then, so the slot was inside it
-	// (SS$_FILESTRUCT); govax's index file grows only as files are made,
-	// so the slot was past its end (SS$_NOSUCHFILE).
-	"FTN unused header/FTN": "the index file's allocation",
-	"FTN unused header/A:":  "the index file's allocation",
 }
 
 // runLib58 assembles, links, and runs lib58.mar as lib58.com does on

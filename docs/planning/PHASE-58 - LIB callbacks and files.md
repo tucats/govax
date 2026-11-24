@@ -825,7 +825,8 @@ TRIM_FILESPEC.
   changed to its answers. `TestLib58Oracle` now matches all 1907 lines
   but for three in `expectedLib58Differences` (an access violation's
   address read from the stack; a header slot inside VMS's index file,
-  extended to 829 blocks, but past govax's). What VMS settled:
+  extended to 829 blocks, but past govax's; *(Resolved in Phase 113: ods2's
+  index file grows as VMS's does.)*). What VMS settled:
   - **FIND_FILE**: a name with no wildcard (a search list included) gets
     one `$SEARCH`; the next call is RMS$_NMF with nothing written.
     RMS$_NMF ends the context (block freed, longword 0), so the next call

@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -125,6 +126,17 @@ func TestErr113Procedure(t *testing.T) {
 		}
 	}
 
+	// The index file grew as VMS's did (subtask 13d): 3,000 files and an
+	// INDEXF.SYS of VMS's size less the block VMS's grew by in FULL, for
+	// MORE.TXT's header, which govax's volume had no room for.
+	if !strings.Contains(sections["INDEX"], "FILES 3000 STATUS %X00000001\n") {
+		t.Errorf("INDEX didn't make 3,000 files:\n%s", sections["INDEX"])
+	}
+
+	if got, want := err113IndexBlocks(t, sections["INDEX"]), err113IndexBlocks(t, vms["INDEX"])-1; got != want {
+		t.Errorf("INDEXF.SYS is %d blocks, want %d (VMS's less FULL's block):\n%s", got, want, sections["INDEX"])
+	}
+
 	for name, want := range vms {
 		if _, skip := err113NotCompared[name]; skip {
 			continue
@@ -153,10 +165,10 @@ var err113NotCompared = map[string]string{
 	// listings, the order of the messages, and the objects to VMS's.
 	"MAC113A": "MACRO's messages are govax's own, the listing TestErr113Macro's",
 	"MAC113B": "MACRO's messages are govax's own, their order TestErr113Macro's",
-	// VMS's INITIALIZE/HEADERS=16 made an index file of other extents, which
-	// grew in pieces govax's doesn't (subtask 13d), and govax has no
-	// DUMP/HEADER or ANALYZE/DISK_STRUCTURE.
-	"INDEX": "the index file's growth (subtask 13d)",
+	// govax has no DUMP/HEADER or ANALYZE/DISK_STRUCTURE; TestErr113Procedure
+	// compares the index file's size, and ods2's TestIndexFileGrowsAsVMS its
+	// extents.
+	"INDEX": "no DUMP/HEADER or ANALYZE/DISK_STRUCTURE; the size compared alone",
 }
 
 // err113Difference is text of VMS's section and what govax shows in its place.
@@ -179,21 +191,43 @@ var err113Differences = map[string][]err113Difference{
 		// The third pass ran with SET VERIFY on, so CREATE's data line is
 		// in VMS's log.
 		{vms: "A line for a full volume.\n", why: "SET VERIFY's data line"},
-		// VMS's index file grew one block on the full volume for MORE.TXT's
-		// header; govax's grows by a cluster at least, which it can't
-		// (subtask 13d), so CREATE fails at its open and MORE.TXT isn't
-		// there for DELETE.
+		// VMS's REST.DAT stopped with one block of the volume free, and its
+		// index file grew by that block for MORE.TXT's header, as ods2's
+		// now would (indexFileGrowth, TestIndexFileGrowthOnAFullVolume);
+		// govax's REST.DAT fills the volume, so there is no block for the
+		// header, CREATE fails at its open, and MORE.TXT isn't there for
+		// DELETE. Why VMS's RMS left the block is unconfirmed.
 		{
 			vms:   "%CREATE-E-WRITEERR, error writing DUA3:[000000]MORE.TXT;1\n-RMS-F-FUL, device full (insufficient space for allocation)\n  $STATUS == \"%X109110D2\"\n",
 			govax: "%CREATE-E-OPENOUT, error opening DUA3:[000000]MORE.TXT as output\n-RMS-F-FUL, device full (insufficient space for allocation)\n  $STATUS == \"%X00700032\"\n",
-			why:   "the index file's growth on a full volume (subtask 13d)",
+			why:   "the block VMS's REST.DAT left free",
 		},
 		{
 			vms:   "%DELETE-W-SEARCHFAIL, error searching for DUA3:[000000]*.OBJ;*",
 			govax: "%DELETE-W-SEARCHFAIL, error searching for DUA3:[000000]*.TXT;*\n-RMS-E-FNF, file not found\n%DELETE-W-SEARCHFAIL, error searching for DUA3:[000000]*.OBJ;*",
-			why:   "no MORE.TXT (subtask 13d)",
+			why:   "no MORE.TXT (the block VMS's REST.DAT left free)",
 		},
 	},
+}
+
+// err113IndexSize is DIRECTORY/SIZE=ALL's line for INDEXF.SYS.
+var err113IndexSize = regexp.MustCompile(`INDEXF\.SYS;1 +([0-9]+)/`)
+
+// err113IndexBlocks is INDEXF.SYS's size in an INDEX section.
+func err113IndexBlocks(t *testing.T, section string) int {
+	t.Helper()
+
+	m := err113IndexSize.FindStringSubmatch(section)
+	if m == nil {
+		t.Fatalf("no INDEXF.SYS size in:\n%s", section)
+	}
+
+	n, err := strconv.Atoi(m[1])
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return n
 }
 
 // err113Values are the values LIB$INITIALIZE's routines and the main program
