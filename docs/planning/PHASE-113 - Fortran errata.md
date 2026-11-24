@@ -493,20 +493,20 @@ stand" was added to the list.
    defined, with three arguments (0, 0, and a flag that is 100 for LIBRTL alone, "apparently").
    That is the C emulator's convention, carried over. VMS's is the main image's own: a program
    puts the addresses of its routines in a `LIB$INITIALIZE` psect, and LINK pulls in STARLET's
-   LIB$INITIALIZE module, which calls each. A.2.2's work in subtask 5 therefore begins by deciding
+   LIB$INITIALIZE module, which calls each. A.2.2's work in subtask 6 therefore begins by deciding
    what becomes of the old mechanism. It may also bear on A.9.2: real LIBRTL faulting at
    `SHARE$LIBRTL+0CE1` may be its initialization routine called with the guessed arguments.
-   Subtask 9 looks at that first.
+   Subtask 10 looks at that first.
 2. **SHOW ASSEMBLER_FLAGS** is in the grammar with no handler as well (`dispatch_test.go`'s
    `TestDispatch_unboundShowSubformErrors` expects the error). It joins A.11.5's list for subtask
-   10, along with any others that subtask's own inventory finds.
+   11, along with any others that subtask's own inventory finds.
 
 **What Phase 112 passed on** (its "Where things stand"):
 
 3. **The VMS round of Phase 112's programs**: `f90rAwaitingVMS` (ZEROSIZE, NULLS, DEFAULTS,
    PURES, ELEMENTALS, FORALLS, FORALLC, WHERES, INTRINS, ZEROWID, ZEROWIDVMS, M_COLONY) and
    `ftn86`'s ZEROVAX. FORRTL's answer for a zero width goes with them, if anything wants it.
-   **Probe**: added to A.12 (subtask 11).
+   **Probe**: added to A.12 (subtask 12).
 4. **A STRUCTURE with initial values in a module's text** (A.3.2's remaining part;
    `modwrite.go` still refuses it). Phase 112 names it as Phase 113's, but Part B doesn't list
    it. **Proposed: 113**, in subtask 2 with the Fortran 90 items: a derived type's default values
@@ -541,6 +541,23 @@ stand" was added to the list.
 - **C.** The old `SHARE$name_INITIALIZE` call (item 1): replace it with VMS's
   `LIB$INITIALIZE` psect (the refresh's proposal, with RUN `/[NO]INIT` kept for the new
   mechanism), or keep both?
+
+**The author's answers (2026-11-23):**
+
+- **A. Taken in.** Phase 112's FORALL NOTIMPLs (item 5) are this phase's, to wrap up as much
+  as can be: a subtask of their own (3, below). Each is either compiled or, where the standard
+  makes the program nonconforming, refused with a message that says so rather than NOTIMPL.
+- **B. As proposed.** PURE's storage association, pointer components' targets, constructors'
+  pointer components, an internal procedure of a PURE one, and ELEMENTAL's 12.7.1 go into
+  subtask 2; `ASSOCIATED(P, NULL())`'s NULLPLACE stays recorded.
+- **C. Replaced.** The `SHARE$name_INITIALIZE` call was the C emulator's way around a real
+  DECCRTL's startup, and isn't needed. It goes, and SET DEBUG LIBINIT with it. VMS's
+  `LIB$INITIALIZE` psect takes its place (subtask 6), and RUN `/[NO]INIT` controls the new
+  mechanism, on by default, so `/NOINIT` remains for the rare case, such as debugging a new
+  run-time library. One thing subtask 6's survey must settle (a probe case if no manual does): VMS runs
+  the initialization routines a *shareable* image lists in its own `LIB$INITIALIZE` psect too,
+  as DECC$SHR's are, or only the main image's. If shareables' are run, the new mechanism does
+  what the old hack was for, the VMS way.
 
 ## Open questions
 
@@ -620,11 +637,14 @@ A.8.1 is not planned.
 - **Fortran 90**: A.3.1's six NOTIMPLs marked 112 (DIM= and ORDER= not constant, an array
   BACK=, COMPLEX(16) to SUM and its kin, CHARACTER length zero in a component or function
   value, a statement function of a derived type, TRANSFER to a CHARACTER MOLD of run-time
-  length); A.3.3, `USE STARLET_SSDEF` and the rest; A.3.4's noticed items.
+  length); A.3.3, `USE STARLET_SSDEF` and the rest; A.3.4's noticed items. Since the
+  refresh (A.15): a STRUCTURE with initial values in a module's text, PURE's and ELEMENTAL's
+  unchecked rules, and Phase 112's FORALL NOTIMPLs (answers A and B).
 - **The compiler**: A.1.4's two forms for `/STANDARD`, A.1.5 (a typed intrinsic's cell),
   A.1.10 (floating short literals).
 - **The libraries**: STR$'s arithmetic (A.2.1); LIB$INITIALIZE (A.2.2): LINK building the
-  image's initialization list and the activator calling it, as VMS does, with probe cases;
+  image's initialization list and the activator calling it, as VMS does, with probe cases,
+  in place of RUN's `SHARE$name_INITIALIZE` call (answer C);
   `$GETCHN`, `$GETDEV`, and the UTC services (A.2.3); `astrace`'s 80,000 format parses
   (A.2.5).
 - **The tools**: MACRO's positional library, an object with errors, every undefined symbol
@@ -642,19 +662,19 @@ A.8.1 is not planned.
 1. **The survey** (done 2026-11-22): Part A; the author's answers the same day. Refreshed
    after Phase 112 (done 2026-11-23): A.15.
 2. Fortran 90's NOTIMPLs and noticed items (A.3.1, A.3.4), a STRUCTURE with initial values in
-   a module's text (A.15.4), and PURE's and ELEMENTAL's unchecked rules if the author agrees
-   (A.15.6).
-3. The compiler's small things and `STARLET_` modules (A.1.4, A.1.5, A.1.10, A.3.3).
-4. MACRO (A.6.1, 2, 5).
-5. LINK and LIB$INITIALIZE (A.7.1, A.7.3, A.2.2).
-6. STR$'s arithmetic (A.2.1).
-7. Services and FTNRTL's format parses (A.2.3, A.2.5).
-8. The debugger (A.8.2, 3).
-9. The SHARE$LIBRTL fault (A.9.2).
-10. Housekeeping (A.11.1, 2, 4, 5).
-11. The probe round (A.12): written, rehearsed on govax, run on VMS 7.1.
-12. Its fixes, the ods2 header among them.
-13. The close-out.
+   a module's text (A.15.4), and PURE's and ELEMENTAL's unchecked rules (A.15.6, answer B).
+3. FORALL's remaining NOTIMPLs (A.15.5, answer A).
+4. The compiler's small things and `STARLET_` modules (A.1.4, A.1.5, A.1.10, A.3.3).
+5. MACRO (A.6.1, 2, 5).
+6. LINK and LIB$INITIALIZE (A.7.1, A.7.3, A.2.2; answer C: the old call removed).
+7. STR$'s arithmetic (A.2.1).
+8. Services and FTNRTL's format parses (A.2.3, A.2.5).
+9. The debugger (A.8.2, 3).
+10. The SHARE$LIBRTL fault (A.9.2), after subtask 6.
+11. Housekeeping (A.11.1, 2, 4, 5; A.15.2).
+12. The probe round (A.12, A.15.3): written, rehearsed on govax, run on VMS 7.1.
+13. Its fixes, the ods2 header among them.
+14. The close-out.
 
 Each subtask may begin with a survey of its own, as earlier phases' did.
 
@@ -700,3 +720,8 @@ Each subtask may begin with a survey of its own, as earlier phases' did.
   which subtask 5 must settle and which may explain A.9.2's fault; and SHOW ASSEMBLER_FLAGS, a
   second grammar entry with no handler. Three questions for the author (A.15's A to C).
   Subtask 2 is next, after the answers.
+- **2026-11-23, the refresh's review:** the author's answers (A.15): Phase 112's FORALL
+  NOTIMPLs taken in, as a new subtask 3; PURE's and ELEMENTAL's rules into subtask 2; RUN's
+  `SHARE$name_INITIALIZE` call, the C emulator's DECCRTL workaround, replaced by VMS's
+  `LIB$INITIALIZE` psect under RUN `/[NO]INIT` (subtask 6). The subtasks after 2 renumbered.
+  Subtask 2 is next.
