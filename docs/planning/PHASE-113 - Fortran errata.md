@@ -726,7 +726,7 @@ A.8.1 is not planned.
     - 13b. The services to VMS's run (`testdata/svc113`, `svc113Compared`) (done 2026-11-24).
     - 13c. ERR113's sections: LIB$INITIALIZE's arguments, MACRO's register names and
       `.WARN`/`.ERROR`/`.PRINT`, DCL's messages, TYPE without carriage control, a full volume;
-      `TestErr113Procedure` held to `vax/err113.log`.
+      `TestErr113Procedure` held to `vax/err113.log` (done 2026-11-24).
     - 13d. The index file's growth (A.9.1): ods2 extending INDEXF.SYS as VMS's XQP does.
     - 13e. FTNRTL to the FORRTL round (`testdata/for81`'s round 3 and the terminal's limits).
     - 13f. The debugger to the debugger round (`testdata/dbg113`'s sessions).
@@ -1413,3 +1413,67 @@ Each subtask may begin with a survey of its own, as earlier phases' did.
     (`svc113Masked`), the TT and SYS$DISK cases explained differences (the test console has
     neither device); `TestUTCServices` and `TestGetchnGetdev` follow the new rules.
   - Subtask 13c, ERR113's sections, is next.
+- **2026-11-24, subtask 13c (done):** ERR113's sections made VMS 7.1's. `TestErr113Procedure`
+  now holds govax's log to `vax/err113.log` section by section, but for `err113NotCompared`
+  (MAC113A and B, whose messages are govax's own form, and INDEX, 13d's) and
+  `err113Differences` (each with why), the arguments' addresses masked (`err113Masked`);
+  `TestErr113Macro` holds the MAC113 listings and the A+B objects to VMS's.
+  - *LIB$INITIALIZE*: RUN's driver calls a main image's LIB$INITIALIZE with the six arguments
+    VMS gives a main program (start; the CLI coroutine, image header, and file information, 0 in
+    govax; the image's link flags, `ICB.LinkFlags`; the CLI flags, 0), and a shareable image's
+    with start alone (`machine/run.go`'s `initCall`). `libinit.mar` passes each routine a copy of
+    its own list, its first argument CONTINUE (`ARGS`), so INITA and INITB get 6, SINIT 1, and
+    the main program its six with start stepped to it, as VMS's did. `TestLibInitialize` checks
+    for six. A program with no initialization routines is still called with none.
+  - *MACRO*: a register name as a data item is DIRSYNX as a directive's first item (a zero
+    stored, the rest left), DATALSTSYN as a later one (a zero in its place), ADRLSTSYNX then
+    DIRSYNX in `.ADDRESS` (nothing stored) (`asm`'s `registerAhead`, `registerItem`; the
+    `!` under the item, or a later item's comma; `VAX_DATALSTSYN`, `VAX_ADRLSTSYNX`); two
+    messages with no bytes between each have the location after them (`listNotedLine`).
+    VMS's listing marks MAC113A's DATALSTSYN zero relocatable and puts `.ADDRESS`'s `!`s
+    under columns 7 and 12, which govax doesn't follow (`mac113Allowed`); `4+R1` stays a
+    symbol (unconfirmed). DEVIATIONS.md's Phase 111 entry moves to DEVIATIONS-RESOLVED.md.
+    `.PRINT`'s line lists its value; the terminal's `.PRINT` lines, warnings, and errors are
+    shown in their lines' order (`dclcmd`'s `showReports`, `Assembler.MessageLines`).
+    `MACRO A+B` numbers each file's lines from 1 in the listing and heads a page with the file
+    it starts in (`Assembler.SetFileLines`, `ListingOptions.Files`), and declares each file
+    to the debugger where its code starts, its line numbers going on from the last file's
+    (`obj.DSTNextSourceFileRecord`, `LineTable.Source`, `ObjectOptions.SourceFiles`), so
+    MAC113C's object is VMS's but for the files' dates.
+  - *DCL*: DELVER's status has STS$M_INHIB_MSG (`%X1093120A`); a `$FILE` parameter (the grammar's
+    `TypeFile`, PURGE's and COPY's) with a directory bracket left open is CLI$_DIRECT with the
+    value as its segment, before the command runs (`dcl`'s `directoryClosed`, `badParameter`);
+    PURGE's facility is 148 (`purgeFacility`), and PURGE/KEEP=0 is PURGE-F-BADVALUE
+    (`%X10941114`). Other commands' file parameters are still `$string` (VMS's are surely
+    `$FILE` too; unconfirmed one by one).
+  - *NOCC*: TYPE of a file whose records have no carriage control writes them one after
+    another and ends the line after the last (`rms`'s `writeUncontrolledRecords`), as VMS's
+    TYPE showed them at the terminal. VMS's log has `ONETWOAFTER`, govax's COPY to the host
+    running the VFC file's records with no control into the next (the records are
+    `00 00`-controlled; `err113Differences`).
+  - *FULL*: COPY gives a volume output its input's blocks as it makes it, so on a full volume
+    the copy fails at its open, leaving nothing: COPY-E-OPENOUT, `-RMS-F-FUL`, then
+    COPY-W-NOTCOPIED for the input, status `%X106710A2` (`rms.DeviceFullError.Open`,
+    `copyOpenOut`); a copy that works leaves `$STATUS` SS$_NORMAL. DCL's WRITE on a full
+    volume is RMS$_FUL (it was RSZ). A record file that fills as it's written is left, a
+    `DeviceFullError` naming it: CREATE says CREATE-E-WRITEERR (`createWriteErr`,
+    `%X109110D2`), and MACRO deletes the object and says MACRO-E-OPENOUT (`macroOpenOut`,
+    `%X100310A2`). VMS showed RMS$_FUL with no STV line in each, so the utilities' messages
+    no longer add SS$_DEVICEFULL. On govax the volume REST.DAT filled has no block for
+    MORE.TXT's header, its index file growing by a cluster at least where VMS's grew one
+    block (INDEXF.SYS's 1-block extent at LBN 20479), so CREATE still fails at its open:
+    13d's.
+  - *`$DIBDEF`*: `testdata/svc113/decode.go` writes `defined.txt` from VMS's `def_dib.obj`;
+    its names are in `vmsdef`, the macro library (`mkdefs`), and FORTRAN's modules
+    (`$DIBDEF`), so SVC113's DEF_DIB assembles on govax.
+  - *A user-mode SYS$OUTPUT file*: an image's records go at the end of an existing file, as the
+    LIB$ manual's LIB$PUT_OUTPUT opens one (`corevms/outfile.go`), which is what VMS 7.1 did with
+    STR113.TXT (13a's note); only a file that isn't there is made.
+  - Tests that held govax's earlier choices now hold VMS's: `TestTIR111Objects` and
+    `TestTIR111ErrorObjects` compare TIRR's object whole (VMS's record for record),
+    `TestConsoleCopy_deviceFull` (no STV; CREATE's WRITEERR), `TestConsolePurge_badLimit`,
+    `TestTB70OutputSameFile` (both runs in one version); `TestFTNRTLListOutput`'s program had
+    data labeled R1 to R14, which VMS's MACRO refuses too, now X1 to X14.
+  - MANUAL.md's TYPE, COPY, PURGE, the MACRO command, LIB$INITIALIZE, and SYS$OUTPUT files;
+    HELP COPY and PURGE.
+  - Subtask 13d, the index file's growth, is next.

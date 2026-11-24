@@ -408,13 +408,20 @@ func (p *ImageProcess) buildDriver(main *ICB, runInits, hibernate bool) (uint32,
 	// (each one's IHA$L_INISHR) in the order they were activated, then the main image's, which calls the
 	// main program itself; the main program alone if it has none.
 	// LIB$INITIALIZE is called as the VMS Run-Time Library manual's 7.2 has
-	// it, with (start, cli-coroutine, image-info): start the address of its
-	// entry in a copy of the image's initialization list, after the code in
-	// the driver's page, so that it finds the main program as the list's next
-	// entry. The list is CALLS's, on the stack, since LIB$INITIALIZE steps
-	// start along it. govax has no CLI coroutine or image information to give
-	// (0 for each).
+	// it, its first argument start: the address of its entry in a copy of
+	// the image's initialization list, after the code in the driver's page,
+	// so that it finds the main program as the list's next entry. The list
+	// is CALLS's, on the stack, since LIB$INITIALIZE steps start along it.
+	// As VMS 7.1 calls it (testdata/err113's INI113), a main image's gets
+	// the main program's six arguments (start, the CLI coroutine, the image
+	// header, the image file's information, the link flags, the CLI flags),
+	// and a shareable image's start alone; LIB$INITIALIZE passes its list on
+	// to each routine. govax has no CLI coroutine, header copy, or file
+	// information to give (0 for each, and for the CLI flags); the link
+	// flags are the header's.
 	var vectors [][]uint32
+
+	var mainVector []bool
 
 	callsMain := false
 
@@ -439,21 +446,28 @@ func (p *ImageProcess) buildDriver(main *ICB, runInits, hibernate bool) (uint32,
 			}
 
 			vectors = append(vectors, vector)
+			mainVector = append(mainVector, icb == main)
 		}
 	}
 
 	// The vectors go after the code, whose length is known before their
 	// addresses are: each call is the same length whatever they are.
-	initCall := func(vector []uint32, at uint32) []byte {
-		b := append(encodePushl(0), encodePushl(0)...)
-		b = append(b, encodePushl(at)...)
+	initCall := func(i int, at uint32) []byte {
+		if !mainVector[i] {
+			return append(encodePushl(at), EncodeCalls(1, vectors[i][0])...)
+		}
 
-		return append(b, EncodeCalls(3, vector[0])...)
+		var b []byte
+		for _, arg := range []uint32{0, main.LinkFlags, 0, 0, 0, at} {
+			b = append(b, encodePushl(arg)...)
+		}
+
+		return append(b, EncodeCalls(6, vectors[i][0])...)
 	}
 
 	afterCode := len(code)
-	for _, v := range vectors {
-		afterCode += len(initCall(v, 0))
+	for i := range vectors {
+		afterCode += len(initCall(i, 0))
 	}
 
 	if !callsMain {
@@ -468,9 +482,9 @@ func (p *ImageProcess) buildDriver(main *ICB, runInits, hibernate bool) (uint32,
 
 	var data []byte
 
-	for _, v := range vectors {
+	for i, v := range vectors {
 		at := driverAddr + uint32(afterCode+len(data))
-		code = append(code, initCall(v, at)...)
+		code = append(code, initCall(i, at)...)
 
 		for _, entry := range v {
 			data = binary.LittleEndian.AppendUint32(data, entry)

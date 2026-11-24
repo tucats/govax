@@ -16,8 +16,9 @@
 // the Utility Routines manual gives); and, since Phase 98,
 // testdata/bat98/defined.txt ($SJCDEF, $QUIDEF, and $JBCMSGDEF, the
 // queue services' codes and the job controller's conditions, from the
-// probe's objects). The macros are generated from those
-// lists, not written from VMS's own.
+// probe's objects); and, since Phase 113, testdata/svc113/defined.txt
+// ($DIBDEF, the device information buffer of $GETCHN and $GETDEV). The
+// macros are generated from those lists, not written from VMS's own.
 //
 // A few families real MACRO's probes never covered come instead from
 // the global symbol directory of STARLET.OLB's definition module of the
@@ -48,6 +49,7 @@ var defined = []string{
 	filepath.Join("..", "..", "testdata", "mp", "defs", "defined.txt"),
 	filepath.Join("..", "..", "testdata", "help90", "defined.txt"),
 	filepath.Join("..", "..", "testdata", "bat98", "defined.txt"),
+	filepath.Join("..", "..", "testdata", "svc113", "defined.txt"),
 }
 
 // libraryFamilies are the families taken from STARLET.OLB's definition

@@ -3,7 +3,6 @@ package console
 import (
 	"bytes"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -21,9 +20,8 @@ var tir111Differences = map[string]string{
 
 // TestTIR111Objects holds govax's MACRO to VMS 7.1's on testdata/tir111's probe modules:
 // each object's GSD, TIR, and end records, as TestF90RObjects compares fcalc's, but for
-// tir111Differences. TIRX, whose errors are on purpose, is TestTIR111Errors's; TIRR's
-// last line, .LONG R1[2], is DIRSYNX on VMS (and govax), where VMS's object stores 4 zero
-// bytes, so its object is compared with that line made .LONG 0.
+// tir111Differences. TIRX and TIRR, whose errors are on purpose, are
+// TestTIR111ErrorObjects's.
 func TestTIR111Objects(t *testing.T) {
 	dir := filepath.Join("..", "..", "testdata", "tir111")
 
@@ -36,24 +34,12 @@ func TestTIR111Objects(t *testing.T) {
 
 	for _, source := range sources {
 		name := strings.ToUpper(strings.TrimSuffix(filepath.Base(source), ".mar"))
-		if name == "TIRX" {
+		if name == "TIRX" || name == "TIRR" {
 			continue // TestTIR111ErrorObjects's
 		}
 
 		t.Run(name, func(t *testing.T) {
-			path := source
-			if name == "TIRR" {
-				path = withoutRegisterRepetition(t, source)
-			}
-
-			got, want := assembledAndVMS(t, d, c, buf, path, filepath.Join(dir, "vax"))
-
-			// VMS's TIRR had its error, which its end record's severity says.
-			if name == "TIRR" && len(want) > 0 && len(want[len(want)-1]) > 1 && want[len(want)-1][0] == 3 {
-				end := bytes.Clone(want[len(want)-1])
-				end[1] = 0
-				want[len(want)-1] = end
-			}
+			got, want := assembledAndVMS(t, d, c, buf, source, filepath.Join(dir, "vax"))
 
 			diff := firstRecordDifference(got, want)
 			why, differs := tir111Differences[name]
@@ -149,29 +135,6 @@ func firstRecordDifference(got, want [][]byte) string {
 	return ""
 }
 
-// withoutRegisterRepetition is a copy of TIRR.MAR, under the same name, with its
-// .LONG R1[2] made .LONG 0, which is what VMS's object stores for that line.
-func withoutRegisterRepetition(t *testing.T, source string) string {
-	t.Helper()
-
-	text, err := os.ReadFile(source)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	changed := strings.Replace(string(text), "\t.LONG\tR1[2]", "\t.LONG\t0", 1)
-	if changed == string(text) {
-		t.Fatal("no .LONG R1[2] in TIRR.MAR")
-	}
-
-	path := filepath.Join(t.TempDir(), filepath.Base(source))
-	if err := os.WriteFile(path, []byte(changed), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	return path
-}
-
 // TestTIR111Errors holds govax's MACRO's errors to VMS's on the probe's modules that have
 // them: DIRSYNX on each string directive with nothing after it (TIRX), and on TIRR's
 // .LONG R1[2]. (VMS's MACRO writes an object for such a module, as govax's doesn't.)
@@ -210,11 +173,8 @@ func TestTIR111Errors(t *testing.T) {
 // TestTIR111ErrorObjects holds govax's objects of the modules with errors, TIRX and
 // TIRR, to VMS's (Phase 113, subtask 5): VMS's MACRO writes an object for one, its
 // end record's severity 2 (an error), a line with an error assembled as it could be:
-// a string directive with nothing after it as an empty string. TIRR's object is only
-// held to having severity 2: VMS took R1 in .LONG R1[2] for a register, an error,
-// and stored one longword of 0, where govax takes it for an external symbol, which the
-// repetition can't use; whether VMS refuses a register name in every data expression
-// is the probe round's question (the phase doc's A.6.3).
+// a string directive with nothing after it as an empty string, and .LONG R1[2] one
+// longword of 0, a register name being no data item (subtask 13c).
 func TestTIR111ErrorObjects(t *testing.T) {
 	dir := filepath.Join("..", "..", "testdata", "tir111")
 	d, c, buf := dungeonConsole(t, false)
@@ -246,15 +206,6 @@ func TestTIR111ErrorObjects(t *testing.T) {
 		}
 
 		got, want := comparedRecords(records), comparedRecords(vmsRecords)
-
-		if name == "TIRR" {
-			end := got[len(got)-1]
-			if end[0] != 3 || end[1] != 2 {
-				t.Errorf("TIRR: end record % x, want severity 2", end)
-			}
-
-			continue
-		}
 
 		if diff := firstRecordDifference(got, want); diff != "" {
 			t.Errorf("%s: %s", name, diff)

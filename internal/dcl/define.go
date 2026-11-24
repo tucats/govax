@@ -460,6 +460,9 @@ func applyValueSwitches(switches map[string]string, typ *ValueType, typeName *st
 		case "$STRING":
 			*typ = TypeString
 
+		case "$FILE":
+			*typ = TypeFile
+
 		case "$INTEGER":
 			*typ = TypeInteger
 

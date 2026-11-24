@@ -50,6 +50,13 @@
    /RECORD_FORMAT asks for another kind.  A copy from one place on a
    volume to another keeps the file's record format and attributes.
 
+   Such a copy is given its input's blocks as it is made, so on a volume
+   without room for them the copy fails at once and leaves nothing:
+
+     %COPY-E-OPENOUT, error opening DUA3:[000000]FILL6.DAT; as output
+     -RMS-F-FUL, device full (insufficient space for allocation)
+     %COPY-W-NOTCOPIED, DUA1:[ERR113]BIG.DAT;1 not copied
+
    An object module (.OBJ) is always copied as records.  On the host it
    is kept as ODS-2 keeps variable-length records on disk (each record a
    2-byte length and its bytes, padded to an even length), so its

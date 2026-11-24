@@ -41,8 +41,8 @@ import (
 //     SS_DEVNOTMOUNT, matching Context.Delete's own translation for the
 //     same underlying condition.
 //   - An invalid /KEEP value (currently just zero) surfaces as an
-//     *rms.InvalidLimitError and is reported as DCL's IVVALU, the value
-//     its segment (unconfirmed against VMS's PURGE/KEEP=0).
+//     *rms.InvalidLimitError and is reported as VMS 7.1 reports
+//     PURGE/KEEP=0 (testdata/err113): PURGE-F-BADVALUE, a fatal error.
 //   - Anything else (a malformed file specification, an unsupported multi-
 //     device volume set, or a genuine I/O failure freeing storage) is
 //     reported as CLI_BADFILESPEC, matching Context.Delete's own catch-all
@@ -76,13 +76,16 @@ func (c *Context) Purge(specText string, keep uint16, log bool) error {
 
 		var badLimit *rms.InvalidLimitError
 		if errors.As(err, &badLimit) {
-			return vmserrors.NewSegment(vmserrors.CLI_IVVALU, fmt.Sprint(badLimit.Limit))
+			return vmserrors.ConditionError{
+				Status: purgeBadValue | stsInhibitMsg,
+				Text:   fmt.Sprintf("PURGE-F-BADVALUE, '%d' is an invalid keyword value", badLimit.Limit),
+			}
 		}
 
 		if _, denied := rms.IsDenied(err); denied {
 			text := "PURGE-W-SEARCHFAIL, error searching for " + c.expandedName(specText) + "\n" + ConditionLine(rmsPRV)
 
-			return vmserrors.ConditionError{Status: purgeFilNotPur&^0xFFFF | vmsdef.LibrarySymbols["SHR$_SEARCHFAIL"] | stsInhibitMsg, Text: text}
+			return vmserrors.ConditionError{Status: purgeSearchFail | stsInhibitMsg, Text: text}
 		}
 
 		// A specification RMS can't parse: SEARCHFAIL over its status, as
@@ -91,7 +94,7 @@ func (c *Context) Purge(specText string, keep uint16, log bool) error {
 		if errors.As(err, &bad) {
 			text := "PURGE-W-SEARCHFAIL, error searching for " + strings.ToUpper(bad.Spec) + "\n" + ConditionLine(bad.Status)
 
-			return vmserrors.ConditionError{Status: purgeFilNotPur&^0xFFFF | vmsdef.LibrarySymbols["SHR$_SEARCHFAIL"] | stsInhibitMsg, Text: text}
+			return vmserrors.ConditionError{Status: purgeSearchFail | stsInhibitMsg, Text: text}
 		}
 
 		return vmserrors.Wrap(vmserrors.CLI_BADFILESPEC, err, specText)
@@ -102,10 +105,19 @@ func (c *Context) Purge(specText string, keep uint16, log bool) error {
 	return nil
 }
 
-// purgeFilNotPur is PURGE's FILNOTPUR condition value, a warning, in
-// DELETE's facility, which PURGE is part of (unconfirmed: no probe showed
-// its $STATUS).
-var purgeFilNotPur = deleteSearchFail&^0xFFFF | vmsdef.LibrarySymbols["SHR$_FILNOTPUR"]
+// purgeFacility is PURGE's facility number, 148, one after DELETE's: VMS
+// 7.1's PURGE/KEEP=0 was %X10941114 (testdata/err113).
+const purgeFacility = 148
+
+// purgeFilNotPur and purgeSearchFail are PURGE's FILNOTPUR and SEARCHFAIL
+// condition values, warnings (their facility VMS's, the statuses
+// themselves unconfirmed: no probe showed them), and purgeBadValue its
+// BADVALUE, fatal, as VMS 7.1's PURGE/KEEP=0 was.
+var (
+	purgeFilNotPur  = purgeFacility<<16 | vmsdef.LibrarySymbols["SHR$_FILNOTPUR"]
+	purgeSearchFail = purgeFacility<<16 | vmsdef.LibrarySymbols["SHR$_SEARCHFAIL"]
+	purgeBadValue   = purgeFacility<<16 | vmsdef.LibrarySymbols["SHR$_BADVALUE"] | 4
+)
 
 // showPurged writes what PURGE says of the files it purged, as VMS 7.1's
 // PURGE does (seen by the author on the simh VAX, 2026-11-22): nothing

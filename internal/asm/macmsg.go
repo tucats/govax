@@ -57,6 +57,8 @@ var macroIdents = map[uint32]string{
 	vmserrors.VAX_CONDDEPTH:     "IFLEVLXCED",
 	vmserrors.VAX_DATARANGE:     "DATATRUNC",
 	vmserrors.VAX_DIRSYNX:       "DIRSYNX",
+	vmserrors.VAX_DATALSTSYN:    "DATALSTSYN",
+	vmserrors.VAX_ADRLSTSYNX:    "ADRLSTSYNX",
 	vmserrors.VAX_DIVZERO:       "DIVBYZERO",
 	vmserrors.VAX_DIVZEROWARN:   "DIVBYZERO",
 	vmserrors.VAX_DUPSYM:        "MULDEFLBL",

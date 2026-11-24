@@ -22,7 +22,9 @@
       /KEEP=n
 
    How many of each file's newest versions to keep.  The default is 1,
-   the newest alone.
+   the newest alone; 0 is an error:
+
+     %PURGE-F-BADVALUE, '0' is an invalid keyword value
 
 /LOG
 

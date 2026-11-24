@@ -15,11 +15,12 @@ import (
 // LIB$PUT_OUTPUT's $CREATE of SYS$OUTPUT then makes the file, which the
 // image holds open until its rundown, and a condition's message, which
 // $PUTMSG writes through an open of its own, can't go there (testdata/
-// tb70's part S; msgout.go). govax makes the file at the first record
-// written to it (variable-length records, carriage-return carriage
-// control: rms.DCLAccess.Variable), keeps it open, and
-// closes it at image rundown (closeImageOutput), so the next image makes
-// a new version.
+// tb70's part S; msgout.go). govax opens the file at the first record
+// written to it, at its end, as the LIB$ manual's LIB$PUT_OUTPUT does, or
+// makes it when there is none (variable-length records, carriage-return
+// carriage control: rms.DCLAccess.Variable), keeps it open, and closes it
+// at image rundown (closeImageOutput), so the next image's records go
+// after this one's.
 
 // outputFile is SYS$OUTPUT or SYS$ERROR as an image's file: the name it
 // was opened for, and the open file.
@@ -59,8 +60,8 @@ func (env *Environment) putRecordFile(out *processOutput, record string) bool {
 	return f.file.Put([]byte(record))&1 != 0
 }
 
-// openRecordFile returns out's file, creating it (a new version) the
-// first time, or when out's name has come to name another (the one before
+// openRecordFile returns out's file, opening it at its end or creating it
+// the first time, or when out's name has come to name another (the one before
 // is closed); nil when the name isn't defined in the process table, names
 // a device that holds no files, or the file can't be made; nil too when
 // the name leads to a process-permanent file, open or closed, which is
@@ -88,7 +89,14 @@ func (env *Environment) openRecordFile(out *processOutput) *outputFile {
 		return nil
 	}
 
-	file, err := env.Session.OpenDCLFile(loc, rms.DCLAccess{Write: true, ShareRead: true, Variable: true})
+	// An existing file is opened at its end; only when there's none is one
+	// made (the LIB$ manual's LIB$PUT_OUTPUT; VMS 7.1 put STR113's second
+	// run after its first in STR113.TXT;1, testdata/err113).
+	file, err := env.Session.OpenDCLFile(loc, rms.DCLAccess{Append: true, ShareRead: true})
+	if err != nil {
+		file, err = env.Session.OpenDCLFile(loc, rms.DCLAccess{Write: true, ShareRead: true, Variable: true})
+	}
+
 	if err != nil {
 		return nil
 	}

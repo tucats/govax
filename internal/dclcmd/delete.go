@@ -26,8 +26,8 @@ import (
 // real operator would see for that exact condition.
 
 // deleteSearchFail is DELETE's SEARCHFAIL condition value, a warning:
-// the shared message SHR$_SEARCHFAIL in DELETE's facility, taken to be
-// 147 (unconfirmed against VMS: no probe has shown DELETE's $STATUS).
+// the shared message SHR$_SEARCHFAIL in DELETE's facility, 147 (VMS 7.1's
+// DELVER was %X1093120A, testdata/err113).
 var deleteSearchFail = 147<<16 | vmsdef.LibrarySymbols["SHR$_SEARCHFAIL"]
 
 // Delete removes the files each of specs names: DCL's DELETE, whose
@@ -131,7 +131,7 @@ func (c *Context) deleteFailure(specText string, err error) error {
 	// VMS 7.3's DELETE words it ("DELETE FOO.TXT;" is the highest version).
 	var versionRequired *rms.VersionRequiredError
 	if errors.As(err, &versionRequired) {
-		return vmserrors.ConditionError{Status: deleteDelVer, Text: "DELETE-E-DELVER, explicit version number or wild card required"}
+		return vmserrors.ConditionError{Status: deleteDelVer | stsInhibitMsg, Text: "DELETE-E-DELVER, explicit version number or wild card required"}
 	}
 
 	var notFound *rms.NotFoundError

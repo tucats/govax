@@ -47,6 +47,7 @@ var families = map[string][]string{
 	"$CLIDEF":    {"CLI$"},
 	"$DCDEF":     {"DC$", "DT$"},
 	"$DEVDEF":    {"DEV$"},
+	"$DIBDEF":    {"DIB$"},
 	"$DSCDEF":    {"DSC$"},
 	"$DVIDEF":    {"DVI$"},
 	"$FABDEF":    {"FAB$"},

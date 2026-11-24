@@ -2,6 +2,7 @@ package asm
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/tucats/govax/internal/vmserrors"
@@ -432,4 +433,31 @@ func (a *Assembler) runSource(f *sourceFrame, lines []string) error {
 	}
 
 	return nil
+}
+
+// SetFileLines says the source the next Assemble is given joins files of
+// these line counts, in order, as MACRO A+B joins them. VMS 7.1's MACRO
+// numbers each file's lines from 1 in the listing, heads a page with the
+// file it starts in, and declares each file in the debugger's source
+// correlation, the line numbers there going on from file to file
+// (testdata/err113's MAC113C). Without it, or with one count, the source
+// is one file.
+func (a *Assembler) SetFileLines(counts []int) {
+	a.fileCounts = nil
+	if len(counts) > 1 {
+		a.fileCounts = slices.Clone(counts)
+	}
+}
+
+// fileOf returns which of the joined files line, a line of the whole
+// source, is in, and its number there.
+func (a *Assembler) fileOf(line int) (file, number int) {
+	number = line
+
+	for file < len(a.fileCounts)-1 && number > a.fileCounts[file] {
+		number -= a.fileCounts[file]
+		file++
+	}
+
+	return file, number
 }

@@ -152,6 +152,11 @@ const (
 	// PHASE-98 - batch queues.md, Decision 11).
 	vaxJobsExecuting
 	vaxJobsEnded
+
+	// MACRO-32: a register name in a data directive's list (Phase 113,
+	// subtask 13c).
+	vaxDataListSyntax
+	vaxAddressListSyntax
 )
 
 // VAX facility status codes -- VAX_ prefix.
@@ -368,6 +373,13 @@ const (
 	// as a VMS system's stop leaves them.
 	VAX_JOBSEXECUTING = VAXFacility<<FacilityPosition | vaxJobsExecuting<<MessagePosition | StatusWarning
 	VAX_JOBSENDED     = VAXFacility<<FacilityPosition | vaxJobsEnded<<MessagePosition | StatusInfo
+
+	// VAX_DATALSTSYN and VAX_ADRLSTSYNX are MACRO-32's "Data list syntax
+	// error" and "Address list syntax error": a register name as an item
+	// after the first of .BYTE, .WORD, or .LONG, and as an item of
+	// .ADDRESS (testdata/err113's MAC113A, VMS 7.1).
+	VAX_DATALSTSYN = VAXFacility<<FacilityPosition | vaxDataListSyntax<<MessagePosition | StatusError
+	VAX_ADRLSTSYNX = VAXFacility<<FacilityPosition | vaxAddressListSyntax<<MessagePosition | StatusError
 )
 
 func init() {
@@ -489,6 +501,8 @@ func init() {
 	DefineMessage(VAX_RAMNOWRITE, VAXFacility, "RAMNOWRITE", "!S has no volume yet; its first mount must be writable")
 	DefineMessage(VAX_JOBSEXECUTING, VAXFacility, "JOBSEXECUTING", "!S executing; ending govax ends !S")
 	DefineMessage(VAX_JOBSENDED, VAXFacility, "JOBSENDED", "batch jobs requeued to restart: !UL; ended (queue reset): !UL")
+	DefineMessage(VAX_DATALSTSYN, VAXFacility, "DATALSTSYN", "Data list syntax error")
+	DefineMessage(VAX_ADRLSTSYNX, VAXFacility, "ADRLSTSYNX", "Address list syntax error")
 	DefineMessage(VAX_ALLOCVAX, VAXFacility, "ALLOCVAX", "Allocating initial VAX")
 	DefineMessage(VAX_READLINE, VAXFacility, "READLINE", "Initializing readline")
 }

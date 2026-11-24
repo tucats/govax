@@ -37,6 +37,13 @@ const (
 	// one entry in parentheses or a parenthesized list of them, read
 	// whole to its closing parenthesis; the command reads the entries.
 	TypeACL
+
+	// TypeFile (Phase 113, subtask 13c) is a file specification, a string
+	// whose directory DCL checks: a "[" or "<" with no closing bracket
+	// after it is CLI$_DIRECT, the value its segment, before the command
+	// runs (VMS 7.1's PURGE DCL[X.TXT, testdata/err113). The command reads
+	// the rest of it.
+	TypeFile
 )
 
 // Keyword is one named value of a Type, matching a grammar "keyword"

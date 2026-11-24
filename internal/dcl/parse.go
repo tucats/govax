@@ -559,12 +559,12 @@ func (g *Grammar) parse(line string) (*Result, *Parameter, error) {
 		if p.List {
 			tokens, rem, err := readList(pos, false, elementReader(p.Type))
 			if err != nil {
-				return nil, nil, vmserrors.Wrap(vmserrors.CLI_BADPARAMETER, err, p.Name)
+				return nil, nil, badParameter(err, p.Name)
 			}
 
 			vals, err := g.resolveList(p.Type, p.TypeName, tokens)
 			if err != nil {
-				return nil, nil, vmserrors.Wrap(vmserrors.CLI_BADPARAMETER, err, p.Name)
+				return nil, nil, badParameter(err, p.Name)
 			}
 
 			pos = skipSeparator(rem, p.Separator)
@@ -597,7 +597,7 @@ func (g *Grammar) parse(line string) (*Result, *Parameter, error) {
 
 		val, redirect, negated, err := g.resolveValue(p.Type, p.TypeName, token)
 		if err != nil {
-			return nil, nil, vmserrors.Wrap(vmserrors.CLI_BADPARAMETER, err, p.Name)
+			return nil, nil, badParameter(err, p.Name)
 		}
 
 		// Its value follows the "=", for the redirected syntax.
@@ -889,9 +889,57 @@ func (g *Grammar) resolveValue(typ ValueType, typeName string, token string) (va
 
 		return Value{IsString: true, IsKeyword: true, Str: kw.Name, Int: kw.ID}, kw.Syntax, neg, nil
 
+	case TypeFile:
+		if !directoryClosed(token) {
+			return Value{}, "", false, vmserrors.NewSegment(vmserrors.CLI_DIRECT, upcase(token))
+		}
+
+		return Value{IsString: true, Str: token}, "", false, nil
+
 	default: // TypeAny, TypeName, TypeString, TypeRestOfLine, TypeExpression, TypeSwitch
 		return Value{IsString: true, Str: token}, "", false, nil
 	}
+}
+
+// badParameter is err, a parameter's value DCL refused, as the command's
+// error: CLI$_BADPARAMETER naming the parameter, but for a file
+// specification's CLI$_DIRECT, which DCL gives alone (TypeFile).
+func badParameter(err error, name string) error {
+	var e vmserrors.VMSError
+	if errors.As(err, &e) && e.Status == vmserrors.CLI_DIRECT {
+		return err
+	}
+
+	return vmserrors.Wrap(vmserrors.CLI_BADPARAMETER, err, name)
+}
+
+// directoryClosed reports whether spec, a file specification, closes each
+// directory it opens: a "[" (or "<") outside quotes has a "]" (or ">")
+// after it. A quoted host name is taken as it is.
+func directoryClosed(spec string) bool {
+	quoted := false
+
+	for i := 0; i < len(spec); i++ {
+		switch c := spec[i]; {
+		case c == '"':
+			quoted = !quoted
+		case quoted:
+		case c == '[' || c == '<':
+			closer := byte(']')
+			if c == '<' {
+				closer = '>'
+			}
+
+			end := strings.IndexByte(spec[i+1:], closer)
+			if end < 0 {
+				return false
+			}
+
+			i += end + 1
+		}
+	}
+
+	return true
 }
 
 // resolveList type-checks each element of a list value, as resolveValue
@@ -1344,7 +1392,7 @@ func (g *Grammar) readItems(r *Result, active *Entry, nextParam int, p *Paramete
 		if !strings.HasPrefix(after, ",") && !item.joined {
 			vals, err := g.resolveList(p.Type, p.TypeName, tokens)
 			if err != nil {
-				return nil, nil, "", vmserrors.Wrap(vmserrors.CLI_BADPARAMETER, err, p.Name)
+				return nil, nil, "", badParameter(err, p.Name)
 			}
 
 			return vals, items, rem, nil

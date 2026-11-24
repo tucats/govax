@@ -2109,14 +2109,6 @@ nothing is changed until a program needs it. `TestLink82Oracle` lists the case.
 - **Status**: open; such objects differ from VMS's in that record alone (`tir111Differences`,
   `f90rObjectDifferences`).
 
-### [Phase 111] A register name in a data expression
-
-- **Where**: `internal/asm`'s expression evaluator.
-- **What**: govax's MACRO takes `.LONG R1` as a reference to a global symbol R1. VMS 7.1's MACRO
-  called `.LONG R1[2]` DIRSYNX (testdata/tir111's TIRR), which govax now does too, its repeated
-  value never defined; whether VMS refuses a register name in any data expression is unconfirmed.
-- **Status**: open.
-
 ### [Phase 111] LBR$OUTPUT_HELP with no SYS$HELP:HELPLIB.HLB
 
 - **Where**: `internal/lbrrtl/help.go`'s `outputHelp`.

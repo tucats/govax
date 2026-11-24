@@ -100,8 +100,18 @@ func (a *Assembler) pseudoDataSigned(c *cursor, scale int, signed bool) error {
 	for {
 		c.skipBlanks()
 
+		itemStart := c.pos
+
 		if err := a.listSeparator(c, first); err != nil || c.atEnd() {
 			return err
+		}
+
+		if a.dialect == DialectMACRO && registerAhead(c) {
+			if done, err := a.registerItem(c, itemStart, first, scale); done || err != nil {
+				return err
+			}
+
+			continue
 		}
 
 		first = false
@@ -167,6 +177,82 @@ func (a *Assembler) pseudoDataSigned(c *cursor, scale int, signed bool) error {
 				return err
 			}
 		}
+	}
+}
+
+// registerAhead reports whether a register name (R0 to R15, AP, FP, SP, or
+// PC, not the start of a longer name) is next at c, without moving it.
+func registerAhead(c *cursor) bool {
+	look := *c
+
+	_, err := parseRegister(&look, 0)
+
+	return err == nil
+}
+
+// registerItem is a data item of .BYTE, .WORD, or .LONG that starts with a
+// register name, which VMS 7.1's MACRO refuses (testdata/err113's MAC113A):
+// as the directive's first item it is DIRSYNX, after a zero of the item's
+// size is stored, and the rest of the directive is left (.LONG R1+4 and
+// .LONG R1[2] each store one zero); as a later one, DATALSTSYN, then a zero
+// stored for it, and the list goes on with the next item (.LONG 1,R2,3
+// stores 1, 0, and 3). The listing's "!" is under the register's first
+// character, or a later item's comma: itemStart, where the item's text
+// starts. done says the directive ends here.
+func (a *Assembler) registerItem(c *cursor, itemStart int, first bool, scale int) (done bool, err error) {
+	if first {
+		if err := a.emitScaled(0, scale); err != nil {
+			return true, err
+		}
+	}
+
+	status := vmserrors.VAX_DATALSTSYN
+	if first {
+		status = vmserrors.VAX_DIRSYNX
+	}
+
+	at := c.pos
+	c.pos = itemStart
+	err = a.continuingError(vmserrors.New(status))
+	c.pos = at
+
+	if err != nil {
+		return true, err
+	}
+
+	if first {
+		c.pos = len(c.s)
+
+		return true, nil
+	}
+
+	if err := a.emitScaled(0, scale); err != nil {
+		return true, err
+	}
+
+	skipListItem(c)
+
+	return false, nil
+}
+
+// skipListItem moves c past the rest of a list's item, to its next comma (not
+// one in a <...> group) or the end.
+func skipListItem(c *cursor) {
+	depth := 0
+
+	for !c.atEnd() {
+		switch c.peek() {
+		case '<':
+			depth++
+		case '>':
+			depth--
+		case ',':
+			if depth <= 0 {
+				return
+			}
+		}
+
+		c.next()
 	}
 }
 

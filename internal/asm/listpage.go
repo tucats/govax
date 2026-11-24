@@ -61,6 +61,11 @@ type ListingOptions struct {
 	// when the file was last revised.
 	Source  string
 	Revised time.Time
+	// Files, for MACRO A+B (SetFileLines), are each joined file's
+	// specification and revision date, in place of Source and Revised: a
+	// page's heading names the file it starts in, and the closing pages
+	// the last.
+	Files []ListingFile
 	// Command is the command line as typed, which the listing ends with:
 	// "MACRO/LIST HELLO".
 	Command string
@@ -69,6 +74,12 @@ type ListingOptions struct {
 	// first two phases (see StartPhase).
 	Initialization    PhaseTime
 	CommandProcessing PhaseTime
+}
+
+// ListingFile is one of ListingOptions.Files.
+type ListingFile struct {
+	Source  string
+	Revised time.Time
 }
 
 // Listing returns the listing of the last Assemble, which SetListing
@@ -112,6 +123,10 @@ func (a *Assembler) Listing(opts ListingOptions) []string {
 			}
 
 			continue
+		}
+
+		if l.depth == 0 {
+			p.file = l.file
 		}
 
 		lines := a.listSourceLine(l)
@@ -194,6 +209,7 @@ type listPager struct {
 	opts               ListingOptions
 	name, title, label string
 	subtitle           string
+	file               int // which of opts.Files the heading names
 	contents           bool
 	page               int
 	started            bool // a page has been started
@@ -235,8 +251,13 @@ func (p *listPager) newPage() {
 		headNameWidth, p.name, headTitleWidth, title, vmsDateTime(p.opts.Assembled),
 		headAssemblerWidth, p.opts.Assembler, p.page)
 
-	file := fmt.Sprintf("%-*s", headFileWidth, p.opts.Source)
-	if len(p.opts.Source) >= headFileWidth {
+	source, revised := p.opts.Source, p.opts.Revised
+	if p.file < len(p.opts.Files) {
+		source, revised = p.opts.Files[p.file].Source, p.opts.Files[p.file].Revised
+	}
+
+	file := fmt.Sprintf("%-*s", headFileWidth, source)
+	if len(source) >= headFileWidth {
 		file += " "
 	}
 
@@ -246,7 +267,7 @@ func (p *listPager) newPage() {
 	}
 
 	second := fmt.Sprintf("%-*s%-*s %s  %s(1)", headLabelWidth, p.label, headTitleWidth, subtitle,
-		vmsDateTime(p.opts.Revised), file)
+		vmsDateTime(revised), file)
 	if p.contents {
 		second = "Table of contents"
 	}
@@ -282,10 +303,10 @@ func (a *Assembler) listSourceLine(l *listLine) []string {
 		return []string{fmt.Sprintf("%*s%08X%s", binaryWidth-3, "", l.endLoc, tail)}
 
 	// A direct assignment shows the value it assigned (.MDELETE how many
-	// macros it deleted, and an .IF the value it tested), and a .BLKx the
-	// location it leaves, as a longword (with no mark, relocatable or
-	// not).
-	case (l.op == "=" || l.op == ".MDELETE" || l.op == ".IF") && l.hasValue:
+	// macros it deleted, an .IF the value it tested, and a .PRINT its
+	// expression's), and a .BLKx the location it leaves, as a longword
+	// (with no mark, relocatable or not).
+	case (l.op == "=" || l.op == ".MDELETE" || l.op == ".IF" || l.op == ".PRINT") && l.hasValue:
 		return []string{listColumns(fmt.Sprintf("%08X ", l.value), l.loc) + tail}
 
 	case strings.HasPrefix(l.op, ".BLK"):
@@ -317,7 +338,7 @@ func (l *listLine) tail() string {
 		return strings.Repeat(" ", 7) + l.text
 	}
 
-	return fmt.Sprintf("%6d %s", l.line, l.text)
+	return fmt.Sprintf("%6d %s", l.number, l.text)
 }
 
 // listNotedLine returns l, a line with errors or warnings, as real MACRO
@@ -386,6 +407,12 @@ func (a *Assembler) listNotedLine(l *listLine) []string {
 			out = append(out, listColumns(r.text, r.offset)+strings.Repeat(" ", 7))
 		}
 
+		// Two messages with no bytes between them each have the
+		// location after them (testdata/err113's MAC113A, .ADDRESS R3).
+		if !last && len(rows) == 0 {
+			out = append(out, listColumns("", n.loc)+strings.Repeat(" ", 7))
+		}
+
 		if last && len(rows) == 0 {
 			switch {
 			case value != "" && (l.op == ".PSECT" || l.op == ".RESTORE_PSECT"):
@@ -409,7 +436,7 @@ func (l *listLine) binaryValue() string {
 	switch {
 	case (l.op == ".PSECT" || l.op == ".RESTORE_PSECT") && l.endSect != nil && l.endSect.relocatable:
 		return fmt.Sprintf("%08X", l.endLoc)
-	case (l.op == "=" || l.op == ".MDELETE" || l.op == ".IF") && l.hasValue:
+	case (l.op == "=" || l.op == ".MDELETE" || l.op == ".IF" || l.op == ".PRINT") && l.hasValue:
 		return fmt.Sprintf("%08X", l.value)
 	case strings.HasPrefix(l.op, ".BLK"):
 		return fmt.Sprintf("%08X", l.endLoc)
@@ -463,7 +490,7 @@ func (a *Assembler) repeatFirstLine(i int) *listLine {
 func (a *Assembler) listRepeatEnd(end, first *listLine) []string {
 	shown := *first
 	shown.text = end.text
-	shown.line = end.line
+	shown.line, shown.number = end.line, end.number
 	shown.depth = end.depth
 
 	return a.listSourceLine(&shown)

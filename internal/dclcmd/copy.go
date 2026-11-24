@@ -15,9 +15,8 @@ var (
 	rmsFEX = vmsdef.Symbols["RMS$_FEX"]
 	rmsPRV = vmsdef.Symbols["RMS$_PRV"]
 
-	// rmsFUL and ssDEVICEFULL are a full volume's status and STV.
-	rmsFUL       = vmsdef.Symbols["RMS$_FUL"]
-	ssDEVICEFULL = vmsdef.Symbols["SS$_DEVICEFULL"]
+	// rmsFUL is a full volume's status.
+	rmsFUL = vmsdef.Symbols["RMS$_FUL"]
 )
 
 // This file implements the console COPY command (docs/planning/PHASE-23.md,
@@ -203,13 +202,24 @@ func (c *Context) Copy(sourceText string, sourceHost bool, destText string, dest
 			return vmserrors.ConditionError{Status: bad.Status, Text: text}
 		}
 
-		// A volume with no room for the output: WRITEERR naming it, then
-		// RMS$_FUL and its STV (unconfirmed: docs/planning/PHASE-113 -
-		// Fortran errata.md, subtask 11; the file's blocks written so far
-		// are left, as govax writes them).
+		// A volume with no room for the output. Given its input's blocks
+		// as it is made, as VMS 7.1's COPY makes it, the copy fails at its
+		// open: OPENOUT, RMS$_FUL, then NOTCOPIED for the input, no file
+		// left, and COPY's OPENOUT the status (testdata/err113's FULL).
+		// A volume that fills as the output is written (not seen on VMS)
+		// is WRITEERR naming it, then RMS$_FUL.
 		var full *rms.DeviceFullError
 		if errors.As(err, &full) {
-			text := "COPY-E-WRITEERR, error writing " + full.Spec + "\n" + ConditionLine(rmsFUL) + "\n" + ConditionLine(ssDEVICEFULL)
+			if full.Open {
+				text := "COPY-E-OPENOUT, error opening " + full.Spec + " as output\n" + ConditionLine(rmsFUL)
+				if full.Source != "" {
+					text += "\n%COPY-W-NOTCOPIED, " + full.Source + " not copied"
+				}
+
+				return vmserrors.ConditionError{Status: copyOpenOut | stsInhibitMsg, Text: text}
+			}
+
+			text := "COPY-E-WRITEERR, error writing " + full.Spec + "\n" + ConditionLine(rmsFUL)
 
 			return vmserrors.ConditionError{Status: rmsFUL, Text: text}
 		}
@@ -219,6 +229,11 @@ func (c *Context) Copy(sourceText string, sourceHost bool, destText string, dest
 
 	for _, r := range results {
 		c.printCopyResult(r, opts)
+	}
+
+	// VMS 7.1's COPY leaves SS$_NORMAL (testdata/err113's FULL).
+	if c.SetStatus != nil {
+		c.SetStatus(ssNormal)
 	}
 
 	return nil
@@ -255,12 +270,16 @@ func (c *Context) copyFiles(sourceText string, sourceHost bool, destText string,
 }
 
 // copyFacility is COPY's facility number, which its own condition values
-// carry (unconfirmed: the probe shows COPY's messages, not their values).
+// carry (VMS 7.1's OPENOUT was %X106710A2, testdata/err113).
 const copyFacility = 103
 
 // copySearchFail is COPY's SEARCHFAIL condition value, an error (the
-// shared message SHR$_SEARCHFAIL in COPY's facility).
-var copySearchFail = uint32(copyFacility<<16) | vmsdef.LibrarySymbols["SHR$_SEARCHFAIL"]&^7 | 2
+// shared message SHR$_SEARCHFAIL in COPY's facility), and copyOpenOut its
+// OPENOUT, an error (VMS 7.1's %X106710A2, testdata/err113).
+var (
+	copySearchFail = uint32(copyFacility<<16) | vmsdef.LibrarySymbols["SHR$_SEARCHFAIL"]&^7 | 2
+	copyOpenOut    = uint32(copyFacility<<16) | vmsdef.LibrarySymbols["SHR$_OPENOUT"]&^7 | 2
+)
 
 // copySyntax is COPY's refusal of a /PROTECTION code's letters,
 // "%COPY-F-SYNTAX, error parsing 'Z'", as CREATE's is (unconfirmed: the

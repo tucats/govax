@@ -492,7 +492,8 @@ func (h *FileHandle) getSequential(ctx *Context) ([]byte, uint32) {
 // size), and returns RMS$_NORMAL or the status for why not:
 // RMS$_FAC for a file not opened to write, RMS$_NEF when the stream isn't
 // at the end of the file (a /READ/WRITE file READ hasn't read to its
-// end), RMS$_RSZ for a record the file can't hold.
+// end), RMS$_FUL for a volume with no room for it, RMS$_RSZ for a record
+// the file can't hold.
 func (f *DCLFile) Put(record []byte) uint32 {
 	if f.host != nil {
 		return f.host.put(record)
@@ -529,7 +530,13 @@ func (h *FileHandle) putSequential(ctx *Context, record []byte) uint32 {
 		copy(control, dclRecordControl)
 	}
 
+	// A volume with no room for the record is RMS$_FUL, as VMS 7.1's WRITE
+	// said it (testdata/err113's FULL).
 	if err := h.Writer.Put(append(control, record...)); err != nil {
+		if DeviceFull(err) {
+			return rmsDeviceFull
+		}
+
 		return rmsRecordTooBig
 	}
 

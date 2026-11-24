@@ -716,8 +716,9 @@ grammar console
 
     verb purge/id=1150
 
+        ! $file: DCL checks a directory's brackets (Phase 113, subtask 13c).
         parameter   spec/id=1151                -
-                    /type=$string
+                    /type=$file
         ! /KEEP=n, VMS's name (govax's was ods2's /LIMIT until Phase 113,
         ! subtask 11).
         qualifier   keep/id=1152                -
@@ -790,13 +791,13 @@ grammar console
     verb copy/id=1250
 
         parameter   source/id=1251              -
-                    /type=$string               -
+                    /type=$file                 -
                     /prompt="Source"
         qualifier   host/id=1252                -
                     /parameter=source
 
         parameter   destination/id=1253         -
-                    /type=$string               -
+                    /type=$file                 -
                     /prompt="Destination"
         qualifier   host/id=1254                -
                     /parameter=destination

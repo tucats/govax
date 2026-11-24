@@ -25,7 +25,7 @@ COUNT:	.LONG	0
 	MOVL	#^X100,COUNT
 	RET
 	.ENTRY	LINKED,^M<>
-	CMPL	(AP),#3
+	CMPL	(AP),#6
 	BNEQ	10$
 	CALLS	#0,@4(AP)
 	ADDL2	#^X1000,R0
@@ -41,9 +41,9 @@ COUNT:	.LONG	0
 
 // TestLibInitialize links a program with initialization routines against
 // govax's LIB$INITIALIZE module and runs it (Phase 113, subtask 6): the routines
-// run before the program, in the order listed, each with three arguments, one
-// calling back to run the rest; under traceback and without it; RUN/NOINIT
-// leaves them out.
+// run before the program, in the order listed, each with six arguments (VMS
+// 7.1's count, testdata/err113), one calling back to run the rest; under
+// traceback and without it; RUN/NOINIT leaves them out.
 func TestLibInitialize(t *testing.T) {
 	d, _, buf := dungeonConsole(t, false)
 

@@ -247,17 +247,37 @@ const RecordFormatStreamLF = 5
 // longer than maxSourceSpec (a long host path) keeps its last
 // maxSourceSpec characters (govax's choice).
 func DSTSourceFileRecord(f SourceFile) DSTRecord {
+	data := append([]byte{0x10}, declareFile(f, 1)...)
+	data = append(data, 0x02, 0x01, 0x00, 0x04, 0x01, 0x00, 0x06, 0x01, 0x00)
+
+	return DSTRecord{Type: DSTSourceFile, Data: data}
+}
+
+// declareFile is DST$K_SRC_DECLFILE of f as file id.
+func declareFile(f SourceFile, id int) []byte {
 	if len(f.Spec) > maxSourceSpec {
 		f.Spec = f.Spec[len(f.Spec)-maxSourceSpec:]
 	}
 
-	data := []byte{0x10, 0x01, byte(20 + len(f.Spec)), 0x00, 0x01, 0x00}
+	data := []byte{0x01, byte(20 + len(f.Spec)), 0x00, byte(id), byte(id >> 8)}
 	data = binary.LittleEndian.AppendUint64(data, vmsTime(f.Created))
 	data = binary.LittleEndian.AppendUint32(data, f.EOFBlock)
 	data = binary.LittleEndian.AppendUint16(data, f.FirstFree)
 	data = append(data, f.Format)
 	data = append(data, counted(f.Spec)...)
-	data = append(data, 0x00, 0x02, 0x01, 0x00, 0x04, 0x01, 0x00, 0x06, 0x01, 0x00)
+
+	return append(data, 0x00)
+}
+
+// DSTNextSourceFileRecord returns the source correlation record VMS 7.1's
+// MACRO writes where the code of MACRO A+B's next file starts
+// (testdata/err113's MAC113C): the last file's lines (DSTLineCountRecord's
+// commands), then f declared as file id, made the current file, from its
+// first record. The line numbers go on from the last file's: no
+// DST$K_SRC_SETLNUM.
+func DSTNextSourceFileRecord(lines int, f SourceFile, id int) DSTRecord {
+	data := append(DSTLineCountRecord(lines).Data, declareFile(f, id)...)
+	data = append(data, 0x02, byte(id), byte(id>>8), 0x04, 0x01, 0x00)
 
 	return DSTRecord{Type: DSTSourceFile, Data: data}
 }

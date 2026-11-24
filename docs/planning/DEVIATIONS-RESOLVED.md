@@ -2785,3 +2785,18 @@ widened."
   (`internal/cpu/condcodes.go`) is N, Z, and C of a comparison, N the signed
   comparison itself, used by all three. `TestEmulCmpOverflowingDifference`
   holds CMPL, CMPW, and CMPB at their limits.
+
+### [Phase 111, resolved] A register name in a data expression
+
+- **Where**: `internal/asm`'s data directives (`pseudo.go`, `macrodir.go`).
+- **What**: govax's MACRO takes `.LONG R1` as a reference to a global symbol R1. VMS 7.1's MACRO
+  called `.LONG R1[2]` DIRSYNX (testdata/tir111's TIRR), which govax now does too, its repeated
+  value never defined; whether VMS refuses a register name in any data expression is unconfirmed.
+- **Status**: resolved in Phase 113, subtask 13c. The probe round's MAC113A
+  (testdata/err113) settled it: VMS 7.1's MACRO refuses a register name as a
+  data item, DIRSYNX for a directive's first item (a zero stored, the rest of
+  the directive left), DATALSTSYN for a later one (a zero stored in its place),
+  and ADRLSTSYNX then DIRSYNX for an `.ADDRESS` item (nothing stored); govax's
+  does the same (`internal/asm`'s `registerItem`), so TIRR's object is VMS's
+  too. A register within an item's expression (`.LONG 4+R1`) is still taken as
+  a symbol (unconfirmed).

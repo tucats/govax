@@ -169,6 +169,23 @@ func (t *LineTable) openRecordWith(cmd DSTItem) []DSTItem {
 	return items
 }
 
+// Source adds r, a source correlation record, after the line-number record
+// being built (which it ends), returning the DBG record it filled, if any.
+func (t *LineTable) Source(r DSTRecord) []*TIR {
+	var out []*TIR
+
+	t.closeOpen()
+
+	items := dstItems(r)
+	if len(t.parts) > 0 && recordSize(append(append([]DSTItem(nil), t.parts...), items...)) > lineFill {
+		out = append(out, t.flush())
+	}
+
+	t.commit(items...)
+
+	return out
+}
+
 // Finish ends the table: the line-number record being built, the source's
 // line count, and a last line-number record of end (the last segment's
 // LineEnd). It returns the DBG records left.

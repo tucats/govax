@@ -39,6 +39,10 @@ type listLine struct {
 	// line is the line's number in its own source: the program's line
 	// number, for a line of the program.
 	line int
+	// file and number are, for a line of the program, which of the files
+	// MACRO A+B joins it is in and its line number there (SetFileLines);
+	// file 0 and line for one file.
+	file, number int
 
 	// sect and loc are where the line was assembled: the section, and
 	// the location in it, when the line began. endSect and endLoc are
@@ -247,10 +251,16 @@ func (a *Assembler) listBegin(f *sourceFrame, line int, raw string) *listLine {
 		depth: len(a.sources) - 1,
 		line:  line,
 		sect:  a.cur,
+
+		number: line,
 		loc:   a.cur.loc,
 		show:  a.show,
 
 		fortranLine: a.fortranLine,
+	}
+
+	if l.depth == 0 {
+		l.file, l.number = a.fileOf(line)
 	}
 
 	if debug {

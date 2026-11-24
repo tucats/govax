@@ -1685,7 +1685,10 @@ by line. `/PAGE` stops after each screenful. `TYPE SYS$INPUT` types the
 lines that follow it in a command procedure. A file with FORTRAN carriage
 control, as a FORTRAN program's formatted files have, shows each record's first
 byte as its control and not as text, as VMS's TYPE does, so a record written
-with no blank to spare loses its first letter.
+with no blank to spare loses its first letter. A file whose records have no
+carriage control at all (its record attributes none, as CREATE/FDL makes one
+with `CARRIAGE_CONTROL NONE`) shows them one after another on a line, as VMS's
+TYPE does at a terminal, and the line is ended after the last.
 
 #### EDIT
 
@@ -1772,9 +1775,19 @@ does. A volume copy keeps the source's contiguity, and an indexed file
 whose prolog RMS can't read isn't copied (`%COPY-E-OPENIN`, with RMS's
 status). As VMS's COPY does, it says nothing of a file copied unless
 `/LOG` is given; `/VERBOSE` (govax's own) also shows each, and `/QUIET`
-none. A volume that fills while the output is written is
-`%COPY-E-WRITEERR` naming the output, then RMS's `-RMS-F-FUL` and
-`-SYSTEM-W-DEVICEFULL`; what was written so far stays.
+none. A copy of a volume file is given its input's blocks as it's made, as
+VMS's COPY makes it, so on a volume without room for them the copy fails at
+once and leaves nothing:
+
+```text
+%COPY-E-OPENOUT, error opening DUA3:[000000]FILL6.DAT; as output
+-RMS-F-FUL, device full (insufficient space for allocation)
+%COPY-W-NOTCOPIED, DUA1:[ERR113]BIG.DAT;1 not copied
+```
+
+A volume that fills while some other output is written is
+`%COPY-E-WRITEERR` naming the output, then `-RMS-F-FUL`; what was written so
+far stays. A copy that works leaves `$STATUS` `%X00000001`, as VMS's does.
 
 `/RECORD_FORMAT` is govax's own, with the three qualifiers that go with it,
 named as in FDL's RECORD section. A Files-11 file's header says how its bytes
@@ -1896,6 +1909,9 @@ PURGE [/KEEP=n] [/LOG] [file-spec]
 Deletes all but the newest `n` versions (default 1) of each file, saying
 nothing. `/LOG` names each file deleted in full, with its size, or says
 `%PURGE-I-NOFILPURG, no files purged` when there was nothing to delete.
+`/KEEP=0` is `%PURGE-F-BADVALUE, '0' is an invalid keyword value`. As in
+VMS, DCL checks a file specification's directory brackets before PURGE or
+COPY runs: `PURGE DCL[X.TXT` is `%DCL-W-DIRECT, invalid directory syntax`.
 
 #### RENAME
 
@@ -3554,8 +3570,10 @@ MACRO source[{,|+}...][/HOST] [/OBJECT[=file] | /NOOBJECT] [/LIST[=file] | /NOLI
 Sources separated by commas are each assembled by themselves, to an object and
 listing of their own; an error in one doesn't stop the next, and the command ends
 with the last failure's status. Sources joined by `+` are concatenated into one
-input, for a single object and listing named for the first file. All have the same
-qualifiers.
+input, for a single object and listing named for the first file; as in VMS's
+MACRO, the listing numbers each file's lines from 1 and heads a page with the
+file it starts in, the debugger's records name each file, and a file after an
+`.END` isn't read. All have the same qualifiers.
 
 | Qualifier | Meaning |
 | --- | --- |
@@ -3579,6 +3597,12 @@ govax: DCL-E-ASMERRORS, 1 error(s) assembling lines.mar
 ```
 
 Warnings are reported, and the object is written as for no message at all.
+The messages, warnings, and `.PRINT` lines are shown in the order of their
+lines, as VMS's MACRO shows them. A register name as a data item
+(`.LONG R1`, `.WORD R5`) is an error, as in VMS's MACRO: `DIRSYNX` for a
+directive's first item, which stores a zero and ends the directive,
+`DATALSTSYN` for a later one, which stores a zero in its place, and
+`ADRLSTSYNX` for an `.ADDRESS` item, which stores nothing.
 
 ### Example 1: Hello, world, explained
 
@@ -4540,7 +4564,10 @@ $ RUN FAIL
 ```
 
 leaves the message and dump in both files if the program wrote nothing
-to `SYS$OUTPUT`, and in `FAIL.ERR` alone if it did.
+to `SYS$OUTPUT`, and in `FAIL.ERR` alone if it did. What a program writes
+to a `SYS$OUTPUT` file named this way goes at the end of the file if it's
+there already, as VMS's `LIB$PUT_OUTPUT` writes it; only a file that isn't
+there is made.
 
 ---
 
@@ -4808,6 +4835,15 @@ LINK takes from `STARLET.OLB` or, with none, from govax:
         .ADDRESS        SETUP
         .EXTERNAL       LIB$INITIALIZE
 ```
+
+Each routine is called with the argument list `LIB$INITIALIZE` was called
+with, its first argument the init-coroutine (a routine that calls it has the
+rest of the list and the program run then, and gets the program's status
+back): a main image's six arguments, those VMS gives a main program (the
+CLI's coroutine, the image header, and its file's information are 0 in
+govax; the link flags are the image's), and a shareable image's one, as VMS
+7.1 calls them. The program then gets the six arguments too (without
+initialization routines govax calls it with none).
 
 A shareable image's own are called before the program's: LINK/SHAREABLE
 marks such an image's header (`IHD$V_INISHR`, with the routine's address in

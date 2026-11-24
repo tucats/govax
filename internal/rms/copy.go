@@ -514,6 +514,16 @@ func (s *Session) copyVolumeToVolume(sourceText, destText string, opts CopyOptio
 
 			err = outputDenied(err, asked, srcFound[0].shownFile(m))
 
+			// An output the volume had no room for at its open is named as
+			// asked for, with no version, as VMS's COPY names it.
+			var full *DeviceFullError
+			if errors.As(err, &full) && full.Open {
+				full.Spec, full.Source = asked.String()+";", srcFound[0].shownFile(m)
+				if asked.Version != "" {
+					full.Spec = asked.String()
+				}
+			}
+
 			return results, fmt.Errorf("copy: %w", fullOutputName(err, dest, destDir))
 		}
 
@@ -1035,6 +1045,24 @@ func createBinaryFile(who creator, destVol *volume.Volume, destDir *volume.Direc
 	dst, err := createVersion(who, destVol, destDir, fullName, version, copiedAttributes(src.Header.RecordAttributes), destBm, destIb)
 	if err != nil {
 		return 0, err
+	}
+
+	// The output is given the input's blocks as it is made, as VMS's COPY
+	// makes it: on a volume without room for them the copy fails at its
+	// open, and no file is left (testdata/err113's FULL, VMS 7.1).
+	if need := uint32((rawByteLength(src) + ondisk.BlockSize - 1) / ondisk.BlockSize); need > dst.Blocks() {
+		if err := volume.Extend(dst, destBm, destIb, need-dst.Blocks()); err != nil {
+			made, lookErr := createdVersion(destDir, fullName, version)
+			if lookErr == nil {
+				_ = volume.DeleteFile(destDir, fullName, made, destBm, destIb)
+			}
+
+			if DeviceFull(err) {
+				return 0, &DeviceFullError{Err: err, Open: true}
+			}
+
+			return 0, fmt.Errorf("writing %s: %w", fullName, err)
+		}
 	}
 
 	if err := copyRawToVolume(dst, src); err != nil {

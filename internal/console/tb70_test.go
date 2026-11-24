@@ -499,8 +499,9 @@ func tb70LogCommands(t *testing.T, file, from, to string) []tb70Command {
 
 // TestTB70OutputSameFile runs part A twice with SYS$OUTPUT and SYS$ERROR
 // both defined to one file: each run's message and dump are written to
-// it once, and each image makes a version of its own, as its own open of
-// the file would (the image's files are forgotten at rundown).
+// it once, and the second image's go after the first's in the same version,
+// as LIB$PUT_OUTPUT opens an existing file at its end (the LIB$ manual; VMS
+// 7.1's STR113.TXT, testdata/err113; Phase 113, subtask 13c).
 func TestTB70OutputSameFile(t *testing.T) {
 	_, dispatch := tb70Console(t)
 
@@ -515,10 +516,13 @@ func TestTB70OutputSameFile(t *testing.T) {
 		}
 	}
 
-	for _, version := range []string{"1", "2"} {
-		got := strings.Split(dispatch("TYPE TB70SAME.LOG;"+version), "|")
-		if len(got) != 7 || !strings.HasPrefix(got[0], "%SYSTEM-F-ACCVIO,") || !strings.HasPrefix(got[1], "%TRACE-F-TRACEBACK,") {
-			t.Errorf("TB70SAME.LOG;%s:\n%s", version, strings.Join(got, "\n"))
-		}
+	got := strings.Split(dispatch("TYPE TB70SAME.LOG;1"), "|")
+	if len(got) != 14 || !strings.HasPrefix(got[0], "%SYSTEM-F-ACCVIO,") || !strings.HasPrefix(got[1], "%TRACE-F-TRACEBACK,") ||
+		!strings.HasPrefix(got[7], "%SYSTEM-F-ACCVIO,") {
+		t.Errorf("TB70SAME.LOG;1:\n%s", strings.Join(got, "\n"))
+	}
+
+	if got := dispatch("TYPE TB70SAME.LOG;2"); !strings.Contains(got, "SEARCHFAIL") {
+		t.Errorf("TB70SAME.LOG;2 is there:\n%s", got)
 	}
 }

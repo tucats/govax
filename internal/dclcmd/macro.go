@@ -1,9 +1,11 @@
 package dclcmd
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"io/fs"
+	"math"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -14,6 +16,7 @@ import (
 	"github.com/tucats/govax/internal/lbr"
 	"github.com/tucats/govax/internal/obj"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -288,6 +291,10 @@ func (c *Context) Macro(opts MacroOptions) (err error) {
 		return FileFailure(err, loc.Name)
 	}
 
+	// MACRO A+B's files, each with its line count.
+	files := []rms.FileLocation{found}
+	counts := []int{len(lines)}
+
 	for prev, i := found, 0; i < len(opts.Joined); i++ {
 		next, err := s.LocateRelated(opts.Joined[i], opts.SourceHost, prev)
 		if err != nil {
@@ -303,11 +310,15 @@ func (c *Context) Macro(opts MacroOptions) (err error) {
 
 		lines = append(lines, more...)
 		prev = read
+
+		files = append(files, read)
+		counts = append(counts, len(more))
 	}
 
 	a := asm.New(false)
 	a.SetDialect(asm.DialectMACRO)
 	a.SetListing(opts.List)
+	a.SetFileLines(counts)
 
 	if err := a.SetListingShow(opts.Show, opts.NoShow); err != nil {
 		return err
@@ -363,13 +374,21 @@ func (c *Context) Macro(opts MacroOptions) (err error) {
 
 	_, asmErr := a.Assemble(JoinLines(lines))
 
-	for _, m := range a.Messages() {
-		c.Printf("%s\n", m)
+	// The .PRINT messages, warnings, and errors are shown in the order of
+	// their lines, as VMS's MACRO shows them (testdata/err113's MAC113B); the
+	// errors with the summary below.
+	var all []error
+
+	if asmErr != nil {
+		all = []error{asmErr}
+
+		var list *asm.Errors
+		if errors.As(asmErr, &list) {
+			all = list.List
+		}
 	}
 
-	for _, w := range a.Warnings() {
-		c.Printf("%%%s\n", vmserrors.Wrap(vmserrors.CLI_ASMWARNING, w, found.Name))
-	}
+	showReports(c, a, all, found.Name)
 
 	// The object is written whether or not the assembly succeeds, as VMS's
 	// MACRO writes it, its end record's severity saying it had errors (which
@@ -381,30 +400,19 @@ func (c *Context) Macro(opts MacroOptions) (err error) {
 
 	switch {
 	case asmErr != nil:
-		all := []error{asmErr}
-
-		var list *asm.Errors
-		if errors.As(asmErr, &list) {
-			all = list.List
-		}
-
-		for _, e := range all {
-			c.Printf("%%%s\n", vmserrors.Wrap(vmserrors.CLI_ASSEMBLING, e, found.Name))
-		}
-
 		status = vmserrors.New(vmserrors.CLI_ASMERRORS, len(all), found.Name)
 
 		if !opts.NoObject {
-			if err := c.writeObject(a, opts, found); err != nil {
+			if err := c.writeObject(a, opts, files); err != nil {
 				c.Printf("%%%s\n", err)
 			}
 		}
 	case !opts.NoObject:
-		status = c.writeObject(a, opts, found)
+		status = c.writeObject(a, opts, files)
 	}
 
 	if opts.List {
-		if err := c.writeListing(a, opts, found, commandProcessing); err != nil && status == nil {
+		if err := c.writeListing(a, opts, files, commandProcessing); err != nil && status == nil {
 			status = err
 		}
 	}
@@ -418,10 +426,69 @@ func (c *Context) Macro(opts MacroOptions) (err error) {
 	return status
 }
 
+// showReports shows a's .PRINT messages, its warnings, and errs, the
+// assembly's errors, in the order of their source lines (a report with no
+// line after the rest), each kind in its own form.
+func showReports(c *Context, a *asm.Assembler, errs []error, name string) {
+	type report struct {
+		line int
+		text string
+	}
+
+	lineOf := func(err error) int {
+		var e *asm.Error
+		if errors.As(err, &e) {
+			return e.Line
+		}
+
+		return math.MaxInt
+	}
+
+	var reports []report
+
+	lines := a.MessageLines()
+	for i, m := range a.Messages() {
+		line := math.MaxInt
+		if i < len(lines) {
+			line = lines[i]
+		}
+
+		reports = append(reports, report{line, m})
+	}
+
+	for _, w := range a.Warnings() {
+		reports = append(reports, report{lineOf(w), "%" + vmserrors.Wrap(vmserrors.CLI_ASMWARNING, w, name).Error()})
+	}
+
+	for _, e := range errs {
+		reports = append(reports, report{lineOf(e), "%" + vmserrors.Wrap(vmserrors.CLI_ASSEMBLING, e, name).Error()})
+	}
+
+	slices.SortStableFunc(reports, func(x, y report) int { return cmp.Compare(x.line, y.line) })
+
+	for _, r := range reports {
+		c.Printf("%s\n", r.text)
+	}
+}
+
 // writeObject writes the object module of a's assembly of the source
-// found.
-func (c *Context) writeObject(a *asm.Assembler, opts MacroOptions, found rms.FileLocation) error {
+// files found (more than one for MACRO A+B).
+func (c *Context) writeObject(a *asm.Assembler, opts MacroOptions, files []rms.FileLocation) error {
 	s := c.ContainerSession
+	found := files[0]
+
+	var sources []obj.SourceFile
+
+	if len(files) > 1 {
+		for _, f := range files {
+			src := obj.SourceFile{Spec: sourceSpec(f), Format: obj.RecordFormatStreamLF}
+			if known := sourceFile(s, f); known != nil {
+				src = *known
+			}
+
+			sources = append(sources, src)
+		}
+	}
 
 	objLoc, err := outputLocation(s, opts.Object, found, "OBJ")
 	if err != nil {
@@ -432,6 +499,8 @@ func (c *Context) writeObject(a *asm.Assembler, opts MacroOptions, found rms.Fil
 		Language:   macroAssemblerName(),
 		Source:     opts.CommandLine,
 		SourceFile: sourceFile(s, found),
+
+		SourceFiles: sources,
 	})
 	if err != nil {
 		return vmserrors.Wrap(vmserrors.CLI_OBJWRITE, err, objLoc.Name)
@@ -443,6 +512,21 @@ func (c *Context) writeObject(a *asm.Assembler, opts MacroOptions, found rms.Fil
 	}
 
 	if _, err := s.CreateRecordFile(objLoc, rms.VariableRecords, records); err != nil {
+		// A volume with no room for the object: no object is left, and the
+		// failure is OPENOUT with RMS$_FUL, as VMS 7.1's MACRO said it
+		// (testdata/err113's FULL).
+		if rms.DeviceFull(err) {
+			var full *rms.DeviceFullError
+			if errors.As(err, &full) && full.Spec != "" {
+				_ = s.DeleteVersion(full.Spec)
+			}
+
+			return vmserrors.ConditionError{
+				Status: macroOpenOut | stsInhibitMsg,
+				Text:   "MACRO-E-OPENOUT, error opening " + c.expandedName(objLoc.Name) + " as output\n" + ConditionLine(rmsFUL),
+			}
+		}
+
 		return objectFailure(err, objLoc.Name)
 	}
 
@@ -482,11 +566,25 @@ func sourceFile(s *rms.Session, found rms.FileLocation) *obj.SourceFile {
 	}
 }
 
-// writeListing writes the listing of a's assembly of the source found, a
-// text file with a record for each line. commandProcessing is how long
-// the command took before the assembler was called.
-func (c *Context) writeListing(a *asm.Assembler, opts MacroOptions, found rms.FileLocation, commandProcessing asm.PhaseTime) error {
+// writeListing writes the listing of a's assembly of the source files
+// found, a text file with a record for each line. commandProcessing is how
+// long the command took before the assembler was called.
+func (c *Context) writeListing(a *asm.Assembler, opts MacroOptions, files []rms.FileLocation, commandProcessing asm.PhaseTime) error {
 	s := c.ContainerSession
+	found := files[0]
+
+	var heads []asm.ListingFile
+
+	if len(files) > 1 {
+		for _, f := range files {
+			revised, err := s.RevisionDate(f)
+			if err != nil {
+				return FileFailure(err, f.Name)
+			}
+
+			heads = append(heads, asm.ListingFile{Source: sourceSpec(f), Revised: revised})
+		}
+	}
 
 	lisLoc, err := outputLocation(s, opts.ListFile, found, "LIS")
 	if err != nil {
@@ -505,6 +603,7 @@ func (c *Context) writeListing(a *asm.Assembler, opts MacroOptions, found rms.Fi
 		Assembler:         macroAssemblerName(),
 		Source:            source,
 		Revised:           revised,
+		Files:             heads,
 		Command:           opts.CommandLine,
 		CommandProcessing: commandProcessing,
 	})
@@ -644,6 +743,10 @@ func JoinLines(lines [][]byte) string {
 	return b.String()
 }
 
+// macroOpenOut is MACRO's OPENOUT condition value, an error: VMS 7.1's was
+// %X100310A2, in facility 3 (testdata/err113).
+var macroOpenOut = uint32(3<<16) | vmsdef.LibrarySymbols["SHR$_OPENOUT"]&^7 | 2
+
 // objectFailure turns an error creating the object file into the
 // console's status for it: an unmounted device or a bad logical name as
 // fileFailure reports them, and anything else as CLI_OBJWRITE.
@@ -668,10 +771,10 @@ func objectFailureAs(status uint32, err error, spec string) error {
 	}
 
 	// A volume with no room for the file: the command's message, then
-	// RMS$_FUL and its STV in place of the volume's own words
-	// (unconfirmed: docs/planning/PHASE-113 - Fortran errata.md, subtask 11).
+	// RMS$_FUL in place of the volume's own words, with no STV, as VMS
+	// 7.1's utilities showed it (testdata/err113's FULL).
 	if rms.DeviceFull(err) {
-		text := vmserrors.New(status, spec).Error() + "\n" + ConditionLine(rmsFUL) + "\n" + ConditionLine(ssDEVICEFULL)
+		text := vmserrors.New(status, spec).Error() + "\n" + ConditionLine(rmsFUL)
 
 		return vmserrors.ConditionError{Status: status, Text: text}
 	}

@@ -358,6 +358,20 @@ func (a *Assembler) pseudoAddress(c *cursor) error {
 			return err
 		}
 
+		// A register name is no address: VMS 7.1's MACRO says ADRLSTSYNX,
+		// then DIRSYNX, and stores nothing more (testdata/err113's MAC113A).
+		if registerAhead(c) {
+			for _, status := range []uint32{vmserrors.VAX_ADRLSTSYNX, vmserrors.VAX_DIRSYNX} {
+				if err := a.continuingError(vmserrors.New(status)); err != nil {
+					return err
+				}
+			}
+
+			c.pos = len(c.s)
+
+			return nil
+		}
+
 		first = false
 
 		if err := a.output(); err != nil {

@@ -139,6 +139,10 @@ type ICB struct {
 	Ident uint32
 	Match int
 
+	// LinkFlags is the header's IHD$L_LNKFLAGS, which RUN's driver passes
+	// a main image's LIB$INITIALIZE as the main program's link flags.
+	LinkFlags uint32
+
 	// Type is the header's image type, IHD$K_EXE or IHD$K_LIM; 0 when
 	// the header couldn't be decoded.
 	Type byte
@@ -586,6 +590,7 @@ func (p *ImageProcess) finishLoad(icb *ICB, data []byte) error {
 	img, err := vmsimage.ReadImage(data)
 	if err == nil {
 		icb.Ident, icb.Match, icb.Type = img.Ident, int(img.LinkFlags>>24&7), img.Type
+		icb.LinkFlags = img.LinkFlags
 		if img.LinkFlags&vmsimage.IHDFlagINISHR != 0 && img.InitShare != 0 {
 			icb.InitShare = img.InitShare + icb.Base
 		}

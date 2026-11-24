@@ -1133,7 +1133,7 @@ where each goes:
   bug-checking on it too; VMS MACRO's occasional byte of a long immediate run stored through
   the stack (`tir111Differences`, `f90rObjectDifferences`); govax's MACRO writing no object
   for a module with errors *(resolved in Phase 113, subtask 5)*; a register name in a data
-  expression.
+  expression *(resolved in Phase 113, subtask 13c)*.
 - **Not planned, ours (NOTIMPL, named; MANUAL.md's "What Fortran 90 isn't here"):** the
   DIM= of CSHIFT, EOSHIFT, and SPREAD and RESHAPE's ORDER= not constant; an assumed-shape
   array to `%LOC`, `%REF`, `%DESCR`, or a system subroutine; a CHARACTER argument of run-time

@@ -688,6 +688,10 @@ func (s *Session) versionLimit(text string, limit uint16, set bool) (uint16, err
 	return f.Header.RecordAttributes.VersionLimit, nil
 }
 
+// DeleteVersion deletes one version of a volume file, named by its full
+// specification: a utility's output it couldn't finish.
+func (s *Session) DeleteVersion(text string) error { return s.deleteVersion(text) }
+
 // deleteVersion deletes one version of a volume file, named by its full
 // specification.
 func (s *Session) deleteVersion(text string) error {
@@ -883,7 +887,22 @@ func (s *Session) createVolumeRecordsAllocated(text string, kind RecordKind, rec
 		return FileLocation{}, err
 	}
 
+	// A volume that fills as the records are written leaves the file made,
+	// as VMS 7.1's CREATE left it (testdata/err113's FULL): a
+	// *DeviceFullError naming it with its version.
 	if err := putRecords(f, records); err != nil {
+		if DeviceFull(err) {
+			made := version
+			if made == 0 {
+				made, _ = lookUpVersion(dir, fullName)
+			}
+
+			full := spec
+			full.Version = fmt.Sprint(made)
+
+			return FileLocation{}, &DeviceFullError{Spec: full.String(), Err: err}
+		}
+
 		return FileLocation{}, err
 	}
 

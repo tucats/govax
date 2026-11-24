@@ -1,10 +1,12 @@
 package dclcmd
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/security"
+	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -81,6 +83,17 @@ func (c *Context) CreateFile(req CreateFileRequest) error {
 			return openFailure(FileFailure(err, req.File), "CREATE-E", false)
 		}
 
+		// A volume that filled as the lines were written: the file is
+		// made, then WRITEERR naming it and RMS$_FUL, as VMS 7.1's CREATE
+		// said it (testdata/err113's FULL).
+		var full *rms.DeviceFullError
+		if errors.As(err, &full) && full.Spec != "" {
+			return vmserrors.ConditionError{
+				Status: createWriteErr | stsInhibitMsg,
+				Text:   "CREATE-E-WRITEERR, error writing " + full.Spec + "\n" + ConditionLine(rmsFUL),
+			}
+		}
+
 		return objectFailureAs(vmserrors.CREATE_OPENOUT, err, req.File)
 	}
 
@@ -90,6 +103,10 @@ func (c *Context) CreateFile(req CreateFileRequest) error {
 
 	return nil
 }
+
+// createWriteErr is CREATE's WRITEERR condition value, an error in CREATE's
+// facility, 145: VMS 7.1's was %X109110D2 (testdata/err113).
+var createWriteErr = uint32(145<<16) | vmsdef.LibrarySymbols["SHR$_WRITEERR"]&^7 | 2
 
 // createFileProfile reads CREATE's /OWNER_UIC and /PROTECTION, each
 // refused as CREATE/DIRECTORY refuses it: a UIC that doesn't resolve

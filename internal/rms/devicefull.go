@@ -14,6 +14,10 @@ import (
 type DeviceFullError struct {
 	Spec string
 	Err  error
+	// Open says the volume had no room for the file as it was made (a COPY
+	// output given its input's blocks), and Source names the input.
+	Open   bool
+	Source string
 }
 
 func (e *DeviceFullError) Error() string {

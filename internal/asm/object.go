@@ -24,6 +24,9 @@ type ObjectOptions struct {
 	// of the source file (its specification, date, size, and format);
 	// nil leaves them empty.
 	SourceFile *obj.SourceFile
+	// SourceFiles, for MACRO A+B (SetFileLines), are each joined file's,
+	// in place of SourceFile: each is declared where its code starts.
+	SourceFiles []obj.SourceFile
 }
 
 // noTitleText is the title header record's text for a module with no
@@ -109,6 +112,11 @@ func (a *Assembler) Object(opts ObjectOptions) (*obj.Module, error) {
 			src := obj.SourceFile{Format: obj.RecordFormatStreamLF}
 			if opts.SourceFile != nil {
 				src = *opts.SourceFile
+			}
+
+			if len(a.fileCounts) > 1 && len(opts.SourceFiles) == len(a.fileCounts) {
+				e.files = opts.SourceFiles
+				src = e.files[0]
 			}
 
 			e.lines = obj.NewLineTable(obj.DSTSourceFileRecord(src))
@@ -297,6 +305,10 @@ type emitter struct {
 	rows    []lineRow
 	nextRow int
 	lines   *obj.LineTable
+	// files are MACRO A+B's source files (ObjectOptions.SourceFiles), or
+	// nil for one, and file the one the table is in.
+	files []obj.SourceFile
+	file  int
 }
 
 // lineAt adds the line-number table's commands for each row whose code
@@ -311,6 +323,11 @@ func (e *emitter) lineAt(s *section, p uint32) {
 
 // addLineCommands adds the next row's commands.
 func (e *emitter) addLineCommands() {
+	if e.files != nil {
+		file, _ := e.a.fileOf(e.rows[e.nextRow].line)
+		e.toFile(file)
+	}
+
 	for _, cmd := range lineCommands(e.rows, e.nextRow) {
 		for _, rec := range e.lines.Add(cmd) {
 			e.b.Insert(rec)
@@ -318,6 +335,21 @@ func (e *emitter) addLineCommands() {
 	}
 
 	e.nextRow++
+}
+
+// toFile moves the source correlation on to file, one of MACRO A+B's files,
+// through each file before it: each one's record gives the last's lines and
+// declares the next.
+func (e *emitter) toFile(file int) {
+	for e.file < file {
+		rec := obj.DSTNextSourceFileRecord(e.a.fileCounts[e.file], e.files[e.file+1], e.file+2)
+
+		for _, r := range e.lines.Source(rec) {
+			e.b.Insert(r)
+		}
+
+		e.file++
+	}
 }
 
 // finishLines ends the line-number table once the code is written: any
@@ -333,8 +365,14 @@ func (e *emitter) finishLines() {
 	}
 
 	last := e.rows[len(e.rows)-1]
+	lines := e.a.fileLines
 
-	for _, rec := range e.lines.Finish(e.a.fileLines, obj.LineEnd(last.size)) {
+	if e.files != nil {
+		e.toFile(len(e.files) - 1)
+		lines = e.a.fileCounts[e.file]
+	}
+
+	for _, rec := range e.lines.Finish(lines, obj.LineEnd(last.size)) {
 		e.b.Insert(rec)
 	}
 }

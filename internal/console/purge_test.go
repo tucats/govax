@@ -24,19 +24,17 @@ func TestConsolePurge_notMounted(t *testing.T) {
 	}
 }
 
-// TestConsolePurge_badLimit confirms a /KEEP=0 is DCL's IVVALU with the value
-// as its segment (Phase 113, subtask 11; it was govax's CLI_BADLIMIT).
+// TestConsolePurge_badLimit confirms a /KEEP=0 is PURGE-F-BADVALUE, as VMS 7.1
+// said it (testdata/err113; Phase 113, subtask 13c).
 func TestConsolePurge_badLimit(t *testing.T) {
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
 	err := c.cmd().Purge("DUA0:INDEXF.SYS", 0, false)
-	if err == nil {
-		t.Fatal("Purge with /KEEP=0 = nil error, want IVVALU")
-	}
 
-	if !errors.Is(err, vmserrors.New(vmserrors.CLI_IVVALU)) || !strings.Contains(err.Error(), `\0\`) {
-		t.Errorf("Purge error = %v, want IVVALU naming \\0\\", err)
+	var cond vmserrors.ConditionError
+	if !errors.As(err, &cond) || cond.Status != 0x10941114 || cond.Text != "PURGE-F-BADVALUE, '0' is an invalid keyword value" {
+		t.Errorf("Purge error = %v, want PURGE-F-BADVALUE", err)
 	}
 }
 

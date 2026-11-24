@@ -77,9 +77,11 @@ type Assembler struct {
 	line     int
 	// messages holds the MACRO dialect's .PRINT messages, and comment
 	// the ";" comment of the statement being assembled (see
-	// message.go).
-	messages []string
-	comment  string
+	// message.go); messageLines is the source line of each message, as
+	// an Error's Line names it.
+	messages     []string
+	messageLines []int
+	comment      string
 
 	// relocs holds the values left for the linker (MACRO dialect only),
 	// and ready the fixups waiting for the end of their statement to
@@ -215,6 +217,9 @@ type Assembler struct {
 	debugSeen bool
 	untyped   []*symbol
 	fileLines int
+	// fileCounts are the line counts of the files the source joins, for
+	// MACRO A+B (SetFileLines); nil for one file.
+	fileCounts []int
 	// fortranLines says the program's lines held the FORTRAN compiler's
 	// traceback marker (dbgtable.TracebackMarker), and fortranLine is the
 	// number of the last FORTRAN source line its comments gave

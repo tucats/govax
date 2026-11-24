@@ -151,7 +151,61 @@ func (s *Session) typeMatch(buf *bytes.Buffer, vol *volume.Volume, r resolvedSpe
 		return writeFortranRecords(buf, f)
 	}
 
+	if noCarriageControl(f.Header.RecordAttributes) {
+		return writeUncontrolledRecords(buf, f)
+	}
+
 	return writeRecords(buf, f, lfLineEnding)
+}
+
+// noCarriageControl reports whether a file of record attributes attr has
+// records with no carriage control: fixed or variable length, and none of
+// FORTRAN, implied, or print carriage control.
+func noCarriageControl(attr ondisk.RecAttr) bool {
+	cc := ondisk.AttrFortranCC | ondisk.AttrImpliedCC | ondisk.AttrPrintCC
+
+	return attr.Attributes&cc == 0 &&
+		(attr.Format == ondisk.RecordFormatFixed || attr.Format == ondisk.RecordFormatVariable)
+}
+
+// writeUncontrolledRecords writes f's records to w as TYPE shows a file whose
+// records have no carriage control: each after the last on the same line, as
+// VMS 7.1's TYPE writes them (testdata/err113's NOCC: at the terminal ONE and
+// TWO are one line, ONETWO). VMS's next line starts a line of its own, its
+// line feed before it; govax's output ends lines rather than starting them,
+// so the line the records leave open is ended at the end of the file.
+func writeUncontrolledRecords(w io.Writer, f *volume.File) error {
+	r, err := odsrms.NewReader(f)
+	if err != nil {
+		return err
+	}
+
+	open := false
+
+	for {
+		rec, err := r.Next()
+		if err == io.EOF {
+			break
+		}
+
+		if err != nil {
+			return err
+		}
+
+		if _, err := w.Write(rec); err != nil {
+			return err
+		}
+
+		open = open || len(rec) > 0
+	}
+
+	if open {
+		_, err := w.Write(lfLineEnding)
+
+		return err
+	}
+
+	return nil
 }
 
 // writeIndexedRecords writes an indexed file's records to w as TYPE shows

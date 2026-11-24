@@ -630,10 +630,10 @@ func TestDispatch_copyHostPathWithoutHost(t *testing.T) {
 }
 
 // TestConsoleCopy_deviceFull: a host file bigger than the volume's free space is
-// COPY-E-WRITEERR naming the output, then RMS$_FUL and SS$_DEVICEFULL, its status
-// RMS$_FUL, where it was DCL-E-BADFILESPEC with ods2's words at its end (Phase 86's
-// note; Phase 113, subtask 11). An output utility's own message, CREATE's OPENOUT
-// here, takes the same two lines (unconfirmed: the probe round, subtask 12).
+// COPY-E-WRITEERR naming the output, then RMS$_FUL, its status RMS$_FUL, where it
+// was DCL-E-BADFILESPEC with ods2's words at its end (Phase 86's note; Phase 113,
+// subtask 11). VMS 7.1 showed RMS$_FUL with no STV, and CREATE's file made and
+// then WRITEERR (testdata/err113's FULL; subtask 13c).
 func TestConsoleCopy_deviceFull(t *testing.T) {
 	d, c, _ := newCommandDispatcher(t)
 	mountFreshContainerSized(t, c, "DUA0", 400)
@@ -647,7 +647,7 @@ func TestConsoleCopy_deviceFull(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	const reasons = "\n-RMS-F-FUL, device full (insufficient space for allocation)\n-SYSTEM-W-DEVICEFULL, device full; allocation failure"
+	const reasons = "\n-RMS-F-FUL, device full (insufficient space for allocation)"
 
 	err := c.cmd().Copy(host, true, "BIG.TXT", false, rms.CopyOptions{})
 
@@ -658,7 +658,7 @@ func TestConsoleCopy_deviceFull(t *testing.T) {
 
 	c.In = strings.NewReader("a line\n")
 
-	if err := d.Dispatch("CREATE A.TXT"); !errors.As(err, &cond) || cond.Text != "CREATE-E-OPENOUT, error opening A.TXT as output"+reasons {
-		t.Errorf("CREATE = %v, want OPENOUT over RMS$_FUL", err)
+	if err := d.Dispatch("CREATE A.TXT"); !errors.As(err, &cond) || cond.Text != "CREATE-E-WRITEERR, error writing DUA0:[000000]A.TXT;1"+reasons {
+		t.Errorf("CREATE = %v, want WRITEERR over RMS$_FUL", err)
 	}
 }
