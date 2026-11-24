@@ -164,6 +164,7 @@ questions, and a progress log extended as that phase is worked.
 | 112 | [PHASE-112 - Fortran 95](PHASE-112%20-%20Fortran%2095.md) | Fortran 95's additions under `/F90`: FORALL, PURE and ELEMENTAL, `NULL()` and default initialization, nested WHERE, the intrinsic changes, CPU_TIME, zero widths, zero-sized arrays, `/STANDARD=F90` widened — planned 2026-11-22, split from the errata at its survey's review; done 2026-11-23 |
 | 113 | [PHASE-113 - Fortran errata](PHASE-113%20-%20Fortran%20errata.md) | The errata of both Fortran programs and their tools: the survey's whole to-do list (Part A, done 2026-11-22) and what the author chose done (Part B), with a VMS probe round — planned 2026-11-22 |
 | 114 | [PHASE-114 - FORTRAN CONVERT](PHASE-114%20-%20FORTRAN%20CONVERT.md) | OPEN's `CONVERT=` other than NATIVE in FTNRTL, held to VMS's FORRTL — planned 2026-11-22 |
+| 115 | [PHASE-115 - Fortran 90 NOTIMPLs](PHASE-115%20-%20Fortran%2090%20NOTIMPLs.md) | The compiler's remaining NOTIMPLs, compiled or refused with a reason — planned 2026-11-23 |
 
 Phase 13 was split out of Phase 10 once that phase's own investigation found that
 `console_run.c`'s `RUN` command (real `.exe` image activation: ICB/ISD/IHD/IHI struct
@@ -1242,4 +1243,6 @@ Fortran manual's additions whole, with nine probe programs built by gfortran `-s
 
 MANUAL.md's 14.13 (a "Fortran 95" part among the rest), HELP FORTRAN, and FORTRAN-INTERNALS.md's
 section 37 describe it; the phase doc's "Where things stand" lists what it left. The next phase is
-113, the errata.
+113, the errata. At the review of its refreshed survey (2026-11-23) the author took Phase 112's
+FORALL NOTIMPLs into it, and split the compiler's other remaining NOTIMPLs, which Phase 113 had
+left not planned, into Phase 115, so the phases stay alike in size.

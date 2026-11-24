@@ -559,6 +559,31 @@ stand" was added to the list.
   as DECC$SHR's are, or only the main image's. If shareables' are run, the new mechanism does
   what the old hack was for, the VMS way.
 
+## A.16 The other NOTIMPLs, weighed (2026-11-23)
+
+After answer A the author asked what the rest of the compiler's NOTIMPLs would weigh, wanting the
+list cleared but the phases kept alike in size. Every remaining site was read (2026-11-23), beyond
+those A.3.1 already named:
+
+- A section, or a whole assumed-shape array, to a system subroutine or a built-in
+  (`arguments.go`): small to medium.
+- CHARACTER array expressions of run-time length not made of names (three sites), and function
+  values of run-time length where still refused (`charlength.go`, `decl.go`'s selector): medium, one
+  or two subtasks.
+- A name an internal procedure's declarations use that its host uses only in executable
+  statements (`internal.go`): medium.
+- A CHARACTER pointer of run-time length (`pointer.go`): small to medium.
+- The module file's gaps (`modwrite.go`'s `fail`, ENTRY in a module procedure): medium to large,
+  about two subtasks.
+- DATA naming an array section (`data.go`, `datatypes.go`): small; the survey missed it.
+- A NAMELIST object past FTNRTL's 8 levels or 15 dimensions (`derivedio.go`): small.
+- **Dead hooks**: the attribute table's `attrNotYet`, the kind table's `pending`, the file
+  specifiers' `later`, and `io.go`'s default case have no entries left that reach them.
+
+Together, seven to nine subtasks, which would take this phase past twenty. **The author's choice:
+Phase 115** (`PHASE-115 - Fortran 90 NOTIMPLs.md`) takes them all but the dead hooks, which this
+phase's housekeeping removes (subtask 11).
+
 ## Open questions
 
 Note: any ANSWER that says "this phase" likely means the new PHASE 113 given the answer
@@ -671,7 +696,7 @@ A.8.1 is not planned.
 8. Services and FTNRTL's format parses (A.2.3, A.2.5).
 9. The debugger (A.8.2, 3).
 10. The SHARE$LIBRTL fault (A.9.2), after subtask 6.
-11. Housekeeping (A.11.1, 2, 4, 5; A.15.2).
+11. Housekeeping (A.11.1, 2, 4, 5; A.15.2; A.16's dead hooks).
 12. The probe round (A.12, A.15.3): written, rehearsed on govax, run on VMS 7.1.
 13. Its fixes, the ods2 header among them.
 14. The close-out.
@@ -724,4 +749,8 @@ Each subtask may begin with a survey of its own, as earlier phases' did.
   NOTIMPLs taken in, as a new subtask 3; PURE's and ELEMENTAL's rules into subtask 2; RUN's
   `SHARE$name_INITIALIZE` call, the C emulator's DECCRTL workaround, replaced by VMS's
   `LIB$INITIALIZE` psect under RUN `/[NO]INIT` (subtask 6). The subtasks after 2 renumbered.
+  Subtask 2 is next.
+- **2026-11-23, A.16:** the compiler's other remaining NOTIMPLs weighed at the author's request:
+  seven to nine subtasks together. By the author's choice they are Phase 115
+  (`PHASE-115 - Fortran 90 NOTIMPLs.md`, new), but for the dead hooks, which subtask 11 removes.
   Subtask 2 is next.

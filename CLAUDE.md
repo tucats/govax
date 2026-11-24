@@ -1503,7 +1503,8 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   Fortran 90 NOTIMPLs, LIB$INITIALIZE, STR$'s arithmetic, `USE
   STARLET_SSDEF`, MACRO's and LINK's gaps, housekeeping, and a VMS probe
   round at its end), and **Phase 114 is `CONVERT=`** (`PHASE-114 - FORTRAN
-  CONVERT.md`); real FORTRAN debugger records are not planned. An item an old
+  CONVERT.md`), and **Phase 115 the compiler's remaining NOTIMPLs** (`PHASE-115 -
+  Fortran 90 NOTIMPLs.md`, split from Phase 113 at its survey's refresh, 2026-11-23); real FORTRAN debugger records are not planned. An item an old
   phase doc or DEVIATIONS.md still lists that a later phase did is marked
   where it was written, "*(Resolved in Phase N.)*" (the author's direction).
   Read the relevant phase doc
