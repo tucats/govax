@@ -123,8 +123,8 @@ FORTRAN program, Phases 74 to 86, is done; PLAN.md summarizes it.
   (subtask 4). So `TestFTN86Procedure` can't catch that mistake.
 - **MACRO's positional `/LIBRARY`** (`MACRO LIB/LIBRARY+SRC`) isn't done; govax keeps `/LIBRARY=(...)` (subtask 1). *(Resolved in Phase 113, subtask 5.)*
 - **Small things from subtask 1:** a typed name that's a system or intrinsic function (`REAL SQRT`) still gets a `$LOCAL` cell and a line in the map, harmless *(resolved in Phase 113, subtask 4)*; a
-  full volume is `%DCL-E-BADFILESPEC` with the reason at its end, where VMS says the device is full.
-- **The Ctrl/Y level's prompt** doesn't take `-` continuation (subtask 2).
+  full volume is `%DCL-E-BADFILESPEC` with the reason at its end, where VMS says the device is full *(resolved in Phase 113, subtask 11: the utility's message, then `-RMS-F-FUL` and `-SYSTEM-W-DEVICEFULL`)*.
+- **The Ctrl/Y level's prompt** doesn't take `-` continuation (subtask 2). *(Resolved in Phase 113, subtask 11.)*
 - **Known differences from VMS** (`ftn86VMSDifferences`): `$GETCHN`, a service govax lacks; SECNDS within a second of its argument, by timing; the last bits of OTS$ negative powers and of
   MTHRTL's complex functions, where six orders of operations were tried and none fits. Real LIBRTL on govax faults at `SHARE$LIBRTL+0CE1`, so it can't stand in for the VAX; why isn't known. *(Resolved in Phase 113: govax called LIBRTL's transfer address, LIB$EMODD.)*
 - **The image's symbol tables** past the debug symbol table aren't compared with VMS's in `TestFTN86Objects`.
@@ -195,7 +195,7 @@ FORTRAN program, Phases 74 to 86, is done; PLAN.md summarizes it.
     still gets a `$LOCAL` cell and a variable's line in the map, harmless but wasted *(resolved
     in Phase 113, subtask 4)*; a full
     volume is `%DCL-E-BADFILESPEC` with the reason at its end, where VMS says the device is
-    full; and `-` continuation typed at the console isn't honored (`LINK A,-`, as the kit's
+    full *(resolved in Phase 113, subtask 11)*; and `-` continuation typed at the console isn't honored (`LINK A,-`, as the kit's
     LINK is written), which subtask 2 is to fix.
 - **2026-11-03, subtask 2:** DUNGEON linked and run, by the kit's commands and with
   its data files. `TestDungeonRuns` builds it from the kit's files and plays:
@@ -220,7 +220,7 @@ FORTRAN program, Phases 74 to 86, is done; PLAN.md summarizes it.
     line ending in a hyphen at command level 0 and joins the next, `dclshell.JoinContinued`
     with a procedure's rule, the prompt an underscore and the usual one. CTRL/C or CTRL/Z
     drops what's held. A subprocess's DCL does the same (`subprocessCLI.nextLine`). The
-    Ctrl/Y level's prompt doesn't.
+    Ctrl/Y level's prompt doesn't. *(Resolved in Phase 113, subtask 11.)*
 - **2026-11-03, subtask 3:** the milestone test, `TestDungeonMilestone`: DUNGEON built by its
   commands and playing `testdata/dungeon86/game.in`, on a volume and from the host, with paging
   on and off, with and without the optimizer, 8 runs printing one SHA-256; on a volume a game is

@@ -24,24 +24,25 @@ func TestConsolePurge_notMounted(t *testing.T) {
 	}
 }
 
-// TestConsolePurge_badLimit confirms a /LIMIT=0 is reported as CLI_BADLIMIT.
+// TestConsolePurge_badLimit confirms a /KEEP=0 is DCL's IVVALU with the value
+// as its segment (Phase 113, subtask 11; it was govax's CLI_BADLIMIT).
 func TestConsolePurge_badLimit(t *testing.T) {
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
 	err := c.cmd().Purge("DUA0:INDEXF.SYS", 0, false)
 	if err == nil {
-		t.Fatal("Purge with /LIMIT=0 = nil error, want CLI_BADLIMIT")
+		t.Fatal("Purge with /KEEP=0 = nil error, want IVVALU")
 	}
 
-	if !errors.Is(err, vmserrors.New(vmserrors.CLI_BADLIMIT)) {
-		t.Errorf("Purge error = %v, want CLI_BADLIMIT", err)
+	if !errors.Is(err, vmserrors.New(vmserrors.CLI_IVVALU)) || !strings.Contains(err.Error(), `\0\`) {
+		t.Errorf("Purge error = %v, want IVVALU naming \\0\\", err)
 	}
 }
 
 // TestConsolePurge_badFileSpec confirms a malformed file specification is
-// reported as CLI_BADFILESPEC, matching Console.Delete's own catch-all
-// status for the same underlying condition.
+// PURGE-W-SEARCHFAIL over RMS's status, as DELETE's is (Phase 113, subtask
+// 11; it was CLI_BADFILESPEC with the Go error's words).
 func TestConsolePurge_badFileSpec(t *testing.T) {
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
@@ -51,8 +52,9 @@ func TestConsolePurge_badFileSpec(t *testing.T) {
 		t.Fatal("Purge with an unterminated directory bracket = nil error, want CLI_BADFILESPEC")
 	}
 
-	if !errors.Is(err, vmserrors.New(vmserrors.CLI_BADFILESPEC)) {
-		t.Errorf("Purge error = %v, want CLI_BADFILESPEC", err)
+	var cond vmserrors.ConditionError
+	if !errors.As(err, &cond) || cond.Text != "PURGE-W-SEARCHFAIL, error searching for DUA0:[UNTERMINATED\n-RMS-F-SYN, file specification syntax error" {
+		t.Errorf("Purge error = %v, want SEARCHFAIL over RMS$_SYN", err)
 	}
 }
 
@@ -160,8 +162,9 @@ func TestDispatch_purgeViaDCL(t *testing.T) {
 	}
 }
 
-// TestDispatch_purgeExplicitLimit confirms an explicit /LIMIT qualifier
-// threads through the grammar correctly, overriding the default of 1.
+// TestDispatch_purgeExplicitLimit confirms an explicit /KEEP qualifier
+// threads through the grammar correctly, overriding the default of 1; /LIMIT,
+// govax's old name, is no longer a qualifier.
 func TestDispatch_purgeExplicitLimit(t *testing.T) {
 	c, buf := newTestConsole(t)
 	g := loadEvaxGrammar(t)
@@ -182,12 +185,16 @@ func TestDispatch_purgeExplicitLimit(t *testing.T) {
 	createConsoleTestFile(t, vol, "FOO.TXT")
 	createConsoleTestFile(t, vol, "FOO.TXT")
 
-	if err := d.Dispatch("PURGE FOO.TXT/LIMIT=2"); err != nil {
-		t.Fatalf("Dispatch PURGE FOO.TXT/LIMIT=2: %v", err)
+	if err := d.Dispatch("PURGE FOO.TXT/LIMIT=2"); !errors.Is(err, vmserrors.New(vmserrors.CLI_IVQUAL)) {
+		t.Errorf("PURGE/LIMIT=2 = %v, want IVQUAL", err)
+	}
+
+	if err := d.Dispatch("PURGE FOO.TXT/KEEP=2"); err != nil {
+		t.Fatalf("Dispatch PURGE FOO.TXT/KEEP=2: %v", err)
 	}
 
 	if buf.Len() != 0 {
-		t.Errorf("Dispatch PURGE/LIMIT=2 output = %q, want nothing", buf.String())
+		t.Errorf("Dispatch PURGE/KEEP=2 output = %q, want nothing", buf.String())
 	}
 
 	if err := c.cmd().Delete([]string{"FOO.TXT;2"}, false); err != nil {

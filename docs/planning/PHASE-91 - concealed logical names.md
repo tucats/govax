@@ -573,7 +573,7 @@ it left:
 - **VMS's system names are a search list** on two roots, and govax's one root, by Decision 1. So the log's cases that use them
   are held by form (`TestSystemNames`), not line for line, and a file there shows the name it was reached by, where VMS's show `SYS$COMMON`.
 - **COPY without `/LOG`** says `%COPY-S-COPIED`, where VMS's says nothing, an older difference; under a root it gives the whole physical
-  path, `DUA0:[SYSTEM.SYSLIB]FTNRTL.EXE;2`.
+  path, `DUA0:[SYSTEM.SYSLIB]FTNRTL.EXE;2`. *(Resolved in Phase 113, subtask 11: COPY says nothing without `/LOG`.)*
 - **LNM91.EXE's size** in the BACKUP section's replay, 17 blocks to VMS's 16, masked and not looked into.
 - **What the probe didn't try**, each marked in its subtask's log entry: a `*` name over a translation's name, a typed root on a concealed
   name with no root, a related file deciding brackets, a list element that fails at `$OPEN`, `[000000...]` on a plain device,
@@ -763,7 +763,7 @@ it left:
 
   Masked in the DCL oracle: a save set's system and CPU lines; LNM91.EXE's size and the total (the image copied from the host by the
   replay shows 17 blocks, VMS's 16; not looked into); RMS's channel in STV; and `%COPY-S-COPIED` from a COPY without `/LOG`, which
-  govax prints and VMS doesn't (an older difference, shown with the physical name under a root).
+  govax prints and VMS doesn't (an older difference, shown with the physical name under a root). *(Resolved in Phase 113, subtask 11: COPY says nothing without `/LOG`.)*
 
   Unconfirmed, the probe having no such case: a walk's end when the deepest directory wasn't the last one walked (`AtLimit` stays
   set); RUN of a bare name that's a search list (its first element); a save of `BASE:[000000...]` (recorded `[SUB]`, logged

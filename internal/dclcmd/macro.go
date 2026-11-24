@@ -659,5 +659,22 @@ func objectFailureAs(status uint32, err error, spec string) error {
 		return FileFailure(err, spec)
 	}
 
+	// A specification RMS can't parse: the command's message over RMS's
+	// status (RMS$_SYN, RMS$_DIR, ...), as VMS's utilities show it, not
+	// the Go error's chain (Phase 113, subtask 11).
+	var bad *rms.NameError
+	if errors.As(err, &bad) {
+		return vmserrors.ConditionError{Status: bad.Status, Text: vmserrors.New(status, spec).Error() + "\n" + ConditionLine(bad.Status)}
+	}
+
+	// A volume with no room for the file: the command's message, then
+	// RMS$_FUL and its STV in place of the volume's own words
+	// (unconfirmed: docs/planning/PHASE-113 - Fortran errata.md, subtask 11).
+	if rms.DeviceFull(err) {
+		text := vmserrors.New(status, spec).Error() + "\n" + ConditionLine(rmsFUL) + "\n" + ConditionLine(ssDEVICEFULL)
+
+		return vmserrors.ConditionError{Status: status, Text: text}
+	}
+
 	return vmserrors.Wrap(status, err, spec)
 }

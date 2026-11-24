@@ -182,9 +182,9 @@ func (s *Session) purgeOnVolume(vol *volume.Volume, r resolvedSpec, keep uint16)
 // InvalidLimitError reports a /LIMIT value PURGE can't use -- currently
 // just zero (volume.PurgeVersions' own doc comment explains why: "DELETE
 // NAME;*" is the correct way to remove every version of a name, not
-// "PURGE/LIMIT=0"). Given its own type (matching NotMountedError/
+// "PURGE/KEEP=0"). Given its own type (matching NotMountedError/
 // VersionRequiredError's own reasoning elsewhere in this package), the
-// console layer can report this as a distinct VMS status (CLI_BADLIMIT)
+// console layer can report this as a distinct VMS status (DCL's IVVALU)
 // rather than lumping it in with an ordinary malformed file specification.
 type InvalidLimitError struct {
 	Limit uint16

@@ -320,8 +320,9 @@ func TestLoadEvaxGrammar_purge(t *testing.T) {
 		t.Error("SPEC should not be formally required (no /prompt=) -- a bare PURGE defaults to *.*, see docs/planning/PHASE-23.md")
 	}
 
-	if _, _, err := purge.qualifier("LIMIT"); err != nil {
-		t.Errorf("PURGE should have a LIMIT qualifier: %v", err)
+	// VMS's /KEEP, since Phase 113's subtask 11 (it was ods2's /LIMIT).
+	if _, _, err := purge.qualifier("KEEP"); err != nil {
+		t.Errorf("PURGE should have a KEEP qualifier: %v", err)
 	}
 }
 

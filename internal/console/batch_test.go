@@ -480,10 +480,6 @@ func TestBatchEndingsOracle(t *testing.T) {
 // isn't VMS's (by the step's command, or the command before it and the
 // step's, joined by "|"), and govax's output.
 var laterDifferences = map[string]string{
-	// govax's COPY says what it copied, where VMS's says nothing without
-	// /LOG (an older difference, not batch queues').
-	"COPY BAT98$DISK:[000000]BAT98OK.COM BAT98$DISK:[BAT98SCR]DELME.COM": "%COPY-S-COPIED, BAT98OK.COM;1 copied to DUA1:[BAT98SCR]DELME.COM;1\n",
-
 	// DIRECTORY that finds nothing: VMS 7.1 left RMS$_FNF with its
 	// message bit, govax DIRECT-W-NOFILES' own status (an older
 	// difference).

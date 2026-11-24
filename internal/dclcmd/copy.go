@@ -2,6 +2,7 @@ package dclcmd
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vmsdef"
@@ -13,6 +14,10 @@ import (
 var (
 	rmsFEX = vmsdef.Symbols["RMS$_FEX"]
 	rmsPRV = vmsdef.Symbols["RMS$_PRV"]
+
+	// rmsFUL and ssDEVICEFULL are a full volume's status and STV.
+	rmsFUL       = vmsdef.Symbols["RMS$_FUL"]
+	ssDEVICEFULL = vmsdef.Symbols["SS$_DEVICEFULL"]
 )
 
 // This file implements the console COPY command (docs/planning/PHASE-23.md,
@@ -47,8 +52,10 @@ var (
 // calls for:
 //
 //   - rms.CopyCopied: "%COPY-I-COPYING, copying SOURCE to DEST" first if
-//     opts.Verbose, then "%COPY-S-COPIED, SOURCE copied to DEST" unless
-//     opts.Quiet — plus, if the result carries a non-empty Warning (a
+//     opts.Verbose, then "%COPY-S-COPIED, SOURCE copied to DEST" under
+//     opts.Log or opts.Verbose, unless opts.Quiet (copyLogs; VMS's form,
+//     each name in full with the blocks copied, for a volume-to-volume
+//     copy under /LOG) — plus, if the result carries a non-empty Warning (a
 //     /TIME failure that didn't stop the copy — see CopyResult.Warning's
 //     own doc comment), a further "%COPY-W-NOTIME, ..." line, but only
 //     when opts.Verbose, matching ods2's own cmdCopy convention for the
@@ -183,6 +190,30 @@ func (c *Context) Copy(sourceText string, sourceHost bool, destText string, dest
 			return vmserrors.Wrap(vmserrors.CLI_BADQUALIFIER, err, "RECORD_FORMAT")
 		}
 
+		// A specification RMS can't parse: SEARCHFAIL for the input's, as a
+		// missing input's is, OPENOUT for the output's (unconfirmed which
+		// VMS gives each).
+		var bad *rms.NameError
+		if errors.As(err, &bad) {
+			text := "COPY-E-OPENOUT, error opening " + strings.ToUpper(bad.Spec) + " as output\n" + ConditionLine(bad.Status)
+			if strings.EqualFold(bad.Spec, sourceText) {
+				text = "COPY-E-SEARCHFAIL, error searching for " + strings.ToUpper(bad.Spec) + "\n" + ConditionLine(bad.Status)
+			}
+
+			return vmserrors.ConditionError{Status: bad.Status, Text: text}
+		}
+
+		// A volume with no room for the output: WRITEERR naming it, then
+		// RMS$_FUL and its STV (unconfirmed: docs/planning/PHASE-113 -
+		// Fortran errata.md, subtask 11; the file's blocks written so far
+		// are left, as govax writes them).
+		var full *rms.DeviceFullError
+		if errors.As(err, &full) {
+			text := "COPY-E-WRITEERR, error writing " + full.Spec + "\n" + ConditionLine(rmsFUL) + "\n" + ConditionLine(ssDEVICEFULL)
+
+			return vmserrors.ConditionError{Status: rmsFUL, Text: text}
+		}
+
 		return vmserrors.Wrap(vmserrors.CLI_BADFILESPEC, err, sourceText)
 	}
 
@@ -243,6 +274,14 @@ func copySyntax(part string) error {
 // printCopyResult prints whichever of the four "%COPY-..." line shapes
 // r.Kind calls for — see Context.Copy's own doc comment for each one's
 // exact wording and quiet/verbose gating.
+// copyLogs says whether COPY reports each file it copied: only under /LOG,
+// as VMS's COPY does, or govax's own /VERBOSE, and never under /QUIET
+// (docs/planning/PHASE-113 - Fortran errata.md, subtask 11; until then
+// govax said COPIED unless /NOLOG).
+func copyLogs(opts rms.CopyOptions) bool {
+	return (opts.Log || opts.Verbose) && !opts.Quiet
+}
+
 func (c *Context) printCopyResult(r rms.CopyResult, opts rms.CopyOptions) {
 	switch r.Kind {
 	case rms.CopyTested:
@@ -256,12 +295,12 @@ func (c *Context) printCopyResult(r rms.CopyResult, opts rms.CopyOptions) {
 			c.Printf("%%COPY-I-COPYING, creating directory %s for %s\n", r.Dest, r.Source)
 		}
 
-		if !opts.Quiet {
+		if copyLogs(opts) {
 			c.Printf("%%COPY-S-COPIED, %s materialized as directory %s\n", r.Source, r.Dest)
 		}
 
 	default: // rms.CopyCopied
-		if opts.Log && r.FullSource != "" {
+		if opts.Log && !opts.Quiet && r.FullSource != "" {
 			c.Printf("%%COPY-S-COPIED, %s copied to %s (%d block%s)\n", r.FullSource, r.FullDest, r.Blocks, plural(r.Blocks))
 
 			return
@@ -271,7 +310,7 @@ func (c *Context) printCopyResult(r rms.CopyResult, opts rms.CopyOptions) {
 			c.Printf("%%COPY-I-COPYING, copying %s to %s\n", r.Source, r.Dest)
 		}
 
-		if !opts.Quiet {
+		if copyLogs(opts) {
 			c.Printf("%%COPY-S-COPIED, %s copied to %s\n", r.Source, r.Dest)
 		}
 

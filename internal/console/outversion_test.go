@@ -55,12 +55,8 @@ func TestOutputVersion(t *testing.T) {
 		`$ WRITE SYS$OUTPUT F$SEARCH("E.LOG;12")`,
 	)
 
-	want := "%COPY-S-COPIED, T.MAR;5 copied to DUA0:[000000]Z.TXT;7\n" +
-		"%COPY-E-OPENOUT, error opening DUA0:[000000]Z.TXT;7 as output\n" +
+	want := "%COPY-E-OPENOUT, error opening DUA0:[000000]Z.TXT;7 as output\n" +
 		"-RMS-E-FEX, file already exists, not superseded\n" +
-		"%COPY-S-COPIED, T.MAR;5 copied to DUA0:[000000]Z.TXT;8\n" +
-		"%COPY-S-COPIED, T.MAR;5 copied to DUA0:[000000]Y.TXT;5\n" +
-		"%COPY-S-COPIED, " + host + " copied to DUA0:[000000]H.TXT;2\n" +
 		"DUA0:[000000]T.MAR;5\n" +
 		"DUA0:[000000]Z.TXT;7\n" +
 		"DUA0:[000000]Z.TXT;8\n" +

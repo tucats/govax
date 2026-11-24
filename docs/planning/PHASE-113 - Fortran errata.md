@@ -390,12 +390,12 @@ sees in MANUAL.md's 14.7 "Choices". Sorted:
 ## A.11 Small things seen on the way
 
 1. A full volume `%DCL-E-BADFILESPEC` where VMS says the device is full; the Ctrl/Y level's
-   prompt without `-` continuation (Phase 86). **Proposed: 112**, small, both.
+   prompt without `-` continuation (Phase 86). **Proposed: 112**, small, both. *(Done in subtask 11.)*
 2. COPY's `%COPY-S-COPIED` without `/LOG` (Phases 83, 87, 91; `dclcmd/copy.go` still prints it
    by default); TYPE ending a line after a record with no carriage control
    (Phase 83); STR$MATCH_WILD with `%` (Phase 83). **Proposed: 112** for COPY (VMS says
    nothing; every log that shows it would change: BUILDFTN.COM's and the tests'); TYPE
-   **probe**; STR$MATCH_WILD **probe**.
+   **probe**; STR$MATCH_WILD **probe**. *(COPY done in subtask 11.)*
 3. DIRECTORY/TOTAL: **resolved** in Phase 91 (`rms/directory.go`'s `Total`; marked in Phase
    88's doc). ods2's null type (`rms.ExplicitNullType`, Phase 88): **not planned** (it works;
    moving it into ods2 is tidiness).
@@ -405,7 +405,7 @@ sees in MANUAL.md's 14.7 "Choices". Sorted:
    still open or deferred: copied over in bulk at some time, not resolved. **Proposed: 112**:
    take the copies whose text is the same out of DEVIATIONS-RESOLVED.md, and compare the
    others first. (A 30th, the console's `SET name=value`, really was resolved, in Phase 50:
-   this survey took it out of DEVIATIONS.md and marked the copy.)
+   this survey took it out of DEVIATIONS.md and marked the copy.) *(Done in subtask 11.)*
 5. *(New, not Fortran's, recorded for completeness.)* Phase 87's work volume lock and Windows
    locking, SAVE/ROM to a volume, `vax.library` after the volume's library; Phase 91's default
    name's search list; Phase 94's RUN/DETACH and INSTALL's other subcommands; Phase 95's
@@ -413,7 +413,8 @@ sees in MANUAL.md's 14.7 "Choices". Sorted:
    97's EDIT and SET SHARE_PREFIX; Phase 98's print queues and LIB$GETQUI; Phase 90's grammar
    leftovers (TEST, SHOW EXPAND, SHOW MAPS, SET UIQUANTUM, CANCEL MEMORY with no handlers).
    **Not this phase**: each stays in its phase's "Where things stand". The grammar leftovers
-   could go here as a cleanup if the author likes (question 10).
+   could go here as a cleanup if the author likes (question 10). *(The grammar's leftovers done
+   in subtask 11: all but SHOW EXPAND were already gone.)*
 
 ## A.12 The probe round, if there is one
 
@@ -424,7 +425,10 @@ arithmetic (`testdata/str113`, written in subtask 7) and MATCH_WILD with `%` (A.
 choices and Fortran 95's zero widths on output, which FORRTL may not take (A.10, D.7); MACRO's
 `.LONG R1`, `<A;B>`, `.ERROR`/`.WARN`, `A+B` numbering, and an object with errors (A.6); a
 debugger round (A.8.6); TYPE after a record with no carriage control (A.11.2); `CONVERT=`'s
-answers, if A.1.1 goes ahead. *(Since the refresh, A.15.3: Phase 112's programs awaiting VMS,
+answers, if A.1.1 goes ahead; from subtask 11, a full volume's messages (COPY's WRITEERR and
+an output utility's, `-RMS-F-FUL` and `-SYSTEM-W-DEVICEFULL`, and whether COPY leaves the
+partial file), DELETE-E-DELVER's `$STATUS`, a bad specification's message in PURGE and in COPY's
+output, INITIALIZE and START with no qualifier, and PURGE/KEEP=0. *(Since the refresh, A.15.3: Phase 112's programs awaiting VMS,
 `f90rAwaitingVMS` and `ftn86`'s ZEROVAX, and FORRTL's zero widths.)*
 
 ## A.13 Resolved items, marked where they were written
@@ -506,7 +510,9 @@ stand" was added to the list.
    Subtask 10 looks at that first.
 2. **SHOW ASSEMBLER_FLAGS** is in the grammar with no handler as well (`dispatch_test.go`'s
    `TestDispatch_unboundShowSubformErrors` expects the error). It joins A.11.5's list for subtask
-   11, along with any others that subtask's own inventory finds.
+   11, along with any others that subtask's own inventory finds. *(Done in subtask 11: it was
+   already gone; the inventory found SHOW EXPAND, an unreachable SHOW INSTRUCTIONS syntax, and
+   INITIALIZE and START alone.)*
 
 **What Phase 112 passed on** (its "Where things stand"):
 
@@ -585,7 +591,7 @@ those A.3.1 already named:
 - DATA naming an array section (`data.go`, `datatypes.go`): small; the survey missed it.
 - A NAMELIST object past FTNRTL's 8 levels or 15 dimensions (`derivedio.go`): small.
 - **Dead hooks**: the attribute table's `attrNotYet`, the kind table's `pending`, the file
-  specifiers' `later`, and `io.go`'s default case have no entries left that reach them.
+  specifiers' `later`, and `io.go`'s default case have no entries left that reach them. *(Done in subtask 11.)*
 
 Together, seven to nine subtasks, which would take this phase past twenty. **The author's choice:
 Phase 115** (`PHASE-115 - Fortran 90 NOTIMPLs.md`) takes them all but the dead hooks, which this
@@ -704,7 +710,7 @@ A.8.1 is not planned.
 8. Services and FTNRTL's format parses (A.2.3, A.2.5) (done 2026-11-24).
 9. The debugger (A.8.2, 3) (done 2026-11-24).
 10. The SHARE$LIBRTL fault (A.9.2), after subtask 6 (done 2026-11-24).
-11. Housekeeping (A.11.1, 2, 4, 5; A.15.2; A.16's dead hooks).
+11. Housekeeping (A.11.1, 2, 4, 5; A.15.2; A.16's dead hooks) (done 2026-11-24).
 12. The probe round (A.12, A.15.3): written, rehearsed on govax, run on VMS 7.1.
 13. Its fixes, the ods2 header among them.
 14. The close-out.
@@ -1108,3 +1114,51 @@ Each subtask may begin with a survey of its own, as earlier phases' did.
     10.7 follow; in passing, HELP FORTRAN's three paragraphs with a line inserted unwrapped (the
     Fortran 95 paragraph, the arrays', /STANDARD's) are wrapped again; Phase 68's unconfirmed transfer address and Phase 86's fault are marked resolved.
     Subtask 11 is next.
+- **2026-11-24, subtask 11 (done):** housekeeping.
+  - *A full volume* (A.11.1). ods2 has no error value for an allocation that finds too few
+    clusters, so `rms.DeviceFull` knows it by ods2's words (`ods2NoSpace`, held by
+    `TestDeviceFullFromODS2`) or by `ErrACPDeviceFull`, and COPY's output is a
+    `rms.DeviceFullError` naming it with the version made (`fullOutputName`). COPY says
+    `%COPY-E-WRITEERR, error writing DUA2:[000000]BIG.TXT;1`, then `-RMS-F-FUL` and
+    `-SYSTEM-W-DEVICEFULL`, `$STATUS` RMS$_FUL; an output utility's message (CREATE's OPENOUT,
+    MACRO's OBJWRITE, through `objectFailureAs`) and `FileFailure`'s catch-all take the same two
+    lines, where each was `%DCL-E-BADFILESPEC` with the Go error's chain. Unconfirmed, for the
+    round: the STV line, each utility's own message, and whether VMS's COPY leaves the blocks it
+    wrote (govax does). `TestConsoleCopy_deviceFull`. A proper ods2 error value would need an ods2
+    release; the text match is the one place that would change.
+  - *The Ctrl/Y level's prompt* (A.11.1) takes `-` continuation as level 0's does
+    (`readControlYLevel`, `JoinContinued`; the prompt `_$ `; Ctrl/Z at a continuation's prompt
+    drops what's held). `TestControlY_level`'s two new cases.
+  - *COPY's message* (A.11.2): nothing without `/LOG`, as VMS's (`copyLogs`); `/VERBOSE`, govax's
+    own, shows it too, `/QUIET` never. The tests that filtered the line still do; MANUAL.md's
+    examples, README.md, and HELP COPY follow.
+  - *The duplicated deviations* (A.11.4): the 29 entries DEVIATIONS-RESOLVED.md held copies of,
+    none fully resolved, came out of it, with a stray copy of the entry template; the four whose
+    texts differed were older copies of what DEVIATIONS.md has.
+  - *Commands with no handler* (A.11.5, A.15.2): `dcl.Grammar.Unhandled` lists every command a
+    grammar parses that only NOHANDLER can answer (a syntax with no handler; a verb with none,
+    alone, or by a keyword or qualifier with no syntax of its own), and
+    `TestNoCommandWithoutHandler` (console and debugger) holds both grammars to none. TEST, SHOW
+    MAPS, SET UIQUANTUM, CANCEL MEMORY, and SHOW ASSEMBLER_FLAGS were already gone; it found SHOW
+    EXPAND (removed), a console SHOW INSTRUCTIONS syntax no keyword reached (removed; it is the
+    debugger's), and INITIALIZE and START with no qualifier, now DCL's INSFPRM as SET, SHOW, and
+    INSTALL alone are (unconfirmed: VMS's INITIALIZE alone asks for a device).
+  - *The dead hooks* (A.16): the attribute table's `attrNotYet`, the kind table's `pending` and
+    `kindProblem.notImpl`, the file keywords' `later`, gone; `ioSpecs`' default, which no
+    specifier reaches, is a panic naming the specifier.
+  - *The author's report, DELETE's version message*: `DELETE FOO.TXT` said
+    `%DCL-E-NEEDVERSION, ...` and the Go error's chain, where VMS 7.3's says
+    `%DELETE-E-DELVER, explicit version number or wild card required` (the author's session). It
+    says that now (SHR$_DELVER in DELETE's facility, raised to E as shown; `CLI_NEEDVERSION`
+    unused). The same pattern, a govax message with the Go chain where VMS's utility gives its
+    message over RMS's status, was in a bad specification's PURGE (`PURGE-W-SEARCHFAIL` over
+    RMS$_SYN, as DELETE's), COPY's output (`COPY-E-OPENOUT`), and an output utility's
+    (`objectFailureAs`: CREATE's OPENOUT, MACRO's OBJWRITE); each now shows RMS's status. A sweep of
+    the file commands' common mistakes (missing files, directories, versions, bad names) found no
+    other.
+  - *PURGE's `/KEEP`* (the author's direction): PURGE's qualifier is VMS's `/KEEP=n`, where it
+    was ods2's `/LIMIT=n` (now IVQUAL); `/KEEP=0` is DCL's `%DCL-W-IVVALU` with `\0\` as its
+    segment, where it was govax's BADLIMIT (unconfirmed: the round). HELP PURGE and MANUAL.md
+    follow.
+  - MANUAL.md's COPY, HELP COPY (the library rebuilt); Phases 83, 86, 87, and 91 marked.
+    Subtask 12, the probe round, is next.

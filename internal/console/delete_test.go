@@ -66,19 +66,18 @@ func TestConsoleDelete_notMounted(t *testing.T) {
 }
 
 // TestConsoleDelete_versionRequired confirms a file spec with no version at
-// all is reported as CLI_NEEDVERSION -- DELETE's own deliberate refusal to
-// default to "the newest version" the way DIRECTORY would.
+// all is VMS's DELETE-E-DELVER, worded as VMS's DELETE words it -- DELETE's
+// refusal to default to "the newest version" the way DIRECTORY would.
+// "NAME;" is the highest version, as on VMS.
 func TestConsoleDelete_versionRequired(t *testing.T) {
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
 	err := c.cmd().Delete([]string{"DUA0:INDEXF.SYS"}, false)
-	if err == nil {
-		t.Fatal("Delete with no version = nil error, want CLI_NEEDVERSION")
-	}
 
-	if !errors.Is(err, vmserrors.New(vmserrors.CLI_NEEDVERSION)) {
-		t.Errorf("Delete error = %v, want CLI_NEEDVERSION", err)
+	var cond vmserrors.ConditionError
+	if !errors.As(err, &cond) || cond.Text != "DELETE-E-DELVER, explicit version number or wild card required" || cond.Status&7 != 2 {
+		t.Errorf("Delete with no version = %v, want DELETE-E-DELVER", err)
 	}
 }
 

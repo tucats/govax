@@ -358,8 +358,10 @@ const (
 	CLI_PARAMNOTFOUND         = CLIFacility<<FacilityPosition | cliParamNotFound<<MessagePosition | StatusError
 	CLI_BADFILESPEC           = CLIFacility<<FacilityPosition | cliBadFileSpec<<MessagePosition | StatusError
 
-	// CLI_NEEDVERSION reports a DELETE with no specific version in its file
-	// specification (docs/planning/PHASE-23.md subtask 6) -- real VMS has no exact
+	// CLI_NEEDVERSION is no longer used: since Phase 113, subtask 11, DELETE
+	// with no version says VMS's DELETE-E-DELVER. It reported a DELETE with
+	// no specific version in its file specification (docs/planning/PHASE-23.md
+	// subtask 6) -- real VMS has no exact
 	// equivalent status this project could reuse (the eVAX C source never
 	// implemented ODS-2 volume access at all), so this is a fresh CLI-
 	// facility argument-validation code, matching CLI_BADFILESPEC's own
@@ -367,7 +369,8 @@ const (
 	// file-operation failure state.
 	CLI_NEEDVERSION = CLIFacility<<FacilityPosition | cliNeedVersion<<MessagePosition | StatusError
 
-	// CLI_BADLIMIT reports a PURGE with a /LIMIT value it can't use --
+	// CLI_BADLIMIT is no longer used: since Phase 113, subtask 11, PURGE/KEEP=0
+	// is DCL's IVVALU. It reported a PURGE with a /LIMIT value it can't use --
 	// currently just zero (docs/planning/PHASE-23.md subtask 7) -- matching
 	// CLI_NEEDVERSION's own "fresh CLI-facility argument-validation code"
 	// framing, since real VMS has no exact equivalent this project could

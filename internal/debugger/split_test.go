@@ -3,7 +3,9 @@ package debugger_test
 import (
 	"testing"
 
+	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
+	"github.com/tucats/govax/internal/debugger"
 )
 
 // Where a command line is understood.
@@ -114,7 +116,7 @@ func TestGrammarSplit(t *testing.T) {
 		{"SHOW DEBUG", consoleOnly},
 		{"SHOW INSTRUCTIONS", debuggerOnly},
 		{"SHOW SHARE_PREFIX", consoleOnly},
-		{"SHOW EXPAND", consoleOnly},
+		{"SHOW EXPAND", neither},
 		{"SHOW ROM", consoleOnly},
 		{"SHOW NVRAM", consoleOnly},
 		{"SHOW STRING_POOL", debuggerOnly},
@@ -247,5 +249,18 @@ func TestGrammarSplit(t *testing.T) {
 			t.Errorf("%-28s parses in: %-8s want: %-8s (console: %v; debugger: %v)",
 				tc.line, got, tc.where, consoleErr, debugErr)
 		}
+	}
+}
+
+// TestNoCommandWithoutHandler: every command the debugger's grammar parses
+// reaches a handler (dcl.Grammar.Unhandled; Phase 113, subtask 11).
+func TestNoCommandWithoutHandler(t *testing.T) {
+	c, _ := consoletest.New(t)
+	c.Dispatcher = console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
+	g := consoletest.DebugGrammar(t)
+	debugger.Install(c, g)
+
+	if unhandled := g.Unhandled(); len(unhandled) > 0 {
+		t.Errorf("commands with no handler: %v", unhandled)
 	}
 }

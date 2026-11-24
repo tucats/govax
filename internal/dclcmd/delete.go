@@ -108,7 +108,7 @@ func (c *Context) Delete(specs []string, log bool) error {
 //     SS_DEVNOTMOUNT, matching Context.Directory's own translation for the
 //     same underlying condition.
 //   - specText with no version surfaces as an *rms.VersionRequiredError
-//     and is reported as CLI_NEEDVERSION.
+//     and is reported as VMS's DELETE-E-DELVER.
 //   - specText matching no file at all surfaces as an *rms.NotFoundError
 //     and is reported as VMS 7.3's DELETE reported it (testdata/dcl50's
 //     rounds 4 and 6): SEARCHFAIL with the name expanded, then RMS$_FNF
@@ -127,9 +127,11 @@ func (c *Context) deleteFailure(specText string, err error) error {
 		return vmserrors.Wrap(vmserrors.SS_DEVNOTMOUNT, err, notMounted.Device)
 	}
 
+	// A name with no version at all is VMS's DELVER, an error, worded as
+	// VMS 7.3's DELETE words it ("DELETE FOO.TXT;" is the highest version).
 	var versionRequired *rms.VersionRequiredError
 	if errors.As(err, &versionRequired) {
-		return vmserrors.Wrap(vmserrors.CLI_NEEDVERSION, err, versionRequired.Spec)
+		return vmserrors.ConditionError{Status: deleteDelVer, Text: "DELETE-E-DELVER, explicit version number or wild card required"}
 	}
 
 	var notFound *rms.NotFoundError
@@ -184,6 +186,11 @@ func plural[T ~int | ~uint32](n T) string {
 // deleteFilNotDel is DELETE's FILNOTDEL condition value, a warning, in
 // the facility of its SEARCHFAIL.
 var deleteFilNotDel = deleteSearchFail&^0xFFFF | vmsdef.LibrarySymbols["SHR$_FILNOTDEL"]
+
+// deleteDelVer is DELETE's DELVER condition value, an error (the shared
+// message SHR$_DELVER, a warning, raised to E as VMS shows it; Phase 113,
+// subtask 11, from the author's VMS session).
+var deleteDelVer = deleteSearchFail&^0xFFFF | vmsdef.LibrarySymbols["SHR$_DELVER"]&^7 | 2
 
 // notDeletedFailure is one message for each file in names a DELETE or
 // PURGE passed over, what being "DELETE-W-FILNOTDEL" or

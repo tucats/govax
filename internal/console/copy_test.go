@@ -30,12 +30,22 @@ func TestConsoleCopy_volumeToVolume(t *testing.T) {
 
 	createConsoleTestFileWithContent(t, vol, "FOO.TXT", "hello, world")
 
+	// As VMS's COPY, nothing is said of a file copied without /LOG
+	// (Phase 113, subtask 11).
 	if err := c.cmd().Copy("FOO.TXT", false, "BAR.TXT", false, rms.CopyOptions{}); err != nil {
 		t.Fatalf("Copy: %v", err)
 	}
 
-	if !strings.Contains(buf.String(), "%COPY-S-COPIED, FOO.TXT;1 copied to DUA0:[000000]BAR.TXT;1") {
-		t.Errorf("Copy output = %q, want a %%COPY-S-COPIED confirmation line", buf.String())
+	if buf.Len() != 0 {
+		t.Errorf("Copy output = %q, want nothing without /LOG", buf.String())
+	}
+
+	if err := c.cmd().Copy("FOO.TXT", false, "BAR.TXT", false, rms.CopyOptions{Log: true}); err != nil {
+		t.Fatalf("Copy/LOG: %v", err)
+	}
+
+	if !strings.Contains(buf.String(), "%COPY-S-COPIED, DUA0:[000000]FOO.TXT;1 copied to DUA0:[000000]BAR.TXT;2 (1 block)") {
+		t.Errorf("Copy/LOG output = %q, want VMS's %%COPY-S-COPIED line", buf.String())
 	}
 
 	buf.Reset()
@@ -160,7 +170,7 @@ func TestConsoleCopy_fromHost(t *testing.T) {
 		t.Fatalf("WriteFile: %v", err)
 	}
 
-	if err := c.cmd().Copy(hostPath, true, "BAZ.TXT", false, rms.CopyOptions{}); err != nil {
+	if err := c.cmd().Copy(hostPath, true, "BAZ.TXT", false, rms.CopyOptions{Log: true}); err != nil {
 		t.Fatalf("Copy: %v", err)
 	}
 
@@ -293,9 +303,9 @@ func TestConsoleCopy_hostToHostRejected(t *testing.T) {
 }
 
 // TestConsoleCopy_badFileSpec confirms a malformed file specification is
-// reported as CLI_BADFILESPEC, matching Console.Type/Console.Delete/
-// Console.Directory's own catch-all status for the same underlying
-// condition.
+// COPY's message over RMS's status, as VMS's utilities report one: an
+// input's SEARCHFAIL, an output's OPENOUT (Phase 113, subtask 11; it was
+// CLI_BADFILESPEC with the Go error's words).
 func TestConsoleCopy_badFileSpec(t *testing.T) {
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
@@ -306,11 +316,18 @@ func TestConsoleCopy_badFileSpec(t *testing.T) {
 
 	err := c.cmd().Copy("DUA0:[UNTERMINATED", false, "BAR.TXT", false, rms.CopyOptions{})
 	if err == nil {
-		t.Fatal("Copy with an unterminated directory bracket = nil error, want CLI_BADFILESPEC")
+		t.Fatal("Copy with an unterminated directory bracket = nil error, want SEARCHFAIL")
 	}
 
-	if !errors.Is(err, vmserrors.New(vmserrors.CLI_BADFILESPEC)) {
-		t.Errorf("Copy error = %v, want CLI_BADFILESPEC", err)
+	var cond vmserrors.ConditionError
+	if !errors.As(err, &cond) || cond.Text != "COPY-E-SEARCHFAIL, error searching for DUA0:[UNTERMINATED\n-RMS-F-SYN, file specification syntax error" {
+		t.Errorf("Copy error = %v, want SEARCHFAIL over RMS$_SYN", err)
+	}
+
+	// The output's: OPENOUT over the same status (Phase 113, subtask 11).
+	if err := c.cmd().Copy("DUA0:INDEXF.SYS", false, "[", false, rms.CopyOptions{}); !errors.As(err, &cond) ||
+		cond.Text != "COPY-E-OPENOUT, error opening [ as output\n-RMS-F-SYN, file specification syntax error" {
+		t.Errorf("Copy to [ = %v, want OPENOUT over RMS$_SYN", err)
 	}
 }
 
@@ -337,8 +354,8 @@ func TestDispatch_copyViaDCL(t *testing.T) {
 
 	createConsoleTestFileWithContent(t, vol, "FOO.TXT", "hello, world")
 
-	if err := d.Dispatch("COPY FOO.TXT BAR.TXT"); err != nil {
-		t.Fatalf("Dispatch COPY FOO.TXT BAR.TXT: %v", err)
+	if err := d.Dispatch("COPY/LOG FOO.TXT BAR.TXT"); err != nil {
+		t.Fatalf("Dispatch COPY/LOG FOO.TXT BAR.TXT: %v", err)
 	}
 
 	if !strings.Contains(buf.String(), "%COPY-S-COPIED") {
@@ -609,5 +626,39 @@ func TestDispatch_copyHostPathWithoutHost(t *testing.T) {
 
 	if strings.Contains(entries, "/") {
 		t.Errorf("volume directory = %q, want no file named after a host path", entries)
+	}
+}
+
+// TestConsoleCopy_deviceFull: a host file bigger than the volume's free space is
+// COPY-E-WRITEERR naming the output, then RMS$_FUL and SS$_DEVICEFULL, its status
+// RMS$_FUL, where it was DCL-E-BADFILESPEC with ods2's words at its end (Phase 86's
+// note; Phase 113, subtask 11). An output utility's own message, CREATE's OPENOUT
+// here, takes the same two lines (unconfirmed: the probe round, subtask 12).
+func TestConsoleCopy_deviceFull(t *testing.T) {
+	d, c, _ := newCommandDispatcher(t)
+	mountFreshContainerSized(t, c, "DUA0", 400)
+
+	if err := c.cmd().SetDefault("DUA0:"); err != nil {
+		t.Fatalf("SetDefault: %v", err)
+	}
+
+	host := filepath.Join(t.TempDir(), "big.txt")
+	if err := os.WriteFile(host, []byte(strings.Repeat(strings.Repeat("X", 79)+"\n", 4000)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	const reasons = "\n-RMS-F-FUL, device full (insufficient space for allocation)\n-SYSTEM-W-DEVICEFULL, device full; allocation failure"
+
+	err := c.cmd().Copy(host, true, "BIG.TXT", false, rms.CopyOptions{})
+
+	var cond vmserrors.ConditionError
+	if !errors.As(err, &cond) || cond.Text != "COPY-E-WRITEERR, error writing DUA0:[000000]BIG.TXT;1"+reasons || cond.Status != 0x18544 {
+		t.Errorf("COPY = %v (%#v), want WRITEERR over RMS$_FUL", err, cond)
+	}
+
+	c.In = strings.NewReader("a line\n")
+
+	if err := d.Dispatch("CREATE A.TXT"); !errors.As(err, &cond) || cond.Text != "CREATE-E-OPENOUT, error opening A.TXT as output"+reasons {
+		t.Errorf("CREATE = %v, want OPENOUT over RMS$_FUL", err)
 	}
 }

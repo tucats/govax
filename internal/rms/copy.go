@@ -122,7 +122,8 @@ type CopyOptions struct {
 	Binary bool
 
 	// Log is /LOG: VMS's message for each file copied, its name in full and
-	// its size, in place of the short confirmation.
+	// its size (a host file's short form). Without it COPY says nothing of
+	// a file copied, as VMS's doesn't.
 	Log bool
 
 	// Records is /RECORD_FORMAT and its companions: what a host source's file
@@ -137,8 +138,8 @@ type CopyOptions struct {
 	Protection string
 
 	// Quiet suppresses the per-file "%COPY-S-COPIED" (or
-	// "...materialized as directory...") confirmation line Console.Copy
-	// would otherwise print. Never read by this file -- see this type's
+	// "...materialized as directory...") confirmation line /LOG or
+	// Verbose would print. Never read by this file -- see this type's
 	// own doc comment above.
 	Quiet bool
 
@@ -218,7 +219,7 @@ const (
 	// CopyCopied reports an ordinary file actually copied --
 	// Console.Copy prints "%COPY-I-COPYING, copying SOURCE to DEST"
 	// first if Verbose, then "%COPY-S-COPIED, SOURCE copied to DEST"
-	// unless Quiet.
+	// under Log or Verbose, unless Quiet.
 	CopyCopied CopyResultKind = iota
 
 	// CopyTested reports what an ordinary file copy would have done,
@@ -231,7 +232,7 @@ const (
 	// an empty host directory (/DIRS on a host destination) --
 	// Console.Copy prints "%COPY-I-COPYING, creating directory DEST for
 	// SOURCE" first if Verbose, then "%COPY-S-COPIED, SOURCE
-	// materialized as directory DEST" unless Quiet.
+	// materialized as directory DEST" under Log or Verbose, unless Quiet.
 	CopyDirCreated
 
 	// CopyDirTested mirrors CopyDirCreated under /TEST -- Console.Copy
@@ -513,7 +514,7 @@ func (s *Session) copyVolumeToVolume(sourceText, destText string, opts CopyOptio
 
 			err = outputDenied(err, asked, srcFound[0].shownFile(m))
 
-			return results, fmt.Errorf("copy: %w", fullOutputName(err, dest))
+			return results, fmt.Errorf("copy: %w", fullOutputName(err, dest, destDir))
 		}
 
 		dest.Version = fmt.Sprint(version)
@@ -597,7 +598,7 @@ func (s *Session) copyFromHost(hostPath, destText string, opts CopyOptions) ([]C
 
 	dest := filespec.Spec{Device: destSpec.Device, Dirs: destSpec.Dirs, Name: name, Type: typ}
 	if err != nil {
-		return nil, fmt.Errorf("copy: %w", fullOutputName(err, dest))
+		return nil, fmt.Errorf("copy: %w", fullOutputName(err, dest, destDir))
 	}
 
 	dest.Version = fmt.Sprint(version)
@@ -1135,12 +1136,23 @@ func (e *OutputExistsError) Error() string {
 
 // fullOutputName gives an *OutputExistsError in err the output's full
 // name, dest's device and directory with the name and version it has, and
-// returns err.
-func fullOutputName(err error, dest filespec.Spec) error {
+// returns err. A volume that filled while the output was written is a
+// *DeviceFullError naming the output with the version it was made with,
+// the highest in dir.
+func fullOutputName(err error, dest filespec.Spec, dir *volume.Directory) error {
 	var exists *OutputExistsError
 	if errors.As(err, &exists) {
 		dest.Version = exists.version
 		exists.Spec = dest.String()
+	}
+
+	var full *DeviceFullError
+	if DeviceFull(err) && !errors.As(err, &full) {
+		if e, lookErr := dir.Lookup(dest.Name+"."+dest.Type, 0); lookErr == nil {
+			dest.Version = fmt.Sprint(e.Version)
+		}
+
+		return &DeviceFullError{Spec: dest.String(), Err: err}
 	}
 
 	return err

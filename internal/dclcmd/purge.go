@@ -2,6 +2,8 @@ package dclcmd
 
 import (
 	"errors"
+	"fmt"
+	"strings"
 
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vmsdef"
@@ -38,8 +40,9 @@ import (
 //     surfaces as an *rms.NotMountedError and is reported as
 //     SS_DEVNOTMOUNT, matching Context.Delete's own translation for the
 //     same underlying condition.
-//   - An invalid keep value (currently just zero) surfaces as an
-//     *rms.InvalidLimitError and is reported as CLI_BADLIMIT.
+//   - An invalid /KEEP value (currently just zero) surfaces as an
+//     *rms.InvalidLimitError and is reported as DCL's IVVALU, the value
+//     its segment (unconfirmed against VMS's PURGE/KEEP=0).
 //   - Anything else (a malformed file specification, an unsupported multi-
 //     device volume set, or a genuine I/O failure freeing storage) is
 //     reported as CLI_BADFILESPEC, matching Context.Delete's own catch-all
@@ -73,11 +76,20 @@ func (c *Context) Purge(specText string, keep uint16, log bool) error {
 
 		var badLimit *rms.InvalidLimitError
 		if errors.As(err, &badLimit) {
-			return vmserrors.Wrap(vmserrors.CLI_BADLIMIT, err, badLimit.Limit)
+			return vmserrors.NewSegment(vmserrors.CLI_IVVALU, fmt.Sprint(badLimit.Limit))
 		}
 
 		if _, denied := rms.IsDenied(err); denied {
 			text := "PURGE-W-SEARCHFAIL, error searching for " + c.expandedName(specText) + "\n" + ConditionLine(rmsPRV)
+
+			return vmserrors.ConditionError{Status: purgeFilNotPur&^0xFFFF | vmsdef.LibrarySymbols["SHR$_SEARCHFAIL"] | stsInhibitMsg, Text: text}
+		}
+
+		// A specification RMS can't parse: SEARCHFAIL over its status, as
+		// DELETE's (unconfirmed for PURGE).
+		var bad *rms.NameError
+		if errors.As(err, &bad) {
+			text := "PURGE-W-SEARCHFAIL, error searching for " + strings.ToUpper(bad.Spec) + "\n" + ConditionLine(bad.Status)
 
 			return vmserrors.ConditionError{Status: purgeFilNotPur&^0xFFFF | vmsdef.LibrarySymbols["SHR$_SEARCHFAIL"] | stsInhibitMsg, Text: text}
 		}

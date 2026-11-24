@@ -245,6 +245,14 @@ func (d *Dispatcher) bindGrammar() {
 			return d.Console.cmd().Install(opts)
 		}
 	}
+	// INITIALIZE and START with none of their qualifiers name nothing govax
+	// does (a volume is INITIALIZE/CONTAINER's): DCL's INSFPRM, as SET,
+	// SHOW, and INSTALL alone give, where NOHANDLER was (Phase 113,
+	// subtask 11; unconfirmed against VMS, whose INITIALIZE alone asks for
+	// a device).
+	g.Bind("INITIALIZE", func(int64, *dcl.Result) error { return vmserrors.New(vmserrors.CLI_INSFPRM) })
+	g.Bind("START", func(int64, *dcl.Result) error { return vmserrors.New(vmserrors.CLI_INSFPRM) })
+
 	// The queue commands (docs/planning/PHASE-98 - batch queues.md,
 	// subtask 6): batch queues and their manager.
 	g.Bind("START_QUEUE_MANAGER", func(id int64, r *dcl.Result) error {
@@ -644,11 +652,9 @@ func (d *Dispatcher) bindGrammar() {
 
 	// Phase 23 (docs/planning/PHASE-23.md, subtask 7): PURGE trims old versions via
 	// internal/rms.Session.Purge (Console.Purge, internal/dclcmd/purge.go).
-	// LIMIT carries no /prompt= in the grammar (console.dcl's own purge verb),
-	// so an omitted /LIMIT reaches here as r.Present("LIMIT") == false --
-	// resolved to the default of 1 (ods2's own cmdPurge convention) here,
+	// An omitted /KEEP (VMS's name) is the default of 1, resolved here
 	// rather than in internal/rms.Session.Purge itself, since r.Int's own
-	// zero value can't be told apart from an explicit, invalid /LIMIT=0
+	// zero value can't be told apart from an explicit, invalid /KEEP=0
 	// (which Session.Purge does reject, as *rms.InvalidLimitError).
 	// docs/planning/PHASE-22.md subtask 18: RENAME renames or moves files on a
 	// mounted volume (Console.Rename, internal/dclcmd/rename.go). A
@@ -661,8 +667,8 @@ func (d *Dispatcher) bindGrammar() {
 
 	g.Bind("PURGE", func(id int64, r *dcl.Result) error {
 		limit := uint16(1)
-		if r.Present("LIMIT") {
-			limit = uint16(r.Int("LIMIT"))
+		if r.Present("KEEP") {
+			limit = uint16(r.Int("KEEP"))
 		}
 
 		return d.Console.cmd().Purge(r.String("SPEC"), limit, r.Present("LOG") && !r.Negated("LOG"))

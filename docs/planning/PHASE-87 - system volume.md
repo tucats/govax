@@ -40,7 +40,7 @@ STARTUP and CONFIG KEYS, CLAUDE.md, and PLAN.md.
   `%DISM-W-SYSDISK`'s wording.
 - **COPY's message.** govax's COPY shows `%COPY-S-COPIED` without `/LOG`,
   as it always has, so BUILDFTN.COM and BUILDSTARLET.COM show one; VMS's
-  COPY says nothing. COPY's own choice, older than this phase.
+  COPY says nothing. COPY's own choice, older than this phase. *(Resolved in Phase 113, subtask 11: COPY says nothing without `/LOG`.)*
 
 ## Goal
 
@@ -858,7 +858,7 @@ recommendation:
   - **COPY's message.** The procedures' COPY shows `%COPY-S-COPIED`, as
     govax's COPY always has without `/QUIET`; VMS's COPY says nothing
     without `/LOG`. Left as it is: that's COPY's own long-standing choice,
-    not this phase's.
+    not this phase's. *(Resolved in Phase 113, subtask 11: COPY says nothing without `/LOG`.)*
   - **Tests** (`internal/console/syslibrary_test.go`, each on a booted
     system volume): `TestSystemFTNRTL` (both paging modes: FTNCALL against
     `FTNRTL.EXE;1`, BUILDFTN, the new version checked, nothing left in

@@ -55,7 +55,6 @@ type attrFate int
 const (
 	attrCompiled   attrFate = iota // compiled as its old statement is
 	attrRecorded                   // kept on the Symbol, its meaning given by code of its own (intent.go, optional.go, pointer.go)
-	attrNotYet                     // NOTIMPL, waiting for its phase
 	attrModuleOnly                 // an error outside a module
 )
 
@@ -175,9 +174,6 @@ func (a *analyzer) attrSpecs(list []*ast.AttrSpec) []*ast.AttrSpec {
 
 			continue
 
-		case row.fate == attrNotYet:
-			a.notImplForm(spec.Pos, "the "+row.name+" attribute")
-
 		case row.fate == attrModuleOnly && a.unit.Kind == ast.ModuleUnit:
 			// access.go's.
 
@@ -201,7 +197,7 @@ func (a *analyzer) attrSpecs(list []*ast.AttrSpec) []*ast.AttrSpec {
 
 		moduleOnly := attrTable[x].fate == attrModuleOnly && a.unit.Kind != ast.ModuleUnit
 
-		if !pair && attrTable[x].fate != attrNotYet && !moduleOnly {
+		if !pair && !moduleOnly {
 			kept = append(kept, spec)
 		}
 	}

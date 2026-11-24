@@ -108,8 +108,9 @@
 
       /LOG
 
-   Shows each file copied by its full name, the output file's too, with
-   the number of blocks copied, in place of the short confirmation.
+   Shows each file copied, by its full name, the output file's too, with
+   the number of blocks copied (a host file by its path).  Without /LOG,
+   COPY says nothing of the files it copies.
 
 /PROTECTION
 
@@ -124,7 +125,8 @@
 
 /QUIET
 
-   Leaves out the %COPY-S-COPIED message for each file.
+   Leaves out the %COPY-S-COPIED message /LOG or /VERBOSE gives each
+   file.
 
 /RECORD_FORMAT
 
@@ -174,7 +176,8 @@
 
 /VERBOSE
 
-   Shows a %COPY-I-COPYING message before each file is copied.
+   Shows a %COPY-I-COPYING message before each file is copied, and the
+   %COPY-S-COPIED message after it.
 
 /VFC
 

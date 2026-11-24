@@ -1,6 +1,7 @@
 package console
 
 import (
+	"errors"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/tucats/govax/internal/dcl"
 	"github.com/tucats/govax/internal/registers"
+	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // evaxGrammarPathForConsole locates internal/bootdata/files/evax.dcl, the
@@ -385,5 +387,24 @@ func TestDispatch_emptyLineIsNoop(t *testing.T) {
 
 	if err := d.Dispatch("! a comment"); err != nil {
 		t.Fatalf("Dispatch(comment): %v", err)
+	}
+}
+
+// TestNoCommandWithoutHandler: every command the console's grammar parses
+// reaches a handler (dcl.Grammar.Unhandled), so none is refused with
+// NOHANDLER: the grammar's leftovers with nothing behind them (SHOW EXPAND,
+// an unreachable SHOW INSTRUCTIONS syntax) went in Phase 113, subtask 11,
+// and INITIALIZE and START alone are INSFPRM.
+func TestNoCommandWithoutHandler(t *testing.T) {
+	d, _ := newTestDispatcher(t)
+
+	if unhandled := d.Grammar.Unhandled(); len(unhandled) > 0 {
+		t.Errorf("commands with no handler: %v", unhandled)
+	}
+
+	for _, line := range []string{"INITIALIZE", "START"} {
+		if err := d.Dispatch(line); !errors.Is(err, vmserrors.New(vmserrors.CLI_INSFPRM)) {
+			t.Errorf("%s = %v, want INSFPRM", line, err)
+		}
 	}
 }

@@ -147,7 +147,7 @@ func TestSession_purgeZeroLimitRejected(t *testing.T) {
 
 	_, err := s.Purge("FOO.TXT", 0)
 	if err == nil {
-		t.Fatal("Purge with /LIMIT=0 = nil error, want an error")
+		t.Fatal("Purge with /KEEP=0 = nil error, want an error")
 	}
 
 	var badLimit *InvalidLimitError

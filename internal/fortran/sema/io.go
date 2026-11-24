@@ -1124,9 +1124,10 @@ func (a *analyzer) ioSpecs(io *IO, specs []*ast.IOSpec, path []frame) bool {
 			io.EOR = s.Label.Label
 
 		default:
-			a.notImplForm(s.Pos, "the "+s.Keyword+"= specifier")
-
-			ok = false
+			// The parser's tables give a data transfer statement no other
+			// specifier here: the keyed ones are keySpecs', the file
+			// statements' fileio.go's.
+			panic("sema: an I/O specifier ioSpecs doesn't know: " + s.Keyword)
 		}
 	}
 

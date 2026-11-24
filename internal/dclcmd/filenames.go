@@ -176,6 +176,15 @@ func FileFailure(err error, spec string) error {
 		return vmserrors.Wrap(vmserrors.CLI_AMBIGUOUS, err, "file specification", spec)
 	}
 
+	// A volume with no room for what was being written is RMS$_FUL and its
+	// STV, as RMS returns it, not a bad specification (unconfirmed for each
+	// utility's own message around it).
+	if rms.DeviceFull(err) {
+		text := strings.TrimPrefix(ConditionLine(rmsFUL), "-") + "\n" + ConditionLine(ssDEVICEFULL)
+
+		return vmserrors.ConditionError{Status: rmsFUL, Text: text}
+	}
+
 	return vmserrors.Wrap(vmserrors.CLI_BADFILESPEC, err, spec)
 }
 

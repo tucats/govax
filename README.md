@@ -136,7 +136,6 @@ Copy it to the VAX disk, build it for the debugger, and stop it mid-loop:
 
 ```text
 VAX> COPY "fact.for"/HOST *
-%COPY-S-COPIED, fact.for copied to DUA1:[WORK]FACT.FOR;1
 VAX> FORTRAN/DEBUG/NOOPTIMIZE FACT
 VAX> MACRO/DEBUG FACT
 VAX> LINK/DEBUG FACT

@@ -340,6 +340,64 @@ func (g *Grammar) Missing() []string {
 	return missing
 }
 
+// Unhandled returns, sorted, the commands the grammar parses that Dispatch
+// can only refuse (CLI$_NOHANDLER), each as its entry's name and what
+// leaves it active: a syntax no handler is bound to (Bind), aliases left
+// out; and for a verb with no handler, the verb alone when no keyword
+// parameter must carry it on, each keyword of its parameters with no
+// syntax of its own ("SHOW EXPAND"), and each of its qualifiers with none
+// ("SHOW /X"). A grammar whose every command has a handler has none
+// (TestNoCommandWithoutHandler, in internal/console and internal/debugger).
+func (g *Grammar) Unhandled() []string {
+	var unhandled []string
+
+	for name, e := range g.entries {
+		if _, ok := g.handlers[name]; ok || e.Alias != "" {
+			continue
+		}
+
+		if !e.IsVerb {
+			unhandled = append(unhandled, name)
+
+			continue
+		}
+
+		carried := false
+
+		for _, p := range e.Parameters {
+			if p.Type != TypeKeyword {
+				continue
+			}
+
+			if p.Default == nil {
+				carried = true
+			}
+
+			if t := g.types[upcase(p.TypeName)]; t != nil {
+				for _, k := range t.Keywords {
+					if k.Syntax == "" {
+						unhandled = append(unhandled, name+" "+upcase(k.Name))
+					}
+				}
+			}
+		}
+
+		if !carried {
+			unhandled = append(unhandled, name)
+		}
+
+		for _, q := range e.Qualifiers {
+			if q.Syntax == "" {
+				unhandled = append(unhandled, name+" /"+upcase(q.Name))
+			}
+		}
+	}
+
+	sort.Strings(unhandled)
+
+	return unhandled
+}
+
 // Qualifiers returns the names of every qualifier a command starting with
 // verb can take, sorted: the verb's own, its parameters', and those of
 // each syntax a qualifier or a keyword of its switches to (CREATE/FDL's,

@@ -349,7 +349,6 @@ grammar console
         keyword         symbols         /syntax=show_sym
         keyword         rom             /syntax=show_rom
         keyword         share_prefix    /syntax=show_share
-        keyword         expand          /syntax=show_expand
         ! SYSTEM and PROCESS (docs/PHASE-44.md, subtask 10): the process
         ! table and one process, as VMS's DCL shows them.
         keyword         system          /syntax=show_system
@@ -375,8 +374,10 @@ grammar console
 
     ! SHOW (docs/PHASE-42.md): the console's keywords. The machine's
     ! (registers, memory, breakpoints, the stack, ...) are the debugger's.
-    ! SHOW ASSEMBLER_FLAGS, COMMAND_ARGS, ERROR, and SHOW SYMBOL/TEMPORARY and
-    ! /UNRESOLVED had no handler, and are gone; SHOW SYMBOL/SYSTEM and the
+    ! SHOW ASSEMBLER_FLAGS, COMMAND_ARGS, ERROR, EXPAND, and SHOW
+    ! SYMBOL/TEMPORARY and /UNRESOLVED had no handler, and are gone (EXPAND
+    ! in Phase 113, subtask 11, with an unreachable INSTRUCTIONS syntax: SHOW
+    ! INSTRUCTIONS is the debugger's); SHOW SYMBOL/SYSTEM and the
     ! machine's SHOW SYMBOL/ALL are the debugger's now.
     verb show/id=120
 
@@ -384,7 +385,6 @@ grammar console
                         /type=show_types            -
                         /prompt="What"
 
-        syntax          show_expand/id=188
         syntax          show_rom/id=154
         ! SHOW SYMBOL [/LOCAL | /GLOBAL] [/ALL] [name]: DCL's symbols, as
         ! DCL shows them (dclsym.go). The machine's symbol table is the
@@ -399,19 +399,6 @@ grammar console
         syntax          show_radix/id=146
         syntax          show_nvram/id=122
         syntax          show_debug/id=129
-        syntax          show_instructions/id=131
-            qualifier   modes/id=1009
-            qualifier   profile/id=1010
-            qualifier   unimplemented/id=1011
-            qualifier   all/id=1012
-            parameter   opcode/id=1013              -
-                        /type=$rest_of_line
-            disallow    modes and profile
-            disallow    modes and unimplemented
-            disallow    modes and all
-            disallow    unimplemented and all
-            disallow    unimplemented and profile
-            disallow    profile and all
         syntax          show_version/id=162
         syntax          show_share/id=161
 
@@ -731,7 +718,9 @@ grammar console
 
         parameter   spec/id=1151                -
                     /type=$string
-        qualifier   limit/id=1152               -
+        ! /KEEP=n, VMS's name (govax's was ods2's /LIMIT until Phase 113,
+        ! subtask 11).
+        qualifier   keep/id=1152                -
                     /type=$integer
         qualifier   log/id=1153
 

@@ -372,7 +372,8 @@ func (c *Interpreter) unwindExit() procedureExit {
 // EXIT and STOP command return you to the DCL level", 13.7.1), as does
 // a command that would run an image or a procedure, which then runs at
 // level 0 (Console.afterStop). Ctrl/Y typed at the prompt gives a new
-// prompt; Ctrl/Z, or the end of the input, is EXIT.
+// prompt; Ctrl/Z, or the end of the input, is EXIT. A line ending in a
+// hyphen goes on in the next, as at the terminal's level 0.
 func (c *Interpreter) controlYLevel(level *commandLevel) bool {
 	return c.readControlYLevel(level, false)
 }
@@ -402,17 +403,46 @@ func (c *Interpreter) readControlYLevel(level *commandLevel, pause bool) bool {
 		}
 	}
 
+	// held is a command being continued: a line typed here ending in a
+	// hyphen goes on in the next, as at level 0's prompt, whose prompt then
+	// starts with an underscore (JoinContinued).
+	held := ""
+
 	for c.Running() {
-		line, ok := c.readTerminal(c.commandPrompt())
+		ask := c.commandPrompt()
+		if held != "" {
+			ask = "_" + ask
+		}
+
+		line, ok := c.readTerminal(ask)
 		if !ok {
 			if c.machine.Engine != nil && isAttentionKey(c.machine.Engine.PendingAttention()) {
 				c.forgetAttention()
+
+				held = ""
+
+				continue
+			}
+
+			// Ctrl/Z at a continuation's prompt drops what's held, as at
+			// level 0's (Dispatcher.CancelContinuation); otherwise it's EXIT.
+			if held != "" {
+				held = ""
 
 				continue
 			}
 
 			line = "EXIT"
 		}
+
+		text, complete := JoinContinued(held, line)
+		if !complete {
+			held = text
+
+			continue
+		}
+
+		line, held = text, ""
 
 		// A subprocess's Ctrl/Y typed at this level does nothing more
 		// than end a WAIT typed here (subprocessAttention): one typed

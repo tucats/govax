@@ -68,7 +68,7 @@ func TestRAMDisk(t *testing.T) {
 		{"DEFINE/DEVICE MDA /MAXBLOCK=20000", "%VAX-I-RAMDISK, _MDA0: defined, 20000 blocks"},
 		{"MOUNT MDA0: SCRATCH", "%MOUNT-I-MOUNTED, SCRATCH mounted on _MDA0:"},
 		{"CREATE/DIRECTORY MDA0:[WORK]", ""},
-		{`COPY "` + login + `"/HOST MDA0:[WORK]LOGIN.COM`, "%COPY-S-COPIED, ..."},
+		{`COPY "` + login + `"/HOST MDA0:[WORK]LOGIN.COM`, ""},
 		{"SHOW DEVICE MDA", "Device                  Device           Error    Volume         Free  Trans Mnt\n" +
 			" Name                   Status           Count     Label        Blocks Count Cnt\n" +
 			"MDA0:                   Mounted              0  SCRATCH      ..."},
@@ -164,7 +164,7 @@ func TestRAMDisk(t *testing.T) {
 
 	ramDiskSteps(t, dispatch, []struct{ line, want string }{
 		{"SET DEFAULT MDA0:[WORK]", ""},
-		{`COPY "` + source + `"/HOST WRITER.FOR`, "%COPY-S-COPIED, ..."},
+		{`COPY "` + source + `"/HOST WRITER.FOR`, ""},
 		{"FORTRAN WRITER", ""},
 		{"MACRO/NOLIST WRITER", ""},
 		{"LINK WRITER", ""},

@@ -59,8 +59,8 @@ type DeletedFile struct {
 // behavior here: it would let a mistyped "DELETE *.TXT" silently delete the
 // newest version of every matching name. Given its own type (rather than a
 // plain fmt.Errorf string), the console layer can recognize this specific
-// failure via errors.As and report it as a distinct VMS status
-// (CLI_NEEDVERSION) rather than lumping it in with an ordinary malformed
+// failure via errors.As and report it as VMS's DELETE does
+// (DELETE-E-DELVER) rather than lumping it in with an ordinary malformed
 // file specification.
 type VersionRequiredError struct {
 	Spec string

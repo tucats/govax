@@ -174,7 +174,7 @@ func TestPhase23Acceptance_fullOperatorSession(t *testing.T) {
 		t.Errorf("PURGE output = %q, want nothing, as VMS's PURGE says without /LOG", buf.String())
 	}
 
-	// The default /LIMIT=1 keeps only the newest version (;2); the older
+	// The default /KEEP=1 keeps only the newest version (;2); the older
 	// one (;1) should now be gone.
 	if err := c.cmd().Type("BAR.TXT;1", false, false); !isTypeSearchFail(err) {
 		t.Errorf("TYPE of the purged BAR.TXT;1 = %v, want TYPE's SEARCHFAIL", err)

@@ -192,10 +192,13 @@ func TestControlY_level(t *testing.T) {
 		{"STOP", "y\nSTOP\n", "", 1},
 		{"image", "y\nPRINT \"later ''F$ENVIRONMENT(\"DEPTH\")'\"\n", "later 0\n", dclshell.CLINormal},
 		{"end of input", "y\n", "", 1 | stsInhibitMsg},
+		{"continued", "y\nX = -\n3\nWRITE SYS$OUTPUT -\n\"at Ctrl/Y ''X'\"\nCONTINUE\n", "at Ctrl/Y 3\nafter 3\n", dclshell.CLINormal},
+		{"continuation dropped", "y\nX = -\n", "", 1 | stsInhibitMsg},
 	} {
 		out, c, _ := runControlY(t, tc.typed, lines)
 
 		got := out[strings.LastIndex(out, "Y: ")+len("Y: "):]
+		got = strings.ReplaceAll(got, "_"+c.Prompt(), "")
 		got = strings.ReplaceAll(got, c.Prompt(), "")
 
 		if got != tc.want || c.Status() != tc.status {

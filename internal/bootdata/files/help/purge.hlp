@@ -17,9 +17,9 @@
    default directory.  Finding no file isn't an error.
 
 2 Qualifiers
-/LIMIT
+/KEEP
 
-      /LIMIT=n
+      /KEEP=n
 
    How many of each file's newest versions to keep.  The default is 1,
    the newest alone.
@@ -38,7 +38,7 @@
 
      Deletes every version of FOO.TXT but the newest.
 
-   2.$ PURGE/LIMIT=2
+   2.$ PURGE/KEEP=2
 
      Keeps the two newest versions of each file in the default
      directory.

@@ -26,7 +26,9 @@
 
    DELETE needs a version so that the newest version isn't deleted by
    mistake: unlike DIRECTORY, TYPE, and COPY, it never takes a missing
-   version to mean the newest.
+   version to mean the newest.  A name without one is refused:
+
+     %DELETE-E-DELVER, explicit version number or wild card required
 
    It says nothing of the files it deletes unless /LOG is given.  A
    specification that finds no file is a warning, and the others are

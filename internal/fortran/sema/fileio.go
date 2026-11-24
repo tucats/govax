@@ -30,13 +30,11 @@ const (
 )
 
 // fileKeyword is one keyword's entry: its code, its kind, and for a choice
-// the number each text has. Later names a phase that compiles it, for a
-// keyword this one doesn't.
+// the number each text has.
 type fileKeyword struct {
 	code    int
 	kind    keywordKind
 	choices map[string]int
-	later   string
 }
 
 // The choices. Each number is FORRTL's for that text.
@@ -286,14 +284,6 @@ func (a *analyzer) fileStatement(s *ast.AuxIOStmt, path []frame) Stmt {
 		k, isKey := keywords[spec.Keyword]
 		if !isKey {
 			control = append(control, spec)
-
-			continue
-		}
-
-		if k.later != "" {
-			a.notImplForm(spec.Pos, k.later)
-
-			ok = false
 
 			continue
 		}

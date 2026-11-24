@@ -322,7 +322,6 @@ govax 1.0-745
 VAX> SHOW DEFAULT
   DUA1:[WORK]
 VAX> COPY "hello.mar"/HOST *
-%COPY-S-COPIED, hello.mar copied to DUA1:[WORK]HELLO.MAR;1
 VAX> MACRO HELLO
 VAX> LINK HELLO
 VAX> RUN HELLO
@@ -1549,10 +1548,8 @@ library, with a procedure to rebuild each:
 
 ```text
 VAX> @SYS$SOURCES:BUILDFTN
-%COPY-S-COPIED, FTNRTL.EXE;1 copied to DUA0:[SYSTEM.SYSLIB]FTNRTL.EXE;2
 FTNRTL.EXE built and installed in SYS$SHARE
 VAX> @SYS$SOURCES:BUILDSTARLET
-%COPY-S-COPIED, STARLET.MLB;1 copied to DUA0:[SYSTEM.SYSLIB]STARLET.MLB;2
 STARLET.MLB built and installed in SYS$LIBRARY
 ```
 
@@ -1773,7 +1770,11 @@ with no version in the destination, a copy between volume files has the
 source's version, or the next if one as high is there, as VMS's COPY
 does. A volume copy keeps the source's contiguity, and an indexed file
 whose prolog RMS can't read isn't copied (`%COPY-E-OPENIN`, with RMS's
-status).
+status). As VMS's COPY does, it says nothing of a file copied unless
+`/LOG` is given; `/VERBOSE` (govax's own) also shows each, and `/QUIET`
+none. A volume that fills while the output is written is
+`%COPY-E-WRITEERR` naming the output, then RMS's `-RMS-F-FUL` and
+`-SYSTEM-W-DEVICEFULL`; what was written so far stays.
 
 `/RECORD_FORMAT` is govax's own, with the three qualifiers that go with it,
 named as in FDL's RECORD section. A Files-11 file's header says how its bytes
@@ -1882,13 +1883,14 @@ DELETE [/LOG] file-spec;version[,...]
 ```
 
 Deletes volume files. A version is required (`;3`, `;*`, or `;` for the
-newest), as on VMS. Several specifications, separated by commas, take
+newest), as on VMS; without one DELETE says `%DELETE-E-DELVER, explicit
+version number or wild card required`. Several specifications, separated by commas, take
 missing fields from the one before: `DELETE A.TXT;1,;2,B;1`.
 
 #### PURGE
 
 ```text
-PURGE [/LIMIT=n] [/LOG] [file-spec]
+PURGE [/KEEP=n] [/LOG] [file-spec]
 ```
 
 Deletes all but the newest `n` versions (default 1) of each file, saying
@@ -11125,7 +11127,6 @@ Edit a module in `SYS$SOURCES` (`FTN_FORMAT.MAR`, say), then:
 
 ```text
 VAX> @SYS$SOURCES:BUILDFTN
-%COPY-S-COPIED, FTNRTL.EXE;1 copied to DUA0:[SYSTEM.SYSLIB]FTNRTL.EXE;2
 FTNRTL.EXE built and installed in SYS$SHARE
 ```
 

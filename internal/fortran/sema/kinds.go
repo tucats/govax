@@ -38,33 +38,31 @@ func (t Type) KindNumber() int {
 }
 
 // kindInfo is what kinds a type keyword has: the kind of type it makes,
-// the kinds a selector or a constant may name, as a message lists them, and
-// the kinds that are a later subtask's (a NOTIMPL naming the type; none now:
-// INTEGER(1) and COMPLEX(16) were until subtasks 5 and 7).
+// and the kinds a selector or a constant may name, as a message lists them.
+// (Its NOTIMPL hook for kinds a later subtask was to compile went in Phase
+// 113, subtask 11: INTEGER(1) and COMPLEX(16), the last, came in Phase 100.)
 type kindInfo struct {
 	kind    Kind
 	allowed []int
 	text    string
-	pending map[int]string
 }
 
 // typeKinds are the type keywords that take a kind, and their kinds.
 // DOUBLE PRECISION, DOUBLE COMPLEX, and BYTE name one type already
 // (NOKIND).
 var typeKinds = map[ast.BaseType]kindInfo{
-	ast.Integer:   {Integer, []int{1, 2, 4}, "1, 2, and 4", nil},
-	ast.Logical:   {Logical, []int{1, 2, 4}, "1, 2, and 4", nil},
-	ast.Real:      {Real, []int{4, 8, 16}, "4, 8, and 16", nil},
-	ast.Complex:   {Complex, []int{4, 8, 16}, "4, 8, and 16", nil},
-	ast.Character: {Character, []int{1}, "1", nil},
+	ast.Integer:   {Integer, []int{1, 2, 4}, "1, 2, and 4"},
+	ast.Logical:   {Logical, []int{1, 2, 4}, "1, 2, and 4"},
+	ast.Real:      {Real, []int{4, 8, 16}, "4, 8, and 16"},
+	ast.Complex:   {Complex, []int{4, 8, 16}, "4, 8, and 16"},
+	ast.Character: {Character, []int{1}, "1"},
 }
 
 // kindProblem is why a kind isn't one a type has: a message's identifier
-// and arguments, or the form a NOTIMPL names.
+// and arguments.
 type kindProblem struct {
-	ident   string
-	args    []any
-	notImpl string
+	ident string
+	args  []any
 }
 
 // kindType is the type keyword base of kind k (for CHARACTER, the kind is
@@ -80,10 +78,6 @@ func kindType(base ast.BaseType, k int) (Type, *kindProblem) {
 			continue
 		}
 
-		if what, later := info.pending[k]; later {
-			return invalid, &kindProblem{notImpl: what}
-		}
-
 		if info.kind == Complex {
 			return Type{Kind: Complex, Size: 2 * k}, nil
 		}
@@ -96,12 +90,6 @@ func kindType(base ast.BaseType, k int) (Type, *kindProblem) {
 
 // reportKind reports a kindProblem at pos.
 func (a *analyzer) reportKind(p *kindProblem, pos diag.Position) {
-	if p.notImpl != "" {
-		a.notImplForm(pos, p.notImpl)
-
-		return
-	}
-
 	a.report(p.ident, pos, p.args...)
 }
 
