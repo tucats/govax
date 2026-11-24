@@ -417,7 +417,8 @@ arithmetic and MATCH_WILD with `%` (A.2.1, A.11.2); a FORRTL round on Phase 80's
 choices and Fortran 95's zero widths on output, which FORRTL may not take (A.10, D.7); MACRO's
 `.LONG R1`, `<A;B>`, `.ERROR`/`.WARN`, `A+B` numbering, and an object with errors (A.6); a
 debugger round (A.8.6); TYPE after a record with no carriage control (A.11.2); `CONVERT=`'s
-answers, if A.1.1 goes ahead.
+answers, if A.1.1 goes ahead. *(Since the refresh, A.15.3: Phase 112's programs awaiting VMS,
+`f90rAwaitingVMS` and `ftn86`'s ZEROVAX, and FORRTL's zero widths.)*
 
 ## A.13 Resolved items, marked where they were written
 
@@ -456,6 +457,90 @@ which replaces this list). As the survey wrote it: In the order the work would g
 Left to **own phases**: `CONVERT=` (A.1.1, if wanted), real debugger records (A.8.1, if
 wanted), Phases 60 and 61 (A.2.2), ANALYZE/DISK_STRUCTURE/REPAIR (A.9.1), Phase 42's Part B
 (A.8.5).
+
+## A.15 The survey refreshed after Phase 112 (2026-11-23)
+
+Part A was written before Phase 112 was done. Before this phase starts, each item Part B
+takes was checked again against the code as Phase 112 left it, and Phase 112's "Where things
+stand" was added to the list.
+
+**Still open, each checked 2026-11-23.** Nothing in Part B was done by Phase 112:
+
+- A.3.1: all six of this phase's NOTIMPLs are still reported (`sema/transform.go`'s DIM= and
+  ORDER=, `charfuncs.go`'s array BACK=, `complex32Intrinsic` at its four sites, `decl.go`'s
+  CHARACTER length zero and statement function of a derived type, `transfer.go`'s MOLD). The
+  compiler now has 48 `notImplForm` calls; Phase 112's FORALL added 8 (`forallorder.go`).
+- A.3.4: all four, by compiling small programs: `K = F(2)%N` is NOTRECORD ("a procedure with
+  an interface body"), `REAL Y(DD(1)%N)` is BADBOUND, TRANSFER to a derived type in a PARAMETER
+  is NOTCONST, and `lowermodel.go` still loads EXPONENT's and FRACTION's argument with MOVF.
+- A.1.5: `REAL SQRT` still gets `T1.SQRT: .BLKL 1` and a storage map line. A.1.10:
+  `SQRT(X)*2.0 + 0.5` still reads `T1.$KF1` and `T1.$KF2` from `$PDATA`.
+- A.3.3: `USE STARLET_SSDEF` is MODNOTFOUND.
+- A.6.2: `dclcmd/macro.go` still writes no object after an error. A.2.1: STR$'s arithmetic
+  still NOTIMPL (`librtl/str.go`). A.2.3: of `$GETCHN`, `$GETDEV`, and the UTC five, only
+  `$GETCHN` is mentioned, in `missingservice.go`'s signal; none has a routine.
+- A.11.2: COPY prints `%COPY-S-COPIED` unless `/NOLOG`. A.11.4: 30 entries' titles are in
+  both DEVIATIONS.md and DEVIATIONS-RESOLVED.md (the 29, and the `SET name=value` copy marked
+  resolved). A.11.5: SHOW EXPAND is still in the grammar (`show_expand`, no handler).
+- No commit since the survey touched MACRO, LINK, the debugger, LIBRTL, COPY, or the services,
+  so A.6.1, A.6.5, A.7.1, A.7.3, A.8.2, A.8.3, A.9.2, and A.11.1 stand as written.
+
+**Found by the refresh:**
+
+1. **LIB$INITIALIZE already has a mechanism, and it isn't VMS's.** RUN's driver
+   (`machine/run.go`'s `BuildImageInitDriver`, RUN `/[NO]INIT`, SET DEBUG LIBINIT, on by
+   default) calls each shareable dependency's `SHARE$name_INITIALIZE` symbol, if one is
+   defined, with three arguments (0, 0, and a flag that is 100 for LIBRTL alone, "apparently").
+   That is the C emulator's convention, carried over. VMS's is the main image's own: a program
+   puts the addresses of its routines in a `LIB$INITIALIZE` psect, and LINK pulls in STARLET's
+   LIB$INITIALIZE module, which calls each. A.2.2's work in subtask 5 therefore begins by deciding
+   what becomes of the old mechanism. It may also bear on A.9.2: real LIBRTL faulting at
+   `SHARE$LIBRTL+0CE1` may be its initialization routine called with the guessed arguments.
+   Subtask 9 looks at that first.
+2. **SHOW ASSEMBLER_FLAGS** is in the grammar with no handler as well (`dispatch_test.go`'s
+   `TestDispatch_unboundShowSubformErrors` expects the error). It joins A.11.5's list for subtask
+   10, along with any others that subtask's own inventory finds.
+
+**What Phase 112 passed on** (its "Where things stand"):
+
+3. **The VMS round of Phase 112's programs**: `f90rAwaitingVMS` (ZEROSIZE, NULLS, DEFAULTS,
+   PURES, ELEMENTALS, FORALLS, FORALLC, WHERES, INTRINS, ZEROWID, ZEROWIDVMS, M_COLONY) and
+   `ftn86`'s ZEROVAX. FORRTL's answer for a zero width goes with them, if anything wants it.
+   **Probe**: added to A.12 (subtask 11).
+4. **A STRUCTURE with initial values in a module's text** (A.3.2's remaining part;
+   `modwrite.go` still refuses it). Phase 112 names it as Phase 113's, but Part B doesn't list
+   it. **Proposed: 113**, in subtask 2 with the Fortran 90 items: a derived type's default values
+   are written already, so the module text has a form for them to follow.
+5. **FORALL's remaining NOTIMPLs**: a statement through temporaries that is a pointer
+   assignment, a defined assignment, a WHERE, or an assignment to an array or to a CHARACTER
+   target of run-time length; a statement through temporaries, or a mask its statements change,
+   in a FORALL whose bounds use an outer index; a target whose subscripts read its own storage
+   (`V(V(I)) = 0`); a nested FORALL's bound that its own statements may change; a FORALL whose
+   pointer's storage isn't known; an elemental defined assignment of a CHARACTER array of
+   run-time length overlapping its target. **Not planned** (the refresh's proposal): each is an
+   unusual program and named by its message, and Phase 112 judged them past its scope. Question
+   A below.
+6. **PURE's and ELEMENTAL's unchecked rules**: storage association with a global (an
+   EQUIVALENCE partner), a pointer component's target through a global or an INTENT(IN) dummy, a
+   constructor's pointer component given a global, an internal procedure of a PURE one being PURE,
+   and ELEMENTAL's 12.7.1 rule for dummies in specification expressions; and
+   `ASSOCIATED(P, NULL())` being NULLPLACE. **Proposed: 113** for the PURE checks and 12.7.1 (each
+   a rule the standard states, small, in `sema/pure.go` and `elemental.go`), in subtask 2;
+   NULLPLACE **recorded**. Question B below.
+7. Phase 112's unconfirmed choices (an empty dimension shown as (1:0), recursive specification
+   functions, DATA of a default-initialized object, CPU_TIME's -1, `I0` of zero, `F0.d`'s sign, a
+   nested FORALL's kept bounds) are **recorded** in its doc. `I0` and `F0.d` go to the probe
+   round with item 3, if FORRTL takes zero widths.
+
+**Questions for the author:**
+
+- **A.** Phase 112's FORALL NOTIMPLs (item 5): leave them named and not planned, or take any
+  into this phase?
+- **B.** PURE's and ELEMENTAL's unchecked rules (item 6): into subtask 2 as proposed, or
+  left?
+- **C.** The old `SHARE$name_INITIALIZE` call (item 1): replace it with VMS's
+  `LIB$INITIALIZE` psect (the refresh's proposal, with RUN `/[NO]INIT` kept for the new
+  mechanism), or keep both?
 
 ## Open questions
 
@@ -554,8 +639,11 @@ A.8.1 is not planned.
 
 ## Subtasks (provisional)
 
-1. **The survey** (done 2026-11-22): Part A; the author's answers the same day.
-2. Fortran 90's NOTIMPLs and noticed items (A.3.1, A.3.4).
+1. **The survey** (done 2026-11-22): Part A; the author's answers the same day. Refreshed
+   after Phase 112 (done 2026-11-23): A.15.
+2. Fortran 90's NOTIMPLs and noticed items (A.3.1, A.3.4), a STRUCTURE with initial values in
+   a module's text (A.15.4), and PURE's and ELEMENTAL's unchecked rules if the author agrees
+   (A.15.6).
 3. The compiler's small things and `STARLET_` modules (A.1.4, A.1.5, A.1.10, A.3.3).
 4. MACRO (A.6.1, 2, 5).
 5. LINK and LIB$INITIALIZE (A.7.1, A.7.3, A.2.2).
@@ -602,3 +690,13 @@ Each subtask may begin with a survey of its own, as earlier phases' did.
   planned; LIB$INITIALIZE, STR$'s arithmetic, `STARLET_` modules, and the housekeeping
   here. Part B is the phase's scope and its subtasks. References to "Phase 112's A.n" in
   Phases 78 to 107's docs now say Phase 113's.
+- **2026-11-23, subtask 1 refreshed (done):** Phase 112 is done, so before work begins every
+  item Part B takes was checked again against the code (A.15): all still open, the compiler's
+  by compiling small programs. Phase 112's "Where things stand" added: its programs for the
+  probe round, a STRUCTURE's initial values in a module's text (proposed for subtask 2), its
+  FORALL NOTIMPLs (proposed not planned), and PURE's and ELEMENTAL's unchecked rules (proposed
+  for subtask 2). Two findings: RUN's driver already calls a dependency's
+  `SHARE$name_INITIALIZE`, the C emulator's convention and not VMS's `LIB$INITIALIZE` psect,
+  which subtask 5 must settle and which may explain A.9.2's fault; and SHOW ASSEMBLER_FLAGS, a
+  second grammar entry with no handler. Three questions for the author (A.15's A to C).
+  Subtask 2 is next, after the answers.
