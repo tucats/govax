@@ -7916,23 +7916,28 @@ routine uses the nearest that makes sense and returns the success `STR$_ILLSTRPO
 `STR$_ILLSTRSPE`. A character passed to `STR$DUPL_CHAR` goes by `%REF`.
 
 The arithmetic routines, `STR$ADD`, `MUL`, `DIVIDE`, `RECIP`, and `ROUND`, work on
-decimal numbers of any length, each passed as three arguments: a sign (0 or 1), the power
-of ten its digits are multiplied by, and the digits, a string. A result comes back the same
-way, its digits without leading zeros, so -1000 plus .0002 is sign 1, exponent -4, and
-digits `9999998`. `STR$DIVIDE`'s seventh argument is the digits wanted after the decimal
-point and its eighth 1 to round or 0 to truncate; `STR$ROUND` keeps a number of significant
-digits. Digits that aren't digits signal `LIB$_INVARG`, and a zero divisor
-`STR$_DIVBY_ZER`:
+decimal numbers of any length, each passed as three arguments: a sign (0 or 1; only its
+low bit counts), the power of ten its digits are multiplied by, and the digits, a string
+read up to its first character that isn't a digit. A result comes back the same way.
+`STR$ADD`, `MUL`, and `RECIP` give their digits without leading zeros, their trailing
+zeros moved into the exponent: -1000 plus .0002 is sign 1, exponent -4, and digits
+`9999998`, and 999 plus 1 is digits `1` and exponent 3. `STR$DIVIDE`'s seventh argument is
+the digits wanted after the decimal point and its eighth 1 to round or 0 to truncate;
+`STR$ROUND` keeps a number of significant digits; `STR$RECIP`'s second number is a
+precision limit, the quotient's last place the first power of ten below it. A CHARACTER
+variable takes a shorter result right-justified, with zeros before it. A zero divisor
+signals `STR$_DIVBY_ZER`:
 
 ```fortran
       CHARACTER*20 C
       INTEGER CSIGN, CEXP, STATUS, STR$DIVIDE
-C     22 / 7 to six places, rounded: 3142857 times 10**-6.
+C     22 / 7 to six places, rounded: 3142857 times 10**-6,
+C     C '00000000000003142857'.
       STATUS = STR$DIVIDE(0, 0, '22', 0, 0, '7', 6, 1, CSIGN, CEXP, C)
 ```
 
-What the manuals leave open (a zero result's sign, how `STR$RECIP` reads its precision) is
-govax's choice until a VMS run settles it.
+Each rule is VMS 7.1's, from a probe of its routines (`testdata/str113`), but one: a
+precision limit of zero, from which VMS's `STR$RECIP` never returns, is `LIB$_INVARG`.
 
 **Condition handlers.** A handler is an INTEGER\*4 function of the signal array and the
 mechanism array, set with `CALL LIB$ESTABLISH(name)` and an `EXTERNAL name`. It's for the

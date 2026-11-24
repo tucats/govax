@@ -2,7 +2,8 @@ C The STR$ arithmetic routines from FORTRAN (Phase 113, subtask 7). Each
 C number is three arguments: a sign (0 or 1), the power of ten its digits
 C are multiplied by, and the digits, a string. A = -1000 and B = .0002 are
 C the manual's examples' numbers. A CHARACTER variable takes a result's
-C digits padded with blanks, and one too short for them is STR$_TRU.
+C digits right-justified, zeros before them, as VMS 7.1's routines write
+C them (subtask 13a), and one too short for them is STR$_TRU.
       PROGRAM STRMATH
       IMPLICIT NONE
       INCLUDE '($SSDEF)'
@@ -53,8 +54,7 @@ C     SHOW prints a result: its status, sign, exponent, and digits.
       INCLUDE '($SSDEF)'
       CHARACTER*(*) NAME, C
       INTEGER STATUS, CSIGN, CEXP
-      PRINT 100, NAME, STATUS .EQ. SS$_NORMAL, CSIGN, CEXP,
-     1  C(1:INDEX(C, ' ') - 1)
+      PRINT 100, NAME, STATUS .EQ. SS$_NORMAL, CSIGN, CEXP, C
 100   FORMAT (1X, A, L2, I3, I4, 1X, A)
       END
 

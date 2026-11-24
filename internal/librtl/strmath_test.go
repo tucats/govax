@@ -8,8 +8,8 @@ import (
 )
 
 // The STR$ arithmetic routines' own tests (Phase 113, subtask 7): the manuals'
-// examples through the shim table, and the arithmetic's rules alone.
-// testdata/str113's probe, run on VMS in subtask 12, is to settle the rest.
+// examples through the shim table, and the arithmetic's rules alone, as
+// testdata/str113's probe found VMS 7.1's (subtask 13).
 
 // number makes a decimal from its three parts.
 func number(neg bool, exp int64, digits string) decimal {
@@ -18,12 +18,12 @@ func number(neg bool, exp int64, digits string) decimal {
 		panic(digits)
 	}
 
-	return decimal{neg: neg, exp: exp, digits: x}
+	return decimal{neg: neg, exp: exp, digits: x, text: digits}
 }
 
 // sameDecimal reports whether d is sign, exponent, and digits.
 func sameDecimal(d decimal, neg bool, exp int64, digits string) bool {
-	return d.neg == neg && d.exp == exp && d.digits.String() == digits
+	return d.neg == neg && d.exp == exp && d.text == digits
 }
 
 // The addresses a call's arguments are laid out at.
@@ -162,9 +162,12 @@ func TestAddDecimals(t *testing.T) {
 		{number(false, 2, "5"), number(true, 0, "7"), false, 0, "493"},
 		{number(true, 2, "5"), number(false, 0, "7"), true, 0, "493"},
 		{number(false, 0, "7"), number(true, 0, "7"), false, 0, "0"},
+		{number(false, 3, "7"), number(true, 3, "7"), false, 0, "0"},
 		{number(false, 0, "0"), number(true, -3, "7"), true, -3, "7"},
-		{number(false, 1, "10"), number(false, 1, "0"), false, 1, "10"},
-		{number(false, 0, "007"), number(false, 0, "3"), false, 0, "10"},
+		{number(false, 1, "10"), number(false, 1, "0"), false, 2, "1"},
+		{number(false, 0, "007"), number(false, 0, "3"), false, 1, "1"},
+		{number(false, 0, "999"), number(false, 0, "1"), false, 3, "1"},
+		{number(true, 2, "0"), number(false, -2, "000"), false, 0, "0"},
 	}
 
 	for _, c := range cases {
@@ -173,9 +176,8 @@ func TestAddDecimals(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		got = got.normal()
 		if !sameDecimal(got, c.neg, c.exp, c.digits) {
-			t.Errorf("%+v + %+v = %v %d %s, want %v %d %s", c.a, c.b, got.neg, got.exp, got.digits, c.neg, c.exp, c.digits)
+			t.Errorf("%+v + %+v = %v %d %s, want %v %d %s", c.a, c.b, got.neg, got.exp, got.text, c.neg, c.exp, c.digits)
 		}
 	}
 
@@ -184,44 +186,101 @@ func TestAddDecimals(t *testing.T) {
 	}
 }
 
-func TestDivideDecimals(t *testing.T) {
+func TestMulDecimals(t *testing.T) {
 	cases := []struct {
 		a, b   decimal
-		places int64
-		round  bool
 		neg    bool
 		exp    int64
 		digits string
 	}{
-		{number(false, 0, "2"), number(false, 0, "3"), 4, false, false, -4, "6666"},
-		{number(false, 0, "2"), number(false, 0, "3"), 4, true, false, -4, "6667"},
-		{number(false, 0, "1"), number(false, 0, "8"), 2, true, false, -2, "13"},
-		{number(true, 0, "1"), number(false, 0, "8"), 2, true, true, -2, "13"},
-		{number(false, 0, "10"), number(false, 0, "4"), 0, true, false, 0, "3"},
-		{number(false, 0, "1"), number(false, 0, "3"), 0, false, false, 0, "0"},
-		{number(false, 0, "12345"), number(false, 0, "1"), -2, false, false, 2, "123"},
-		{number(false, 0, "1"), number(false, 9, "1"), 2, true, false, -2, "0"},
-		{number(false, -3, "1"), number(false, 0, "1"), 2, true, false, -2, "0"},
-		{number(false, -3, "5"), number(false, 0, "1"), 2, true, false, -2, "1"},
+		{number(false, 0, "25"), number(false, 0, "4"), false, 2, "1"},
+		{number(true, 0, "3"), number(false, 0, "0"), true, 0, "0"},
+		{number(false, 5, "0"), number(true, -2, "0"), true, 3, "0"},
+		{number(false, 2, "12"), number(false, -1, "5"), false, 2, "6"},
+		{number(false, 2147483647, "1"), number(false, 1, "1"), false, 2147483648, "1"},
 	}
 
 	for _, c := range cases {
-		got, err := divideDecimals(c.a, c.b, c.places, c.round)
+		got := mulDecimals(c.a, c.b)
+		if !sameDecimal(got, c.neg, c.exp, c.digits) {
+			t.Errorf("%+v * %+v = %v %d %s, want %v %d %s", c.a, c.b, got.neg, got.exp, got.text, c.neg, c.exp, c.digits)
+		}
+	}
+}
+
+func TestDivideDecimals(t *testing.T) {
+	cases := []struct {
+		a, b      decimal
+		places    int64
+		indicator int64
+		neg       bool
+		exp       int64
+		digits    string
+	}{
+		{number(false, 0, "2"), number(false, 0, "3"), 4, 0, false, -4, "6666"},
+		{number(false, 0, "2"), number(false, 0, "3"), 4, 1, false, -4, "6667"},
+		{number(false, 0, "2"), number(false, 0, "3"), 4, 2, false, -4, "666666"},
+		{number(false, 0, "2"), number(false, 0, "3"), 4, 3, false, -4, "6666666"},
+		{number(false, 0, "2"), number(false, 0, "3"), 4, -1, false, -4, "666"},
+		{number(false, 0, "1"), number(false, 0, "8"), 2, 1, false, -2, "13"},
+		{number(true, 0, "1"), number(false, 0, "8"), 2, 1, true, -2, "13"},
+		{number(false, 0, "10"), number(false, 0, "4"), 0, 1, false, 0, "3"},
+		{number(false, 0, "1"), number(false, 0, "3"), 0, 0, false, 0, "0"},
+		{number(true, 0, "1"), number(false, 0, "3"), 0, 0, true, 0, "0"},
+		{number(false, 0, "12345"), number(false, 0, "1"), -2, 0, false, 2, "123"},
+		{number(false, 0, "6"), number(false, 0, "2"), 2, 0, false, -2, "300"},
+		{number(false, -9, "1"), number(false, 0, "1"), 2, 1, false, -2, "0"},
+		{number(true, 0, "0"), number(false, 0, "5"), 2, 0, false, -2, "00"},
+	}
+
+	for _, c := range cases {
+		got, err := divideDecimals(c.a, c.b, c.places, c.indicator)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		if got.zero() {
-			got.neg = false
-		}
-
 		if !sameDecimal(got, c.neg, c.exp, c.digits) {
-			t.Errorf("%v / %v to %d: %v %d %s, want %v %d %s", c.a.digits, c.b.digits, c.places, got.neg, got.exp, got.digits, c.neg, c.exp, c.digits)
+			t.Errorf("%v / %v to %d, %d: %v %d %s, want %v %d %s", c.a.digits, c.b.digits, c.places, c.indicator,
+				got.neg, got.exp, got.text, c.neg, c.exp, c.digits)
 		}
 	}
 
-	if _, err := divideDecimals(number(false, 0, "1"), number(false, 0, "3"), 70000, false); err == nil {
+	if _, err := divideDecimals(number(false, 0, "1"), number(false, 0, "3"), 70000, 0); err == nil {
 		t.Error("70,000 places: want an error")
+	}
+}
+
+func TestRecipDecimal(t *testing.T) {
+	cases := []struct {
+		a, b   decimal
+		neg    bool
+		exp    int64
+		digits string
+	}{
+		{number(true, 3, "1"), number(false, -4, "2"), true, -3, "1"},
+		{number(false, 0, "3"), number(false, -4, "1"), false, -5, "33333"},
+		{number(false, 0, "6"), number(false, -4, "9"), false, -4, "1666"},
+		{number(false, 0, "6"), number(false, -4, "25"), false, -4, "1666"},
+		{number(false, 0, "8"), number(false, -4, "1"), false, -3, "125"},
+		{number(false, 0, "3"), number(false, 2, "1"), false, 0, "0"},
+		{number(false, 0, "3"), number(false, 0, "1"), false, -1, "3"},
+		{number(false, 0, "1"), number(false, -4, "1"), false, 0, "1"},
+	}
+
+	for _, c := range cases {
+		got, err := recipDecimal(c.a, c.b)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if !sameDecimal(got, c.neg, c.exp, c.digits) {
+			t.Errorf("1 / %v to %v e%d: %v %d %s, want %v %d %s", c.a.digits, c.b.digits, c.b.exp,
+				got.neg, got.exp, got.text, c.neg, c.exp, c.digits)
+		}
+	}
+
+	if _, err := recipDecimal(number(false, 0, "6"), number(false, -4, "0")); err == nil {
+		t.Error("a precision limit of 0: want an error")
 	}
 }
 
@@ -240,30 +299,33 @@ func TestRoundDecimal(t *testing.T) {
 		{number(false, 0, "125"), 2, false, 1, "13"},
 		{number(false, 0, "12"), 5, false, 0, "12"},
 		{number(false, 0, "95"), 1, false, 2, "1"},
+		{number(false, 0, "0099"), 1, false, 3, "0"},
+		{number(false, 5, "0"), 3, false, 5, "0"},
+		{number(false, 0, "12345"), 0, false, 0, "0"},
 	}
 
 	for _, c := range cases {
 		got := roundDecimal(c.a, c.places, c.truncate)
 		if !sameDecimal(got, false, c.exp, c.digits) {
-			t.Errorf("%v e%d to %d: %d %s, want %d %s", c.a.digits, c.a.exp, c.places, got.exp, got.digits, c.exp, c.digits)
+			t.Errorf("%v e%d to %d: %d %s, want %d %s", c.a.text, c.a.exp, c.places, got.exp, got.text, c.exp, c.digits)
 		}
 	}
 }
 
-func TestTrimZeros(t *testing.T) {
-	if got := trimZeros(number(false, -4, "1000")); !sameDecimal(got, false, -1, "1") {
-		t.Errorf("1000e-4 = %d %s, want -1 1", got.exp, got.digits)
+func TestNormal(t *testing.T) {
+	if got := number(false, -4, "1000").normal(); !sameDecimal(got, false, -1, "1") {
+		t.Errorf("1000e-4 = %d %s, want -1 1", got.exp, got.text)
 	}
 
-	if got := trimZeros(number(false, 0, "0")); !sameDecimal(got, false, 0, "0") {
-		t.Errorf("0 = %d %s", got.exp, got.digits)
+	if got := number(true, 3, "000").normal(); !sameDecimal(got, true, 3, "0") {
+		t.Errorf("-000e3 = %v %d %s, want a zero as it was", got.neg, got.exp, got.text)
 	}
 }
 
 func TestDecimalDigits(t *testing.T) {
-	for s, ok := range map[string]bool{"": true, "0": true, "0123": true, "12a": false, " 1": false, "1 ": false, "-1": false} {
-		if _, got := decimalDigits(s); got != ok {
-			t.Errorf("decimalDigits(%q) ok = %v, want %v", s, got, ok)
+	for s, want := range map[string]string{"": "", "0": "0", "0123": "0123", "12A": "12", " 12": "", "12 ": "12", "+12": "", "1.2": "1"} {
+		if got, _ := decimalDigits(s); got != want {
+			t.Errorf("decimalDigits(%q) = %q, want %q", s, got, want)
 		}
 	}
 }

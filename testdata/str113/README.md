@@ -38,7 +38,9 @@ digits are `0`), so the round took it out (`gen.go` says where it was). `vax/str
 the second run, of 117 cases; VMS's DCL wrote it after the first run's lines in the same file
 (`DEFINE/USER SYS$OUTPUT` of an existing file), which were taken off.
 
-It runs in Phase 113's probe round (subtask 12, `testdata/err113`), with the round's other programs. Until then
-`TestStr113Probe` (`internal/console/str113_test.go`) runs it on govax and holds it to the
-manuals' examples; with VMS's output in `vax/str113-vax.txt`, it holds govax to that line for
-line, but for `expectedStr113Differences`.
+It ran in Phase 113's probe round (subtask 12, `testdata/err113`), with the round's other
+programs. `TestStr113Probe` (`internal/console/str113_test.go`) runs it on govax and holds it to
+`vax/str113-vax.txt` line for line, but for `expectedStr113Differences` (ROUND to -1 places,
+whose VMS result is 65,535 bytes from beyond the digits, and the registers STR$ELEMENT_R8
+leaves). Subtask 13 made govax's routines VMS's; `internal/librtl/strmath.go` says what the run
+showed.

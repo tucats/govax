@@ -2136,3 +2136,12 @@ nothing is changed until a program needs it. `TestLink82Oracle` lists the case.
   SYS$OUTPUT whatever the user-mode name says; an image run by RUN does follow it. Found by
   Phase 113's probe round rehearsal (`testdata/err113`), which no longer depends on it.
 - **Status**: open.
+
+### [Phase 113] STR$RECIP with a precision limit of zero, and STR$ROUND to negative places
+
+- **Where**: `internal/librtl/strmath.go`'s `recipDecimal` and `roundDecimal`.
+- **What**: VMS 7.1's STR$RECIP never returns when the precision limit's digits are zero (its
+  places grow until a power of ten is below the limit), and its STR$ROUND to -1 places writes
+  65,535 bytes read from beyond the operand's digits (`testdata/str113`'s run). govax signals
+  LIB$_INVARG for the first and gives a zero, as for 0 places, for the second.
+- **Status**: by choice.

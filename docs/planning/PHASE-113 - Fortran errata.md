@@ -721,7 +721,17 @@ A.8.1 is not planned.
     - 12c. The debugger round (A.8.6) (done 2026-11-24).
     - 12d. The session on VMS 7.1: `testdata/err113`, `testdata/ftn86` (round 6), and
       `testdata/f90r` (round 3), with 12b's and 12c's; the results copied back (done 2026-11-24).
-13. Its fixes, the ods2 header among them.
+13. Its fixes, the ods2 header among them. In parts (2026-11-24), each a subtask's size:
+    - 13a. STR$'s arithmetic to VMS's run (`testdata/str113`, `str113Compared`) (done 2026-11-24).
+    - 13b. The services to VMS's run (`testdata/svc113`, `svc113Compared`).
+    - 13c. ERR113's sections: LIB$INITIALIZE's arguments, MACRO's register names and
+      `.WARN`/`.ERROR`/`.PRINT`, DCL's messages, TYPE without carriage control, a full volume;
+      `TestErr113Procedure` held to `vax/err113.log`.
+    - 13d. The index file's growth (A.9.1): ods2 extending INDEXF.SYS as VMS's XQP does.
+    - 13e. FTNRTL to the FORRTL round (`testdata/for81`'s round 3 and the terminal's limits).
+    - 13f. The debugger to the debugger round (`testdata/dbg113`'s sessions).
+    - 13g. The FORTRAN rounds: `TestFTN86Oracle` on `testdata/ftn86`'s round 6 and
+      `TestF90ROracle` on `testdata/f90r`'s round 3, their awaiting lists emptied.
 14. The close-out.
 
 Each subtask may begin with a survey of its own, as earlier phases' did.
@@ -1350,3 +1360,36 @@ Each subtask may begin with a survey of its own, as earlier phases' did.
     - The debugger: VMS's debugger on GVDBG113, govax's image, wrote DBG113S's session to the
       byte.
   - Subtask 13, the fixes, is next.
+- **2026-11-24, subtask 13a (done):** STR$'s arithmetic made VMS 7.1's. Subtask 13 is split in
+  six (the subtask list): STR$, the services, ERR113's sections, the index file, FTNRTL, and the
+  debugger.
+  - *What VMS's run showed* (`internal/librtl/strmath.go`'s comments have each rule):
+    only a sign's bit 0 counts (2 positive, 3 and -1 negative); digits are read up to the first
+    character that isn't one (" 12" is 0, "12A" 12, "1.2" 1), never refused; ADD's, MUL's,
+    and RECIP's results lose leading zeros and move trailing zeros into the exponent; ADD's
+    and RECIP's zero is sign and exponent 0, MUL's keeps the sign and the exponents' sum (-3 times
+    0 is sign 1); exponents wrap as longwords with no condition; a fixed destination takes a
+    shorter result right-justified with zeros (`006`); a destination of no class is LIB$_INVARG,
+    nothing written; DIVIDE with too few arguments is LIB$_INVARG (the others STR$_WRONUMARG).
+  - *DIVIDE*: the quotient is truncated to places+indicator digits after the point, then, for
+    an indicator of exactly 1, rounded half up to places; its exponent is always -places (so 2
+    and 3 keep more digits, -1 one fewer); a zero dividend gives places+indicator zeros with sign
+    0 (`00`; the one case), a quotient that truncates to zero keeps its sign; a zero divisor
+    writes the sign and exponent before STR$_DIVBY_ZER.
+  - *RECIP*: the precision limit B gives the places p: from -B's exponent, one more while 10^-p
+    is not below B, so digits of 1 give one more place and any others none (1e-4: 5 places;
+    9e-4, 25e-4: 4). Digits of 0 loop for ever on VMS; govax gives LIB$_INVARG (DEVIATIONS.md).
+  - *ROUND*: the digits as written, leading zeros and all (0099 to 1 place is `0` times 10^3);
+    a number no longer than the places returned as it is; places 0 a plain zero; -1 a zero too,
+    where VMS's writes 65,535 bytes from beyond the digits (`expectedStr113Differences`, with
+    STR$ELEMENT_R8's registers, which are VMS's code's scratch values).
+  - `TestStr113Probe` now holds govax to `vax/str113-vax.txt` (`str113Compared`), the unit
+    tests in `internal/librtl/strmath_test.go` to the same answers; MANUAL.md's "Strings" says
+    what the routines do, and `testdata/str113`'s README.
+  - *STRMATH* (`testdata/fortran/strmath.for`) assumed blank padding: its SHOW printed
+    `C(1:INDEX(C, ' ') - 1)`. Round 6 ran it on VMS, and the PRINT stopped with OUTSTAOVE, as
+    govax's does now; SHOW prints the whole field, `strmath.out` the zero-padded digits
+    (`nof90.sum` rewritten for it; `ftn86AwaitingVMS` keeps STRMATH until 13g).
+  - VMS's `DEFINE/USER SYS$OUTPUT` of an existing file appending (12d's note) is not STR$'s;
+    it goes with ERR113's sections, 13c.
+  - Subtask 13b, the services, is next.

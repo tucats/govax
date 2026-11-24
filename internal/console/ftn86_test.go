@@ -273,7 +273,10 @@ var ftn86VMSDifferences = map[string]string{
 
 // ftn86AwaitingVMS are corpus programs newer than VMS's last run of the procedure, which
 // the next VMS round is to run: RECARRAYS, Phase 105's subtask 5a, RECDYN, 5b, and
-// ZEROVAX, Phase 112's subtask 12, and STRMATH, Phase 113's subtask 7.
+// ZEROVAX, Phase 112's subtask 12, and STRMATH, Phase 113's subtask 7. (Round 6 ran
+// STRMATH as it was then: VMS's STR$ wrote its CHARACTER results zero-padded, so SHOW's
+// INDEX found no blank and the PRINT was OUTSTAOVE, as govax's is since subtask 13a; the
+// program now prints the whole field.)
 var ftn86AwaitingVMS = []string{"RECARRAYS", "RECDYN", "ZEROVAX", "STRMATH"}
 
 // ftn86NewModules are FTNRTL's modules newer than VMS's last run of the procedure, each a

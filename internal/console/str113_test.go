@@ -9,20 +9,24 @@ import (
 
 // The Phase 113 probe of STR$'s arithmetic (docs/planning/PHASE-113, subtask
 // 7): testdata/str113's str113.mar calls STR$ADD, STR$MUL, STR$DIVIDE,
-// STR$RECIP, STR$ROUND, and STR$ELEMENT_R8 case by case. Until subtask 12 runs
-// it on VMS, govax's run is held to the manuals' examples, the lines the
-// manuals print; with vax/str113-vax.txt in place, it is held to VMS's output
-// line for line, but for expectedStr113Differences.
+// STR$RECIP, STR$ROUND, STR$ELEMENT_R8, and STR$MATCH_WILD case by case.
+// govax's run is held to VMS 7.1's, vax/str113-vax.txt (subtask 12d), line for
+// line, but for expectedStr113Differences.
 
 // str113Compared turns on the comparison with VMS's run. VMS's output came back
-// in Phase 113's subtask 12d; subtask 13 makes govax's routines VMS's and then
-// sets it. Until then the run is held to the manuals' examples, and the lines
-// that differ from VMS's are only counted.
-const str113Compared = false
+// in Phase 113's subtask 12d, and subtask 13 made govax's routines VMS's. Off,
+// the run is held to the manuals' examples, and the lines that differ from
+// VMS's are only counted.
+const str113Compared = true
 
 // expectedStr113Differences are the lines of VMS's output govax doesn't
 // reproduce, by the case's name and the line's first word, each with why.
-var expectedStr113Differences = map[string]string{}
+var expectedStr113Differences = map[string]string{
+	"ROUND 12345 -1/CS:":               "VMS's ROUND to -1 places reads 65,535 bytes from beyond the digits; govax gives a zero, as for 0",
+	"ROUND 12345 -1/D:":                "VMS's ROUND to -1 places reads 65,535 bytes from beyond the digits; govax gives a zero, as for 0",
+	"ELEMENT_R8 value (JSB)/REGS:":     "the registers STR$ELEMENT_R8 leaves are VMS's code's scratch values",
+	"ELEMENT_R8 reference (JSB)/REGS:": "the registers STR$ELEMENT_R8 leaves are VMS's code's scratch values",
+}
 
 // str113Manual is each manual example's case and the lines it prints: R0, the
 // result's sign and exponent, and its digits.

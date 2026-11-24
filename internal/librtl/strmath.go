@@ -2,7 +2,6 @@ package librtl
 
 import (
 	"errors"
-	"math"
 	"math/big"
 	"strings"
 
@@ -10,66 +9,91 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// The STR$ arithmetic routines (docs/planning/PHASE-113, subtask 7): STR$ADD,
-// STR$MUL, STR$DIVIDE, STR$RECIP, and STR$ROUND, written from the VMS 5.0 and
-// OpenVMS 7.3 STR$ manuals. Each number is passed in three arguments, all by
-// reference but the digits: a sign (a longword, 0 positive and 1 negative), an
-// exponent (a signed longword, the power of 10 the digits are multiplied by),
-// and the digits (a string of unsigned decimal digits, by descriptor). So the
-// manual's example -1000 is sign 1, exponent 3, digits "1", and .0002 is sign 0,
-// exponent -4, digits "2". A result comes back the same way, its digits written
-// to the destination by its class as every STR$ routine writes (STR$_TRU when
-// they don't fit).
+// The STR$ arithmetic routines (docs/planning/PHASE-113, subtasks 7 and 13):
+// STR$ADD, STR$MUL, STR$DIVIDE, STR$RECIP, and STR$ROUND, written from the VMS
+// 5.0 and OpenVMS 7.3 STR$ manuals and made VMS 7.1's by testdata/str113's
+// probe. Each number is passed in three arguments, all by reference but the
+// digits: a sign (a longword, 0 positive and 1 negative), an exponent (a signed
+// longword, the power of 10 the digits are multiplied by), and the digits (a
+// string of unsigned decimal digits, by descriptor). So the manual's example
+// -1000 is sign 1, exponent 3, digits "1", and .0002 is sign 0, exponent -4,
+// digits "2". A result comes back the same way.
 //
 // The arithmetic is exact, in math/big integers: a number is its digits as an
 // integer and its exponent, so adding aligns the two on the smaller exponent and
-// multiplying adds the exponents. Only DIVIDE, RECIP, and ROUND give up digits,
-// each by its own rule (below). What the manuals don't settle is govax's own
-// choice, unconfirmed until testdata/str113's probe runs on VMS (subtask 12):
+// multiplying adds the exponents. What VMS 7.1 showed (the probe's log):
 //
-//   - a result's digits have no leading zeros; zero is "0" with exponent 0 and
-//     sign 0, whatever signs and exponents made it;
-//   - digits that aren't all decimal digits, and a sign other than 0 or 1, are
-//     LIB$_INVARG (the manuals list it, without saying for what); an empty digit
-//     string is zero;
-//   - a result whose exponent doesn't fit in a longword is LIB$_INVARG, and one
-//     with more than 65,535 digits STR$_STRTOOLON, as the other STR$ routines'
-//     results that long are;
-//   - too few arguments is STR$_WRONUMARG, which the manuals list.
+//   - only bit 0 of a sign counts: 2 is positive, 3 and -1 negative;
+//   - the digits are read up to the first character that isn't a digit, so
+//     " 12" is 0, "12A" and "12 " are 12, and "1.2" is 1; nothing is refused;
+//   - ADD's, MUL's, and RECIP's results lose their leading zeros, and their
+//     trailing zeros go into the exponent (999 + 1 is 1 times 10^3); ADD's and
+//     RECIP's zero is "0" with sign and exponent 0, MUL's keeps the product's
+//     sign and the exponents' sum;
+//   - an exponent wraps as a longword does, without a condition;
+//   - DIVIDE's and ROUND's results are as their rules (below) leave them;
+//   - a fixed-length destination shorter result is padded with zeros on the
+//     left ("006"), a longer one truncated on the right with STR$_TRU;
+//     a destination of no string class is LIB$_INVARG, nothing written;
+//   - too few arguments is STR$_WRONUMARG, but DIVIDE's LIB$_INVARG.
+//
+// A result with more than 65,535 digits is STR$_STRTOOLON, as the other STR$
+// routines' results that long are (unconfirmed).
 
 var (
 	strDivByZer = vmsdef.LibrarySymbols["STR$_DIVBY_ZER"]
 
-	// errBadDecimal is a sign or a digit string the routines can't read.
-	errBadDecimal = errors.New("not a decimal number")
-
-	// errExponentRange is a result whose exponent isn't a longword.
-	errExponentRange = errors.New("exponent out of range")
-
 	// errTooManyDigits is a result longer than any string.
 	errTooManyDigits = errors.New("too many digits")
+
+	// errNoPrecision is RECIP's precision limit of zero, which VMS 7.1's
+	// STR$RECIP never returns from.
+	errNoPrecision = errors.New("a precision limit of zero")
 
 	ten = big.NewInt(10)
 )
 
 // decimal is one number: digits times 10 to the power exp, negative if neg.
+// text is the digits as they were read or are to be written (ROUND keeps an
+// operand's leading zeros); digits is their value.
 type decimal struct {
 	neg    bool
 	exp    int64
 	digits *big.Int // never negative
+	text   string
 }
 
 // zero reports whether d is zero.
 func (d decimal) zero() bool { return d.digits.Sign() == 0 }
 
-// normal is d as the routines return it: zero is "0", exponent 0, sign 0.
+// made is a result of value x, its text x's digits.
+func made(neg bool, exp int64, x *big.Int) decimal {
+	return decimal{neg: neg, exp: exp, digits: x, text: x.String()}
+}
+
+// normal is d as ADD, MUL, and RECIP return it: no leading zeros, its trailing
+// zeros moved into the exponent. A zero is left as it is.
 func (d decimal) normal() decimal {
 	if d.zero() {
-		return decimal{digits: new(big.Int)}
+		return made(d.neg, d.exp, new(big.Int))
 	}
 
-	return d
+	x, q, r := new(big.Int).Set(d.digits), new(big.Int), new(big.Int)
+	exp := d.exp
+
+	for {
+		q.QuoRem(x, ten, r)
+		if r.Sign() != 0 {
+			return made(d.neg, exp, x)
+		}
+
+		x.Set(q)
+		exp++
+	}
 }
+
+// plainZero is the zero ADD and RECIP return: sign and exponent 0.
+func plainZero() decimal { return made(false, 0, new(big.Int)) }
 
 // powerOfTen is 10 to the power n, n not negative.
 func powerOfTen(n int64) *big.Int {
@@ -85,19 +109,23 @@ func decimalLength(x *big.Int) int64 {
 	return int64(len(x.String()))
 }
 
-// decimalDigits reads a digit string: decimal digits only, an empty string zero.
-func decimalDigits(s string) (*big.Int, bool) {
-	if strings.Trim(s, "0123456789") != "" {
-		return nil, false
+// decimalDigits reads a digit string as VMS's routines do: the digits before
+// the first character that isn't one, an empty string or none zero. It returns
+// the digits read and their value.
+func decimalDigits(s string) (string, *big.Int) {
+	n := 0
+	for n < len(s) && s[n] >= '0' && s[n] <= '9' {
+		n++
 	}
 
+	s = s[:n]
 	if s == "" {
-		return new(big.Int), true
+		return s, new(big.Int)
 	}
 
-	x, ok := new(big.Int).SetString(s, 10)
+	x, _ := new(big.Int).SetString(s, 10)
 
-	return x, ok
+	return s, x
 }
 
 // readDecimal reads one number from its three arguments, sign first, as the
@@ -118,18 +146,15 @@ func readDecimal(env *corevms.Environment, signAddr, expAddr, digitsAddr uint32)
 		return decimal{}, err
 	}
 
-	digits, ok := decimalDigits(s)
-	if !ok || sign > 1 {
-		return decimal{}, errBadDecimal
-	}
+	text, digits := decimalDigits(s)
 
-	return decimal{neg: sign == 1, exp: int64(exp), digits: digits}, nil
+	return decimal{neg: sign&1 != 0, exp: int64(exp), digits: digits, text: text}, nil
 }
 
 // arithmeticFailure is strFailure for the arithmetic routines' own errors too.
 func arithmeticFailure(env *corevms.Environment, dst uint32, err error) (uint32, error) {
 	switch {
-	case errors.Is(err, errBadDecimal), errors.Is(err, errExponentRange):
+	case errors.Is(err, errNoPrecision):
 		return env.SignalFailure([]uint32{libInvArg}, libInvArg)
 	case errors.Is(err, errTooManyDigits):
 		return strTooLong(env, dst)
@@ -138,19 +163,46 @@ func arithmeticFailure(env *corevms.Environment, dst uint32, err error) (uint32,
 	}
 }
 
+// storeSignExponent writes a result's sign and exponent, the exponent wrapped
+// to a longword.
+func storeSignExponent(env *corevms.Environment, signAddr, expAddr uint32, neg bool, exp int64) error {
+	sign := uint32(0)
+	if neg {
+		sign = 1
+	}
+
+	mem, cpu := env.Memory(), env.CPU()
+	if err := mem.StoreLongword(cpu, expAddr, uint32(exp)); err != nil {
+		return writing(err)
+	}
+
+	if err := mem.StoreLongword(cpu, signAddr, sign); err != nil {
+		return writing(err)
+	}
+
+	return nil
+}
+
 // storeDecimal writes a result to its three arguments: the digits first (so a
 // destination of no string class changes nothing), then the exponent and the
 // sign. The status is the digits' store's, SS$_NORMAL or STR$_TRU.
 func storeDecimal(env *corevms.Environment, signAddr, expAddr, digitsAddr uint32, d decimal) (uint32, error) {
-	d = d.normal()
-
-	if d.exp < math.MinInt32 || d.exp > math.MaxInt32 {
-		return arithmeticFailure(env, digitsAddr, errExponentRange)
+	desc, err := readDescriptor(env, digitsAddr)
+	if errors.Is(err, errInvStrDes) {
+		return env.SignalFailure([]uint32{libInvArg}, libInvArg)
+	} else if err != nil {
+		return strFailure(env, err)
 	}
 
-	text := d.digits.String()
+	text := d.text
 	if len(text) > maxStringLength {
 		return arithmeticFailure(env, digitsAddr, errTooManyDigits)
+	}
+
+	// A fixed-length destination takes a shorter result right-justified, with
+	// zeros before it.
+	if desc.class != dscClassD && desc.class != dscClassVS && uint32(len(text)) < desc.length {
+		text = strings.Repeat("0", int(desc.length)-len(text)) + text
 	}
 
 	status, err := strPut(env, digitsAddr, text)
@@ -158,30 +210,23 @@ func storeDecimal(env *corevms.Environment, signAddr, expAddr, digitsAddr uint32
 		return status, err
 	}
 
-	sign := uint32(0)
-	if d.neg {
-		sign = 1
-	}
-
-	mem, cpu := env.Memory(), env.CPU()
-	if err := mem.StoreLongword(cpu, expAddr, uint32(int32(d.exp))); err != nil {
-		return memoryFault(env, writing(err))
-	}
-
-	if err := mem.StoreLongword(cpu, signAddr, sign); err != nil {
-		return memoryFault(env, writing(err))
+	if err := storeSignExponent(env, signAddr, expAddr, d.neg, d.exp); err != nil {
+		return memoryFault(env, err)
 	}
 
 	return status, nil
 }
 
-// addDecimals is a + b: both on the smaller exponent, then a signed sum.
+// addDecimals is a + b: both on the smaller exponent, then a signed sum. A zero
+// sum is a plain zero.
 func addDecimals(a, b decimal) (decimal, error) {
 	switch {
+	case a.zero() && b.zero():
+		return plainZero(), nil
 	case a.zero():
-		return b, nil
+		return b.normal(), nil
 	case b.zero():
-		return a, nil
+		return a.normal(), nil
 	}
 
 	exp := min(a.exp, b.exp)
@@ -205,38 +250,51 @@ func addDecimals(a, b decimal) (decimal, error) {
 	}
 
 	sum := x.Add(x, y)
+	if sum.Sign() == 0 {
+		return plainZero(), nil
+	}
+
 	neg := sum.Sign() < 0
 
-	return decimal{neg: neg, exp: exp, digits: sum.Abs(sum)}, nil
+	return made(neg, exp, sum.Abs(sum)).normal(), nil
 }
 
-// mulDecimals is a times b: the digits' product, the exponents' sum.
+// mulDecimals is a times b: the digits' product, the exponents' sum. A zero
+// product keeps both (VMS's -3 times 0 is "0" with sign 1).
 func mulDecimals(a, b decimal) decimal {
-	return decimal{
-		neg:    a.neg != b.neg,
-		exp:    a.exp + b.exp,
-		digits: new(big.Int).Mul(a.digits, b.digits),
-	}
+	return made(a.neg != b.neg, a.exp+b.exp, new(big.Int).Mul(a.digits, b.digits)).normal()
 }
 
-// divideDecimals is a over b to places digits after the decimal point (the
-// result's exponent -places), rounded half away from zero if round, else
-// truncated. b is not zero.
-func divideDecimals(a, b decimal, places int64, round bool) (decimal, error) {
+// divideDecimals is a over b, b not zero, by VMS 7.1's STR$DIVIDE: the
+// quotient truncated to places+indicator digits after the decimal point, then,
+// for an indicator of 1, rounded (half up) to places; its exponent is -places
+// whatever the indicator. So the indicator's 0 truncates and 1 rounds, as the
+// manual says, and VMS's 2 and 3 keep 2 and 3 more digits, and -1 one fewer,
+// at the same exponent (2/3 to 4 places with 2 is 666666 times 10^-4).
+// Leading zeros go, but a zero dividend's quotient is places+indicator zeros
+// (VMS's 0/5 to 2 places is "00"; unconfirmed beyond that case) with sign 0.
+func divideDecimals(a, b decimal, places, indicator int64) (decimal, error) {
 	exp := -places
+	digits := places + indicator
+
+	if a.zero() {
+		return decimal{exp: exp, digits: new(big.Int), text: strings.Repeat("0", int(max(1, min(digits, maxStringLength))))}, nil
+	}
 
 	// The quotient is a.digits * 10^k / b.digits.
-	k := a.exp - b.exp + places
+	k := a.exp - b.exp + digits
 	lenA, lenB := decimalLength(a.digits), decimalLength(b.digits)
 
 	// The quotient is below 10^(lenA-lenB+1+k): past any string when that's
-	// too many digits, and below .1, so 0 either way, when that's -1 or less.
-	if lenA-lenB+1+k > maxStringLength+1 {
+	// too many digits, and 0 when that's 0 or less.
+	if lenA-lenB+1+k > maxStringLength+2 {
 		return decimal{}, errTooManyDigits
 	}
 
-	if a.zero() || lenA-lenB+1+k <= -1 {
-		return decimal{exp: exp, digits: new(big.Int)}, nil
+	neg := a.neg != b.neg
+
+	if lenA-lenB+1+k <= 0 {
+		return made(neg, exp, new(big.Int)), nil
 	}
 
 	num := new(big.Int).Set(a.digits)
@@ -248,59 +306,83 @@ func divideDecimals(a, b decimal, places int64, round bool) (decimal, error) {
 		den.Mul(den, powerOfTen(-k))
 	}
 
-	q, r := new(big.Int).QuoRem(num, den, new(big.Int))
-	if round && r.Sign() != 0 && r.Lsh(r, 1).Cmp(den) >= 0 {
-		q.Add(q, big.NewInt(1))
+	q := new(big.Int).Quo(num, den)
+	if indicator == 1 {
+		q.Add(q, big.NewInt(5))
+		q.Quo(q, ten)
 	}
 
-	return decimal{neg: a.neg != b.neg, exp: exp, digits: q}, nil
+	return made(neg, exp, q), nil
 }
 
-// roundDecimal keeps a's first places significant digits, rounding the rest
-// away (half away from zero) or truncating them. A carry that makes one more
-// digit (999 to 1000) drops the last zero into the exponent, so the result
-// never has more than places digits: the manual's 999.9998 to 3 is 100 times
-// 10, rounded, and 999, truncated.
+// recipDecimal is 1 / a, a not zero, to b's precision, by VMS 7.1's STR$RECIP:
+// the places p start at -b's exponent and grow until 10^-p is below b, so b's
+// digits of 1 give one more place than b's exponent says and any other digits
+// none (1e-4 gives 5 places, 9e-4 and 25e-4 give 4). The quotient is
+// truncated there and returned as ADD's are. Digits of 0 never satisfy the
+// rule: VMS loops for ever, govax gives LIB$_INVARG.
+func recipDecimal(a, b decimal) (decimal, error) {
+	if b.zero() {
+		return decimal{}, errNoPrecision
+	}
+
+	p := -b.exp
+	if b.digits.Cmp(big.NewInt(1)) == 0 {
+		p++
+	}
+
+	q, err := divideDecimals(made(false, 0, big.NewInt(1)), a, p, 0)
+	if err != nil {
+		return decimal{}, err
+	}
+
+	if q.zero() {
+		return plainZero(), nil
+	}
+
+	return q.normal(), nil
+}
+
+// roundDecimal keeps a's first places digits as written, leading zeros and all
+// (VMS's 0099 to one place is "0" times 10^3), rounding the rest away (half up)
+// or truncating them. A carry that makes one more digit (999 to 1000) drops the
+// last zero into the exponent, so the result never has more than places digits:
+// the manual's 999.9998 to 3 is 100 times 10, rounded, and 999, truncated. A
+// number with no more digits than places is returned as it is, and places
+// below 1 is a plain zero (VMS 7.1's for 0; its -1 is a string of 65,535
+// characters read from beyond the digits, which govax doesn't copy).
 func roundDecimal(a decimal, places int64, truncate bool) decimal {
-	s := a.digits.String()
-	if int64(len(s)) <= places || a.zero() {
+	if places < 1 {
+		return plainZero()
+	}
+
+	s := a.text
+	if int64(len(s)) <= places {
 		return a
 	}
 
-	drop := int64(len(s)) - places
-	kept, _ := new(big.Int).SetString(s[:places], 10)
-	exp := a.exp + drop
+	kept := []byte(s[:places])
+	exp := a.exp + int64(len(s)) - places
 
 	if !truncate && s[places] >= '5' {
-		kept.Add(kept, big.NewInt(1))
+		i := len(kept) - 1
+		for ; i >= 0 && kept[i] == '9'; i-- {
+			kept[i] = '0'
+		}
 
-		if decimalLength(kept) > places {
-			kept.Quo(kept, ten)
+		if i >= 0 {
+			kept[i]++
+		} else {
+			// Every digit carried: 99 becomes 100, kept as 10 with one more
+			// in the exponent.
+			kept = append([]byte{'1'}, kept[:len(kept)-1]...)
 			exp++
 		}
 	}
 
-	return decimal{neg: a.neg, exp: exp, digits: kept}
-}
+	_, x := decimalDigits(string(kept))
 
-// trimZeros takes a result's trailing zeros into its exponent: RECIP's result,
-// as the manual's example shows it (1 / 1000 to the fourth place is "1" times
-// 10^-3, not "10" times 10^-4).
-func trimZeros(d decimal) decimal {
-	if d.zero() {
-		return d
-	}
-
-	q, r := new(big.Int), new(big.Int)
-	for {
-		q.QuoRem(d.digits, ten, r)
-		if r.Sign() != 0 {
-			return d
-		}
-
-		d.digits = new(big.Int).Set(q)
-		d.exp++
-	}
+	return decimal{neg: a.neg, exp: exp, digits: x, text: string(kept)}
 }
 
 // twoOperands reads a and b from the first six arguments.
@@ -353,13 +435,14 @@ func strMul(env *corevms.Environment, argv []uint32) (uint32, error) {
 
 // strDivide is STR$DIVIDE: asign, aexp, adigits, bsign, bexp, bdigits,
 // total-digits (the digits after the decimal point), round-truncate-indicator
-// (bit 0: 1 rounds, 0 truncates), csign, cexp, cdigits. The quotient's
-// exponent is -total-digits, its digits as many as that takes (the manual's
-// -1000 / .0002 to 3 is 5000000000 times 10^-3). A zero divisor is
-// STR$_DIVBY_ZER.
+// (0 truncates, 1 rounds; divideDecimals says what the others do), csign,
+// cexp, cdigits. The quotient's exponent is -total-digits, its digits as many
+// as that takes (the manual's -1000 / .0002 to 3 is 5000000000 times 10^-3).
+// Too few arguments is LIB$_INVARG, and a zero divisor STR$_DIVBY_ZER after
+// the result's sign and exponent are written (VMS 7.1's).
 func strDivide(env *corevms.Environment, argv []uint32) (uint32, error) {
 	if len(argv) < 11 {
-		return wrongArgCount(env, argv, "STR$DIVIDE")
+		return env.SignalFailure([]uint32{libInvArg}, libInvArg)
 	}
 
 	a, b, err := twoOperands(env, argv)
@@ -372,16 +455,20 @@ func strDivide(env *corevms.Environment, argv []uint32) (uint32, error) {
 		return strFailure(env, err)
 	}
 
-	indicator, err := env.Memory().LoadLongword(env.CPU(), argv[7])
+	indicator, err := signedAt(env, argv[7])
 	if err != nil {
 		return strFailure(env, err)
 	}
 
 	if b.zero() {
+		if err := storeSignExponent(env, argv[8], argv[9], a.neg != b.neg, -int64(places)); err != nil {
+			return memoryFault(env, err)
+		}
+
 		return env.SignalFailure([]uint32{strDivByZer}, strDivByZer)
 	}
 
-	c, err := divideDecimals(a, b, int64(places), indicator&1 != 0)
+	c, err := divideDecimals(a, b, int64(places), int64(indicator))
 	if err != nil {
 		return arithmeticFailure(env, argv[10], err)
 	}
@@ -389,11 +476,8 @@ func strDivide(env *corevms.Environment, argv []uint32) (uint32, error) {
 	return storeDecimal(env, argv[8], argv[9], argv[10], c)
 }
 
-// strRecip is STR$RECIP: asign, aexp, adigits, then b, whose exponent is the
-// precision (1 / a to the place b's last digit is in), then c. The quotient is
-// truncated there and its trailing zeros taken into the exponent, so the
-// manual's 1 / -1000 to .0002's place is -1 times 10^-3. Only b's exponent is
-// used (unconfirmed, as is truncating). A zero a is STR$_DIVBY_ZER.
+// strRecip is STR$RECIP: asign, aexp, adigits, then b, the precision limit
+// (recipDecimal), then c. A zero a is STR$_DIVBY_ZER.
 func strRecip(env *corevms.Environment, argv []uint32) (uint32, error) {
 	if len(argv) < 9 {
 		return wrongArgCount(env, argv, "STR$RECIP")
@@ -408,19 +492,16 @@ func strRecip(env *corevms.Environment, argv []uint32) (uint32, error) {
 		return env.SignalFailure([]uint32{strDivByZer}, strDivByZer)
 	}
 
-	one := decimal{digits: big.NewInt(1)}
-
-	c, err := divideDecimals(one, a, -b.exp, false)
+	c, err := recipDecimal(a, b)
 	if err != nil {
 		return arithmeticFailure(env, argv[8], err)
 	}
 
-	return storeDecimal(env, argv[6], argv[7], argv[8], trimZeros(c))
+	return storeDecimal(env, argv[6], argv[7], argv[8], c)
 }
 
 // strRound is STR$ROUND: places (significant digits kept), flags (bit 0: 1
-// truncates, 0 rounds), asign, aexp, adigits, csign, cexp, cdigits. Places
-// below 1 is LIB$_INVARG (unconfirmed).
+// truncates, 0 rounds), asign, aexp, adigits, csign, cexp, cdigits.
 func strRound(env *corevms.Environment, argv []uint32) (uint32, error) {
 	if len(argv) < 8 {
 		return wrongArgCount(env, argv, "STR$ROUND")
@@ -439,10 +520,6 @@ func strRound(env *corevms.Environment, argv []uint32) (uint32, error) {
 	a, err := readDecimal(env, argv[2], argv[3], argv[4])
 	if err != nil {
 		return arithmeticFailure(env, argv[7], err)
-	}
-
-	if places < 1 {
-		return arithmeticFailure(env, argv[7], errBadDecimal)
 	}
 
 	return storeDecimal(env, argv[5], argv[6], argv[7], roundDecimal(a, int64(places), flags&1 != 0))
