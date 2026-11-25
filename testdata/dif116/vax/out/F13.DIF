@@ -1,0 +1,18 @@
+-------------------------------------------------------------------------------
+File DUA1:[DIF116.IN]F01.A;1           |  File DUA1:[DIF116.IN]F01.B;1         
+------------------- 5 ------------------------------------- 5 -----------------
+data line 5                            |  data line 5, revised                 
+------------------- 16 ------------------------------------ 16 ----------------
+                                       |  inserted one                         
+                                       |  inserted two                         
+------------------- 26 ------------------------------------ 28 ----------------
+data line 26                           |                                       
+data line 27                           |                                       
+-------------------------------------------------------------------------------
+
+Number of difference sections found: 3
+Number of difference records found: 5
+
+DIFFERENCES /IGNORE=()/WIDTH=80/OUTPUT=DUA1:[DIF116.OUT]F13.DIF;1/PARALLEL-
+    DUA1:[DIF116.IN]F01.A;1-
+    DUA1:[DIF116.IN]F01.B;1

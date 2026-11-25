@@ -33,6 +33,8 @@ DIFFERENCES (the phase doc's A.3):
 | `dif116.com` | The run: 859 cases in sections, each listing to `[DIF116.OUT]case.DIF` (or, for errors, to the log), then `$STATUS` and its message |
 | `dif116t.com` | The terminal cases, run by hand |
 | `exchange.cmd`, `copyout.cmd` | The govax console scripts that build the exchange volume and bring the results back |
+| `dif116b.com`, `exchange2.cmd`, `copyout2.cmd` | Round 2: the cases round 1 didn't reach, and its scripts |
+| `vax/` | VMS 7.1's answers: `dif116.log` (round 1), `terminal.log`, `out/` (the listings) |
 
 Each case in the log starts with a `#### CASE id: title` line, then the
 command (the procedure runs with SET VERIFY), any messages, and a
@@ -101,9 +103,63 @@ system group).
    This copies the log to `vax/dif116.log` and every listing to
    `vax/out/`.
 
+## Round 1 (2026-11-25)
+
+The author ran steps 1 to 6. `dif116.com` ended at case N60: its command
+was a 285-byte line, longer than DCL reads from a procedure
+(`%RMS-W-RTB`), so 260 of the 859 cases ran (`vax/dif116.log`, and 207
+listings in `vax/out/`). Its status lines are also wrong: `$STATUS` is a
+string, so `F$FAO("%X!XL",S)` printed the string's address
+(`%X7FFEC964`) every time; the status is the number in `F$MESSAGE`'s
+text, which doesn't know DIFFERENCES' messages (`%DIFF-I-NOMSG, Message
+number 006C8013`). `vax/terminal.log` is `dif116t.com`'s session.
+(`dif116.com` as `gen.go` writes it now breaks long lines before a slash
+or after a blank; the lines it ran are unchanged.)
+
+## Round 2
+
+`dif116b.com` runs the cases from N60 on, no line longer than 200
+characters, each status written as the string it is. It leaves round
+1's listings where they are.
+
+1. **Add it to the exchange volume**, from the repository root:
+
+       go run ./cmd/govax --profile tbprobe --system-file none console < testdata/dif116/exchange2.cmd
+
+2. **Attach** the volume to the simh VAX again (`attach rq1
+   testdata/disks/dif116-exchange.dsk`).
+
+3. **As SYSTEM**:
+
+       $ MOUNT DUA1: DIF116
+       $ SET DEFAULT DUA1:[DIF116]
+       $ @DIF116B/OUTPUT=DIF116B.LOG
+
+   Its last line is `DIF116B FINISHED`.
+
+4. **By hand**, at the `$` prompt (not in a procedure, where DCL doesn't
+   prompt: round 1's `%DCL-W-INSFPRM`), with the terminal's text kept:
+
+       $ SET DEFAULT DUA1:[DIF116.IN]
+       $ DIFFERENCES
+
+   answering whatever it asks with `A02.A`, then `A02.B`; then
+
+       $ DIFFERENCES A02.A
+
+   (a file with no other version) and `SET DEFAULT DUA1:[DIF116]`.
+   Paste the text at the end of `testdata/dif116/vax/terminal.log`.
+
+5. **Dismount**, detach, and bring the results back:
+
+       $ DISMOUNT DUA1:
+
+       go run ./cmd/govax --profile tbprobe --system-file none console < testdata/dif116/copyout2.cmd
+       for f in testdata/dif116/vax/out/*\;1; do mv "$f" "${f%;1}"; done
+
 ## Rehearsal on govax
 
-`dif116.com` runs to its end on govax (2026-11-25), every DIFFERENCES
+`dif116.com` and `dif116b.com` run to their ends on govax (2026-11-25), every DIFFERENCES
 an unknown verb until subtask 3: the procedure's other lines work, and
 the exchange volume's records are what `cases.txt` says (DUMP/RECORD of
 trailing blanks, empty files, form feeds, and the fixed files' every

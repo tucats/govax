@@ -1,0 +1,19 @@
+************
+File DUA1:[DIF116.IN]L05.A;1
+   11   only one
+   12   entry 12
+******
+File DUA1:[DIF116.IN]L05.B;1
+   11   one
+   12   two
+   13   three
+   14   four
+   15   entry 12
+************
+
+Number of difference sections found: 1
+Number of difference records found: 4
+
+DIFFERENCES /IGNORE=()/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]L05.DIF;1-
+    DUA1:[DIF116.IN]L05.A;1-
+    DUA1:[DIF116.IN]L05.B;1

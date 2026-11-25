@@ -1,0 +1,40 @@
+************
+File DUA1:[DIF116.IN]F01.B;1
+    1   data line 1
+    2   data line 2
+    3   data line 3
+    4   data line 4
+    5 # data line 5, revised
+    6   data line 6
+    7   data line 7
+    8   data line 8
+    9   data line 9
+   10   data line 10
+   11   data line 11
+   12   data line 12
+   13   data line 13
+   14   data line 14
+   15   data line 15
+   16 # inserted one
+   17 # inserted two
+   18   data line 16
+   19   data line 17
+   20   data line 18
+   21   data line 19
+   22   data line 20
+   23   data line 21
+   24   data line 22
+   25   data line 23
+   26   data line 24
+   27   data line 25
+   28 # data line 28
+   29   data line 29
+   30   data line 30
+************
+
+Number of difference sections found: 3
+Number of difference records found: 5
+
+DIFFERENCES /IGNORE=()/OUTPUT=DUA1:[DIF116.OUT]F41.DIF;1-
+    DUA1:[DIF116.IN]F01.A;1-
+    DUA1:[DIF116.IN]F01.B;1/CHANGE_BAR=("#")

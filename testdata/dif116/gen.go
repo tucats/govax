@@ -111,6 +111,7 @@ func main() {
 	writeTerminal()
 	writeExchange()
 	writeCopyout()
+	writeRound2Scripts()
 }
 
 // layout is A.3's first and fourth questions: the merged listing's bytes for
@@ -951,16 +952,67 @@ $ SHOW DEFAULT
 $ DIRECTORY/SIZE V0*.TXT
 `
 
+// procedureHeadB starts dif116b.com, round 2: the same names, round 1's
+// listings left where they are.
+const procedureHeadB = `$ ! DIF116B.COM - Phase 116's probe of DIFFERENCES, round 2: the cases
+$ ! from N60 on, which round 1 didn't reach. Written by
+$ ! testdata/dif116/gen.go. Run it as SYSTEM, with the exchange volume
+$ ! mounted, from its [DIF116] directory:
+$ !
+$ !     $ SET DEFAULT DUA1:[DIF116]
+$ !     $ @DIF116B/OUTPUT=DIF116B.LOG
+$ !
+$ SET NOON
+$ SET VERIFY
+$ WRITE SYS$OUTPUT "######## ENVIRONMENT"
+$ WRITE SYS$OUTPUT F$GETSYI("VERSION"), " ", F$GETSYI("HW_NAME"), " ", F$GETSYI("NODENAME")
+$ WRITE SYS$OUTPUT F$TIME()
+$ TOP = F$PARSE("[000000]",,,"DEVICE")
+$ DEFINE DIF$TOP 'TOP'
+$ DEFINE DIF$OUT DIF$TOP:[DIF116.OUT]
+$ SHOW LOGICAL DIF$TOP
+$ SET DEFAULT DIF$TOP:[DIF116.IN]
+$ SHOW DEFAULT
+`
+
 // writeProcedure writes dif116.com: each case under a heading, its status,
 // and F$MESSAGE's text of it.
 func writeProcedure() {
+	write("dif116.com", procedure(procedureHead, "", statusRound1, "DIF116"))
+	write("dif116b.com", procedure(procedureHeadB, round2From, statusRound2, "DIF116B"))
+}
+
+// round2From is the first case round 1 didn't reach: its procedure ended
+// at N60, whose 285-byte line DCL couldn't read (RMS-W-RTB).
+const round2From = "N60"
+
+// statusRound1 is round 1's status line. It is wrong: $STATUS is a string
+// ("%X006C8013"), so F$FAO's !XL printed the string's address, the same
+// %X7FFEC964 on every line; F$MESSAGE's text still has the number.
+const statusRound1 = "$ WRITE SYS$OUTPUT \"STATUS \", F$FAO(\"%X!XL\",S), \" \", F$MESSAGE(S)\n"
+
+// statusRound2 writes the status as the string it is.
+const statusRound2 = "$ WRITE SYS$OUTPUT \"STATUS \", S, \" \", F$MESSAGE(S)\n"
+
+// procedure writes a run of the cases from the one named from (all if
+// from is ""), after head.
+func procedure(head, from, status, name string) string {
 	var b strings.Builder
 
-	b.WriteString(procedureHead)
+	b.WriteString(head)
 
 	section := ""
+	started := from == ""
 
 	for _, c := range cases {
+		if c.ID == from {
+			started = true
+		}
+
+		if !started {
+			continue
+		}
+
 		if c.Section != section {
 			section = c.Section
 			fmt.Fprintf(&b, "$ !\n$ WRITE SYS$OUTPUT \"######## %s\"\n", section)
@@ -981,7 +1033,7 @@ func writeProcedure() {
 		fmt.Fprintf(&b, "$ %s\n", dclLine(command))
 
 		b.WriteString("$ S = $STATUS\n")
-		b.WriteString("$ WRITE SYS$OUTPUT \"STATUS \", F$FAO(\"%X!XL\",S), \" \", F$MESSAGE(S)\n")
+		b.WriteString(status)
 
 		for _, p := range c.Post {
 			fmt.Fprintf(&b, "$ %s\n", p)
@@ -992,16 +1044,18 @@ func writeProcedure() {
 $ WRITE SYS$OUTPUT "######## THE LISTINGS"
 $ DIRECTORY/SIZE DIF$OUT:
 $ SET DEFAULT DIF$TOP:[DIF116]
-$ WRITE SYS$OUTPUT "DIF116 FINISHED"
+$ WRITE SYS$OUTPUT "` + name + ` FINISHED"
 $ SET NOVERIFY
 $ EXIT
 `)
 
-	write("dif116.com", b.String())
+	return b.String()
 }
 
 // dclLine breaks a command longer than 250 characters into continuation
-// lines at slashes, as DCL reads them.
+// lines, as DCL reads them: before a slash or after a blank, so no line
+// is longer than 200 characters. (DCL reads a procedure's records into a
+// buffer of about 255 bytes; round 1 stopped at a longer one.)
 func dclLine(command string) string {
 	if len(command) <= 250 {
 		return command
@@ -1010,9 +1064,13 @@ func dclLine(command string) string {
 	var out strings.Builder
 
 	for len(command) > 200 {
-		cut := strings.LastIndex(command[1:200], "/") + 1
+		cut := strings.LastIndexAny(command[1:200], "/ ") + 1
 		if cut == 0 {
-			break
+			log.Fatalf("no place to break %q", command)
+		}
+
+		if command[cut] == ' ' {
+			cut++
 		}
 
 		out.WriteString(command[:cut] + "-\n")
@@ -1144,4 +1202,34 @@ func write(name, text string) {
 	if err := os.WriteFile(filepath.Join(dir, name), []byte(text), 0o644); err != nil {
 		log.Fatal(err)
 	}
+}
+
+// writeRound2Scripts writes exchange2.cmd, which puts round 2's procedure on
+// the exchange volume beside round 1's results, and copyout2.cmd, which
+// brings round 2's log and every listing back.
+func writeRound2Scripts() {
+	write("exchange2.cmd", `! EXCHANGE2.CMD - adds Phase 116's round 2 procedure to dif116-exchange.dsk.
+! Written by testdata/dif116/gen.go. Run from the repository root:
+!
+!     go run ./cmd/govax --profile tbprobe --system-file none console < testdata/dif116/exchange2.cmd
+!
+MOUNT/WRITE DUA5 "testdata/disks/dif116-exchange.dsk"
+COPY "testdata/dif116/dif116b.com"/HOST DUA5:[DIF116]DIF116B.COM
+DIRECTORY/SIZE DUA5:[DIF116]
+DISMOUNT DUA5
+`)
+
+	write("copyout2.cmd", `! COPYOUT2.CMD - copies Phase 116's round 2 results off dif116-exchange.dsk
+! into testdata/dif116/vax (README.md). Written by testdata/dif116/gen.go.
+! Run from the repository root after the VAX runs round 2:
+!
+!     go run ./cmd/govax --profile tbprobe --system-file none console < testdata/dif116/copyout2.cmd
+!     for f in testdata/dif116/vax/out/*\;1; do mv "$f" "${f%;1}"; done
+!
+MOUNT DUA5 "testdata/disks/dif116-exchange.dsk"
+DIRECTORY/SIZE DUA5:[DIF116],[DIF116.OUT],[DIF116.SCR]
+COPY DUA5:[DIF116]DIF116B.LOG "testdata/dif116/vax/dif116b.log"/HOST/QUIET
+COPY DUA5:[DIF116.OUT]*.DIF "testdata/dif116/vax/out/"/HOST/QUIET
+DISMOUNT DUA5
+`)
 }

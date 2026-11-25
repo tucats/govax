@@ -1,0 +1,39 @@
+************
+File DUA1:[DIF116.IN]C1.FOR;1
+    2   y = 2 ; semi
+    3   * star line
+    4   / slash line
+    5   
+******
+File DUA1:[DIF116.IN]C2.FOR;1
+    2   y = 2 ; SEMI CHANGED
+    3   * STAR CHANGED
+    4   / SLASH CHANGED
+    5   
+************
+************
+File DUA1:[DIF116.IN]C1.FOR;1
+    9   z = 3 * star mid
+   10   w = 4 / slash mid
+   11   v = 5 V vee
+   12   u = 6 : colon
+   13   t = 7 , comma
+   14   s = 8 [left] r
+   15   plain 1
+******
+File DUA1:[DIF116.IN]C2.FOR;1
+    9   z = 3 * STAR CHANGED
+   10   w = 4 / SLASH CHANGED
+   11   v = 5 V VEE CHANGED
+   12   u = 6 : COLON CHANGED
+   13   t = 7 , COMMA CHANGED
+   14   s = 8 [LEFT] R
+   15   plain 1
+************
+
+Number of difference sections found: 2
+Number of difference records found: 9
+
+DIFFERENCES /IGNORE=(COMMENTS)/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]IC_FOR.DIF;1-
+    DUA1:[DIF116.IN]C1.FOR;1-
+    DUA1:[DIF116.IN]C2.FOR;1

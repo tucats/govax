@@ -1,0 +1,16 @@
+************
+File DUA1:[DIF116.IN]A06.A;1
+    1   record 1
+******
+File DUA1:[DIF116.IN]A06.B;1
+    1   new first
+    2   new second
+    3   record 1
+************
+
+Number of difference sections found: 1
+Number of difference records found: 2
+
+DIFFERENCES /IGNORE=()/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]A06.DIF;1-
+    DUA1:[DIF116.IN]A06.A;1-
+    DUA1:[DIF116.IN]A06.B;1

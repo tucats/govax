@@ -1,0 +1,26 @@
+-------------------------------------------------------------------------------
+File DUA1:[DIF116.IN]C1.TXT;1          |  File DUA1:[DIF116.IN]C2.TXT;1        
+------------------- 1 ------------------------------------- 1 -----------------
+x = 1 ! bang                           |  x = 1 ! BANG CHANGED                 
+y = 2 ; semi                           |  y = 2 ; SEMI CHANGED                 
+* star line                            |  * STAR CHANGED                       
+/ slash line                           |  / SLASH CHANGED                      
+C cee line                             |  C CEE CHANGED                        
+D dee line                             |  D DEE CHANGED                        
+c lower cee                            |  c LOWER CHANGED                      
+d lower dee                            |  d LOWER CHANGED                      
+z = 3 * star mid                       |  z = 3 * STAR CHANGED                 
+w = 4 / slash mid                      |  w = 4 / SLASH CHANGED                
+v = 5                                  |  v = 5                                
+u = 6 : colon                          |  u = 6 : COLON CHANGED                
+t = 7 , comma                          |  t = 7 , COMMA CHANGED                
+s = 8 [left] r                         |  s = 8 [LEFT] R                       
+-------------------------------------------------------------------------------
+
+Number of difference sections found: 1
+Number of difference records found: 14
+
+DIFFERENCES /IGNORE=(COMMENTS)/COMMENT_DELIMITERS=("V")/WIDTH=80/OUTPUT=-
+    DUA1:[DIF116.OUT]IE12.DIF;1/PARALLEL-
+    DUA1:[DIF116.IN]C1.TXT;1-
+    DUA1:[DIF116.IN]C2.TXT;1

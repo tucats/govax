@@ -1,0 +1,21 @@
+************
+File DUA1:[DIF116.IN]I01.A;1
+    3     two  spaces
+    4   tab	here
+    5   trail   
+    6   
+******
+File DUA1:[DIF116.IN]I01.B;1
+    3    two spaces
+    4   tab here
+    5   trail
+    6   
+    7   
+************
+
+Number of difference sections found: 1
+Number of difference records found: 4
+
+DIFFERENCES /IGNORE=(CASE,EXACT)/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]I10.DIF;1-
+    DUA1:[DIF116.IN]I01.A;1-
+    DUA1:[DIF116.IN]I01.B;1

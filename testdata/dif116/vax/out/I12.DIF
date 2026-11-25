@@ -1,0 +1,15 @@
+-----------------------------------------------------------------------------------------------------------------------------------
+File DUA1:[DIF116.IN]I01.A;1                                     |  File DUA1:[DIF116.IN]I01.B;1                                   
+-------------------------------- 1 --------------------------------------------------------------- 1 ------------------------------
+Alpha Beta                                                       |  alpha BETA                                                     
+x                                                                |  x                                                              
+  two  spaces                                                    |   two spaces                                                    
+tab     here                                                     |  tab here                                                       
+-----------------------------------------------------------------------------------------------------------------------------------
+
+Number of difference sections found: 1
+Number of difference records found: 4
+
+DIFFERENCES /IGNORE=(TRAILING_SPACES,BLANK_LINES)/OUTPUT=DUA1:[DIF116.OUT]I12.DIF;1/PARALLEL-
+    DUA1:[DIF116.IN]I01.A;1-
+    DUA1:[DIF116.IN]I01.B;1

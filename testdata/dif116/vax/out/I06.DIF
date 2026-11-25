@@ -1,0 +1,6 @@
+Number of difference sections found: 0
+Number of difference records found: 0
+
+DIFFERENCES /IGNORE=(SPACING,TRAILING_SPACES,CASE,BLANK_LINES)/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]I06.DIF;1-
+    DUA1:[DIF116.IN]I01.A;1-
+    DUA1:[DIF116.IN]I01.B;1

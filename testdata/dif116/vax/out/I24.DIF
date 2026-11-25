@@ -1,0 +1,16 @@
+************
+File DUA1:[DIF116.IN]I20.A;1
+    6   ab
+    7   body 3
+******
+File DUA1:[DIF116.IN]I20.B;1
+    6   ab
+    7   body 3
+************
+
+Number of difference sections found: 1
+Number of difference records found: 1
+
+DIFFERENCES /IGNORE=(HEADER=3)/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]I24.DIF;1-
+    DUA1:[DIF116.IN]I20.A;1-
+    DUA1:[DIF116.IN]I20.B;1

@@ -1,0 +1,669 @@
+$ @dif116T
+$ ! DIF116T.COM - Phase 116's probe: DIFFERENCES at a terminal.
+$ ! Written by testdata/dif116/gen.go. Run it at a terminal, from the
+$ ! exchange volume's [DIF116] directory, and keep everything the
+$ ! terminal shows (README.md, "The terminal"):
+$ !
+$ !     $ SET DEFAULT DUA1:[DIF116]
+$ !     $ @DIF116T
+$ !
+$ SET NOON
+$ SET VERIFY
+$ WIDTH = F$GETDVI("TT","DEVBUFSIZ")
+$ SET DEFAULT [.IN]
+$ SET TERMINAL/WIDTH=80
+$ DIFFERENCES F01.A F01.B
+************
+File DUA1:[DIF116.IN]F01.A;1
+    5   data line 5
+    6   data line 6
+******
+File DUA1:[DIF116.IN]F01.B;1
+    5   data line 5, revised
+    6   data line 6
+************
+************
+File DUA1:[DIF116.IN]F01.A;1
+   16   data line 16
+******
+File DUA1:[DIF116.IN]F01.B;1
+   16   inserted one
+   17   inserted two
+   18   data line 16
+************
+************
+File DUA1:[DIF116.IN]F01.A;1
+   26   data line 26
+   27   data line 27
+   28   data line 28
+******
+File DUA1:[DIF116.IN]F01.B;1
+   28   data line 28
+************
+
+Number of difference sections found: 3
+Number of difference records found: 5
+
+DIFFERENCES /IGNORE=()/MERGED=1-
+    DUA1:[DIF116.IN]F01.A;1-
+    DUA1:[DIF116.IN]F01.B;1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X006C8013"
+$ DIFFERENCES/WIDTH=132 F01.A F01.B
+************
+File DUA1:[DIF116.IN]F01.A;1
+    5   data line 5
+    6   data line 6
+******
+File DUA1:[DIF116.IN]F01.B;1
+    5   data line 5, revised
+    6   data line 6
+************
+************
+File DUA1:[DIF116.IN]F01.A;1
+   16   data line 16
+******
+File DUA1:[DIF116.IN]F01.B;1
+   16   inserted one
+   17   inserted two
+   18   data line 16
+************
+************
+File DUA1:[DIF116.IN]F01.A;1
+   26   data line 26
+   27   data line 27
+   28   data line 28
+******
+File DUA1:[DIF116.IN]F01.B;1
+   28   data line 28
+************
+
+Number of difference sections found: 3
+Number of difference records found: 5
+
+DIFFERENCES /IGNORE=()/WIDTH=132/MERGED=1-
+    DUA1:[DIF116.IN]F01.A;1-
+    DUA1:[DIF116.IN]F01.B;1
+$ DIFFERENCES/PARALLEL F01.A F01.B
+-------------------------------------------------------------------------------
+File DUA1:[DIF116.IN]F01.A;1           |  File DUA1:[DIF116.IN]F01.B;1         
+------------------- 5 ------------------------------------- 5 -----------------
+data line 5                            |  data line 5, revised                 
+------------------- 16 ------------------------------------ 16 ----------------
+                                       |  inserted one                         
+                                       |  inserted two                         
+------------------- 26 ------------------------------------ 28 ----------------
+data line 26                           |                                       
+data line 27                           |                                       
+-------------------------------------------------------------------------------
+
+Number of difference sections found: 3
+Number of difference records found: 5
+
+DIFFERENCES /IGNORE=()/PARALLEL-
+    DUA1:[DIF116.IN]F01.A;1-
+    DUA1:[DIF116.IN]F01.B;1
+$ DIFFERENCES/MODE=HEX F01.A F01.B
+************
+File DUA1:[DIF116.IN]F01.A;1
+
+RECORD NUMBER 5 (00000005) LENGTH 11 (0000000B) 
+
+            352065 6E696C20 61746164 data line 5..... 000000
+
+RECORD NUMBER 6 (00000006) LENGTH 11 (0000000B) 
+
+            362065 6E696C20 61746164 data line 6..... 000000
+******
+File DUA1:[DIF116.IN]F01.B;1
+
+RECORD NUMBER 5 (00000005) LENGTH 20 (00000014) 
+
+ 76657220 2C352065 6E696C20 61746164 data line 5, rev 000000
+                            64657369 ised............ 000010
+
+RECORD NUMBER 6 (00000006) LENGTH 11 (0000000B) 
+
+            362065 6E696C20 61746164 data line 6..... 000000
+************
+************
+File DUA1:[DIF116.IN]F01.A;1
+
+RECORD NUMBER 16 (00000010) LENGTH 12 (0000000C) 
+
+          36312065 6E696C20 61746164 data line 16.... 000000
+******
+File DUA1:[DIF116.IN]F01.B;1
+
+RECORD NUMBER 16 (00000010) LENGTH 12 (0000000C) 
+
+          656E6F20 64657472 65736E69 inserted one.... 000000
+
+RECORD NUMBER 17 (00000011) LENGTH 12 (0000000C) 
+
+          6F777420 64657472 65736E69 inserted two.... 000000
+
+RECORD NUMBER 18 (00000012) LENGTH 12 (0000000C) 
+
+          36312065 6E696C20 61746164 data line 16.... 000000
+************
+************
+File DUA1:[DIF116.IN]F01.A;1
+
+RECORD NUMBER 26 (0000001A) LENGTH 12 (0000000C) 
+
+          36322065 6E696C20 61746164 data line 26.... 000000
+
+RECORD NUMBER 27 (0000001B) LENGTH 12 (0000000C) 
+
+          37322065 6E696C20 61746164 data line 27.... 000000
+
+RECORD NUMBER 28 (0000001C) LENGTH 12 (0000000C) 
+
+          38322065 6E696C20 61746164 data line 28.... 000000
+******
+File DUA1:[DIF116.IN]F01.B;1
+
+RECORD NUMBER 28 (0000001C) LENGTH 12 (0000000C) 
+
+          38322065 6E696C20 61746164 data line 28.... 000000
+************
+
+Number of difference sections found: 3
+Number of difference records found: 5
+
+DIFFERENCES /IGNORE=()/MERGED=1/MODE=(HEXADECIMAL)-
+    DUA1:[DIF116.IN]F01.A;1-
+    DUA1:[DIF116.IN]F01.B;1
+$ DIFFERENCES A19.A A19.B
+************
+File DUA1:[DIF116.IN]A19.A;1
+    2   012345678901234567890123456789012345678901234567890123456789012345678901
+    3   tail 1
+******
+File DUA1:[DIF116.IN]A19.B;1
+    2   012345678901234567890123456789012345678901234567890123456789012345678901
+    3   tail 1
+************
+
+Number of difference sections found: 1
+Number of difference records found: 1
+
+DIFFERENCES /IGNORE=()/MERGED=1-
+    DUA1:[DIF116.IN]A19.A;1-
+    DUA1:[DIF116.IN]A19.B;1
+$ DIFFERENCES/PARALLEL A19.A A19.B
+-------------------------------------------------------------------------------
+File DUA1:[DIF116.IN]A19.A;1           |  File DUA1:[DIF116.IN]A19.B;1         
+------------------- 2 ------------------------------------- 2 -----------------
+0123456789012345678901234567890123456  |  0123456789012345678901234567890123456
+-------------------------------------------------------------------------------
+
+Number of difference sections found: 1
+Number of difference records found: 1
+
+DIFFERENCES /IGNORE=()/PARALLEL-
+    DUA1:[DIF116.IN]A19.A;1-
+    DUA1:[DIF116.IN]A19.B;1
+$ DIFFERENCES I30.A I30.B
+************
+File DUA1:[DIF116.IN]I30.A;1
+    1   bellhere
+    2   esc
+    3   vt
+
+
+
+          here
+    4   delhere
+    5   eight?bit
+    6   same 1
+******
+File DUA1:[DIF116.IN]I30.B;1
+    1   bell here
+    2   esc[1m
+    3   vthere
+    4   delhere
+    5   eight bit
+    6   same 1
+************
+
+Number of difference sections found: 1
+Number of difference records found: 5
+
+DIFFERENCES /IGNORE=()/MERGED=1-
+    DUA1:[DIF116.IN]I30.A;1-
+    DUA1:[DIF116.IN]I30.B;1
+$ DIFFERENCES A13.A A13.B
+Number of difference sections found: 0
+Number of difference records found: 0
+
+DIFFERENCES /IGNORE=()/MERGED=1-
+    DUA1:[DIF116.IN]A13.A;1-
+    DUA1:[DIF116.IN]A13.B;1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X006C8009"
+$ ! No parameters: answer the prompts with A02.A and A02.B.
+$ DIFFERENCES
+%DCL-W-INSFPRM, missing command parameters - supply all required parameters
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038048"
+$ DIFFERENCES/OUTPUT=SYS$OUTPUT/WIDTH=132 A19.A A19.B
+************
+File DUA1:[DIF116.IN]A19.A;1
+    2   012345678901234567890123456789012345678901234567890123456789012345678901
+2345678901234567890123456789012345678901234567890123
+    3   tail 1
+******
+File DUA1:[DIF116.IN]A19.B;1
+    2   012345678901234567890123456789012345678901234567890123456789012345678901
+2345678901234567890123456789012345678901234567890123
+    3   tail 1
+************
+
+Number of difference sections found: 1
+Number of difference records found: 1
+
+DIFFERENCES /IGNORE=()/WIDTH=132/MERGED=1/OUTPUT=SYS$OUTPUT:.;-
+    DUA1:[DIF116.IN]A19.A;1-
+    DUA1:[DIF116.IN]A19.B;1
+$ DIFFERENCES/OUTPUT=TT:/WIDTH=132 A19.A A19.B
+************
+File DUA1:[DIF116.IN]A19.A;1
+    2   012345678901234567890123456789012345678901234567890123456789012345678901
+2345678901234567890123456789012345678901234567890123
+    3   tail 1
+******
+File DUA1:[DIF116.IN]A19.B;1
+    2   012345678901234567890123456789012345678901234567890123456789012345678901
+2345678901234567890123456789012345678901234567890123
+    3   tail 1
+************
+
+Number of difference sections found: 1
+Number of difference records found: 1
+
+DIFFERENCES /IGNORE=()/WIDTH=132/MERGED=1/OUTPUT=TT:[]A19.DIF;-
+    DUA1:[DIF116.IN]A19.A;1-
+    DUA1:[DIF116.IN]A19.B;1
+$ SET TERMINAL/WIDTH=132
+$ DIFFERENCES F01.A F01.B
+************
+File DUA1:[DIF116.IN]F01.A;1
+    5   data line 5
+    6   data line 6
+******
+File DUA1:[DIF116.IN]F01.B;1
+    5   data line 5, revised
+    6   data line 6
+************
+************
+File DUA1:[DIF116.IN]F01.A;1
+   16   data line 16
+******
+File DUA1:[DIF116.IN]F01.B;1
+   16   inserted one
+   17   inserted two
+   18   data line 16
+************
+************
+File DUA1:[DIF116.IN]F01.A;1
+   26   data line 26
+   27   data line 27
+   28   data line 28
+******
+File DUA1:[DIF116.IN]F01.B;1
+   28   data line 28
+************
+
+Number of difference sections found: 3
+Number of difference records found: 5
+
+DIFFERENCES /IGNORE=()/MERGED=1-
+    DUA1:[DIF116.IN]F01.A;1-
+    DUA1:[DIF116.IN]F01.B;1
+$ DIFFERENCES/WIDTH=80 F01.A F01.B
+************
+File DUA1:[DIF116.IN]F01.A;1
+    5   data line 5
+    6   data line 6
+******
+File DUA1:[DIF116.IN]F01.B;1
+    5   data line 5, revised
+    6   data line 6
+************
+************
+File DUA1:[DIF116.IN]F01.A;1
+   16   data line 16
+******
+File DUA1:[DIF116.IN]F01.B;1
+   16   inserted one
+   17   inserted two
+   18   data line 16
+************
+************
+File DUA1:[DIF116.IN]F01.A;1
+   26   data line 26
+   27   data line 27
+   28   data line 28
+******
+File DUA1:[DIF116.IN]F01.B;1
+   28   data line 28
+************
+
+Number of difference sections found: 3
+Number of difference records found: 5
+
+DIFFERENCES /IGNORE=()/WIDTH=80/MERGED=1-
+    DUA1:[DIF116.IN]F01.A;1-
+    DUA1:[DIF116.IN]F01.B;1
+$ DIFFERENCES/PARALLEL F01.A F01.B
+-----------------------------------------------------------------------------------------------------------------------------------
+File DUA1:[DIF116.IN]F01.A;1                                     |  File DUA1:[DIF116.IN]F01.B;1                                   
+-------------------------------- 5 --------------------------------------------------------------- 5 ------------------------------
+data line 5                                                      |  data line 5, revised                                           
+-------------------------------- 16 -------------------------------------------------------------- 16 -----------------------------
+                                                                 |  inserted one                                                   
+                                                                 |  inserted two                                                   
+-------------------------------- 26 -------------------------------------------------------------- 28 -----------------------------
+data line 26                                                     |                                                                 
+data line 27                                                     |                                                                 
+-----------------------------------------------------------------------------------------------------------------------------------
+
+Number of difference sections found: 3
+Number of difference records found: 5
+
+DIFFERENCES /IGNORE=()/PARALLEL-
+    DUA1:[DIF116.IN]F01.A;1-
+    DUA1:[DIF116.IN]F01.B;1
+$ DIFFERENCES/MODE=HEX F01.A F01.B
+************
+File DUA1:[DIF116.IN]F01.A;1
+
+RECORD NUMBER 5 (00000005) LENGTH 11 (0000000B) 
+
+                                                352065 6E696C20 61746164 data line 5..................... 000000
+
+RECORD NUMBER 6 (00000006) LENGTH 11 (0000000B) 
+
+                                                362065 6E696C20 61746164 data line 6..................... 000000
+******
+File DUA1:[DIF116.IN]F01.B;1
+
+RECORD NUMBER 5 (00000005) LENGTH 20 (00000014) 
+
+                            64657369 76657220 2C352065 6E696C20 61746164 data line 5, revised............ 000000
+
+RECORD NUMBER 6 (00000006) LENGTH 11 (0000000B) 
+
+                                                362065 6E696C20 61746164 data line 6..................... 000000
+************
+************
+File DUA1:[DIF116.IN]F01.A;1
+
+RECORD NUMBER 16 (00000010) LENGTH 12 (0000000C) 
+
+                                              36312065 6E696C20 61746164 data line 16.................... 000000
+******
+File DUA1:[DIF116.IN]F01.B;1
+
+RECORD NUMBER 16 (00000010) LENGTH 12 (0000000C) 
+
+                                              656E6F20 64657472 65736E69 inserted one.................... 000000
+
+RECORD NUMBER 17 (00000011) LENGTH 12 (0000000C) 
+
+                                              6F777420 64657472 65736E69 inserted two.................... 000000
+
+RECORD NUMBER 18 (00000012) LENGTH 12 (0000000C) 
+
+                                              36312065 6E696C20 61746164 data line 16.................... 000000
+************
+************
+File DUA1:[DIF116.IN]F01.A;1
+
+RECORD NUMBER 26 (0000001A) LENGTH 12 (0000000C) 
+
+                                              36322065 6E696C20 61746164 data line 26.................... 000000
+
+RECORD NUMBER 27 (0000001B) LENGTH 12 (0000000C) 
+
+                                              37322065 6E696C20 61746164 data line 27.................... 000000
+
+RECORD NUMBER 28 (0000001C) LENGTH 12 (0000000C) 
+
+                                              38322065 6E696C20 61746164 data line 28.................... 000000
+******
+File DUA1:[DIF116.IN]F01.B;1
+
+RECORD NUMBER 28 (0000001C) LENGTH 12 (0000000C) 
+
+                                              38322065 6E696C20 61746164 data line 28.................... 000000
+************
+
+Number of difference sections found: 3
+Number of difference records found: 5
+
+DIFFERENCES /IGNORE=()/MERGED=1/MODE=(HEXADECIMAL)-
+    DUA1:[DIF116.IN]F01.A;1-
+    DUA1:[DIF116.IN]F01.B;1
+$ DIFFERENCES A19.A A19.B
+************
+File DUA1:[DIF116.IN]A19.A;1
+    2   0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123
+    3   tail 1
+******
+File DUA1:[DIF116.IN]A19.B;1
+    2   0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123
+    3   tail 1
+************
+
+Number of difference sections found: 1
+Number of difference records found: 1
+
+DIFFERENCES /IGNORE=()/MERGED=1-
+    DUA1:[DIF116.IN]A19.A;1-
+    DUA1:[DIF116.IN]A19.B;1
+$ DIFFERENCES/PARALLEL A19.A A19.B
+-----------------------------------------------------------------------------------------------------------------------------------
+File DUA1:[DIF116.IN]A19.A;1                                     |  File DUA1:[DIF116.IN]A19.B;1                                   
+-------------------------------- 2 --------------------------------------------------------------- 2 ------------------------------
+012345678901234567890123456789012345678901234567890123456789012  |  012345678901234567890123456789012345678901234567890123456789012
+-----------------------------------------------------------------------------------------------------------------------------------
+
+Number of difference sections found: 1
+Number of difference records found: 1
+
+DIFFERENCES /IGNORE=()/PARALLEL-
+    DUA1:[DIF116.IN]A19.A;1-
+    DUA1:[DIF116.IN]A19.B;1
+$ ! Does VMS 7.1 have DIFFERENCES'paging qualifiers? Each, if accepted,
+$ ! may page: press Return or Ctrl/Z to go on.
+$ DIFFERENCES/PAGE A02.A A02.B
+************
+File DUA1:[DIF116.IN]A02.A;1
+    5	record 5
+    6	record 6
+******
+File DUA1:[DIF116.IN]A02.B;1
+    5	record five changed
+    6	record 6
+************
+
+Number of difference sections found: 1
+Number of difference records found: 1
+
+DIFFERENCES /IGNORE=()/MERGED=1-
+    DUA1:[DIF116.IN]A02.A;1-
+    DUA1:[DIF116.IN]A02.B;1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X006C8013"
+$ DIFFERENCES/PAGE=SCROLL A02.A A02.B
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+************
+File DUA1:[DIF116.IN]A02.A;1
+    5	record 5
+    6	record 6
+******
+File DUA1:[DIF116.IN]A02.B;1
+    5	record five changed
+    6	record 6
+************
+
+Number of difference sections found: 1
+Number of difference records found: 1
+
+DIFFERENCES /IGNORE=()/MERGED=1-
+    DUA1:[DIF116.IN]A02.A;1-
+    DUA1:[DIF116.IN]A02.B;1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+$ DIFFERENCES/SEARCH="record" A02.A A02.B
+%DCL-W-CONFLICT, illegal combination of command elements - check documentation
+ \NOPAGE\
+$ DIFFERENCES/WRAP A02.A A02.B
+%DCL-W-CONFLICT, illegal combination of command elements - check documentation
+ \NOPAGE\
+$ DIFFERENCES/HIGHLIGHT A02.A A02.B
+%DCL-W-CONFLICT, illegal combination of command elements - check documentation
+ \NOPAGE\
+$ DIFFERENCES/EXACT A02.A A02.B
+%DCL-W-CONFLICT, illegal combination of command elements - check documentation
+ \NOPAGE\
+$ SET TERMINAL/WIDTH=177
+$ SET DEFAULT [-]
+$ SET NOVERIFY
+

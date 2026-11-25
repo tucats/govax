@@ -1,0 +1,30 @@
+************
+File DUA1:[DIF116.IN]M03.A;1
+    6   item 6
+    7   item 7
+    8   item 8
+    9   item 9
+   10   item 10
+   11   item 11
+   12   item 12
+   13   item 13
+   14   item 14
+******
+File DUA1:[DIF116.IN]M03.B;1
+    6   other 1
+    7   other 2
+    8   other 3
+    9   other 4
+   10   other 5
+   11   other 6
+   12   other 7
+   13   other 8
+   14   item 14
+************
+
+Number of difference sections found: 1
+Number of difference records found: 8
+
+DIFFERENCES /IGNORE=()/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]M03_W8.DIF;1/WINDOW=8-
+    DUA1:[DIF116.IN]M03.A;1-
+    DUA1:[DIF116.IN]M03.B;1

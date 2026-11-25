@@ -1,0 +1,24 @@
+************
+File DUA1:[DIF116.IN]A14.A;1
+    1   apple 1
+    2   apple 2
+    3   apple 3
+    4   apple 4
+    5   apple 5
+******
+File DUA1:[DIF116.IN]A14.B;1
+    1   pear 1
+    2   pear 2
+    3   pear 3
+    4   pear 4
+    5   pear 5
+    6   pear 6
+    7   pear 7
+************
+
+Number of difference sections found: 1
+Number of difference records found: 7
+
+DIFFERENCES /IGNORE=()/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]A14.DIF;1-
+    DUA1:[DIF116.IN]A14.A;1-
+    DUA1:[DIF116.IN]A14.B;1

@@ -1,0 +1,22 @@
+************
+File DUA1:[DIF116.IN]M02.A;1
+    6   item 6
+******
+File DUA1:[DIF116.IN]M02.B;1
+    6   new 1
+    7   new 2
+    8   new 3
+    9   new 4
+   10   new 5
+   11   new 6
+   12   new 7
+   13   new 8
+   14   item 6
+************
+
+Number of difference sections found: 1
+Number of difference records found: 8
+
+DIFFERENCES /IGNORE=()/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]M02_W9.DIF;1/WINDOW=9-
+    DUA1:[DIF116.IN]M02.A;1-
+    DUA1:[DIF116.IN]M02.B;1

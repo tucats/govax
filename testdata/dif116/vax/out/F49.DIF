@@ -1,0 +1,50 @@
+************
+File DUA1:[DIF116.IN]A20.A;1
+
+RECORD NUMBER 1 (00000001) LENGTH 5 (00000005) 
+
+                                                         143 01130404541 a.b.c................... 000000
+
+RECORD NUMBER 2 (00000002) LENGTH 7 (00000007) 
+
+                                                    10020154 15130271164 trail  ................. 000000
+
+RECORD NUMBER 3 (00000003) LENGTH 0 (00000000) 
+
+
+RECORD NUMBER 4 (00000004) LENGTH 3 (00000003) 
+
+                                                                10020040    ..................... 000000
+
+RECORD NUMBER 5 (00000005) LENGTH 1 (00000001) 
+
+                                                                     170 x....................... 000000
+******
+File DUA1:[DIF116.IN]A20.B;1
+
+RECORD NUMBER 1 (00000001) LENGTH 5 (00000005) 
+
+                                                         144 01130404541 a.b.d................... 000000
+
+RECORD NUMBER 2 (00000002) LENGTH 5 (00000005) 
+
+                                                         154 15130271164 trail................... 000000
+
+RECORD NUMBER 3 (00000003) LENGTH 0 (00000000) 
+
+
+RECORD NUMBER 4 (00000004) LENGTH 4 (00000004) 
+
+                                                             04010020040     .................... 000000
+
+RECORD NUMBER 5 (00000005) LENGTH 1 (00000001) 
+
+                                                                     170 x....................... 000000
+************
+
+Number of difference sections found: 1
+Number of difference records found: 4
+
+DIFFERENCES /IGNORE=()/MERGED=1/MODE=(OCTAL)/OUTPUT=DUA1:[DIF116.OUT]F49.DIF;1-
+    DUA1:[DIF116.IN]A20.A;1-
+    DUA1:[DIF116.IN]A20.B;1

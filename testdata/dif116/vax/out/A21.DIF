@@ -1,0 +1,25 @@
+************
+File DUA1:[DIF116.IN]A21.A;1
+ 9999   record 9999
+10000   record 10000
+******
+File DUA1:[DIF116.IN]A21.B;1
+ 9999   changed at 9999
+10000   record 10000
+************
+************
+File DUA1:[DIF116.IN]A21.A;1
+100005   record 100005
+100006   record 100006
+******
+File DUA1:[DIF116.IN]A21.B;1
+100005   changed near the end
+100006   record 100006
+************
+
+Number of difference sections found: 2
+Number of difference records found: 2
+
+DIFFERENCES /IGNORE=()/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]A21.DIF;1-
+    DUA1:[DIF116.IN]A21.A;1-
+    DUA1:[DIF116.IN]A21.B;1

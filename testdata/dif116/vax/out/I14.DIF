@@ -1,0 +1,50 @@
+************
+File DUA1:[DIF116.IN]I01.A;1
+
+RECORD NUMBER 1 (00000001) LENGTH 10 (0000000A) 
+
+                                                  6174 65422061 68706C41 Alpha Beta...................... 000000
+
+RECORD NUMBER 2 (00000002) LENGTH 1 (00000001) 
+
+                                                                      78 x............................... 000000
+******
+File DUA1:[DIF116.IN]I01.B;1
+
+RECORD NUMBER 1 (00000001) LENGTH 10 (0000000A) 
+
+                                                  4154 45422061 68706C61 alpha BETA...................... 000000
+
+RECORD NUMBER 2 (00000002) LENGTH 1 (00000001) 
+
+                                                                      78 x............................... 000000
+************
+************
+File DUA1:[DIF116.IN]I01.A;1
+
+RECORD NUMBER 5 (00000005) LENGTH 6 (00000006) 
+
+                                                           206C 69617274 trail .......................... 000000
+
+RECORD NUMBER 6 (00000006) LENGTH 0 (00000000) 
+
+******
+File DUA1:[DIF116.IN]I01.B;1
+
+RECORD NUMBER 5 (00000005) LENGTH 5 (00000005) 
+
+                                                             6C 69617274 trail........................... 000000
+
+RECORD NUMBER 6 (00000006) LENGTH 0 (00000000) 
+
+
+RECORD NUMBER 7 (00000007) LENGTH 0 (00000000) 
+
+************
+
+Number of difference sections found: 2
+Number of difference records found: 3
+
+DIFFERENCES /IGNORE=(SPACING)/MERGED=1/MODE=(HEXADECIMAL)/OUTPUT=DUA1:[DIF116.OUT]I14.DIF;1-
+    DUA1:[DIF116.IN]I01.A;1-
+    DUA1:[DIF116.IN]I01.B;1

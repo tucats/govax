@@ -1,0 +1,56 @@
+************
+File DUA1:[DIF116.IN]L01.A;1
+    5   entry 5
+    6   entry 6
+******
+File DUA1:[DIF116.IN]L01.B;1
+    5   entry 5 x
+    6   entry 6
+************
+************
+File DUA1:[DIF116.IN]L01.A;1
+   10   entry 10
+******
+File DUA1:[DIF116.IN]L01.B;1
+   10   extra a
+   11   extra b
+   12   entry 10
+************
+************
+File DUA1:[DIF116.IN]L01.A;1
+   15   entry 15
+   16   entry 16
+   17   entry 17
+******
+File DUA1:[DIF116.IN]L01.B;1
+   17   entry 15 x
+   18   entry 16 x
+   19   entry 17
+************
+************
+File DUA1:[DIF116.IN]L01.A;1
+   25   entry 25
+   26   entry 26
+   27   entry 27
+   28   entry 28
+******
+File DUA1:[DIF116.IN]L01.B;1
+   27   entry 25 x
+   28   entry 26 x
+   29   entry 27 x
+   30   entry 28
+************
+************
+File DUA1:[DIF116.IN]L01.A;1
+   35   entry 35
+******
+File DUA1:[DIF116.IN]L01.B;1
+   37   entry 35 x
+************
+
+Number of difference sections found: 5
+Number of difference records found: 9
+
+DIFFERENCES /IGNORE=()/MAXIMUM_DIFFERENCES=9/MERGED=0/OUTPUT=DUA1:[DIF116.OUT]L01_9.DIF;1-
+    DUA1:[DIF116.IN]L01.A;1-
+    DUA1:[DIF116.IN]L01.B;1

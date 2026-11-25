@@ -1,0 +1,19 @@
+-----------------------------------------------------------------------------------------------------------------------------------
+File DUA1:[DIF116.IN]I20.A;1                                     |  File DUA1:[DIF116.IN]I20.B;1                                   
+-------------------------------- 2 --------------------------------------------------------------- 2 ------------------------------
+Title page 1                                                     |  Title page 1 revised                                           
+Date 1                                                           |  Date 9                                                         
+body 1                                                           |  body 1                                                         
+body 2                                                           |  body 2                                                         
+a<FF>b                                                           |  ab                                                             
+body 3                                                           |  body 3                                                         
+<FF>Page 2                                                       |  <FF>Page 2                                                     
+Date 2                                                           |  Date 8                                                         
+-----------------------------------------------------------------------------------------------------------------------------------
+
+Number of difference sections found: 1
+Number of difference records found: 8
+
+DIFFERENCES /IGNORE=()/OUTPUT=DUA1:[DIF116.OUT]I27.DIF;1/PARALLEL-
+    DUA1:[DIF116.IN]I20.A;1-
+    DUA1:[DIF116.IN]I20.B;1

@@ -1,0 +1,22 @@
+************
+File DUA1:[DIF116.IN]A20.A;1
+    1   a	b	c
+    2   trail  
+    3   
+    4      
+    5   x
+******
+File DUA1:[DIF116.IN]A20.B;1
+    1   a	b	d
+    2   trail
+    3   
+    4       
+    5   x
+************
+
+Number of difference sections found: 1
+Number of difference records found: 4
+
+DIFFERENCES /IGNORE=()/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]A20.DIF;1-
+    DUA1:[DIF116.IN]A20.A;1-
+    DUA1:[DIF116.IN]A20.B;1

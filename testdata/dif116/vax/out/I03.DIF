@@ -1,0 +1,26 @@
+************
+File DUA1:[DIF116.IN]I01.A;1
+    1   Alpha Beta
+    2   x
+******
+File DUA1:[DIF116.IN]I01.B;1
+    1   alpha BETA
+    2   x
+************
+************
+File DUA1:[DIF116.IN]I01.A;1
+    5   trail 
+    6   
+******
+File DUA1:[DIF116.IN]I01.B;1
+    5   trail
+    6   
+    7   
+************
+
+Number of difference sections found: 2
+Number of difference records found: 3
+
+DIFFERENCES /IGNORE=(SPACING)/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]I03.DIF;1-
+    DUA1:[DIF116.IN]I01.A;1-
+    DUA1:[DIF116.IN]I01.B;1

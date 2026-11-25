@@ -1,0 +1,60 @@
+************
+File DUA1:[DIF116.IN]I30.A;1
+
+RECORD NUMBER 1 (00000001) LENGTH 9 (00000009) 
+
+                                                    65 72656807 6C6C6562 bell.here....................... 000000
+
+RECORD NUMBER 2 (00000002) LENGTH 7 (00000007) 
+
+                                                         6D315B 1B637365 esc.[1m......................... 000000
+
+RECORD NUMBER 3 (00000003) LENGTH 7 (00000007) 
+
+                                                         657265 680B7476 vt.here......................... 000000
+
+RECORD NUMBER 4 (00000004) LENGTH 8 (00000008) 
+
+                                                       65726568 7F6C6564 del.here........................ 000000
+
+RECORD NUMBER 5 (00000005) LENGTH 9 (00000009) 
+
+                                                    74 6962A974 68676965 eight©bit....................... 000000
+
+RECORD NUMBER 6 (00000006) LENGTH 6 (00000006) 
+
+                                                           3120 656D6173 same 1.......................... 000000
+******
+File DUA1:[DIF116.IN]I30.B;1
+
+RECORD NUMBER 1 (00000001) LENGTH 9 (00000009) 
+
+                                                    65 72656820 6C6C6562 bell here....................... 000000
+
+RECORD NUMBER 2 (00000002) LENGTH 6 (00000006) 
+
+                                                           6D31 5B637365 esc[1m.......................... 000000
+
+RECORD NUMBER 3 (00000003) LENGTH 6 (00000006) 
+
+                                                           6572 65687476 vthere.......................... 000000
+
+RECORD NUMBER 4 (00000004) LENGTH 7 (00000007) 
+
+                                                         657265 686C6564 delhere......................... 000000
+
+RECORD NUMBER 5 (00000005) LENGTH 9 (00000009) 
+
+                                                    74 69622074 68676965 eight bit....................... 000000
+
+RECORD NUMBER 6 (00000006) LENGTH 6 (00000006) 
+
+                                                           3120 656D6173 same 1.......................... 000000
+************
+
+Number of difference sections found: 1
+Number of difference records found: 5
+
+DIFFERENCES /IGNORE=()/MERGED=1/MODE=(HEXADECIMAL)/OUTPUT=DUA1:[DIF116.OUT]I33.DIF;1-
+    DUA1:[DIF116.IN]I30.A;1-
+    DUA1:[DIF116.IN]I30.B;1

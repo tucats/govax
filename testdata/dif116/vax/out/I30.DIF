@@ -1,0 +1,24 @@
+************
+File DUA1:[DIF116.IN]I30.A;1
+    1   bellhere
+    2   esc[1m
+    3   vthere
+    4   delhere
+    5   eight©bit
+    6   same 1
+******
+File DUA1:[DIF116.IN]I30.B;1
+    1   bell here
+    2   esc[1m
+    3   vthere
+    4   delhere
+    5   eight bit
+    6   same 1
+************
+
+Number of difference sections found: 1
+Number of difference records found: 5
+
+DIFFERENCES /IGNORE=()/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]I30.DIF;1-
+    DUA1:[DIF116.IN]I30.A;1-
+    DUA1:[DIF116.IN]I30.B;1

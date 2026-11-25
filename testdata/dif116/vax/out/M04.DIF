@@ -1,0 +1,34 @@
+************
+File DUA1:[DIF116.IN]A22.A;1
+    4   row 4
+    5   row 5
+    6   row 6
+    7   row 7
+    8   row 8
+    9   row 9
+   10   row 10
+   11   row 11
+   12   row 12
+   13   row 13
+   14   row 14
+******
+File DUA1:[DIF116.IN]A22.B;1
+    4   row 11
+    5   row 12
+    6   row 13
+    7   row 4
+    8   row 5
+    9   row 6
+   10   row 7
+   11   row 8
+   12   row 9
+   13   row 10
+   14   row 14
+************
+
+Number of difference sections found: 1
+Number of difference records found: 10
+
+DIFFERENCES /IGNORE=()/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]M04.DIF;1/WINDOW=2-
+    DUA1:[DIF116.IN]A22.A;1-
+    DUA1:[DIF116.IN]A22.B;1

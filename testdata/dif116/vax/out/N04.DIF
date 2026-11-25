@@ -1,0 +1,18 @@
+************
+File DUA1:[DIF116.IN]V01.TXT;1
+    1   version one
+    2   same 1
+    3   same 2
+    4   same 3
+******
+File DUA1:[DIF116.IN]V03.TXT;3
+    1   three, version three
+    2   same
+************
+
+Number of difference sections found: 1
+Number of difference records found: 4
+
+DIFFERENCES /IGNORE=()/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]N04.DIF;1-
+    DUA1:[DIF116.IN]V01.TXT;1-
+    DUA1:[DIF116.IN]V03.TXT;3

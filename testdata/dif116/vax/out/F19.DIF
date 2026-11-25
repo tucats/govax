@@ -1,0 +1,70 @@
+************
+File DUA1:[DIF116.IN]F01.A;1
+
+RECORD NUMBER 5 (00000005) LENGTH 11 (0000000B) 
+
+                                                352065 6E696C20 61746164 data line 5..................... 000000
+
+RECORD NUMBER 6 (00000006) LENGTH 11 (0000000B) 
+
+                                                362065 6E696C20 61746164 data line 6..................... 000000
+******
+File DUA1:[DIF116.IN]F01.B;1
+
+RECORD NUMBER 5 (00000005) LENGTH 20 (00000014) 
+
+                            64657369 76657220 2C352065 6E696C20 61746164 data line 5, revised............ 000000
+
+RECORD NUMBER 6 (00000006) LENGTH 11 (0000000B) 
+
+                                                362065 6E696C20 61746164 data line 6..................... 000000
+************
+************
+File DUA1:[DIF116.IN]F01.A;1
+
+RECORD NUMBER 16 (00000010) LENGTH 12 (0000000C) 
+
+                                              36312065 6E696C20 61746164 data line 16.................... 000000
+******
+File DUA1:[DIF116.IN]F01.B;1
+
+RECORD NUMBER 16 (00000010) LENGTH 12 (0000000C) 
+
+                                              656E6F20 64657472 65736E69 inserted one.................... 000000
+
+RECORD NUMBER 17 (00000011) LENGTH 12 (0000000C) 
+
+                                              6F777420 64657472 65736E69 inserted two.................... 000000
+
+RECORD NUMBER 18 (00000012) LENGTH 12 (0000000C) 
+
+                                              36312065 6E696C20 61746164 data line 16.................... 000000
+************
+************
+File DUA1:[DIF116.IN]F01.A;1
+
+RECORD NUMBER 26 (0000001A) LENGTH 12 (0000000C) 
+
+                                              36322065 6E696C20 61746164 data line 26.................... 000000
+
+RECORD NUMBER 27 (0000001B) LENGTH 12 (0000000C) 
+
+                                              37322065 6E696C20 61746164 data line 27.................... 000000
+
+RECORD NUMBER 28 (0000001C) LENGTH 12 (0000000C) 
+
+                                              38322065 6E696C20 61746164 data line 28.................... 000000
+******
+File DUA1:[DIF116.IN]F01.B;1
+
+RECORD NUMBER 28 (0000001C) LENGTH 12 (0000000C) 
+
+                                              38322065 6E696C20 61746164 data line 28.................... 000000
+************
+
+Number of difference sections found: 3
+Number of difference records found: 5
+
+DIFFERENCES /IGNORE=()/MERGED=1/MODE=(HEXADECIMAL)/OUTPUT=DUA1:[DIF116.OUT]F19.DIF;1-
+    DUA1:[DIF116.IN]F01.A;1-
+    DUA1:[DIF116.IN]F01.B;1

@@ -1,0 +1,6 @@
+Number of difference sections found: 0
+Number of difference records found: 0
+
+DIFFERENCES /IGNORE=(COMMENTS)/COMMENT_DELIMITERS=(SPACE)/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]IE09.DIF;1-
+    DUA1:[DIF116.IN]C1.TXT;1-
+    DUA1:[DIF116.IN]C2.TXT;1

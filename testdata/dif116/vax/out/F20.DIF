@@ -1,0 +1,70 @@
+************
+File DUA1:[DIF116.IN]F01.A;1
+
+RECORD NUMBER 5 (00000005) LENGTH 11 (00000013) 
+
+                                        15220145 15632266040 14135060544 data line 5............. 000000
+
+RECORD NUMBER 6 (00000006) LENGTH 11 (00000013) 
+
+                                        15420145 15632266040 14135060544 data line 6............. 000000
+******
+File DUA1:[DIF116.IN]F01.B;1
+
+RECORD NUMBER 5 (00000005) LENGTH 20 (00000024) 
+
+             14431271551 16631271040 05415220145 15632266040 14135060544 data line 5, revised.... 000000
+
+RECORD NUMBER 6 (00000006) LENGTH 11 (00000013) 
+
+                                        15420145 15632266040 14135060544 data line 6............. 000000
+************
+************
+File DUA1:[DIF116.IN]F01.A;1
+
+RECORD NUMBER 16 (00000020) LENGTH 12 (00000014) 
+
+                                     06614220145 15632266040 14135060544 data line 16............ 000000
+******
+File DUA1:[DIF116.IN]F01.B;1
+
+RECORD NUMBER 16 (00000020) LENGTH 12 (00000014) 
+
+                                     14533467440 14431272162 14534667151 inserted one............ 000000
+
+RECORD NUMBER 17 (00000021) LENGTH 12 (00000014) 
+
+                                     15735672040 14431272162 14534667151 inserted two............ 000000
+
+RECORD NUMBER 18 (00000022) LENGTH 12 (00000014) 
+
+                                     06614220145 15632266040 14135060544 data line 16............ 000000
+************
+************
+File DUA1:[DIF116.IN]F01.A;1
+
+RECORD NUMBER 26 (00000032) LENGTH 12 (00000014) 
+
+                                     06614420145 15632266040 14135060544 data line 26............ 000000
+
+RECORD NUMBER 27 (00000033) LENGTH 12 (00000014) 
+
+                                     06714420145 15632266040 14135060544 data line 27............ 000000
+
+RECORD NUMBER 28 (00000034) LENGTH 12 (00000014) 
+
+                                     07014420145 15632266040 14135060544 data line 28............ 000000
+******
+File DUA1:[DIF116.IN]F01.B;1
+
+RECORD NUMBER 28 (00000034) LENGTH 12 (00000014) 
+
+                                     07014420145 15632266040 14135060544 data line 28............ 000000
+************
+
+Number of difference sections found: 3
+Number of difference records found: 5
+
+DIFFERENCES /IGNORE=()/MERGED=1/MODE=(OCTAL)/OUTPUT=DUA1:[DIF116.OUT]F20.DIF;1-
+    DUA1:[DIF116.IN]F01.A;1-
+    DUA1:[DIF116.IN]F01.B;1

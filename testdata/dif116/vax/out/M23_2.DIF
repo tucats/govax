@@ -1,0 +1,29 @@
+************
+File DUA1:[DIF116.IN]A23.A;1
+    3   x
+    4   y
+******
+File DUA1:[DIF116.IN]A23.B;1
+    3   y
+************
+************
+File DUA1:[DIF116.IN]A23.A;1
+    8   y
+******
+File DUA1:[DIF116.IN]A23.B;1
+    7   x
+    8   y
+************
+************
+File DUA1:[DIF116.IN]A23.A;1
+******
+File DUA1:[DIF116.IN]A23.B;1
+   11   x
+************
+
+Number of difference sections found: 3
+Number of difference records found: 3
+
+DIFFERENCES /IGNORE=()/MATCH=2/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]M23_2.DIF;1-
+    DUA1:[DIF116.IN]A23.A;1-
+    DUA1:[DIF116.IN]A23.B;1

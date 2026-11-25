@@ -290,3 +290,21 @@ The author's answers to the plan's three questions:
   DIFFERENCES an unknown verb for now). The README has the VAX steps.
   Noticed on the way: govax has no SHOW TIME (the procedure writes
   `F$TIME()` instead), not this phase's to add.
+- **2026-11-25 — subtask 2, round 1 on the VAX.** The author ran
+  `dif116.com` and `dif116t.com` on VMS 7.1; `copyout.cmd` brought back
+  `vax/dif116.log`, `vax/out/` (207 listings), and the author pasted
+  `vax/terminal.log`. The procedure stopped at case N60, a 285-byte line
+  DCL couldn't read (`%RMS-W-RTB`): 260 of 859 cases ran. Its status
+  lines print `F$FAO("!XL")` of the string `$STATUS`, the string's
+  address on VMS; on govax the same line printed the value, a small
+  deviation to log at the close-out. First answers, to be written up as
+  A.4 after round 2: listings use spaces, not tabs (`"    3   line 3"`);
+  the closing echo includes `/OUTPUT=` with the listing's full name;
+  identical files print counts of 0 and the echo, status `%X006C8009`
+  (DIFF-S), different ones `%X006C8013` (DIFF-I); `F$MESSAGE` doesn't
+  know the DIFF facility's messages; VMS 7.1 takes `/PAGE` and
+  `/PAGE=SCROLL`, and refuses `/SEARCH`, `/WRAP`, `/HIGHLIGHT`, and
+  `/EXACT` alone (`%DCL-W-CONFLICT`); DIFFERENCES with no parameters in a
+  procedure is `%DCL-W-INSFPRM`. Round 2 (`dif116b.com`, `exchange2.cmd`,
+  `copyout2.cmd`; long lines broken after a blank too) runs the cases from
+  N60 on, and the prompts at the `$` prompt by hand.

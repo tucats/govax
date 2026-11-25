@@ -1,0 +1,16 @@
+-----------------------------------------------------------------------------------------------------------------------------------
+File DUA1:[DIF116.IN]I30.A;1                                     |  File DUA1:[DIF116.IN]I30.B;1                                   
+-------------------------------- 1 --------------------------------------------------------------- 1 ------------------------------
+bell.here                                                        |  bell here                                                      
+esc.[1m                                                          |  esc[1m                                                         
+vt<VT>here                                                       |  vthere                                                         
+del.here                                                         |  delhere                                                        
+eight©bit                                                        |  eight bit                                                      
+-----------------------------------------------------------------------------------------------------------------------------------
+
+Number of difference sections found: 1
+Number of difference records found: 5
+
+DIFFERENCES /IGNORE=()/OUTPUT=DUA1:[DIF116.OUT]I32.DIF;1/PARALLEL-
+    DUA1:[DIF116.IN]I30.A;1-
+    DUA1:[DIF116.IN]I30.B;1

@@ -1,0 +1,40 @@
+************
+File DUA1:[DIF116.IN]C1.HLP;1
+    2   y = 2 ; semi
+    3   * star line
+    4   / slash line
+    5   C cee line
+    6   D dee line
+    7   c lower cee
+    8   d lower dee
+    9   z = 3 * star mid
+   10   w = 4 / slash mid
+   11   v = 5 V vee
+   12   u = 6 : colon
+   13   t = 7 , comma
+   14   s = 8 [left] r
+   15   plain 1
+******
+File DUA1:[DIF116.IN]C2.HLP;1
+    2   y = 2 ; SEMI CHANGED
+    3   * STAR CHANGED
+    4   / SLASH CHANGED
+    5   C CEE CHANGED
+    6   D DEE CHANGED
+    7   c LOWER CHANGED
+    8   d LOWER CHANGED
+    9   z = 3 * STAR CHANGED
+   10   w = 4 / SLASH CHANGED
+   11   v = 5 V VEE CHANGED
+   12   u = 6 : COLON CHANGED
+   13   t = 7 , COMMA CHANGED
+   14   s = 8 [LEFT] R
+   15   plain 1
+************
+
+Number of difference sections found: 1
+Number of difference records found: 13
+
+DIFFERENCES /IGNORE=(COMMENTS)/COMMENT_DELIMITERS=(EXCLAMATION)/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]ID_HLP.DIF;1-
+    DUA1:[DIF116.IN]C1.HLP;1-
+    DUA1:[DIF116.IN]C2.HLP;1

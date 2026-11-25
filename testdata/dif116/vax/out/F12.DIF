@@ -1,0 +1,27 @@
+-----------------------------------------------------------------------------------------------------------------------------------
+File DUA1:[DIF116.IN]F01.A;1                                     |  File DUA1:[DIF116.IN]F01.B;1                                   
+-------------------------------- 5 --------------------------------------------------------------- 5 ------------------------------
+data line 5                                                      |  data line 5, revised                                           
+data line 6                                                      |  data line 6                                                    
+data line 7                                                      |  data line 7                                                    
+data line 8                                                      |  data line 8                                                    
+-------------------------------- 16 -------------------------------------------------------------- 16 -----------------------------
+                                                                 |  inserted one                                                   
+                                                                 |  inserted two                                                   
+data line 16                                                     |  data line 16                                                   
+data line 17                                                     |  data line 17                                                   
+data line 18                                                     |  data line 18                                                   
+-------------------------------- 26 -------------------------------------------------------------- 28 -----------------------------
+data line 26                                                     |                                                                 
+data line 27                                                     |                                                                 
+data line 28                                                     |  data line 28                                                   
+data line 29                                                     |  data line 29                                                   
+data line 30                                                     |  data line 30                                                   
+-----------------------------------------------------------------------------------------------------------------------------------
+
+Number of difference sections found: 3
+Number of difference records found: 5
+
+DIFFERENCES /IGNORE=()/OUTPUT=DUA1:[DIF116.OUT]F12.DIF;1/PARALLEL=3-
+    DUA1:[DIF116.IN]F01.A;1-
+    DUA1:[DIF116.IN]F01.B;1

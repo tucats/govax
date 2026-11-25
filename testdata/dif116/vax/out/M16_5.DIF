@@ -1,0 +1,20 @@
+************
+File DUA1:[DIF116.IN]A16.A;1
+    7   row 7
+    8   row 8
+    9   row 9
+   10   row 10
+******
+File DUA1:[DIF116.IN]A16.B;1
+    7   row 7 changed
+    8   row 8
+    9   row 9 changed
+   10   row 10
+************
+
+Number of difference sections found: 1
+Number of difference records found: 3
+
+DIFFERENCES /IGNORE=()/MATCH=5/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]M16_5.DIF;1-
+    DUA1:[DIF116.IN]A16.A;1-
+    DUA1:[DIF116.IN]A16.B;1
