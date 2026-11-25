@@ -18,8 +18,21 @@ type probeCase struct {
 	Merged               int32
 
 	// Parallel and Separated say the case asked for /PARALLEL or
-	// /SEPARATED (of both files) instead of the merged form.
-	Parallel, Separated bool
+	// /SEPARATED (of both files) instead of the merged form, and Merged
+	// that it asked for the merged form too.
+	Parallel, Separated, AlsoMerged bool
+
+	// Width is /WIDTH, Radixes /MODE's, and SLP /SLP.
+	Width   int
+	Radixes []Radix
+	SLP     bool
+}
+
+var probeModes = regexp.MustCompile(`/MODE=(\([A-Z,]+\)|[A-Z]+)`)
+
+// probeRadixes are /MODE's keywords as the probe abbreviates them.
+var probeRadixes = map[string]Radix{
+	"HEX": Hexadecimal, "HEXADECIMAL": Hexadecimal, "OCTAL": Octal, "ASCII": ASCII,
 }
 
 var probeQualifier = regexp.MustCompile(`/([A-Z_]+)=(-?\d+)`)
@@ -74,8 +87,15 @@ func readProbe(t *testing.T) (map[string][][]byte, []probeCase) {
 				continue
 			}
 
-			c := probeCase{ID: id, Master: f[1], Revision: f[2], Opts: Options{Match: 3}, Merged: 1}
-			rest := probeQualifier.ReplaceAllStringFunc(f[0], func(q string) string {
+			c := probeCase{ID: id, Master: f[1], Revision: f[2], Opts: Options{Match: 3}, Merged: 1, Width: 132}
+			rest := probeModes.ReplaceAllStringFunc(f[0], func(q string) string {
+				for k := range strings.SplitSeq(strings.Trim(probeModes.FindStringSubmatch(q)[1], "()"), ",") {
+					c.Radixes = append(c.Radixes, probeRadixes[k])
+				}
+
+				return ""
+			})
+			rest = probeQualifier.ReplaceAllStringFunc(rest, func(q string) string {
 				m := probeQualifier.FindStringSubmatch(q)
 				n, _ := strconv.Atoi(m[2])
 
@@ -88,6 +108,8 @@ func readProbe(t *testing.T) (map[string][][]byte, []probeCase) {
 					c.Opts.MaxDifferences = n
 				case "MERGED":
 					c.Merged = int32(n)
+				case "WIDTH":
+					c.Width = n
 				default:
 					return q
 				}
@@ -95,13 +117,17 @@ func readProbe(t *testing.T) (map[string][][]byte, []probeCase) {
 				return ""
 			})
 
-			for _, form := range []string{"/PARALLEL", "/SEPARATED"} {
+			for _, form := range []string{"/PARALLEL", "/SEPARATED", "/MERGED", "/SLP"} {
 				if strings.Contains(rest, form) {
 					rest = strings.Replace(rest, form, "", 1)
 					c.Parallel = c.Parallel || form == "/PARALLEL"
 					c.Separated = c.Separated || form == "/SEPARATED"
+					c.AlsoMerged = c.AlsoMerged || form == "/MERGED"
+					c.SLP = c.SLP || form == "/SLP"
 				}
 			}
+
+			c.Opts.BothSides = c.SLP
 
 			if rest == "" {
 				cases = append(cases, c)
@@ -113,18 +139,24 @@ func readProbe(t *testing.T) (map[string][][]byte, []probeCase) {
 }
 
 // probeSections are the probe's sections whose cases this package can run
-// whole: two files named plainly, numeric qualifiers, the merged form, and
-// the generated pairs run /PARALLEL (PG) and /SEPARATED (EG). (NAMES, FORMS,
-// IGNORING, and FORMATS need the command or later subtasks.)
+// whole: two files named plainly, numeric qualifiers, /MODE, and the merged,
+// parallel, separated, and SLP forms (the FORMS, IGNORING, and FORMATS
+// sections' cases that ask for nothing else). NAMES needs the command, and
+// /IGNORE and change bars aren't read here.
 var probeSections = map[byte]bool{
 	'A': true, 'M': true, 'L': true, 'G': true, 'H': true, 'X': true, 'Z': true, 'P': true, 'E': true,
+	'F': true, 'S': true, 'R': true, 'I': true,
 }
+
+// probeListings is how many of the probe's listings TestProbeListings holds.
+const probeListings = 696
 
 // TestProbeListings holds the comparison and the listing, up to the echo,
 // to every listing VMS 7.1 made of the probe's LAYOUT, MATCHING, LIMITS, and
-// GENERATED cases (testdata/dif116/vax/out), merged, parallel (PGnnn), and
-// separated (EGnnn). The echo, and the cases' messages and statuses, are
-// internal/console's TestDif116MergedOracle's.
+// GENERATED cases (testdata/dif116/vax/out), merged, parallel (PGnnn),
+// separated (EGnnn), and SLP (SAnn, SGnnn), and the FORMS, IGNORING, and
+// FORMATS cases it can read, /MODE's among them. The echo, and the cases'
+// messages and statuses, are internal/console's oracles'.
 func TestProbeListings(t *testing.T) {
 	files, cases := readProbe(t)
 	ran := 0
@@ -139,33 +171,45 @@ func TestProbeListings(t *testing.T) {
 			continue
 		}
 
-		ran++
-
 		w := string(want)
 		if i := strings.Index(w, "\nDIFFERENCES "); i >= 0 {
 			w = w[:i+1]
 		}
 
 		a, b := files[c.Master], files[c.Revision]
+		if a == nil || b == nil {
+			continue
+		}
+
+		ran++
+
 		res := Compare(a, b, c.Opts)
-		l := NewListing(132)
-		List(l, Input{Name: "DUA1:[DIF116.IN]" + c.Master + ";1", Records: a},
-			Input{Name: "DUA1:[DIF116.IN]" + c.Revision + ";1", Records: b}, res, Forms{
-				Merged:            !c.Parallel && !c.Separated,
+		l := NewListing(c.Width)
+
+		master := Input{Name: "DUA1:[DIF116.IN]" + c.Master + ";1", Records: a}
+		revision := Input{Name: "DUA1:[DIF116.IN]" + c.Revision + ";1", Records: b}
+
+		if c.SLP {
+			l.Lines = SLP(revision, res)
+		} else {
+			List(l, master, revision, res, Forms{
+				Merged:            c.AlsoMerged || (!c.Parallel && !c.Separated),
 				MergedStyle:       Style{After: c.Merged},
 				Parallel:          c.Parallel,
 				SeparatedMaster:   c.Separated,
 				SeparatedRevision: c.Separated,
+				Radixes:           c.Radixes,
 			})
-		Summary(l, res)
+			Summary(l, res)
+		}
 
 		if g := l.Text(); g != w {
 			t.Errorf("%s %+v\nmaster:   %s\nrevision: %s\ngovax:\n%s\nVMS:\n%s", c.ID, c.Opts, show(a), show(b), g, w)
 		}
 	}
 
-	if ran != 591 {
-		t.Errorf("%d of the probe's listings ran, not 591", ran)
+	if ran != probeListings {
+		t.Errorf("%d of the probe's listings ran, not %d", ran, probeListings)
 	}
 }
 

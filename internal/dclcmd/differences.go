@@ -69,10 +69,11 @@ type differences struct {
 	width                   int
 	window, maxDifferences  uint32
 
-	ignore     []string // /IGNORE's keywords as the echo shows them
-	delimiters []string // /COMMENT_DELIMITER's, as the echo shows them
-	modes      []string // /MODE's, as the echo shows them
-	separated  []string // /SEPARATED's, MASTER and REVISION, in that order
+	ignore     []string     // /IGNORE's keywords as the echo shows them
+	delimiters []string     // /COMMENT_DELIMITER's, as the echo shows them
+	modes      []string     // /MODE's, as the echo shows them
+	radixes    []diff.Radix // /MODE's as given, the listings' radixes
+	separated  []string     // /SEPARATED's, MASTER and REVISION, in that order
 }
 
 // Differences runs DIFFERENCES.
@@ -94,15 +95,21 @@ func (c *Context) Differences(req DifferencesRequest) error {
 
 	res := diff.Compare(master.Records, revision.Records, diff.Options{
 		Match: d.match, Window: int(d.window), MaxDifferences: int(d.maxDifferences),
+		BothSides: on(req.SLP),
 	})
-
-	l := diff.NewListing(d.width)
-	diff.List(l, master, revision, res, d.forms())
-	diff.Summary(l, res)
 
 	outName, err := d.output(master.Name)
 	if err != nil {
 		return err
+	}
+
+	// /SLP writes its script alone: no counts, no echo (F35).
+	l := diff.NewListing(d.width)
+	if on(req.SLP) {
+		l.Lines = diff.SLP(revision, res)
+	} else {
+		diff.List(l, master, revision, res, d.forms())
+		diff.Summary(l, res)
 	}
 
 	// A comparison /MAXIMUM_DIFFERENCES stopped lists its last section with
@@ -112,10 +119,12 @@ func (c *Context) Differences(req DifferencesRequest) error {
 		d.merged = 0
 	}
 
-	diff.Echo(l, d.echo(outName), []string{
-		master.Name + changeBarEcho(req.MasterBar, req.MasterBarList),
-		revision.Name + changeBarEcho(req.RevisionBar, req.RevisionBarList),
-	})
+	if !on(req.SLP) {
+		diff.Echo(l, d.echo(outName), []string{
+			master.Name + changeBarEcho(req.MasterBar, req.MasterBarList),
+			revision.Name + changeBarEcho(req.RevisionBar, req.RevisionBarList),
+		})
+	}
 
 	if err := d.write(outName, l); err != nil {
 		return err
@@ -270,8 +279,15 @@ func (d *differences) keywords() error {
 		return err
 	}
 
+	radixes := map[string]diff.Radix{"ASCII": diff.ASCII, "HEXADECIMAL": diff.Hexadecimal, "OCTAL": diff.Octal}
+	for k := range modes {
+		d.radixes = append(d.radixes, radixes[k])
+	}
+
 	// The parallel form is ASCII's, so /PARALLEL adds it to the modes
-	// given (F34: /PARALLEL/MODE=HEX echoes /MODE=(HEXADECIMAL,ASCII)).
+	// given (F34: /PARALLEL/MODE=HEX echoes /MODE=(HEXADECIMAL,ASCII)). The
+	// other forms are listed only in the radixes given (unconfirmed: no case
+	// asked for one of them with /PARALLEL and without ASCII).
 	if len(modes) > 0 && on(d.req.Parallel) {
 		modes["ASCII"] = ""
 	}
@@ -784,6 +800,7 @@ func (d *differences) forms() diff.Forms {
 		NoNumber:      noNumber,
 		MasterBar:     changeBar(req.MasterBar, req.MasterBarList, noNumber),
 		RevisionBar:   changeBar(req.RevisionBar, req.RevisionBarList, noNumber),
+		Radixes:       d.radixes,
 	}
 
 	if on(req.Separated) {

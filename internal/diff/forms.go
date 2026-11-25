@@ -35,16 +35,23 @@ type Forms struct {
 	// MasterBar and RevisionBar are each file's /CHANGE_BAR, nil for
 	// none.
 	MasterBar, RevisionBar *Bar
+
+	// Radixes are /MODE's radixes for the merged, separated, and change
+	// bar listings, in any order; none is ASCII alone. The parallel form is
+	// always text.
+	Radixes []Radix
 }
 
 // List writes the listings forms asks for, in VMS's order: the parallel
-// form first, then the merged form, the separated ones (the master's, then
-// the revision's), and the change bars (the master's, then the revision's),
-// each after a blank line but the first; a merged listing that isn't the
-// first ends with an empty section (Style.Closing). Files that don't differ
-// get no listing at all (F45). A comparison /MAXIMUM_DIFFERENCES stopped
-// gets only the first form (L02), the master's and revision's separated
-// listings counting as one.
+// form first, then for each radix, ASCII, hexadecimal, and octal (F22, F33),
+// the merged form, the separated ones (the master's, then the revision's),
+// and the change bars (the master's, then the revision's), each after a blank
+// line but the first; a merged listing after a listing of the records as
+// text (the parallel form, or the ASCII merged form) ends with an empty
+// section (Style.Closing; F21, F22, F31, F33, and R13, whose octal listing
+// after the hexadecimal one has none). Files that don't differ get no listing at
+// all (F45). A comparison /MAXIMUM_DIFFERENCES stopped gets only the first
+// form (L02), the master's and revision's separated listings counting as one.
 func List(l *Listing, master, revision Input, res Result, forms Forms) {
 	if len(res.Sections) == 0 {
 		return
@@ -68,43 +75,70 @@ func List(l *Listing, master, revision Input, res Result, forms Forms) {
 		return true
 	}
 
+	text := false // a listing of the records as text was written
+
 	if forms.Parallel && start() {
 		Parallel(l, master, revision, res, forms.ParallelStyle)
+
+		text = true
 	}
 
-	if forms.Merged && start() {
-		st := forms.MergedStyle
-		st.Closing = l.listed()
-		Merged(l, master, revision, res, st)
-	}
+	for _, radix := range []Radix{ASCII, Hexadecimal, Octal} {
+		if !forms.wants(radix) {
+			continue
+		}
 
-	if forms.SeparatedMaster || forms.SeparatedRevision {
-		if start() {
-			if forms.SeparatedMaster {
-				Separated(l, master, res, masterSpan, forms.NoNumber)
-			}
+		if forms.Merged && start() {
+			st := forms.MergedStyle
+			st.Closing = text
+			st.Radix = radix
+			Merged(l, master, revision, res, st)
 
-			if forms.SeparatedMaster && forms.SeparatedRevision {
-				l.Lines = append(l.Lines, "")
-			}
+			text = text || radix == ASCII
+		}
 
-			if forms.SeparatedRevision {
-				Separated(l, revision, res, revisionSpan, forms.NoNumber)
+		if forms.SeparatedMaster || forms.SeparatedRevision {
+			if start() {
+				st := Style{NoNumber: forms.NoNumber, Radix: radix}
+
+				if forms.SeparatedMaster {
+					Separated(l, master, res, masterSpan, st)
+				}
+
+				if forms.SeparatedMaster && forms.SeparatedRevision {
+					l.Lines = append(l.Lines, "")
+				}
+
+				if forms.SeparatedRevision {
+					Separated(l, revision, res, revisionSpan, st)
+				}
 			}
 		}
-	}
 
-	if forms.MasterBar != nil && start() {
-		ChangeBars(l, master, Marks(res, len(master.Records), masterSpan), *forms.MasterBar)
-	}
+		if forms.MasterBar != nil && start() {
+			ChangeBars(l, master, Marks(res, len(master.Records), masterSpan), *forms.MasterBar, radix)
+		}
 
-	if forms.RevisionBar != nil && start() {
-		ChangeBars(l, revision, Marks(res, len(revision.Records), revisionSpan), *forms.RevisionBar)
+		if forms.RevisionBar != nil && start() {
+			ChangeBars(l, revision, Marks(res, len(revision.Records), revisionSpan), *forms.RevisionBar, radix)
+		}
 	}
 }
 
-// listed says something was already written to the listing.
-func (l *Listing) listed() bool { return len(l.Lines) > 0 }
+// wants says the listings are made in radix.
+func (f Forms) wants(radix Radix) bool {
+	if len(f.Radixes) == 0 {
+		return radix == ASCII
+	}
+
+	for _, r := range f.Radixes {
+		if r == radix {
+			return true
+		}
+	}
+
+	return false
+}
 
 // masterSpan and revisionSpan pick one file's side of a section.
 func masterSpan(s Section) Span   { return s.Master }
@@ -119,7 +153,7 @@ func revisionSpan(s Section) Span { return s.Revision }
 //	   26   data line 26
 //	   27   data line 27
 //	************
-func Separated(l *Listing, in Input, res Result, span func(Section) Span, noNumber bool) {
+func Separated(l *Listing, in Input, res Result, span func(Section) Span, st Style) {
 	l.Cut(strings.Repeat("*", 12))
 	l.Cut("File " + in.Name)
 
@@ -127,7 +161,7 @@ func Separated(l *Listing, in Input, res Result, span func(Section) Span, noNumb
 		sp := span(s)
 
 		for r := sp.Start; r < min(sp.End, len(in.Records)); r++ {
-			l.Cut(recordLine(r+1, in.Records[r], noNumber))
+			record(l, r+1, in.Records[r], st)
 		}
 	}
 
@@ -162,18 +196,25 @@ func Marks(res Result, n int, span func(Section) Span) []bool {
 
 // ChangeBars lists the whole of one file, each record marked by marks with
 // the bar's character (/CHANGE_BAR on a file, F40 to F42; N64 under
-// /NONUMBER):
+// /NONUMBER), or in a radix each record dumped, a marked one's heading
+// followed by " ***CHANGE***" (N64):
 //
 //	************
 //	File DUA1:[DIF116.IN]F01.B;1
 //	    4   data line 4
 //	    5 # data line 5, revised
 //	************
-func ChangeBars(l *Listing, in Input, marks []bool, bar Bar) {
+func ChangeBars(l *Listing, in Input, marks []bool, bar Bar, radix Radix) {
 	l.Cut(strings.Repeat("*", 12))
 	l.Cut("File " + in.Name)
 
 	for r, text := range in.Records {
+		if radix != ASCII {
+			dumpRecord(l, newDumpLayout(radix, l.Width), r+1, text, marks[r])
+
+			continue
+		}
+
 		mark := byte(' ')
 		if marks[r] {
 			mark = bar.Char
@@ -304,10 +345,8 @@ func Pretty(text []byte) string {
 			b.WriteString("<FF>")
 		case c == '\r':
 			b.WriteString("<CR>")
-		case c < 0x20 || c == 0x7F || (c >= 0x80 && c < 0xA0) || c == 0xFF:
-			b.WriteByte('.')
 		default:
-			b.WriteByte(c)
+			b.WriteByte(Printable(c))
 		}
 	}
 

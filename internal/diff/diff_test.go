@@ -196,3 +196,27 @@ func TestMarks(t *testing.T) {
 		t.Errorf("revision marks %s", got)
 	}
 }
+
+// TestDumpLayout holds the dump's line to the widths the probe showed (8
+// hexadecimal longwords at 132, 4 at 80, 6 octal ones at 132) and its
+// partial longwords' digits.
+func TestDumpLayout(t *testing.T) {
+	for _, c := range []struct {
+		radix         Radix
+		width, longwd int
+	}{
+		{Hexadecimal, 132, 8}, {Hexadecimal, 80, 4}, {Octal, 132, 6}, {Hexadecimal, 12, 2},
+	} {
+		if d := newDumpLayout(c.radix, c.width); d.longwords != c.longwd {
+			t.Errorf("radix %d at %d: %d longwords, want %d", c.radix, c.width, d.longwords, c.longwd)
+		}
+	}
+
+	// A20.A's first record in octal (F49): a 3-digit longword of one byte.
+	d := newDumpLayout(Octal, 132)
+	want := strings.Repeat(" ", 57) + "143 01130404541 a.b.c" + strings.Repeat(".", 19) + " 000000"
+
+	if got := d.line([]byte("a\tb\tc"), 0); got != want {
+		t.Errorf("octal line:\n%q\nwant\n%q", got, want)
+	}
+}

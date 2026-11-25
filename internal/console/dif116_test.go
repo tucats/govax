@@ -420,37 +420,14 @@ func dif116Status(got, want []string) []string {
 // dif116Later are the cases of a section an oracle test holds whose listings
 // a later subtask writes: only their messages and status are compared.
 var dif116Later = map[string]string{
-	"N64": "/MODE=HEX's and /IGNORE's listings are subtasks 6 and 7's",
-	"L03": "/SLP's listing is subtask 6's",
-	"F19": "/MODE's listings are subtask 6's",
-	"F20": "/MODE's listings are subtask 6's",
-	"F21": "/MODE's listings are subtask 6's",
-	"F22": "/MODE's listings are subtask 6's",
-	"F23": "/MODE's listings are subtask 6's",
-	"F33": "/MODE's listings are subtask 6's",
-	"F35": "/SLP's listing is subtask 6's",
-	"F36": "/MODE's listings are subtask 6's",
-	"F48": "/MODE's listings are subtask 6's",
-	"F49": "/MODE's listings are subtask 6's",
+	"N64": "/IGNORE's listings are subtask 7's",
 }
-
-// dif116LaterPrefixes are the cases run again in another form, the later
-// subtasks' to hold: SAnn and SGnnn /SLP (6).
-var dif116LaterPrefixes = []string{"SA", "SG"}
 
 // dif116IsLater says a case's listing is a later subtask's.
 func dif116IsLater(id string) bool {
-	if _, later := dif116Later[id]; later {
-		return true
-	}
+	_, later := dif116Later[id]
 
-	for _, p := range dif116LaterPrefixes {
-		if strings.HasPrefix(id, p) {
-			return true
-		}
-	}
-
-	return false
+	return later
 }
 
 // dif116NotCompared are cases an oracle test leaves out.
@@ -560,8 +537,8 @@ func TestDif116MergedOracle(t *testing.T) {
 
 // TestDif116FormsOracle holds the other listing forms to VMS's (subtask 5):
 // /SEPARATED, /PARALLEL, /CHANGE_BAR on a file, /NONUMBER, /WIDTH, and
-// several forms together (the FORMS section, but for /MODE's and /SLP's
-// listings, subtask 6's).
+// several forms together, and /MODE's and /SLP's listings (subtask 6): the
+// FORMS section.
 func TestDif116FormsOracle(t *testing.T) {
 	t.Parallel()
 

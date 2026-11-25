@@ -66,8 +66,9 @@
    periods (or <CR>, <LF>, <VT>, <FF>); /CHANGE_BAR after a file lists
    that whole file, its changed records marked.  Several forms in one
    command are listed in this order, a blank line between them: the
-   parallel listing, the merged one, the separated ones, the change
-   bars.  When /MAXIMUM_DIFFERENCES stops the comparison, only the first
+   parallel listing, then for each radix /MODE names (ASCII, then
+   HEXADECIMAL, then OCTAL) the merged one, the separated ones, and the
+   change bars.  When /MAXIMUM_DIFFERENCES stops the comparison, only the first
    is listed.  Files that are the same get no listing, only the counts.
 
    The status DIFFERENCES leaves is %X006C8009 (success) when the files
@@ -76,10 +77,8 @@
 
 2 Restrictions
 
-   This version of govax lists in ASCII only: /MODE=HEXADECIMAL and
-   OCTAL, and /SLP, are accepted and shown in the command written out,
-   but the listing is the ASCII one.  /IGNORE and /COMMENT_DELIMITER are
-   checked and shown, but nothing is ignored yet.  VMS's /PAGE, /SEARCH,
+   /IGNORE and /COMMENT_DELIMITER are checked and shown in the command
+   written out, but nothing is ignored yet.  VMS's /PAGE, /SEARCH,
    /EXACT, /HIGHLIGHT, and /WRAP are not available.
 
 2 Qualifiers
@@ -147,7 +146,29 @@
    /MODE=(radix[,...])
 
    The listing's radix: ASCII (the default), HEXADECIMAL, OCTAL, each a
-   listing of its own.
+   listing of its own.  In HEXADECIMAL and OCTAL each record is a
+   heading, RECORD NUMBER n (n) LENGTH n (n), the numbers in parentheses
+   in the radix, and a dump of its bytes as DUMP shows them: longwords
+   from right to left, the bytes as text (periods for those that don't
+   print), and the offset.  In a change bar listing a changed record's
+   heading is followed by ***CHANGE***.  /PARALLEL is always ASCII.
+
+   Example, the files of the example under DIFFERENCES at /WIDTH=80:
+
+     $ DIFFERENCES/MODE=HEX/WIDTH=80 FOO.TXT FOO.TST
+     ************
+     File DUA1:[WORK]FOO.TXT;1
+
+     RECORD NUMBER 3 (00000003) LENGTH 6 (00000006)
+
+                            3320 656E696C line 3.......... 000000
+     ******
+     File DUA1:[WORK]FOO.TST;1
+
+     RECORD NUMBER 3 (00000003) LENGTH 9 (00000009)
+
+                     74 61632061 72747865 extra cat....... 000000
+     ...
 
 /NUMBER
 
@@ -188,6 +209,17 @@
    that turns the first file into the second.  Its file is the first
    file's name with type .DIF unless /OUTPUT names another.  It can't be
    given with another listing's qualifier (CONFLICT).
+
+   For each section, a line "-    m,    n" (the first file's records
+   m to n are replaced) or "-    m" (records are inserted after record
+   m; "-" alone, before the first), then the second file's records
+   that take their place.  A line "/" ends the script.  For the
+   example under DIFFERENCES:
+
+     -    2
+     extra cat
+     extra dog
+     /
 
 /WIDTH
 

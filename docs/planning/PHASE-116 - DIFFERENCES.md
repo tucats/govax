@@ -315,7 +315,7 @@ Each is one commit, with tests, stopping for review.
    summary, and the closing echo; held to every generated pair.
 5. **The other forms** (done 2026-11-25): `/SEPARATED`, `/PARALLEL`, `/CHANGE_BAR`,
    `/NONUMBER`, `/WIDTH`, several forms together.
-6. **Radix and SLP**: `/MODE=HEX` and `OCTAL`, `/SLP`.
+6. **Radix and SLP** (done 2026-11-25): `/MODE=HEX` and `OCTAL`, `/SLP`.
 7. **Ignoring**: `/IGNORE`'s keywords, EDITED/EXACT/PRETTY,
    `/COMMENT_DELIMITER` and the defaults by file type.
 8. **The terminal and the rest**: the terminal's width, records that
@@ -541,3 +541,45 @@ The author's answers to the plan's three questions:
   - **A race fixed.** `cpu.Table.ByName` built its index lazily with no
     lock, and two consoles assembling at once (the parallel oracle tests)
     crashed on it; it is built under a `sync.Once` now.
+- **2026-11-25 — subtask 6 done: radix and SLP.** `internal/diff/radix.go`
+  (`Radix`, the dump) and `slp.go` (`SLP`); `Style.Radix` and
+  `Forms.Radixes`; the command passes `/MODE`'s radixes and writes `/SLP`'s
+  script in place of the listing, counts, and echo. `TestDif116FormsOracle`
+  and `TestDif116MergedOracle` now hold every `/MODE` and `/SLP` listing
+  (F19 to F23, F33, F35, F36, F48, F49, L03, SAnn, SGnnn); `internal/diff`'s
+  `TestProbeListings` reads `/MODE`, `/SLP`, `/WIDTH`, and `/MERGED` beside
+  another form, and holds 696 listings (FORMS', IGNORING's I30 and I33, and
+  FORMATS' R10, R12 to R14 among them). Only N64's (its `/IGNORE`) is left.
+  - **The dump.** Each record a blank line, `RECORD NUMBER n (n) LENGTH n
+    (n) ` (the numbers in parentheses eight digits in the radix, the line
+    ending in a blank), a blank line, and DUMP-style lines: longwords from
+    the highest, each a blank and 8 hexadecimal or 11 octal digits, one the
+    record only partly fills showing only its bytes' digits (octal: 3, 6, 8
+    for 1 to 3 bytes) right-aligned, one it doesn't reach blank; a blank,
+    four characters a longword (`Printable`: a period for what `Pretty`
+    makes a period, and for every control; the record's end filled with
+    periods); a blank and the offset, six digits. A line holds the most
+    longwords that fit in one less than the width, an even number (8
+    hexadecimal at 132, 4 at 80, 6 octal at 132); other widths, and an octal
+    offset past 0, are unconfirmed. An empty record is its heading alone.
+  - **Change bars in a radix** (N64, held by its messages only until
+    subtask 7): a marked record's heading gets ` ***CHANGE***`, the heading
+    cut at the dump line's length (`***CHANGE**` at /WIDTH=80); the bar's
+    character isn't shown.
+  - **Order.** Parallel, then per radix ASCII, hexadecimal, octal (F22,
+    F33: not the echo's order) the merged, separated, and change bar
+    listings. The closing empty section follows a merged listing only after
+    a listing of the records as text, the parallel or the ASCII merged one:
+    R13's (/MODE=(HEX,OCTAL)) octal listing after the hexadecimal has none,
+    where F22's, after ASCII's, has. Subtask 5's rule (every merged listing
+    not first) was wrong. With `/PARALLEL` the other forms are listed only in
+    the radixes given, not the ASCII `/PARALLEL` adds to the echo
+    (unconfirmed: no case).
+  - **SLP.** Per section `-%5d,%5d` (the master's first and last records) or,
+    for an insertion, `-%5d` (the master's record it follows; `-` alone
+    before the first, SA06), the revision's records uncut; `/` at the end,
+    alone for identical files (SG137). Under `/SLP`, `/MAXIMUM_DIFFERENCES`
+    counts both files' records of a section (`Options.BothSides`): L03 at 3
+    stopped at an insertion of two after a section of one, its script
+    replacing one record with one, where the merged L01_3 listed two of
+    each. Fitted to that one case, unconfirmed.

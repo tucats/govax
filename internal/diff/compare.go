@@ -17,6 +17,14 @@ type Options struct {
 	// MaxDifferences is /MAXIMUM_DIFFERENCES: the comparison stops once
 	// its sections hold this many records (Result.Stopped); 0 is no limit.
 	MaxDifferences int
+
+	// BothSides counts a section's records as both files' together, not
+	// its larger side's, for /MAXIMUM_DIFFERENCES: /SLP's count. VMS's
+	// L03 (/MAXIMUM_DIFFERENCES=3/SLP) stopped at a section of one record
+	// and an insertion of two, its script replacing one record with one;
+	// the merged L01_3 listed two of each. Fitted to that one case,
+	// unconfirmed.
+	BothSides bool
 }
 
 // Span is a run of records in one file: Start to End, counted from 0, End
@@ -68,6 +76,7 @@ func (c *comparison) run() Result {
 
 	i, j := 0, 0
 	n, m := len(c.a), len(c.b)
+	counted := 0 // the records counted against /MAXIMUM_DIFFERENCES
 
 	for i < n || j < m {
 		if i < n && j < m && bytes.Equal(c.a[i], c.b[j]) {
@@ -85,11 +94,20 @@ func (c *comparison) run() Result {
 		// start, as the limit had left, whether or not they are the section's
 		// (testdata/dif116's L01_1 to L01_9: the master's "entry 10" after
 		// an insertion).
-		if limit := c.opts.MaxDifferences; limit > 0 && res.Records+s.Records() >= limit {
-			rest := limit - res.Records
+		count := s.Records()
+		if c.opts.BothSides {
+			count = s.Master.Len() + s.Revision.Len()
+		}
+
+		if limit := c.opts.MaxDifferences; limit > 0 && counted+count >= limit {
+			rest := limit - counted
+			if c.opts.BothSides {
+				rest = (rest + 1) / 2
+			}
+
 			s = Section{Master: Span{i, min(i+rest, n)}, Revision: Span{j, min(j+rest, m)}}
 			res.Sections = append(res.Sections, s)
-			res.Records = limit
+			res.Records += s.Records()
 			res.Stopped = true
 
 			break
@@ -97,6 +115,7 @@ func (c *comparison) run() Result {
 
 		res.Sections = append(res.Sections, s)
 		res.Records += s.Records()
+		counted += count
 
 		i, j = p, q
 	}

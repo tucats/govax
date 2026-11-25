@@ -81,7 +81,11 @@
 // The other forms are forms.go's: Separated (each file's records of every
 // section under one heading), Parallel (side by side, in the printable form,
 // Pretty), and ChangeBars (a whole file, its changed records marked, Marks).
-// List writes a command's forms in VMS's order: parallel, merged, separated,
-// change bars, a blank line between them; a merged listing that isn't the
-// first ends with a section of no records, as VMS's did.
+// List writes a command's forms in VMS's order: parallel, then for each of
+// /MODE's radixes (ASCII, hexadecimal, octal) merged, separated, and change
+// bars, a blank line between them; a merged listing after one of the records
+// as text ends with a section of no records, as VMS's did. In hexadecimal and
+// octal each record is a heading and a dump (radix.go). /SLP writes no
+// listing but an edit script (SLP), and with it /MAXIMUM_DIFFERENCES counts
+// both files' records of a section (Options.BothSides).
 package diff

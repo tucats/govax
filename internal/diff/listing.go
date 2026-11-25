@@ -65,9 +65,13 @@ type Style struct {
 	NoNumber bool
 
 	// Closing ends a merged listing with a section of no records, as VMS
-	// 7.1 ended every merged listing but the first a command wrote
-	// (testdata/dif116's F21, F22, F31, F33).
+	// 7.1 ended every merged listing written after one of the records as
+	// text (testdata/dif116's F21, F22, F31, F33; not R13's octal one after
+	// the hexadecimal; List decides).
 	Closing bool
+
+	// Radix is the records' radix: as text, or dumped (radix.go).
+	Radix Radix
 }
 
 // Merged lists res's sections in the merged form: for each, master's
@@ -82,9 +86,9 @@ func Merged(l *Listing, master, revision Input, res Result, st Style) {
 		}
 
 		l.Cut(strings.Repeat("*", 12))
-		side(l, master, s.Master, after, st.NoNumber)
+		side(l, master, s.Master, after, st)
 		l.Cut(strings.Repeat("*", 6))
-		side(l, revision, s.Revision, after, st.NoNumber)
+		side(l, revision, s.Revision, after, st)
 		l.Cut(strings.Repeat("*", 12))
 	}
 
@@ -99,24 +103,28 @@ func Merged(l *Listing, master, revision Input, res Result, st Style) {
 
 // side lists one file's part of a section, and the after records that
 // follow it.
-func side(l *Listing, in Input, span Span, after int32, noNumber bool) {
+func side(l *Listing, in Input, span Span, after int32, st Style) {
 	l.Cut("File " + in.Name)
 
 	end := min(span.End+max(int(after), 0), len(in.Records))
 
 	for r := span.Start; r < end; r++ {
-		l.Cut(recordLine(r+1, in.Records[r], noNumber))
+		record(l, r+1, in.Records[r], st)
 	}
 }
 
-// recordLine is a record's line in the merged and separated forms: with its
-// number (RecordLine) or, under /NONUMBER, its text alone (F15).
-func recordLine(number int, text []byte, noNumber bool) string {
-	if noNumber {
-		return string(text)
+// record lists a record in the merged and separated forms: in a radix, its
+// dump (dumpRecord); as text, its line with its number (RecordLine) or,
+// under /NONUMBER, its text alone (F15).
+func record(l *Listing, number int, text []byte, st Style) {
+	switch {
+	case st.Radix != ASCII:
+		dumpRecord(l, newDumpLayout(st.Radix, l.Width), number, text, false)
+	case st.NoNumber:
+		l.Cut(string(text))
+	default:
+		l.Cut(RecordLine(number, text))
 	}
-
-	return RecordLine(number, text)
 }
 
 // RecordLine is a record's line: its number right-aligned in five columns
