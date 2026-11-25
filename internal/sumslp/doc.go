@@ -82,7 +82,10 @@
 // locator2; a range starting two or more lines past the input's end is lost,
 // as an insert there is; EDOUTSEQ of a dropped or held edit is listed when
 // the pass reaches it; PRMEOF takes no line number; a range open at the
-// second end closes there.
+// second end closes there. With several update files a range that runs out
+// is the same: the other files' edits reach the second reading by its
+// numbers, and a range starting inside the one that ran out is dropped
+// (TestMergeChoices pins each).
 //
 // # The listing
 //

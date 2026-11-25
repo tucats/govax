@@ -181,37 +181,9 @@ func TestGovaxScriptsRoundTrip(t *testing.T) {
 	}
 
 	rng := rand.New(rand.NewPCG(117, 4))
-	words := []string{"alpha", "beta", "gamma", "-minus", "/slash", "<less", `\back`, "%pct", "", " /"}
-
-	file := func() [][]byte {
-		n := rng.IntN(30)
-		f := make([][]byte, n)
-
-		for i := range f {
-			f[i] = []byte(words[rng.IntN(len(words))])
-		}
-
-		return f
-	}
 
 	for i := range 3000 {
-		master := file()
-
-		// The revision is the master edited: some records dropped, changed,
-		// or added, so the two share runs.
-		var revision [][]byte
-
-		for _, r := range master {
-			switch rng.IntN(6) {
-			case 0:
-			case 1:
-				revision = append(revision, []byte(words[rng.IntN(len(words))]))
-			case 2:
-				revision = append(revision, r, []byte(words[rng.IntN(len(words))]))
-			default:
-				revision = append(revision, r)
-			}
-		}
+		master, revision := randomPair(rng)
 
 		if why := roundTrip(master, revision, govaxScript(master, revision)); why != "" {
 			t.Fatalf("pair %d: %s", i, why)
@@ -228,4 +200,33 @@ func hasLineFeed(records [][]byte) bool {
 	}
 
 	return false
+}
+
+// randomPair is a small master of a few distinct records, some starting with
+// SLP's operators, and a revision of it with records dropped, changed, and
+// added, so that the two share runs and their sections meet, start, and end
+// the files.
+func randomPair(rng *rand.Rand) ([][]byte, [][]byte) {
+	words := []string{"alpha", "beta", "gamma", "-minus", "/slash", "<less", `\back`, "%pct", "", " /"}
+
+	master := make([][]byte, rng.IntN(30))
+	for i := range master {
+		master[i] = []byte(words[rng.IntN(len(words))])
+	}
+
+	var revision [][]byte
+
+	for _, r := range master {
+		switch rng.IntN(6) {
+		case 0:
+		case 1:
+			revision = append(revision, []byte(words[rng.IntN(len(words))]))
+		case 2:
+			revision = append(revision, r, []byte(words[rng.IntN(len(words))]))
+		default:
+			revision = append(revision, r)
+		}
+	}
+
+	return master, revision
 }

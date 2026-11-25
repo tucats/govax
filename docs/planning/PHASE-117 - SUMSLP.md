@@ -509,9 +509,10 @@ Each is one commit, with tests, stopping for review.
    round trip over Phase 116's pairs and VMS's 62 scripts. (The one pass
    that fits one file's cases fits several files' too: MERGE and CLASH2,
    the trail, and the listing's pages already match, below.)
-5. **Merging**: several update files, their order and conflicts; held
-   to MERGE. (Held since subtask 4, engine and command; what is left is
-   the unconfirmed cases: a range that runs out with several files.)
+5. **Merging** (done 2026-11-25): several update files, their order and
+   conflicts; held to MERGE. (Held since subtask 4, engine and command; what
+   was left was the unconfirmed cases: a range that runs out with several
+   files.)
 6. **Audit trail and listing**: held to AUDIT and LISTING. (The engine's
    part held since subtask 4; left: `/HEADER`'s VFC output, U11 to U14.)
 7. **Files and the round trip on VMS**: record formats, every byte, long
@@ -711,3 +712,16 @@ The author's answers to the plan's four questions:
   tests' reading of cases.txt's `=lines` rule took a one-word prefix
   (L03's and L04's "listing record"), fixed in both readers. Subtask 5
   is next; with its sections already held, it is small.
+- **2026-11-25 — subtask 5 done: merging.** The MERGE and CLASH2 sections
+  were held by subtask 4's pass (`TestProbeMerged`, and through EDIT/SUM
+  `TestSum117MergeOracle`). Added: `merge_test.go`'s `TestSplitScriptsMerge`
+  deals the edits of each DIFFERENCES/SLP script (both probes' pairs and
+  2,000 random ones) among two or three update files at random; merged, they
+  give the revision with no message, so edits that don't meet merge into one
+  file's result whatever files they are in. `TestMergeChoices` pins govax's
+  choices where no case had one, a range that runs out with another file's
+  edits after it: an insert or a range of the other file reaches the second
+  reading by its numbers, a range starting inside the one that ran out is
+  dropped, and a range open at the second end closes there (`doc.go`; for
+  DEVIATIONS.md at the close-out). The random pairs' maker is shared,
+  `randomPair`. No engine change was needed. Subtask 6 is next.
