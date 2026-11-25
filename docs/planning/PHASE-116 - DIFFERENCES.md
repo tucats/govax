@@ -212,9 +212,10 @@ The probe (Part D) is to answer each:
 Each is one commit, with tests, stopping for review.
 
 1. **The survey**: Part A, this plan.
-2. **The probe**: `testdata/dif116`, as in Part D, written and its
-   exchange volume built; run on the VAX by the author; A.3 answered
-   (as A.4) and Part B adjusted.
+2. **The probe** (written and rehearsed 2026-11-25; awaiting the VAX
+   run): `testdata/dif116`, as in Part D, written and its exchange
+   volume built; run on the VAX by the author; A.3 answered (as A.4) and
+   Part B adjusted.
 3. **The command's frame**: the grammar, HELP DIFFERENCES in VMS's
    shape, the messages and statuses in `vmsdef`, names (the second's
    defaults, the next lower version), the errors, identical files, the
@@ -240,10 +241,13 @@ Each is one commit, with tests, stopping for review.
 the simh VAX). `gen.go` writes every file but the README:
 
 - **The pairs**: `[DIF116.IN]` holds each case's files, made by
-  `gen.go` (A.3's hand-written cases, and about 300 generated pairs from
-  a fixed seed: short files of a few distinct lines, so repeats and
-  near-matches are common, with insertions, deletions, changes, and
-  moves).
+  `gen.go` (A.3's hand-written cases, and 270 generated pairs from a
+  fixed seed: 240 short files of four or twelve distinct lines, so
+  repeats and near-matches are common, and 30 longer ones, with
+  insertions, deletions, changes, moves, and duplicates). `cases.txt` is
+  the whole probe, every file's records and every case, the one record
+  govax's oracle tests read; `in/`, the host copies, is made from it and
+  gitignored.
 - **`dif116.com`**: SET VERIFY, then a section per A.3 question; each
   case runs DIFFERENCES with `/OUTPUT=[DIF116.OUT]Cnnn.DIF` and writes
   `$STATUS` and `F$MESSAGE($STATUS)` to the log; the error cases run at
@@ -251,8 +255,10 @@ the simh VAX). `gen.go` writes every file but the README:
   stay tabs when the files come back.
 - **`dif116t.com`**: the terminal cases, run by hand at an 80- and a
   132-column terminal, whose session log the author keeps (A.3.10).
-- **The other record formats**: made on the VAX by CONVERT/FDL from
-  `gen.go`'s FDL files, so their attributes are VMS's own.
+- **The other record formats**: VFC, STREAM_LF, and fixed files made
+  by `exchange.cmd`'s COPY `/RECORD_FORMAT` (Phase 86), so govax's tests
+  can make them the same way; the fixed ones copied as binary, so a
+  record may hold CR and LF (a text copy drops a CR before a LF).
 
 `copyout.cmd` brings back the log, every `.DIF` file, and a
 DIRECTORY/FULL of the outputs. The oracle test (subtask 4 on) reads the
@@ -273,3 +279,14 @@ The author's answers to the plan's three questions:
 - **2026-11-25 — subtask 1, the survey.** The DCL Dictionary's entry
   read; govax's pieces found; the plan and the probe's design written.
   The author accepted it the same day ("The review").
+- **2026-11-25 — subtask 2, the probe, written.** `testdata/dif116`:
+  `gen.go` writes `cases.txt` (659 input files, 859 cases in nine
+  sections: LAYOUT, MATCHING, FORMS, IGNORING, LIMITS, NAMES, OUTPUT,
+  FORMATS, GENERATED), `dif116.com`, `dif116t.com` (the terminal and the
+  paging qualifiers, by hand; DIFFERENCES with no parameters moved here,
+  since its prompts would stop the logged run), `exchange.cmd`, and
+  `copyout.cmd`. The exchange volume built on govax, its records checked
+  with DUMP/RECORD, and `dif116.com` rehearsed to its end (every
+  DIFFERENCES an unknown verb for now). The README has the VAX steps.
+  Noticed on the way: govax has no SHOW TIME (the procedure writes
+  `F$TIME()` instead), not this phase's to add.
