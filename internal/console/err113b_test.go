@@ -146,7 +146,6 @@ var err113BDifferences = map[string][]err113Difference{
 	}},
 }
 
-
 // TestErr113BLink links round 2's LNK113L from VMS's own object
 // (testdata/err113/vax/round2) and holds the image and map to VMS's: a
 // shareable image's .LONG of its own address is LINK-W-NONPICREF, and the
