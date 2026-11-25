@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // Phase 116's probe of DIFFERENCES (docs/planning/PHASE-116 - DIFFERENCES.md;
@@ -551,4 +552,135 @@ func TestDif116IgnoringOracle(t *testing.T) {
 	t.Parallel()
 
 	holdDif116(t, "IGNORING")
+}
+
+// TestDif116FormatsOracle holds records that aren't text to VMS's (subtask
+// 8): VFC, STREAM_LF, and fixed files compared by their records, and every
+// byte from 0 to %XFF in each form: the FORMATS section.
+func TestDif116FormatsOracle(t *testing.T) {
+	t.Parallel()
+
+	holdDif116(t, "FORMATS")
+}
+
+// dif116TerminalSkipped are the terminal log's commands the terminal oracle
+// doesn't replay, and why.
+var dif116TerminalSkipped = map[string]string{
+	"WIDTH = F$GETDVI(\"TT\",\"DEVBUFSIZ\")": "the procedure's own bookkeeping",
+	"SET TERMINAL/WIDTH='WIDTH'":             "the procedure's own bookkeeping",
+	"SET TERMINAL/WIDTH=177":                 "the procedure's own bookkeeping",
+	"SET NOON":                               "the procedure's own bookkeeping",
+	"SET VERIFY":                             "the procedure's own bookkeeping",
+	"SET NOVERIFY":                           "the procedure's own bookkeeping",
+	"DIFFERENCES":                            "its prompts are a procedure's INSFPRM, or a person's answers (TestDif116NamesOracle)",
+	"differences":                            "its prompts are a person's answers",
+	"DIFFERENCES I30.A I30.B":                "the log shows what the terminal did with the records' control characters",
+}
+
+// TestDif116TerminalOracle replays DIF116T.COM's session at a terminal
+// (testdata/dif116/vax/terminal.log, subtask 8): the listing at the
+// terminal's width of 80 and of 132 columns, /WIDTH ignored there but
+// shown in the echo, and /OUTPUT naming the terminal, which takes /WIDTH.
+// The paging qualifiers VMS 7.1 has are left out (Decision 1).
+func TestDif116TerminalOracle(t *testing.T) {
+	t.Parallel()
+
+	text, err := os.ReadFile(filepath.Join(dif116Dir(t), "vax", "terminal.log"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	type exchange struct {
+		command string
+		output  []string
+	}
+
+	var session []*exchange
+
+	for _, line := range strings.Split(strings.ReplaceAll(string(text), "\r", ""), "\n") {
+		if rest, ok := strings.CutPrefix(line, "$ "); ok {
+			session = append(session, &exchange{command: strings.TrimSpace(rest)})
+
+			continue
+		}
+
+		if len(session) > 0 && !strings.HasPrefix(line, "_File ") {
+			last := session[len(session)-1]
+			last.output = append(last.output, line)
+		}
+	}
+
+	d, _, buf := dif116Volume(t)
+	shareFindRun(t, d, "SET DEFAULT DIF$TOP:[DIF116]")
+
+	ran, width, skipped := 0, 0, false
+
+	for _, x := range session {
+		if x.command == "" || strings.HasPrefix(x.command, "!") || strings.HasPrefix(x.command, "@") {
+			continue
+		}
+
+		// A skipped command's SHOW SYMBOL $STATUS goes with it.
+		if _, skip := dif116TerminalSkipped[x.command]; skip || skipped && x.command == "SHOW SYMBOL $STATUS" {
+			skipped = skip
+
+			continue
+		}
+
+		skipped = false
+
+		if n, ok := strings.CutPrefix(x.command, "SET TERMINAL/WIDTH="); ok {
+			width, _ = strconv.Atoi(n)
+		}
+
+		// The paging qualifiers are VMS 7.1's, not govax's (Decision 1).
+		if strings.Contains(x.command, "/PAGE") || strings.Contains(x.command, "/SEARCH") ||
+			strings.Contains(x.command, "/WRAP") || strings.Contains(x.command, "/HIGHLIGHT") ||
+			strings.Contains(x.command, "/EXACT") {
+			break
+		}
+
+		buf.Reset()
+
+		if err := d.Dispatch(x.command); err != nil && !vmserrors.MessageInhibited(err) {
+			t.Errorf("%s: %v", x.command, err)
+
+			continue
+		}
+
+		ran++
+
+		got := strings.TrimRight(dif116Wrap(buf.String(), width), "\n")
+		want := strings.TrimRight(strings.Join(x.output, "\n"), "\n")
+
+		if got != want {
+			t.Errorf("%s: the output differs\ngovax:\n%s\nVMS:\n%s", x.command, got, want)
+		}
+	}
+
+	if ran < 20 {
+		t.Errorf("only %d commands replayed", ran)
+	}
+}
+
+// dif116Wrap is text as a terminal of width columns set /WRAP shows it, a
+// line longer than the width going on at the next line's start: what VMS's
+// terminal did with /OUTPUT=TT:'s 132-column records on 80 columns.
+func dif116Wrap(text string, width int) string {
+	if width <= 0 {
+		return text
+	}
+
+	var b strings.Builder
+
+	for line := range strings.SplitSeq(text, "\n") {
+		for len(line) > width {
+			b.WriteString(line[:width] + "\n")
+			line = line[width:]
+		}
+
+		b.WriteString(line + "\n")
+	}
+
+	return strings.TrimSuffix(b.String(), "\n")
 }

@@ -57,7 +57,10 @@
      ************
 
    each file's records of the section, and after them as many records
-   that match as /MERGED says (1).  A record's line is its number, three
+   that match as /MERGED says (1).  The files may have any record
+   format, variable, VFC, fixed, or stream: their records are compared,
+   not their formats, so a VFC file and a stream file with the same
+   records are the same.  A record's line is its number, three
    blanks, and its text, cut at the listing's width.
 
    The other forms: /SEPARATED lists each file's records of every
@@ -255,6 +258,11 @@
 
    The listing's width, 132 by default; at least 12.  A line longer is
    cut, the counts and the command written out are broken with "-".
+
+   A listing written to SYS$OUTPUT at a terminal is the terminal's
+   width (SET TERMINAL/WIDTH), whatever /WIDTH says, though the command
+   written out shows /WIDTH.  /OUTPUT naming the terminal (/OUTPUT=TT:
+   or /OUTPUT=SYS$OUTPUT) takes /WIDTH.
 
 /WINDOW
 

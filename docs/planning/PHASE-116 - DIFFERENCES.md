@@ -318,7 +318,7 @@ Each is one commit, with tests, stopping for review.
 6. **Radix and SLP** (done 2026-11-25): `/MODE=HEX` and `OCTAL`, `/SLP`.
 7. **Ignoring** (done 2026-11-25): `/IGNORE`'s keywords, EDITED/EXACT/PRETTY,
    `/COMMENT_DELIMITER` and the defaults by file type.
-8. **The terminal and the rest**: the terminal's width, records that
+8. **The terminal and the rest** (done 2026-11-25): the terminal's width, records that
    aren't text.
 9. **The close-out**: MANUAL.md (section 6's file commands), HELP,
    VAX-VMS-INTERNALS.md if a mechanism changed, DEVIATIONS.md (what
@@ -630,3 +630,37 @@ The author's answers to the plan's three questions:
     UTF-8, so under CASE every byte from %X80 up became one replacement
     character and R15's records 9, which differ, matched; `upperASCII` folds
     byte by byte.
+- **2026-11-25 — subtask 8 done: the terminal and the rest.**
+  `TestDif116FormatsOracle` holds the FORMATS section (VFC, STREAM_LF, and
+  fixed files, R01 to R07, and every byte in each form, R10 to R15) to
+  VMS's: the earlier subtasks' reading and forms already gave every listing,
+  echo, and status, so nothing in the command changed for it.
+  `TestDif116TerminalOracle` replays `vax/terminal.log`'s session at the
+  console, the terminal set to 80 and then 132 columns.
+  - **The terminal's width.** A listing written to SYS$OUTPUT by default,
+    with no user-mode SYS$OUTPUT file, is SYS$OUTPUT's terminal's width
+    (`differences.terminalWidth`, `corevms.Environment.TerminalSettings`),
+    whatever `/WIDTH` says, though the echo shows `/WIDTH=132` (at 80) or
+    `/WIDTH=80` (at 132) as given; the echo is broken at the terminal's
+    width too. A SYS$OUTPUT that isn't a terminal (a procedure's `/OUTPUT`
+    file, which every oracle's log is) keeps 132 or `/WIDTH`. The dump at
+    132 columns is 8 longwords a line, the rule subtask 6 fitted to files.
+  - **`/OUTPUT` naming the terminal** takes `/WIDTH` (`/OUTPUT=SYS$OUTPUT`
+    and `/OUTPUT=TT:` at `/WIDTH=132` on 80 columns wrote 132-column
+    records, which VMS's terminal wrapped; govax's host terminal doesn't
+    wrap, so the test wraps govax's lines at the terminal's width,
+    `dif116Wrap`). The echo shows RMS's resultant names, fitted to those two
+    cases (`differences.terminalOutput`): a process-permanent file's logical
+    name and an empty name, type, and version (`SYS$OUTPUT:.;`), a terminal
+    device with an empty directory and the defaults' name and type
+    (`TT:[]A19.DIF;`). Unconfirmed: the width with no `/WIDTH` there (govax
+    132), and a name or type given after a terminal's device (govax shows it
+    as given).
+  - **Not replayed**: the procedure's DIFFERENCES with no parameters
+    (INSFPRM) and the prompts at the `$` prompt (both held by subtask 3's
+    oracle and `internal/dcl`'s tests), I30 at the terminal (the log is what
+    the terminal did with its control characters), and the paging
+    qualifiers VMS 7.1 has and govax leaves out (Decision 1; a deviation for
+    the close-out's DEVIATIONS.md).
+  - HELP DIFFERENCES says both: `/WIDTH`'s topic the terminal's rule, the
+    Description that the files' record formats don't matter.

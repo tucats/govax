@@ -77,6 +77,8 @@ type differences struct {
 
 	ign      diff.Ignore // what /IGNORE and /COMMENT_DELIMITER ignore
 	comments []byte      // /COMMENT_DELIMITER's characters, none for the type's
+
+	outTerminal bool // /OUTPUT names a terminal: the listing goes to SYS$OUTPUT
 }
 
 // Differences runs DIFFERENCES.
@@ -111,8 +113,20 @@ func (c *Context) Differences(req DifferencesRequest) error {
 		return err
 	}
 
+	// The listing goes to its file, a user-mode SYS$OUTPUT's file, or
+	// SYS$OUTPUT; at a terminal it is the terminal's width.
+	file := outName
+	if file == "" && !d.outTerminal {
+		file = d.userOutput()
+	}
+
+	width := d.width
+	if file == "" && !d.outTerminal {
+		width = d.terminalWidth(width)
+	}
+
 	// /SLP writes its script alone: no counts, no echo (F35).
-	l := diff.NewListing(d.width)
+	l := diff.NewListing(width)
 	if on(req.SLP) {
 		l.Lines = diff.SLP(master, revision, res)
 	} else {
@@ -134,7 +148,7 @@ func (c *Context) Differences(req DifferencesRequest) error {
 		})
 	}
 
-	if err := d.write(outName, l); err != nil {
+	if err := d.write(file, l); err != nil {
 		return err
 	}
 
@@ -651,6 +665,12 @@ func (d *differences) output(master string) (string, error) {
 		spec = d.req.Output.Text
 	}
 
+	if shown, ok := d.terminalOutput(spec, name); ok {
+		d.outTerminal = true
+
+		return shown, nil
+	}
+
 	if parsed, _, err := s.Parse(spec, name+".DIF", "", true, false); err == nil && !s.DefaultOnHost() {
 		spec = parsed.String()
 	}
@@ -670,15 +690,10 @@ func (d *differences) output(master string) (string, error) {
 	return created.Name, nil
 }
 
-// write writes the listing to its file, or to SYS$OUTPUT: a user-mode
-// SYS$OUTPUT naming a file, the image's own, gets it there, as VMS's image
-// wrote it (O09).
+// write writes the listing to its file name, or with none (or /OUTPUT naming
+// a terminal) to SYS$OUTPUT.
 func (d *differences) write(name string, l *diff.Listing) error {
-	if name == "" {
-		name = d.userOutput()
-	}
-
-	if name == "" {
+	if name == "" || d.outTerminal {
 		d.c.Printf("%s", l.Text())
 
 		return nil
@@ -695,6 +710,80 @@ func (d *differences) write(name string, l *diff.Listing) error {
 	}
 
 	return nil
+}
+
+// terminalWidth is the listing's width when it goes to SYS$OUTPUT: the
+// terminal's, /WIDTH or not (testdata/dif116's terminal.log: /WIDTH=132 at a
+// terminal of 80 columns and /WIDTH=80 at one of 132 are the terminal's,
+// though the echo shows them), or width when SYS$OUTPUT isn't a terminal (a
+// procedure's /OUTPUT file, a batch job's log).
+func (d *differences) terminalWidth(width int) int {
+	if d.c.RTL == nil {
+		return width
+	}
+
+	s, st := d.c.RTL.TerminalSettings("SYS$OUTPUT")
+	if st != 0 || s.Width == 0 {
+		return width
+	}
+
+	return max(int(s.Width), diff.MinWidth)
+}
+
+// terminalOutput says whether /OUTPUT's spec names a terminal, and the name
+// the echo shows for it. A terminal named by /OUTPUT takes /WIDTH, where
+// SYS$OUTPUT's by default doesn't (terminal.log's /OUTPUT=SYS$OUTPUT and
+// /OUTPUT=TT: at /WIDTH=132 on a terminal of 80 columns: the records are
+// 132 wide). RMS's resultant name for a process-permanent file is its
+// logical name and an empty name, type, and version ("SYS$OUTPUT:.;"); for
+// a terminal device, the device, an empty directory, and the name and type
+// from the defaults, the version empty ("TT:[]A19.DIF;"). Both forms are
+// fitted to those two cases; a name or type given with a terminal is shown
+// as given (unconfirmed).
+func (d *differences) terminalOutput(spec, name string) (string, bool) {
+	if spec == "" || d.c.RTL == nil {
+		return "", false
+	}
+
+	spec = strings.ToUpper(spec)
+
+	device, rest, colon := strings.Cut(spec, ":")
+	if !colon && strings.ContainsAny(spec, ".[]<>;") {
+		return "", false
+	}
+
+	if _, st := d.c.RTL.TerminalSettings(device); st != 0 {
+		return "", false
+	}
+
+	if rest == "" && d.c.Logicals != nil {
+		if e, err := d.c.Logicals.Translate("LNM$FILE_DEV", device, lnm.User, 0); err == nil && len(e.Equivalences) > 0 {
+			if _, ok := lnm.ParsePermanentFile(e.Equivalences[0].Value); ok {
+				return device + ":.;", true
+			}
+		}
+	}
+
+	file, typ := name, ".DIF"
+
+	if rest != "" {
+		rest, _, _ = strings.Cut(rest, ";")
+		if i := strings.LastIndexAny(rest, "]>"); i >= 0 {
+			rest = rest[i+1:]
+		}
+
+		if n, t, dot := strings.Cut(rest, "."); dot {
+			if n != "" {
+				file = n
+			}
+
+			typ = "." + t
+		} else if rest != "" {
+			file = rest
+		}
+	}
+
+	return device + ":[]" + file + typ + ";", true
 }
 
 // userOutput is the file a user-mode SYS$OUTPUT names for the image DCL
