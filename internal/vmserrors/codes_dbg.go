@@ -49,6 +49,11 @@ const (
 	dbgDynModSet
 	dbgNotAlloc
 	dbgNotAssoc
+	dbgBadTarget
+	dbgNoAlterSP
+	dbgNoSucc
+	dbgNoNxtLin
+	dbgNotCurPC
 )
 
 // DBG facility status codes.
@@ -148,9 +153,9 @@ const (
 	// DBG_DYNMODSET is the debugger setting a module's symbols itself, when
 	// the program stops in it.
 	DBG_DYNMODSET = DBGFacility<<FacilityPosition | dbgDynModSet<<MessagePosition | StatusInfo
-	// DBG_NOSUCHMODULE is SET MODULE's and SHOW SYMBOL's answer to a
-	// module name no loaded image has. The wording is govax's choice: no
-	// probe showed it.
+	// DBG_NOSUCHMODULE is SET MODULE's, SET SOURCE/MODULE's, TYPE's, and
+	// SHOW SYMBOL's answer to a module name no loaded image has: VMS 7.1's
+	// NOSUCHMODU, its argument the name (testdata/dbg113's DBG113M).
 	DBG_NOSUCHMODULE = DBGFacility<<FacilityPosition | dbgNoSuchModule<<MessagePosition | StatusError
 	// DBG_NOTRACES is SHOW TRACE's answer when no tracepoint is set (the
 	// probe's trace.dlg). CANCEL TRACE of nothing says it too: unconfirmed.
@@ -197,6 +202,21 @@ const (
 	// command procedure (@) starts and ends: "entering" or "exiting", and
 	// the file as given (VMS 7.1's text, testdata/trace73's sessions).
 	DBG_VERIFYICF = DBGFacility<<FacilityPosition | dbgVerifyICF<<MessagePosition | StatusInfo
+	// Phase 113's debugger round (VMS 7.1's texts, testdata/dbg113).
+	// DBG_BADTARGET is DEPOSIT to an address among the registers'.
+	DBG_BADTARGET = DBGFacility<<FacilityPosition | dbgBadTarget<<MessagePosition | StatusWarning
+	// DBG_NOALTERSP is DEPOSIT to an outer scope's SP, which only the RET
+	// computes.
+	DBG_NOALTERSP = DBGFacility<<FacilityPosition | dbgNoAlterSP<<MessagePosition | StatusInfo
+	// DBG_NOSUCC follows EXAMINE of the PSL, the last register: there is
+	// nothing after it for EXAMINE with no location.
+	DBG_NOSUCC = DBGFacility<<FacilityPosition | dbgNoSucc<<MessagePosition | StatusWarning
+	// DBG_NONXTLIN is TYPE with no line before any source line was shown.
+	DBG_NONXTLIN = DBGFacility<<FacilityPosition | dbgNoNxtLin<<MessagePosition | StatusWarning
+	// DBG_NOTCURPC comes before an instruction whose operands are explained
+	// at an address other than the PC's. Its text is two lines, the second
+	// after a tab, as VMS's.
+	DBG_NOTCURPC = DBGFacility<<FacilityPosition | dbgNotCurPC<<MessagePosition | StatusInfo
 )
 
 func init() {
@@ -229,7 +249,7 @@ func init() {
 	DefineMessage(DBG_MISINVNUM, DBGFacility, "MISINVNUM", "misplaced invocation number in !S")
 	DefineMessage(DBG_NEEDMORE, DBGFacility, "NEEDMORE", "unexpected end of command line")
 	DefineMessage(DBG_DYNMODSET, DBGFacility, "DYNMODSET", "setting module !S")
-	DefineMessage(DBG_NOSUCHMODULE, DBGFacility, "NOSUCHMODULE", "module '!S' is not in the module table")
+	DefineMessage(DBG_NOSUCHMODULE, DBGFacility, "NOSUCHMODU", "module !S is not in module chain")
 	DefineMessage(DBG_NOTRACES, DBGFacility, "NOTRACES", "no tracepoints are set, no opcode tracing")
 	DefineMessage(DBG_NOWATCHES, DBGFacility, "NOWATCHES", "no watchpoints are set")
 	DefineMessage(DBG_OPTNOTALLOW, DBGFacility, "OPTNOTALLOW", "operator \"!S\" not allowed on given data type")
@@ -243,5 +263,10 @@ func init() {
 	DefineMessage(DBG_NOCURVAL, DBGFacility, "NOCURVAL", "no value has been examined, evaluated, or deposited")
 	DefineMessage(DBG_NOEXC, DBGFacility, "NOEXC", "there is no current exception")
 	DefineMessage(DBG_NOTNUMERIC, DBGFacility, "NOTNUMERIC", "'!S' is a string, not a number")
+	DefineMessage(DBG_BADTARGET, DBGFacility, "BADTARGET", "target location protected, cannot perform deposit")
+	DefineMessage(DBG_NOALTERSP, DBGFacility, "NOALTERSP", "deposit into register 14 (stack pointer) not allowed")
+	DefineMessage(DBG_NOSUCC, DBGFacility, "NOSUCC", "logical successor not defined")
+	DefineMessage(DBG_NONXTLIN, DBGFacility, "NONXTLIN", "next line for source display not defined")
+	DefineMessage(DBG_NOTCURPC, DBGFacility, "NOTCURPC", "target of EXAMINE/OPERANDS is not the current PC \n\tresults may be unexpected")
 	DefineMessage(DBG_NOSOURCEDIR, DBGFacility, "NOSOURCEDIR", "no source directory search list is in effect")
 }

@@ -54,6 +54,23 @@ type Evaluator struct {
 	// (.R2 is what is at the address R2 holds), as any other operand is.
 	Value bool
 
+	// Labels, with Value, makes a label in the code (one that isn't a
+	// routine's entry) its instruction's bytes, as a data label is its
+	// data: the value DEPOSIT stores (VMS 7.1's DEPOSIT PC = DEEP stored
+	// 005001D0, DEEP's MOVL #1, R0, testdata/dbg113's DBG113S). Past four
+	// bytes the first four (unconfirmed). EVALUATE of such a label still
+	// gives its address (govax's choice: no VMS log shows one).
+	Labels bool
+
+	// RegisterAddresses makes a register's name, in an address (not
+	// Value), the register's place among the debugger's register
+	// addresses, RegisterBase + 4n (the PSL's RegisterBase+40), rather
+	// than its contents: VMS 7.1's EXAMINE AP+4 showed FP, and R2+1 the
+	// bytes of R2 from its second on, while @AP is still AP's contents
+	// (testdata/dbg113's DBG113A). RegisterUsed is set when one was read.
+	RegisterAddresses bool
+	RegisterUsed      bool
+
 	// LoadSized reads size bytes (1, 2, or 4) at an address, for a data
 	// label's contents in Value mode. Nil reads a longword with Load.
 	LoadSized func(addr, size uint32) (uint32, error)
@@ -471,6 +488,10 @@ func (e *Evaluator) parseAtom(s string) (uint32, string, error) {
 			return v, s[i:], err
 		}
 
+		if v, ok := e.registerAddress(s[1:i]); ok {
+			return v, s[i:], nil
+		}
+
 		if v, ok, err := e.registerContents(s[1:i]); ok || err != nil {
 			return v, s[i:], err
 		}
@@ -541,6 +562,10 @@ func (e *Evaluator) parseAtom(s string) (uint32, string, error) {
 		// A register the debugger gives for its scope, unless a console
 		// symbol has the name (which wins over a register, as below).
 		if e.Register != nil && !strings.Contains(name, `\`) && !e.consoleName(name) {
+			if v, ok := e.registerAddress(name); ok {
+				return v, rest, nil
+			}
+
 			if v, ok, err := e.registerContents(name); ok || err != nil {
 				return v, rest, err
 			}
@@ -564,6 +589,15 @@ func (e *Evaluator) parseAtom(s string) (uint32, string, error) {
 
 			if isData {
 				return contents, rest, nil
+			}
+
+			if size, ok := e.codeLabel(name, v); e.Labels && ok {
+				contents, err := e.loadValue(v, 4)
+				if size < 4 {
+					contents &= 1<<(8*size) - 1
+				}
+
+				return contents, rest, err
 			}
 		}
 
@@ -704,6 +738,33 @@ func (e *Evaluator) dataContents(name string, addr uint32) (v uint32, isData boo
 	return v, true, err
 }
 
+// DebugLabels is what the debug names say of a label: CodeLabel reports
+// whether path, at addr, names a label that isn't a routine's entry or
+// data, and the length of the instruction there.
+type DebugLabels interface {
+	CodeLabel(path string, addr uint32) (size uint32, ok bool)
+}
+
+// codeLabel reports whether name, at addr, is a label in the code, which
+// the Labels mode reads as its instruction's bytes, and how many there
+// are. A console symbol or a register of the name isn't one.
+func (e *Evaluator) codeLabel(name string, addr uint32) (uint32, bool) {
+	dl, ok := e.Debug.(DebugLabels)
+	if !ok || e.Symbols == nil {
+		return 0, false
+	}
+
+	if _, found := e.Symbols.Get(name); found {
+		return 0, false
+	}
+
+	if _, found := registerValue(e, name); found {
+		return 0, false
+	}
+
+	return dl.CodeLabel(e.scopedPath(name), addr)
+}
+
 // startsOperand reports whether ch can begin the operand a "." or "@"
 // takes: a name, a number, a parenthesis, or a "%" register. (A "." before
 // a digit is a number's own point, and is left to the number.)
@@ -716,13 +777,19 @@ func startsOperand(ch byte) bool {
 // register name already gives; anything else is an address, and the
 // contents are the longword stored there.
 func (e *Evaluator) parseContents(s string) (uint32, string, error) {
+	// @AP is AP's contents, even where AP alone is its register address.
+	if !e.Value && e.isRegister(s) {
+		saved := e.RegisterAddresses
+		e.RegisterAddresses = false
+		v, rest, err := e.parseAtom(s)
+		e.RegisterAddresses = saved
+
+		return v, rest, err
+	}
+
 	addr, rest, err := e.parseAtom(s)
 	if err != nil {
 		return 0, "", err
-	}
-
-	if !e.Value && e.isRegister(s) {
-		return addr, rest, nil
 	}
 
 	if e.Load == nil {
@@ -761,6 +828,40 @@ func (e *Evaluator) isRegister(s string) bool {
 	}
 
 	return true
+}
+
+// RegisterBase is where the debugger's register addresses start: R0's
+// is RegisterBase, Rn's RegisterBase + 4n, and the PSL's RegisterBase +
+// 40 (hex), VMS's numbers, which its SYMBOLIZE names (testdata/dbg113's
+// DBG113A). RegisterEnd is the first address past them.
+const (
+	RegisterBase uint32 = 0xFFFF0000
+	RegisterPSL  uint32 = RegisterBase + 0x40
+	RegisterEnd  uint32 = RegisterBase + 0x44
+)
+
+// registerAddress is a register's address in RegisterAddresses mode; ok
+// is false when name isn't a register or the mode isn't on.
+func (e *Evaluator) registerAddress(name string) (uint32, bool) {
+	if !e.RegisterAddresses || e.Value {
+		return 0, false
+	}
+
+	upper := strings.ToUpper(name)
+	if upper == "PSL" {
+		e.RegisterUsed = true
+
+		return RegisterPSL, true
+	}
+
+	r, ok := registerNames[upper]
+	if !ok {
+		return 0, false
+	}
+
+	e.RegisterUsed = true
+
+	return RegisterBase + 4*uint32(r), true
 }
 
 // registerContents is a register's contents as the Register hook gives

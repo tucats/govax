@@ -94,12 +94,16 @@ func TestDepositInScope(t *testing.T) {
 
 	for _, step := range []struct{ line, says string }{
 		{"DEPOSIT R0 = 1", "non-static variable 'DBG89\\REC 1\\%R0' is not active"},
-		{"DEPOSIT SP = 0", "not allowed"},
-		{"DEPOSIT PSL = 0", "not allowed"},
+		{"DEPOSIT SP = 0", "deposit into register 14 (stack pointer) not allowed"},
 	} {
 		if _, err := sayErr(c, step.line); err == nil || !strings.Contains(err.Error(), step.says) {
 			t.Errorf("%s: %v, want %q", step.line, err, step.says)
 		}
+	}
+
+	// An outer level's PSL takes a DEPOSIT, as VMS 7.1's did (testdata/dbg113).
+	if _, err := sayErr(c, "DEPOSIT PSL = PSL"); err != nil {
+		t.Errorf("DEPOSIT PSL = PSL: %v", err)
 	}
 }
 

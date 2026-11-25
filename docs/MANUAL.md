@@ -5243,7 +5243,7 @@ stepped to FACT\FACTORIAL\%LINE 36
 DBG> EXAMINE/INSTRUCTION .PC
 FACT\FACTORIAL\%LINE 36:        BLEQ     FACT\FACTORIAL\%LINE 41
 DBG> STEP/RETURN
-stepped on return from FACT\FACTORIAL\%LINE 36 to FACT\FACTORIAL\%LINE 40: RET
+stepped on return from FACT\FACTORIAL\%LINE 36 to FACT\FACTORIAL\%LINE 40
     40:         RET
 DBG> EXAMINE/DECIMAL R0
 FACT\FACTORIAL\%R0:     6
@@ -5344,11 +5344,11 @@ An address or value is an expression:
 | `SET RADIX [/INPUT\|/OUTPUT] radix` | Decimal, hexadecimal, octal, or binary. |
 | `SET MODE [NO]SYMBOLIC`, `OPERANDS`, `[NO]LINE` | Display modes. |
 | `SET TYPE [/OVERRIDE] type` | The default type for `EXAMINE` and `DEPOSIT`. |
-| `SET SOURCE dir,...` | Where to find source files. |
+| `SET SOURCE [/MODULE=name] dir,...` | Where to find source files, of every module or of one; `SHOW SOURCE` and `CANCEL SOURCE [/MODULE=name]`. |
 | `@file` | Run debugger commands from a file (`.COM` when it has no type); with `SET OUTPUT VERIFY` each line is echoed as it runs. |
 | `SET LOG file`, `SET OUTPUT [NO]LOG,[NO]VERIFY,[NO]TERMINAL` | Log the session (to `DEBUG.LOG` unless `SET LOG` names another file): each command as read, and every output line after a `!`, so the log can be run with `@`. |
 | `SHOW LOG`, `SHOW OUTPUT` | Whether the session is logged, and the other output settings. |
-| `EXIT`, `QUIT` | End the session, and a program still running under it. |
+| `EXIT`, `QUIT` | End the session, and a program still running under it (`EXIT` runs its exit handlers first, `QUIT` doesn't); in an `@` file, end the file. |
 
 A command procedure can give the debugger its commands, as on VMS: a
 `DEFINE/USER_MODE DBG$INPUT file` before `RUN/DEBUG` makes the debugger

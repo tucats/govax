@@ -65,6 +65,14 @@ func sessionCases() []sessionCase {
 		sessionCase{"dbg89", "dbg89f.dbg", "dbg89f.dlg", "testdata/dbg89/vax/dbg89f.exe", "testdata/dbg89/vax", ""},
 	)
 
+	// Phase 113's debugger round: what Phases 42, 85, and 89 left open.
+	for _, name := range []string{"dbg113s", "dbg113a", "dbg113i", "dbg113t", "dbg113r", "dbg113n",
+		"dbg113o", "dbg113l", "dbg113x", "dbg113m", "dbg113q"} {
+		cases = append(cases, sessionCase{"dbg113", name + ".dbg", name + ".dlg", "testdata/dbg113/vax/dbg113.exe", "testdata/dbg113", ""})
+	}
+
+	cases = append(cases, sessionCase{"dbg113", "dbg113s.dbg", "gvdbg113s.dlg", "testdata/dbg113/vax/dbg113.exe", "testdata/dbg113", ""})
+
 	for _, name := range []string{"break", "brkcls", "call", "errors", "exam", "except", "step", "trace", "watch"} {
 		cases = append(cases, sessionCase{"dbgcmd", name + ".dbg", name + ".dlg", "testdata/dbgcmd/vax/dbgcmd.exe", "testdata/dbgcmd", ""})
 	}
@@ -105,6 +113,10 @@ func logLines(t *testing.T, dir, name string) []string {
 
 	for _, l := range strings.Split(strings.ReplaceAll(string(data), "\r", ""), "\n") {
 		if l, ok := strings.CutPrefix(l, "!"); ok {
+			lines = append(lines, strings.TrimRight(l, " "))
+		} else if strings.HasPrefix(l, "\t") {
+			// A message's second line (NOTCURPC's "results may be
+			// unexpected") is logged as it was written, with no "!".
 			lines = append(lines, strings.TrimRight(l, " "))
 		}
 	}
@@ -223,6 +235,8 @@ var programOutput = map[string]bool{
 	"DBGDIS: done":              true,
 	"DBGCMD: done":              true,
 	"TRACE: three routines ran": true,
+	"DBG113: the exit handler ran": true,
+	"DBG113: done":                 true,
 }
 
 // trace73Output matches what testdata/trace73's program prints: a part's
@@ -362,10 +376,6 @@ func readScriptIn(t *testing.T, dir, name string) []string {
 // and isn't listed under one of these fails the test, and so does a listed
 // one that no longer differs: the list is what is left to do, or to decide.
 const (
-	reasonWhen = "a WHEN condition's .LABEL is the contents at the address COUNT holds in VMS, and the " +
-		"contents at COUNT in govax (condition.go says why), so the break at BUMP or CATCH differs, and " +
-		"what the later GOs reach"
-
 	reasonDispatcher = "at a break on an unhandled exception govax's program is paused inside the condition " +
 		"dispatcher (an XFC), not at the faulting instruction, so .PC, SHOW CALLS, and the frame's register " +
 		"names are the dispatcher's (docs/planning/PHASE-42.md, subtask 5)"
@@ -399,6 +409,13 @@ const (
 	reasonCaretX = "DEPOSIT R2=^X2222: VMS's debugger doesn't read ^X (SYNERREXPR) and stores nothing, govax " +
 		"reads it and stores, so the registers it changed differ after (the probe meant %X)"
 
+	reasonActivatorRegisters = "the registers VMS's image activator left that no routine since has changed (R11 " +
+		"7FFE2BDC, and AP and FP's stack addresses, which R11's instruction runs into); govax's differ"
+
+	reasonSourceHarness = "this harness finds the source by SET SOURCE, so SHOW SOURCE with none set has a list, " +
+		"SYS$LOGIN has no translation, and after the session's CANCEL SOURCE the source is gone " +
+		"(TestDbg113Procedure, on a volume, finds it)"
+
 	reasonDebuggerTraced = "under the debugger VMS ran its own debugger code traced after the service's " +
 		"CHMK (TRACE73.LOG's records at P0 000912xx), adding traces govax has no code for"
 )
@@ -415,7 +432,6 @@ var expectedDifferences = map[string]map[int]string{
 		7:  reasonSymbolForm,
 		8:  reasonSymbolForm,
 		9:  reasonSymbolForm,
-		50: "@(AP+N): VMS takes AP alone there as something other than its value, which isn't understood (D2)",
 		51: "@N(AP): VMS sees the syntax error first; govax reads memory first (D2)",
 	},
 
@@ -424,6 +440,16 @@ var expectedDifferences = map[string]map[int]string{
 		16: reasonEveryModule, 31: reasonEveryModule,
 		46: reasonStartR6, 71: reasonStartR6, 79: reasonStartR6,
 		162: reasonCaretX, 164: reasonCaretX, 166: reasonCaretX, 169: reasonCaretX, 175: reasonCaretX,
+	},
+
+	// Phase 113's debugger round, testdata/dbg113.
+	"dbg113s.dlg":   {34: reasonActivatorRegisters, 65: reasonDispatcher},
+	"gvdbg113s.dlg": {34: reasonActivatorRegisters, 65: reasonDispatcher},
+	"dbg113i.dlg":   {14: reasonActivatorRegisters},
+	"dbg113x.dlg":   {4: reasonDispatcher, 9: reasonDispatcher},
+	"dbg113m.dlg": {
+		11: reasonSourceHarness, 15: reasonSourceHarness, 23: reasonSourceHarness, 24: reasonSourceHarness,
+		26: reasonSourceHarness,
 	},
 
 	"dbgdis.dlg":   {29: reasonGlobalName},
@@ -445,7 +471,8 @@ var expectedDifferences = map[string]map[int]string{
 			"says the name is undefined",
 	},
 
-	"break.dlg": {36: reasonWhen, 38: reasonWhen, 39: reasonWhen, 43: reasonWhen},
+	"break.dlg": {39: "at HANDLR's break VMS echoes a DO clause's commands (\" EXAMINE R0;\"), its R0 is the " +
+		"dispatcher's, and SHOW CALLS has the handler's lines (" + reasonHandlerCalls + ")"},
 
 	"call.dlg": {
 		2: reasonCall, 3: reasonCall, 6: reasonCall, 8: reasonCall, 9: reasonCall, 10: reasonCall,

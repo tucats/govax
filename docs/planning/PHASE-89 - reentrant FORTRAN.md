@@ -42,6 +42,7 @@ Phases 82, 83, and 86 each left "routines really reentrant" for a later phase.
 5. **Unconfirmed in the debugger:** where a DEPOSIT to an outer level's register goes (the probe's `^X` DEPOSITs
    failed on VMS); an outer level's PSL condition codes; `%NEXT_SCOPE_ENTRY` at the last level; G and H short
    literals' digits; EXAMINE/INSTRUCTION of a register past its bytes; EXAMINE after the PC; TYPE with nothing shown.
+   *(Resolved in Phase 113, subtask 13f: `testdata/dbg113` asked VMS 7.1 each, and govax follows its answers.)*
 6. **The stack with paging off:** a stack past the top 1,024 pages of P1 runs into a P1 expansion below it, and LINK's
    `STACK=` does nothing with paging off.
 7. **Not planned:** threads (DECthreads) and HP Fortran's `/REENTRANCY`; `NON_RECURSIVE`; Fortran 90's other procedure
@@ -842,7 +843,8 @@ it moves to a Phase 90.
     (SYNERREXPR), so where a DEPOSIT to an outer level's register goes is unconfirmed. govax puts it
     where the level's value is kept: in the frame that saved it (the RET restores it), or in the live
     register. An outer level's SP and PSL, which no frame holds, refuse it (OPTNOTALLOW), as do R0
-    and R1 (SYMNOTACT). `TestDepositInScope` holds that.
+    and R1 (SYMNOTACT). `TestDepositInScope` holds that. *(Resolved in Phase 113, subtask 13f: VMS 7.1 put a
+    DEPOSIT where govax does; an outer SP is NOALTERSP, an outer PSL is taken.)*
   - **Done:**
     - `machine/scope.go`: `CallLevels`, `RegistersAt` (by the frames' masks, with each saved
       register's slot), and `InstructionInBytes`. The outer level's PSL is the live one with the
@@ -867,13 +869,14 @@ it moves to a Phase 90.
   - **Tests:** `TestFortranScope` holds a `/DEBUG` FORTRAN program's activations (SET SCOPE n,
     `/CURRENT`, `2\K`, a DEPOSIT into an outer frame); `TestDepositInScope` the MACRO DEPOSITs. Three
     older tests now expect DYNMODSET before a break in DBGSUB.
-  - **Unconfirmed, govax's choices:**
-    - `%NEXT_SCOPE_ENTRY` stops at the last level;
-    - G and H short literals are written with seven digits too;
+  - **Unconfirmed, govax's choices** *(each resolved in Phase 113, subtask 13f, by `testdata/dbg113`)*:
+    - `%NEXT_SCOPE_ENTRY` stops at the last level *(VMS's does)*;
+    - G and H short literals are written with seven digits too *(VMS's are)*;
     - EXAMINE/INSTRUCTION of a register takes the bytes of the registers after it for a longer
-      instruction;
-    - after the PC, EXAMINE with no location goes to the PSL;
-    - TYPE with no line and none shown yet asks for one.
+      instruction *(VMS's does, R11 into AP and FP)*;
+    - after the PC, EXAMINE with no location goes to the PSL *(it does, and after the PSL it is
+      NOSUCC)*;
+    - TYPE with no line and none shown yet asks for one *(VMS's says NONXTLIN)*.
 - **2026-11-05:** Subtask 11, end to end.
   - **New programs**, each worked by hand before it ran, in all four compile modes and both paging modes
     (`testdata/fortran/README.md` has each one's row):

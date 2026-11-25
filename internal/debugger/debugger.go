@@ -94,9 +94,17 @@ type Debugger struct {
 	// instruction), silent, and source (step.go).
 	stepDefaults stepSettings
 
-	// pendingReturn is a STEP/RETURN still waiting for the RET it was
-	// given for (step.go), or nil.
-	pendingReturn *pendingReturn
+	// pendingReturns are the STEP/RETURNs still waiting for the RETs they
+	// were given for (step.go), innermost frame last: a second one given in
+	// a deeper frame waits beside the first (VMS 7.1's DBG113N).
+	pendingReturns []*pendingReturn
+
+	// lastBreak is the breakpoint that last stopped a run (breakpointHit).
+	lastBreak *Breakpoint
+
+	// leaving says EXIT or QUIT ended the @ procedure being read; quietExit
+	// that EXIT is running the image's exit handlers (dbginput.go).
+	leaving, quietExit bool
 
 	// stepTrace is set for a run that gives the program the trace pending
 	// before a STEP's instruction, and traceDone when that run has done so;
@@ -430,7 +438,7 @@ func (d *Debugger) NewImage() {
 
 	d.StepMode = StepOver
 	d.stepDefaults = stepSettings{}
-	d.pendingReturn = nil
+	d.pendingReturns = nil
 
 	d.imageDebug = false
 	d.imageExited = false

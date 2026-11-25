@@ -144,15 +144,17 @@ func TestBreakListAndTemporary(t *testing.T) {
 
 // TestBreakWhenAndDo: WHEN keeps a breakpoint from stopping until its
 // condition holds, and DO runs commands when it stops. SHOW BREAK shows
-// both clauses as typed.
+// both clauses as typed. A data label in the condition is its contents, so
+// COUNT is what COUNT holds (.COUNT would read the address it holds, as on
+// VMS).
 func TestBreakWhenAndDo(t *testing.T) {
 	c := probeSession(t)
 
-	say(t, c, "SET BREAK LOOP WHEN (.COUNT EQL 1)")
+	say(t, c, "SET BREAK LOOP WHEN (COUNT EQL 1)")
 	say(t, c, "SET BREAK ODD DO (SHOW BREAK)")
 
 	expect(t, "SHOW BREAK", say(t, c, "SHOW BREAK"),
-		"breakpoint at DBGCMD\\START\\LOOP\n   when (.COUNT EQL 1)\n"+
+		"breakpoint at DBGCMD\\START\\LOOP\n   when (COUNT EQL 1)\n"+
 			"breakpoint at DBGCMD\\START\\ODD\n   do (SHOW BREAK)\n")
 
 	// ODD's DO runs after its break message, as if typed at the prompt.

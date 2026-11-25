@@ -11,16 +11,12 @@ import (
 // This file evaluates the conditions the debugger's commands accept so
 // far: comparisons (EQL, NEQ, LSS, LEQ, GTR, GEQ) between two operands,
 // joined with AND, OR, and NOT, and grouped with parentheses. An operand
-// is an address expression (the console's expression evaluator, with the
-// debugger's registers and ".COUNT" for the longword stored at an address
-// in it: ".COUNT" is COUNT's contents; "COUNT" is its address).
-//
-// Unconfirmed against VMS: in a MACRO-language expression the VMS
-// debugger takes a data label's *value* to be its contents, so its ".COUNT"
-// is the contents of the address COUNT holds (the probe's WHEN
-// (.WATCHL EQL 2) read address 2 and failed). govax takes a label's value
-// to be its address, as the console's evaluator always has, which makes
-// ".COUNT" the contents the author meant.
+// is an expression's value, as EVALUATE's: a data label is its contents,
+// so ".COUNT" is the contents of the address COUNT holds, as in VMS 7.1's
+// (testdata/dbgcmd's WHEN (.WATCHL EQL 2) read address 2, and
+// testdata/dbg113's DBG113T addresses 0, 1, and 2 as COUNT went from 0 to
+// 2). A condition that can't be evaluated says why, and the eventpoint is
+// taken (eventpoint.go's conditionHolds), as VMS's was.
 
 // comparisons are the relational operators, as the debugger spells them.
 var comparisons = []string{"EQL", "NEQ", "LSS", "LEQ", "GTR", "GEQ"}
@@ -109,12 +105,18 @@ func compare(op string, l, r int32) bool {
 	return l >= r // GEQ
 }
 
-// operand evaluates one side of a comparison: an address expression. The
+// operand evaluates one side of a comparison, an expression's value. The
 // evaluator takes registers (R1, SP), and ".expression" for the longword
 // at an address, which is %DEBUG-E-NOACCESSR when the program can't read
-// it.
+// it. A FORTRAN variable is its place, as before.
 func (d *Debugger) operand(text string) (uint32, error) {
-	return d.evalWhole(unparenthesize(text))
+	text = unparenthesize(text)
+
+	if _, ok, _ := d.fortranPlaces(text); ok {
+		return d.evalWhole(text)
+	}
+
+	return d.Machine.EvalWholeMode(d.inputRadix, text, true)
 }
 
 // splitWord splits text around the first occurrence of word (compared

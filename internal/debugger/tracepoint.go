@@ -75,6 +75,14 @@ func (d *Debugger) traceHit(pc uint32) {
 		}
 	}
 
+	// A tracepoint at an address is reported after the classes' (lines,
+	// branches) at the same pc, whatever the list's order: VMS 7.1's
+	// LOOPTOP gave "trace on lines" then "trace at" each pass
+	// (testdata/dbg113's DBG113T).
+	slices.SortStableFunc(fired, func(a, b *Breakpoint) int {
+		return boolOrder(a.Kind == BreakAddress) - boolOrder(b.Kind == BreakAddress)
+	})
+
 	for _, tp := range fired {
 		d.Machine.Printf("%s\n", d.traceMessage(tp, pc))
 		d.showSource(pc)
@@ -145,4 +153,13 @@ func (d *Debugger) cancelTrace(r *dcl.Result) error {
 	}
 
 	return nil
+}
+
+// boolOrder is 1 for true and 0 for false, for sorting.
+func boolOrder(b bool) int {
+	if b {
+		return 1
+	}
+
+	return 0
 }

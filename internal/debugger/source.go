@@ -2,10 +2,12 @@ package debugger
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/tucats/govax/internal/dbgsym"
 	"github.com/tucats/govax/internal/dcl"
+	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -136,9 +138,40 @@ func expandTabs(s string) string {
 // grammar, unquoted text is made upper case and a "/" starts a qualifier,
 // so a host path, whose case counts, is written in quotes.
 func (d *Debugger) SetSource(list string) error {
+	dirs, err := sourceList(list)
+	if err != nil {
+		return err
+	}
+
 	// A table comes from a file the new list may find elsewhere.
 	d.fortranTables = nil
+	d.Machine.SetSourceDirs(dirs)
 
+	return nil
+}
+
+// setModuleSource is SET SOURCE/MODULE=name: a list for one module's
+// source, searched in place of the list for all; a module no image has is
+// NOSUCHMODU (VMS 7.1's, testdata/dbg113's DBG113M).
+func (d *Debugger) setModuleSource(module, list string) error {
+	module = strings.ToUpper(strings.TrimSpace(module))
+	if d.moduleNamed(module) == nil {
+		return vmserrors.New(vmserrors.DBG_NOSUCHMODULE, module)
+	}
+
+	dirs, err := sourceList(list)
+	if err != nil {
+		return err
+	}
+
+	d.fortranTables = nil
+	d.Machine.SetModuleSourceDirs(module, dirs)
+
+	return nil
+}
+
+// sourceList is SET SOURCE's list of directories.
+func sourceList(list string) ([]string, error) {
 	var dirs []string
 
 	for _, dir := range splitTop(list, ',') {
@@ -148,30 +181,77 @@ func (d *Debugger) SetSource(list string) error {
 	}
 
 	if len(dirs) == 0 {
-		return vmserrors.New(vmserrors.CLI_MISSINGPARAMETER, "directories")
+		return nil, vmserrors.New(vmserrors.CLI_MISSINGPARAMETER, "directories")
 	}
 
-	d.Machine.SetSourceDirs(dirs)
+	return dirs, nil
+}
+
+// ShowSource implements SHOW SOURCE in VMS 7.1's words (testdata/dbg113's
+// DBG113M): the lists for EDIT ("the latest source file version") and for
+// DISPLAY ("the exact" one), which in govax are the same, each module's
+// own list first, then the list for all (other) modules; a list of a
+// logical name, SYS$LOGIN:, shows its translation below it. A list of
+// more than one directory is a "search list" (VMS's one-directory list
+// for all modules was "list", its two for a module "search list"; which
+// decides is unconfirmed).
+func (d *Debugger) ShowSource() error {
+	all := d.Machine.SourceDirs()
+	modules := d.Machine.ModuleSourceDirs()
+
+	names := make([]string, 0, len(modules))
+	for name := range modules {
+		names = append(names, name)
+	}
+
+	slices.Sort(names)
+
+	for _, use := range []struct{ title, match string }{{"EDIT", "latest"}, {"DISPLAY", "exact"}} {
+		d.Machine.Printf("For %s:\n", use.title)
+
+		if len(all) == 0 && len(names) == 0 {
+			d.Machine.Printf("    no directory search list in effect, match the %s source file version\n", use.match)
+
+			continue
+		}
+
+		for _, name := range names {
+			d.showSourceList("for "+name, modules[name], use.match)
+		}
+
+		if len(all) > 0 {
+			whom := "for all modules"
+			if len(names) > 0 {
+				whom = "for all other modules"
+			}
+
+			d.showSourceList(whom, all, use.match)
+		}
+	}
 
 	return nil
 }
 
-// ShowSource implements SHOW SOURCE: the directory search list.
-func (d *Debugger) ShowSource() error {
-	dirs := d.Machine.SourceDirs()
-	if len(dirs) == 0 {
-		d.Machine.Printf("%%%s\n", vmserrors.New(vmserrors.DBG_NOSOURCEDIR))
-
-		return nil
+// showSourceList is one list of SHOW SOURCE's.
+func (d *Debugger) showSourceList(whom string, dirs []string, match string) {
+	kind := "list"
+	if len(dirs) > 1 {
+		kind = "search list"
 	}
 
-	d.Machine.Printf("source directory search list for all modules:\n")
+	d.Machine.Printf("    source directory %s %s, match the %s source file version\n", kind, whom, match)
 
 	for _, dir := range dirs {
-		d.Machine.Printf("    %s\n", dir)
-	}
+		d.Machine.Printf("        %s\n", dir)
 
-	return nil
+		if name, ok := strings.CutSuffix(dir, ":"); ok && !strings.ContainsAny(name, ":[]<>") {
+			if logicals := d.Machine.ProcessOneLogicals(); logicals != nil {
+				if e, err := logicals.Translate("LNM$FILE_DEV", name, lnm.User, lnm.AttrCaseBlind); err == nil && len(e.Equivalences) > 0 {
+					d.Machine.Printf("             = %s\n", e.Equivalences[0].Value)
+				}
+			}
+		}
+	}
 }
 
 // bindSource binds SET SOURCE, SHOW SOURCE, and CANCEL SOURCE.
@@ -303,22 +383,37 @@ func (d *Dispatcher) bindSource() {
 		}
 
 		// With no line, the one after the source line last shown, as
-		// VMS's does (testdata/dbg89). With none shown yet, a line is
-		// needed (govax's choice).
+		// VMS's does (testdata/dbg89); with none shown yet, NONXTLIN
+		// (VMS 7.1's, testdata/dbg113).
 		if last := d.Debugger.lastSource; last.module != nil {
 			d.Debugger.typeLines(last.module, last.line+1, last.line+1)
 
 			return nil
 		}
 
-		return vmserrors.New(vmserrors.CLI_MISSINGPARAMETER, "lines")
+		return vmserrors.New(vmserrors.DBG_NONXTLIN)
 	})
 
 	d.Grammar.Bind("SET_SOURCE", func(id int64, r *dcl.Result) error {
+		if r.Present("MODULE") {
+			return d.Debugger.setModuleSource(r.String("MODULE"), r.String("DIRECTORIES"))
+		}
+
 		return d.Debugger.SetSource(r.String("DIRECTORIES"))
 	})
 	d.Grammar.Bind("SHOW_SOURCE", func(id int64, r *dcl.Result) error { return d.Debugger.ShowSource() })
 	d.Grammar.Bind("CANCEL_SOURCE", func(id int64, r *dcl.Result) error {
+		if r.Present("MODULE") {
+			name := strings.TrimSpace(r.String("MODULE"))
+			if d.Debugger.moduleNamed(name) == nil {
+				return vmserrors.New(vmserrors.DBG_NOSUCHMODULE, strings.ToUpper(name))
+			}
+
+			d.Debugger.Machine.SetModuleSourceDirs(name, nil)
+
+			return nil
+		}
+
 		d.Debugger.Machine.SetSourceDirs(nil)
 
 		return nil

@@ -405,7 +405,9 @@ func (d *Debugger) showPoint(bp *Breakpoint, word string) {
 		}
 	}
 
-	if bp.After > 0 {
+	// Once its count is reached it's shown with none, as a watchpoint is
+	// (VMS 7.1's SHOW WATCH, testdata/dbg113's DBG113T; unconfirmed here).
+	if bp.After > 0 && bp.hits < bp.After {
 		c.Printf("   /after: %d\n", bp.After)
 	}
 

@@ -47,6 +47,10 @@ type CallLevel struct {
 // invocation number: MODULE\ROUTINE, or the module alone when the
 // routine has its module's name (a FORTRAN main program, DBG89B).
 func (l CallLevel) Path() string {
+	if l.Module == "" {
+		return ""
+	}
+
 	if l.HasRoutine && !strings.EqualFold(l.Routine, l.Module) {
 		return l.Module + `\` + l.Routine
 	}
@@ -58,7 +62,7 @@ func (l CallLevel) Path() string {
 // PC isn't in a module the debug symbols know (no image, or one without
 // them).
 func (m *Machine) CallLevels() (levels []CallLevel, ok bool, err error) {
-	rows, ok, err := m.debugFrames(0)
+	rows, ok, err := m.walkFrames(0, true)
 
 	for _, row := range rows {
 		levels = append(levels, CallLevel{
@@ -205,4 +209,24 @@ func (m *Machine) InstructionInBytes(data []byte, opts DisassembleOptions) (stri
 	}
 
 	return dec.Format(m.formatOptions(opts, names)), nil
+}
+
+// SetSavedPSW stores psl's PSW bits 5 to 15, those a CALL saves, in the
+// frame that holds level k's PSW (level k-1's), for DEPOSIT to an outer
+// level's PSL. The condition codes aren't saved, so they are dropped.
+func (m *Machine) SetSavedPSW(levels []CallLevel, k int, psl uint32) error {
+	if k < 1 || k > len(levels) {
+		return nil
+	}
+
+	at := levels[k-1].FP + 4
+
+	word, err := m.Mem.LoadLongword(m.CPU, at)
+	if err != nil {
+		return err
+	}
+
+	word = word&^0xFFE0 | psl&0xFFE0
+
+	return m.WriteBytes(at, []byte{byte(word), byte(word >> 8), byte(word >> 16), byte(word >> 24)})
 }

@@ -101,6 +101,14 @@ func levelNames(levels []machine.CallLevel) []string {
 		path := l.Path()
 		key := strings.ToUpper(path)
 
+		// A level whose PC is in no module is named by its number, as
+		// VMS's 1\%PC (testdata/dbg113's DBG113S).
+		if path == "" {
+			names[i] = strconv.Itoa(i)
+
+			continue
+		}
+
 		names[i] = path
 		if n := seen[key]; n > 0 {
 			names[i] = fmt.Sprintf("%s %d", path, n)
@@ -192,6 +200,10 @@ func (d *Debugger) registerView() (regView, error) {
 	v := regView{level: level, regs: regs, scope: d.registerScope()}
 	if level > 0 {
 		v.scope = levelNames(levels)[level]
+	} else if v.scope == "" && d.imageDebug {
+		// The program's PC in no routine (a break on an exception at
+		// 005001D0): VMS names its registers 0\%R2 (testdata/dbg113).
+		v.scope = "0"
 	}
 
 	return v, nil
@@ -230,10 +242,9 @@ func (v regView) psl() (uint32, error) {
 }
 
 // put stores a register of the view: a live one in the CPU, one a frame
-// saved in the frame, so the RET gives it back to the routine. SP and the
-// PSL of an outer level are what a RET computes and no frame holds, so
-// they can't be changed (govax's choice: the probe's DEPOSITs were
-// written with ^X, which VMS's debugger doesn't read).
+// saved in the frame, so the RET gives it back to the routine (VMS 7.1's
+// DBG113S). An outer level's SP is what a RET computes and no frame holds:
+// %DEBUG-I-NOALTERSP.
 func (d *Debugger) put(v regView, reg registers.Reg, name string, value uint32) error {
 	if _, err := v.get(reg, name); err != nil {
 		return err
@@ -249,8 +260,10 @@ func (d *Debugger) put(v regView, reg registers.Reg, name string, value uint32) 
 		return d.Machine.WriteBytes(slot, []byte{byte(value), byte(value >> 8), byte(value >> 16), byte(value >> 24)})
 	}
 
+	// An outer level's SP is what its frame's RET will compute: VMS 7.1
+	// refuses it with an informational (testdata/dbg113's DBG113S).
 	if reg == registers.SP {
-		return vmserrors.New(vmserrors.DBG_OPTNOTALLOW, "DEPOSIT")
+		return vmserrors.New(vmserrors.DBG_NOALTERSP)
 	}
 
 	d.Machine.CPU.SetGPR(reg, value)
@@ -695,6 +708,10 @@ func (d *Debugger) examineRegisterInstruction(item string, opts machine.Disassem
 
 // registerInstruction shows the instruction a register's bytes hold.
 func (d *Debugger) registerInstruction(reg registers.Reg, name string, isPSL bool, opts machine.DisassembleOptions) error {
+	if !isPSL {
+		return d.registerInstructionAt(machine.RegisterBase+4*uint32(reg), opts)
+	}
+
 	view, err := d.registerView()
 	if err != nil {
 		return err
@@ -734,6 +751,59 @@ func (d *Debugger) registerInstruction(reg registers.Reg, name string, isPSL boo
 	}
 
 	d.Machine.Printf("%s%s\n", tabPad(view.label(name)+":"), text)
+
+	return nil
+}
+
+// registerInstructionAt shows the instruction in the registers' bytes from
+// register address at on (R5, or R5+1 inside it), and makes it the place
+// EXAMINE with no location goes on from. A CASE instruction's table is in
+// the bytes after it, which aren't listed past 20 displacements (VMS
+// 7.1's DBG113I; fewer aren't listed either, unconfirmed).
+func (d *Debugger) registerInstructionAt(at uint32, opts machine.DisassembleOptions) error {
+	reg, name, _, offset := registerAt(at)
+
+	view, err := d.registerView()
+	if err != nil {
+		return err
+	}
+
+	if _, err := view.get(reg, name); err != nil {
+		return err
+	}
+
+	var data []byte
+
+	// The registers after it supply the bytes of a longer instruction, as
+	// far as the PC (VMS 7.1's R11 went on into AP and FP).
+	for k := reg; k <= registers.PC; k++ {
+		v, err := view.get(k, registerName(k))
+		if err != nil {
+			break
+		}
+
+		data = append(data, byte(v), byte(v>>8), byte(v>>16), byte(v>>24))
+	}
+
+	data = data[offset:]
+
+	text, err := d.Machine.InstructionInBytes(data, opts)
+	if err != nil {
+		return err
+	}
+
+	label, err := d.registerAddressName(at)
+	if err != nil {
+		return err
+	}
+
+	d.Machine.Printf("%s%s\n", tabPad(label+":"), text)
+
+	if line := machine.CaseTooLong(data); line != "" {
+		d.Machine.Printf("%16s%s\n", "", line)
+	}
+
+	d.examined.regAt, d.examined.inRegs = at, true
 
 	return nil
 }

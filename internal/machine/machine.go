@@ -10,14 +10,14 @@ import (
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/cpu"
 	iodev "github.com/tucats/govax/internal/io"
-	"github.com/tucats/govax/internal/librtl"
 	"github.com/tucats/govax/internal/lbrrtl"
-	"github.com/tucats/govax/internal/mthrtl"
-	"github.com/tucats/govax/internal/securertl"
+	"github.com/tucats/govax/internal/librtl"
 	"github.com/tucats/govax/internal/lnm"
+	"github.com/tucats/govax/internal/mthrtl"
 	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/respath"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/securertl"
 	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -85,7 +85,7 @@ type Machine struct {
 	// DebugNames, when set, is the Evaluator's Names: the debugger's names for what a
 	// program's symbols don't say (docs/planning/PHASE-85, subtask 10). Nil for none.
 	DebugNames func(name string) (uint32, bool)
-	Verbose     bool
+	Verbose    bool
 
 	// Trace matches vax.console.disasm (SET TRACE/NOTRACE, SHOW TRACE):
 	// whether EXEC/GO/CALL/RUN disassemble each instruction as they execute
@@ -139,8 +139,10 @@ type Machine struct {
 	// sourceDirs is the debugger's SET SOURCE search list, and
 	// sourceCache the source files read so far, by the file name the
 	// debug symbol table gives (source.go).
-	sourceDirs  []string
-	sourceCache map[string][]string
+	sourceDirs []string
+	// moduleSourceDirs are SET SOURCE/MODULE's lists, by module name.
+	moduleSourceDirs map[string][]string
+	sourceCache      map[string][]string
 
 	// instructionLimit and timeLimit are govax's --instruction-limit and
 	// --time-limit options (SetRunLimits, misc.go). They are held here,
@@ -446,9 +448,9 @@ func (m *Machine) newRTL() *corevms.Environment {
 	}
 
 	sys := corevms.NewSystem(m.CPU, m.Mem, m.Devices, m.Mounts)
-	librtl.Register(sys.Shims()) // LIBRTL.EXE's routines (docs/planning/PHASE-34.md)
-	mthrtl.Register(sys.Shims()) // MTHRTL.EXE's (docs/planning/PHASE-77 - MTHRTL.md)
-	lbrrtl.Register(sys.Shims()) // LBRSHR.EXE's (docs/planning/PHASE-90 - VMS help.md)
+	librtl.Register(sys.Shims())    // LIBRTL.EXE's routines (docs/planning/PHASE-34.md)
+	mthrtl.Register(sys.Shims())    // MTHRTL.EXE's (docs/planning/PHASE-77 - MTHRTL.md)
+	lbrrtl.Register(sys.Shims())    // LBRSHR.EXE's (docs/planning/PHASE-90 - VMS help.md)
 	securertl.Register(sys.Shims()) // SECURESHR.EXE's (docs/planning/PHASE-93 - file protection.md)
 	m.unresolved = unresolvedStubs{}
 
@@ -647,9 +649,9 @@ func (m *Machine) Evaluator() *Evaluator {
 		FieldDots: m.FieldDots,
 		Names:     m.DebugNames,
 		Debug:     imageNames{m: m},
-		Builtins: m.DebugBuiltins,
-		Register: m.DebugRegister,
-		Scoped:   m.DebugScoped,
+		Builtins:  m.DebugBuiltins,
+		Register:  m.DebugRegister,
+		Scoped:    m.DebugScoped,
 		Load: func(addr uint32) (uint32, error) {
 			v, err := m.loadSized(addr, SizeLongword)
 			if err != nil {

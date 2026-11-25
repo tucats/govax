@@ -597,9 +597,10 @@ func (d *Debugger) moduleNamed(name string) *dbgsym.Module {
 	return nil
 }
 
-// showLanguage runs SHOW LANGUAGE: the language of the module the program
-// counter is in ("language: MACRO"). With the PC in no module the answer
-// is UNKNOWN (govax's choice; the probe had no such case).
+// showLanguage runs SHOW LANGUAGE: the session's language, the main
+// routine's from the image's start or SET LANGUAGE's ("language: MACRO";
+// VMS 7.1's kept MACRO with the PC in no module, testdata/dbg113). With no
+// image started, the language of the module the PC is in, or UNKNOWN.
 func (d *Debugger) showLanguage() error {
 	c := d.Machine
 

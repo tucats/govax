@@ -83,7 +83,7 @@ Left for later, none of it blocking Phase 86:
 
 - **The debugger on FORTRAN programs:** a record's fields (a record shows as longwords) *(resolved in Phase 110, subtask 7a)*; which of several active calls of one routine a dummy means (the innermost) and SET SCOPE *(resolved in Phase 89, subtask 10b)*; a variable's register during a loop only as a remark, since the table doesn't say where the loop is. The review's level C, real FORTRAN debugger records, remains a phase of its own if wanted.
 - **`/STANDARD`:** what a program means rather than how it's written (`SEMANTIC`, on memory's list); a FUNCTION with no parentheses and `&s`, which the tree doesn't keep; a bare `X`. *(The last three resolved in Phase 113, subtask 4; SEMANTIC not planned.)*
-- **`testdata/dbg85`'s differences left:** `SHOW SYMBOL *`'s lines for VMS's debugger's own images, and how VMS reads `@(AP+N)`, not understood. `dbg85c.dlg` isn't replayed.
+- **`testdata/dbg85`'s differences left:** `SHOW SYMBOL *`'s lines for VMS's debugger's own images, and how VMS reads `@(AP+N)`, not understood *(resolved in Phase 113, subtask 13f: in a location a register's name is the register's own place, FFFF0000 plus 4n, so `@(AP+N)` reads memory there)*. `dbg85c.dlg` isn't replayed.
 - **Unconfirmed,** there being no VAX FORTRAN to compare: every layout and message marked ours in the log, and `/CHECK`'s default (MANUAL.md's 14.7).
 
 # Part A — the survey (2026-11-02)

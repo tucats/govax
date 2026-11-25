@@ -732,7 +732,7 @@ A.8.1 is not planned.
     - 13e2. Round 3b, what 13e left open (`testdata/for81`'s FOR81K and FOR81W): written and
       rehearsed, run on VMS 7.1, and govax and FTNRTL made its answers (2026-11-24); FOR81W's
       terminal lines to be run again.
-    - 13f. The debugger to the debugger round (`testdata/dbg113`'s sessions).
+    - 13f. The debugger to the debugger round (`testdata/dbg113`'s sessions) (done 2026-11-25).
     - 13g. The FORTRAN rounds: `TestFTN86Oracle` on `testdata/ftn86`'s round 6 and
       `TestF90ROracle` on `testdata/f90r`'s round 3, their awaiting lists emptied.
 14. The close-out.
@@ -1615,3 +1615,36 @@ Each subtask may begin with a survey of its own, as earlier phases' did.
     to paste for another run.
   - *Found and left*: `TestBatchLaterSectionsOracle` fails about one run in six, before this work
     too (a SYNCHRONIZE/ENTRY=63 whose job is sometimes still there): a timing race in the test.
+- **2026-11-25, subtask 13f (done):** the debugger made VMS 7.1's in `testdata/dbg113`'s round
+  (its README's "What came back" lists every answer). `TestDebuggerSessionOracle` now replays the
+  eleven sessions and GVDBG113S on VMS's image, and `TestDbg113Procedure` holds DBG113.COM's logs
+  on govax to VMS's whole (an LCS of lines, stack addresses masked, `dbg113Differences`).
+  - *Scopes* (`machine/scope.go`, `debugger/scope.go`): the scope walk goes on past a frame whose
+    PC is in no routine (`walkFrames`' `through`), such a level named by its number (`1\%PC`, and
+    `0\%R2` at a break in no routine); an outer SP is NOALTERSP, an outer PSL's DEPOSIT goes to the
+    frame's saved PSW (`SetSavedPSW`); after the PSL, EXAMINE is NOSUCC.
+  - *Locations and values* (`machine/expr.go`'s `RegisterAddresses`, `EvalLocation`,
+    `EvalDepositValue`; `debugger/data.go`'s `registerLocation`, `examineRegisterAddress`): a
+    register's name in a location is its own place, FFFF0000 + 4n (VMS's numbers, which its
+    SYMBOLIZE names), so `@(AP+N)` reads memory at FFFF0034 and testdata/dbg85's long-standing
+    `@(AP+N)` difference is gone; DEPOSIT's value and a WHEN's operands are values, a code label
+    its instruction's bytes (`DebugLabels.CodeLabel`); `break.dlg`'s WHEN differences are gone, and
+    `TestBreakWhenAndDo` writes `COUNT EQL 1`.
+  - *Instructions* (`machine/dbgoperands.go`'s `explainOperand`, `disasm.go`): NOTCURPC before
+    operands away from the PC, FULL's explanations, `(no read access)`, CASE's 20-displacement
+    limit; a register's instruction and the location after it (`registerInstructionAt`).
+  - *Eventpoints and steps*: address tracepoints after the classes', a tracepoint at a
+    watchpoint's stop, "routine" names (`routineLocation`), `/after` hidden once reached,
+    `pendingReturns` (a list by frame), an interrupted STEP/OVER's end kept (`Breakpoint.stepEnd`;
+    `TestStepOverEndsAtBreakpoint` now expects VMS's stop), STEP/RETURN's report by its unit.
+  - *The rest*: TYPE's NONXTLIN; SHOW LANGUAGE the session's; SET/CANCEL SOURCE/MODULE and VMS's
+    SHOW SOURCE (`machine/source.go`'s per-module lists); NOSUCHMODU; EXIT runs exit handlers
+    (`runExitHandlers`, a silent `$EXIT`), QUIT doesn't, and in an `@` file of an image session
+    either ends the file; the log's echo by VMS's rule (`refusedAsRead`, `notEchoed`, found from
+    every probe's logs) and a message's tab-led second line without "!".
+  - DEVIATIONS.md's Phase 42 entry is all resolved but multi-dimension bounds; Phase 89's and
+    Phase 85's unconfirmed debugger items are marked; HELP's EXIT, QUIT, SOURCE, and Expressions,
+    and MANUAL.md's debugger tables.
+  - Left: the activator's registers, govax's larger P0 (OPCDEC at 005001D0 where VMS had an
+    access violation), and the condition dispatcher at an exception break.
+  - Subtask 13g, the FORTRAN rounds, is next.

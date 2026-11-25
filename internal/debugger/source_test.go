@@ -29,7 +29,9 @@ func TestSourceNotFoundShowsLocationAlone(t *testing.T) {
 	c := stepSession(t)
 
 	expect(t, "STEP", say(t, c, "STEP"), "stepped to DBGCMD\\START\\%LINE 34\n")
-	expect(t, "SHOW SOURCE", say(t, c, "SHOW SOURCE"), "%DEBUG-I-NOSOURCEDIR, no source directory search list is in effect\n")
+	expect(t, "SHOW SOURCE", say(t, c, "SHOW SOURCE"),
+		"For EDIT:\n    no directory search list in effect, match the latest source file version\n"+
+			"For DISPLAY:\n    no directory search list in effect, match the exact source file version\n")
 }
 
 // TestSourceAfterSteps: step.dlg's first steps, with their source lines
@@ -67,7 +69,9 @@ func TestSourceAfterBreaks(t *testing.T) {
 }
 
 // TestSourceStepReturn: the report of STEP/RETURN is followed by the line
-// of the RET it stopped at.
+// of the RET it stopped at. Given at a routine's first instruction, it's
+// from "routine NAME", and stepping by line it names no instruction (VMS
+// 7.1's DBG113R).
 func TestSourceStepReturn(t *testing.T) {
 	c := sourceSession(t)
 
@@ -76,7 +80,7 @@ func TestSourceStepReturn(t *testing.T) {
 	say(t, c, "CANCEL BREAK/ALL")
 
 	expect(t, "STEP/RETURN", say(t, c, "STEP/RETURN"),
-		"stepped on return from DBGCMD\\FACT\\%LINE 54 to DBGCMD\\FACT\\%LINE 62: RET     \n    62:         RET\n")
+		"stepped on return from routine DBGCMD\\FACT to DBGCMD\\FACT\\%LINE 62\n    62:         RET\n")
 }
 
 // TestSetSourceList: SET SOURCE takes a list, SHOW SOURCE lists it, and
@@ -87,7 +91,10 @@ func TestSetSourceList(t *testing.T) {
 
 	say(t, c, `SET SOURCE nowhere,"`+dir+`"`)
 	expect(t, "SHOW SOURCE", say(t, c, "SHOW SOURCE"),
-		"source directory search list for all modules:\n    NOWHERE\n    "+dir+"\n")
+		"For EDIT:\n    source directory search list for all modules, match the latest source file version\n"+
+			"        NOWHERE\n        "+dir+"\n"+
+			"For DISPLAY:\n    source directory search list for all modules, match the exact source file version\n"+
+			"        NOWHERE\n        "+dir+"\n")
 
 	say(t, c, "CANCEL SOURCE")
 	expect(t, "STEP", say(t, c, "STEP"), "stepped to DBGCMD\\START\\%LINE 34\n")

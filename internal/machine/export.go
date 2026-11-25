@@ -61,6 +61,50 @@ func (m *Machine) EvalWholeIn(radix int, text string) (uint32, error) {
 	return m.EvalWholeMode(radix, text, false)
 }
 
+// EvalLocation is EvalWholeIn for the debugger's locations: a register's
+// name is its register address (Evaluator.RegisterAddresses), and
+// register says one was read, even when the evaluation failed.
+func (m *Machine) EvalLocation(radix int, text string) (v uint32, register bool, err error) {
+	ev := m.Evaluator()
+	ev.Radix = radix
+	ev.RegisterAddresses = true
+
+	v, rest, err := ev.Eval(text)
+	if err != nil {
+		return 0, ev.RegisterUsed, debuggerSymbolError(err)
+	}
+
+	if extra := strings.TrimSpace(rest); extra != "" {
+		if extra[0] == '.' || extra[0] == '(' {
+			return 0, ev.RegisterUsed, vmserrors.New(vmserrors.DBG_MISOPEMIS, extra[:1])
+		}
+
+		return 0, ev.RegisterUsed, vmserrors.New(vmserrors.CLI_EXTRAPARAMETER, extra)
+	}
+
+	return v, ev.RegisterUsed, nil
+}
+
+// EvalDepositValue is the value of DEPOSIT's expression: EvalWholeMode's
+// value, with a label in the code its longword contents (Evaluator.Labels).
+func (m *Machine) EvalDepositValue(radix int, text string) (uint32, error) {
+	ev := m.Evaluator()
+	ev.Radix = radix
+	ev.Value = true
+	ev.Labels = true
+
+	v, rest, err := ev.Eval(text)
+	if err != nil {
+		return 0, debuggerSymbolError(err)
+	}
+
+	if extra := strings.TrimSpace(rest); extra != "" {
+		return 0, vmserrors.New(vmserrors.CLI_EXTRAPARAMETER, extra)
+	}
+
+	return v, nil
+}
+
 // EvalWholeMode is EvalWholeIn with the evaluator's Value mode chosen: true
 // gives an expression's value, as EVALUATE shows it (a data label is its
 // contents), and false its location, as EXAMINE and DEPOSIT take it (a

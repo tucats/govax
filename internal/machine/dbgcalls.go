@@ -97,7 +97,19 @@ func (m *Machine) debugCallRow(pc uint32, caller bool) (callRow, bool) {
 // following the saved FPs from the current FP, for as long as that PC is
 // in a module of a loaded image's debug symbol table. ok is false when
 // the PC itself isn't in one. count bounds the rows; 0 is every frame.
+//
+// With through, a frame whose saved PC is in no module is a row of its
+// own (no module, no routine) when a frame further out is in one: VMS
+// 7.1's scopes went on past a saved PC changed to 005001D0, scope 1 then
+// named by its number and scope 2 the REC beyond it (testdata/dbg113's
+// DBG113S). The frames past the last known one, the image activator's,
+// are never rows.
 func (m *Machine) debugFrames(count uint32) (rows []callRow, ok bool, err error) {
+	return m.walkFrames(count, false)
+}
+
+// walkFrames is debugFrames, with through as above.
+func (m *Machine) walkFrames(count uint32, through bool) (rows []callRow, ok bool, err error) {
 	pc := m.CPU.GPR(registers.PC)
 
 	row, ok := m.debugCallRow(pc, false)
@@ -127,7 +139,11 @@ func (m *Machine) debugFrames(count uint32) (rows []callRow, ok bool, err error)
 
 		row, ok := m.debugCallRow(savedPC, true)
 		if !ok {
-			break
+			if !through || !m.knownFurtherOut(savedFP, fp) {
+				break
+			}
+
+			row = callRow{pc: savedPC}
 		}
 
 		row.fp = savedFP
@@ -143,6 +159,30 @@ func (m *Machine) debugFrames(count uint32) (rows []callRow, ok bool, err error)
 	}
 
 	return rows, true, nil
+}
+
+// knownFurtherOut reports whether a frame out from the one at fp (inside
+// the one at inner) has a saved PC in a module of the debug symbols.
+func (m *Machine) knownFurtherOut(fp, inner uint32) bool {
+	for n := 0; n < maxDebugFrames && fp > inner && fp != cpu.SentinelReturn; n++ {
+		savedFP, err := m.Mem.LoadLongword(m.CPU, fp+12)
+		if err != nil {
+			return false
+		}
+
+		savedPC, err := m.Mem.LoadLongword(m.CPU, fp+16)
+		if err != nil {
+			return false
+		}
+
+		if _, ok := m.debugCallRow(savedPC, true); ok {
+			return true
+		}
+
+		fp, inner = savedFP, fp
+	}
+
+	return false
 }
 
 // showDebugCalls prints SHOW CALLS as the debugger does, when the PC is

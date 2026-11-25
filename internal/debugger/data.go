@@ -6,6 +6,7 @@ import (
 
 	"github.com/tucats/govax/internal/dbgsym"
 	"github.com/tucats/govax/internal/dcl"
+	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -49,6 +50,14 @@ type examineState struct {
 	// last memory location's.
 	register   registers.Reg
 	isRegister bool
+	isPSL      bool
+
+	// regAt is the register address (machine.RegisterBase on) whose bytes
+	// EXAMINE/INSTRUCTION of a register last decoded, when inRegs: EXAMINE
+	// with no location then decodes the bytes from the next one on, as
+	// VMS 7.1's did (R5, then DBG113\REGINS\%R5+1, testdata/dbg113).
+	regAt  uint32
+	inRegs bool
 }
 
 // registerLocations are the names of the machine's general registers, as
@@ -271,8 +280,18 @@ func (d *Debugger) examineItem(r *dcl.Result, item string) error {
 		return d.withScope(e, func() error { return d.examineItem(r, name) })
 	}
 
+	// With no location after an instruction in a register, the next one
+	// in its bytes.
+	if item == "" && d.examined.inRegs {
+		return d.registerInstructionAt(d.examined.regAt+1, d.instructionOptions())
+	}
+
 	// With no location after a register, the next register, then the PSL.
 	if item == "" && d.examined.isRegister {
+		if d.examined.isPSL {
+			return vmserrors.New(vmserrors.DBG_NOSUCC)
+		}
+
 		if next := d.examined.register + 1; next <= registers.PC {
 			return d.examineRegister(r, next, registerName(next), false)
 		}
@@ -307,6 +326,24 @@ func (d *Debugger) examineItem(r *dcl.Result, item string) error {
 	}
 
 	if lo, hi, ok := splitRange(item); ok {
+		// A range of registers, R2:R4, is each register in turn.
+		if first, inRegs, err := d.registerLocation(lo); err == nil && inRegs {
+			last, inLast, err := d.registerLocation(hi)
+			if err != nil {
+				return err
+			}
+
+			if inLast {
+				for at := first; at <= last; at += 4 {
+					if err := d.examineRegisterAddress(r, at); err != nil {
+						return err
+					}
+				}
+
+				return nil
+			}
+		}
+
 		first, err := d.evalWhole(lo)
 		if err != nil {
 			return err
@@ -345,6 +382,13 @@ func (d *Debugger) examineItem(r *dcl.Result, item string) error {
 		}
 
 		return nil
+	}
+
+	// A register's address and an offset, AP+4 or R2+1.
+	if at, inRegs, err := d.registerLocation(item); err != nil {
+		return err
+	} else if inRegs {
+		return d.examineRegisterAddress(r, at)
 	}
 
 	addr, err := d.evalWhole(item)
@@ -447,6 +491,11 @@ func (d *Debugger) examineRegister(r *dcl.Result, reg registers.Reg, name string
 			c.Printf("%s\n%s", label, pslTable(value))
 		}
 
+		// The PSL is the last register: EXAMINE with no location after it
+		// is NOSUCC (VMS 7.1's, testdata/dbg113's DBG113S).
+		d.examined = examineState{register: reg, isRegister: true, isPSL: true, set: d.examined.set,
+			addr: d.examined.addr, size: d.examined.size}
+
 		return nil
 	}
 
@@ -518,15 +567,21 @@ func (d *Debugger) registerBytes(view regView, reg registers.Reg, t dataType, ve
 func (d *Debugger) depositPSL(t dataType, typed bool, value string) error {
 	size := uint32(4)
 
-	// An outer call level's PSL is what its frame's saved PSW makes it,
-	// which isn't changed here (govax's choice, unconfirmed).
-	if view, err := d.registerView(); err != nil {
+	// An outer call level's PSL is what its frame's saved PSW makes it:
+	// VMS 7.1 took DEPOSIT PSL = PSL there without a word (testdata/
+	// dbg113's DBG113S), so the PSW's bits the frame keeps (5 to 15) go
+	// into the frame (where they go is unconfirmed: the probe's value
+	// was the one there).
+	view, err := d.registerView()
+	if err != nil {
 		return err
-	} else if _, err := view.psl(); err != nil {
-		return err
-	} else if view.level > 0 {
-		return vmserrors.New(vmserrors.DBG_OPTNOTALLOW, "DEPOSIT")
 	}
+
+	if _, err := view.psl(); err != nil {
+		return err
+	}
+
+	outer := view.level > 0
 
 	if typed {
 		var fixed bool
@@ -551,14 +606,22 @@ func (d *Debugger) depositPSL(t dataType, typed bool, value string) error {
 		data = []byte{byte(v), byte(v >> 8), byte(v >> 16), byte(v >> 24)}
 	}
 
-	psl := uint32(d.Machine.CPU.PSL())
+	psl := view.regs.PSL
+	if !outer {
+		psl = uint32(d.Machine.CPU.PSL())
+	}
 
 	for b := range min(size, 2, uint32(len(data))) {
 		psl = psl&^(0xFF<<(8*b)) | uint32(data[b])<<(8*b)
 	}
 
-	d.Machine.CPU.SetPSL(registers.PSL(psl))
 	d.setCurrentValue(data)
+
+	if outer {
+		return d.Machine.SetSavedPSW(d.callLevels(), view.level, psl)
+	}
+
+	d.Machine.CPU.SetPSL(registers.PSL(psl))
 
 	return nil
 }
@@ -1131,6 +1194,23 @@ func (d *Dispatcher) evaluate(r *dcl.Result) error {
 
 		value = places[0].addr
 	} else {
+		// EVALUATE/ADDRESS of a register is its name in the scope, as
+		// VMS 7.1's writes it (DBG113\REC\%AP, testdata/dbg113).
+		if r.Present("ADDRESS") {
+			if at, inRegs, err := dbg.registerLocation(text); err != nil {
+				return err
+			} else if inRegs {
+				name, err := dbg.registerAddressName(at)
+				if err != nil {
+					return err
+				}
+
+				dbg.Machine.Printf("%s\n", name)
+
+				return nil
+			}
+		}
+
 		dbg.evaluating = !r.Present("ADDRESS")
 		value, err = dbg.Machine.EvalWholeMode(dbg.inputRadix, text, !r.Present("ADDRESS"))
 		dbg.evaluating = false
@@ -1181,6 +1261,19 @@ func (d *Dispatcher) symbolize(r *dcl.Result) error {
 	addr, err := dbg.evalWhole(r.String("ADDRESS"))
 	if err != nil {
 		return err
+	}
+
+	// A register's address is the register, which no symbol names:
+	// "address DBG113\REC\%AP:" (VMS 7.1's, testdata/dbg113's DBG113A).
+	if addr >= machine.RegisterBase && addr < machine.RegisterEnd {
+		name, err := dbg.registerAddressName(addr)
+		if err != nil {
+			return err
+		}
+
+		dbg.Machine.Printf("address %s:  \n    no symbols are bound to %s\n", name, name)
+
+		return nil
 	}
 
 	names, global := dbg.Machine.DebugProgramAt(addr).SymbolizeNames(addr, dbg.symbolRadix())
@@ -1244,7 +1337,9 @@ func (d *Dispatcher) deposit(r *dcl.Result) error {
 		}
 
 		if !typed {
-			v, err := dbg.Machine.EvalWholeIn(dbg.inputRadix, value)
+			// The value is an expression's value, as EVALUATE's: a label
+			// is its contents (VMS's DEPOSIT PC = DEEP).
+			v, err := dbg.Machine.EvalDepositValue(dbg.inputRadix, value)
 			if err != nil {
 				return err
 			}
@@ -1283,6 +1378,12 @@ func (d *Dispatcher) deposit(r *dcl.Result) error {
 	addr, err := dbg.evalWhole(target)
 	if err != nil {
 		return err
+	}
+
+	// An address among the registers' isn't memory DEPOSIT can change
+	// (VMS 7.1's DEPOSIT 0FFFF0008, testdata/dbg113's DBG113A).
+	if addr >= machine.RegisterBase && addr < machine.RegisterEnd {
+		return vmserrors.New(vmserrors.DBG_BADTARGET)
 	}
 
 	if !typed {
@@ -1527,4 +1628,98 @@ func splitAssignment(text string) (target, value string, ok bool) {
 	}
 
 	return "", "", false
+}
+
+// registerLocation evaluates a location in which a register's name is its
+// register address (machine.Evaluator's RegisterAddresses). inRegs says
+// the location is among the registers and a register's name made it so:
+// a number there alone (EXAMINE 0FFFF0030) is memory no one can read, as
+// on VMS.
+func (d *Debugger) registerLocation(text string) (at uint32, inRegs bool, err error) {
+	if _, ok, _ := d.fortranPlaces(text); ok {
+		return 0, false, nil
+	}
+
+	at, used, err := d.Machine.EvalLocation(d.inputRadix, text)
+	if !used {
+		// The ordinary evaluation says what's wrong, if anything.
+		return 0, false, nil
+	}
+
+	// @(AP+4) reads memory at AP's register address plus 4, where there is
+	// none (VMS 7.1's NOACCESSR at FFFF0034).
+	if err != nil {
+		return 0, false, err
+	}
+
+	return at, at >= machine.RegisterBase && at < machine.RegisterEnd, nil
+}
+
+// registerAt is the register a register address is in, and how far into
+// it: R2+1 is R2 and 1.
+func registerAt(at uint32) (reg registers.Reg, name string, isPSL bool, offset uint32) {
+	if at >= machine.RegisterPSL {
+		return 0, "PSL", true, at - machine.RegisterPSL
+	}
+
+	reg = registers.Reg((at - machine.RegisterBase) / 4)
+
+	return reg, registerName(reg), false, at % 4
+}
+
+// registerAddressName is how a register address is named in the scope:
+// DBG113\REC\%AP, or DBG113\REC\%R2+1 inside a register.
+func (d *Debugger) registerAddressName(at uint32) (string, error) {
+	view, err := d.registerView()
+	if err != nil {
+		return "", err
+	}
+
+	_, name, _, offset := registerAt(at)
+	if offset != 0 {
+		return fmt.Sprintf("%s+%d", view.label(name), offset), nil
+	}
+
+	return view.label(name), nil
+}
+
+// examineRegisterAddress is EXAMINE of a register address: the register
+// it is, or, inside one, the longword from that byte on, which runs into
+// the next register (VMS 7.1's EXAMINE R2+1, 03000001 from R2 102 and R3
+// 103).
+func (d *Debugger) examineRegisterAddress(r *dcl.Result, at uint32) error {
+	reg, name, isPSL, offset := registerAt(at)
+	if offset == 0 {
+		return d.examineRegister(r, reg, name, isPSL)
+	}
+
+	view, err := d.registerView()
+	if err != nil {
+		return err
+	}
+
+	var data []byte
+
+	for k := reg; k <= reg+1 && k <= registers.PC; k++ {
+		v, err := view.get(k, registerName(k))
+		if err != nil {
+			return err
+		}
+
+		data = append(data, byte(v), byte(v>>8), byte(v>>16), byte(v>>24))
+	}
+
+	data = append(data, 0, 0, 0, 0)
+	data = data[offset : offset+4]
+
+	label, err := d.registerAddressName(at)
+	if err != nil {
+		return err
+	}
+
+	d.setCurrentValue(data)
+	text, _ := d.fixedText(longwordType, data, d.examineRadix(r))
+	d.Machine.Printf("%s%s\n", tabPad(label+":"), text)
+
+	return nil
 }

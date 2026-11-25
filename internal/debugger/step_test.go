@@ -115,7 +115,7 @@ func TestStepReturn_stopsAtTheFramesRet(t *testing.T) {
 		t.Errorf("PC after STEP/RETURN = %#x, want 0x302 (at the RET, not past it)", got)
 	}
 
-	if got, want := buf.String(), "stepped on return from 00000302 to 00000302: RET\n"; got != want {
+	if got, want := buf.String(), "stepped on return from 00000302 to 00000302\n"; got != want {
 		t.Errorf("output = %q, want %q", got, want)
 	}
 
@@ -152,7 +152,7 @@ func TestStepReturn_boundToItsFrame(t *testing.T) {
 		t.Errorf("PC after STEP/RETURN = %#x, want 0x209 (the outer frame's RET)", got)
 	}
 
-	if got, want := buf.String(), "stepped on return from 00000202 to 00000209: RET\n"; got != want {
+	if got, want := buf.String(), "stepped on return from 00000202 to 00000209\n"; got != want {
 		t.Errorf("output = %q, want %q", got, want)
 	}
 }

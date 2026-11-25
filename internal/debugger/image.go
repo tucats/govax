@@ -2,6 +2,7 @@ package debugger
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/machine"
@@ -53,12 +54,15 @@ func (d *Debugger) startImage(a machine.Activation) (runOutcome, error) {
 
 	// The language sets the radix numbers are typed and shown in, and how
 	// a name with a period reads.
-	d.language = ""
+	// It is the session's language from then on, wherever the PC goes,
+	// until SET LANGUAGE (VMS 7.1's SHOW LANGUAGE at an exception break,
+	// testdata/dbg113's DBG113X).
+	d.language = strings.ToUpper(a.Language)
 	d.useLanguage(a.Language)
 
 	d.imageDebug = true
 	d.imageExited = false
-	d.pendingReturn = nil
+	d.pendingReturns = nil
 	d.symbolsSet = nil
 
 	// The program stops at its first instruction without a message: this
@@ -177,7 +181,9 @@ func (d *Debugger) imageExit(err error) (ok bool) {
 
 	// The status's own message line keeps its percent sign: VMS shows
 	// "is '%SYSTEM-S-NORMAL, normal successful completion'".
-	c.Printf("%%%s\n", vmserrors.New(vmserrors.DBG_EXITSTATUS, c.StatusText(status)))
+	if !d.quietExit {
+		c.Printf("%%%s\n", vmserrors.New(vmserrors.DBG_EXITSTATUS, c.StatusText(status)))
+	}
 
 	d.imageDebug = false
 	d.imageExited = true
@@ -187,7 +193,7 @@ func (d *Debugger) imageExit(err error) (ok bool) {
 	c.CPU.SetGPR(registers.PC, 0)
 
 	// A STEP/RETURN waiting for a frame of the image is moot now.
-	d.pendingReturn = nil
+	d.pendingReturns = nil
 
 	return true
 }

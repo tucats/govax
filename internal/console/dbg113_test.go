@@ -3,6 +3,7 @@ package console_test
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -11,9 +12,9 @@ import (
 // subtask 12c): testdata/dbg113's DBG113.COM asks VMS's debugger what Phases
 // 42, 85, and 89 left unconfirmed, in eleven sessions on one program. It goes
 // to the VAX on testdata/err113's volume, in [DBG113]. TestDbg113Procedure
-// rehearses it on govax, as the VAX will run it, so a mistake in a session
-// shows first; once VMS's logs are in testdata/dbg113/vax, it logs each
-// session's differences, for subtask 13 to settle.
+// rehearses it on govax, as the VAX ran it, and holds each session's log to
+// VMS 7.1's in testdata/dbg113/vax (subtask 13f), stack addresses masked,
+// but for dbg113Differences.
 
 // dbg113Sessions are DBG113.COM's sessions, in its order; the last runs
 // DBG113S on GVDBG113, govax's own image.
@@ -100,17 +101,135 @@ func TestDbg113Procedure(t *testing.T) {
 			}
 		}
 
-		vax := filepath.Join(dir, "vax", name+".dlg")
-		if _, err := os.Stat(vax); err != nil {
-			t.Logf("%s.dlg (no VMS run yet):\n%s", name, strings.Join(got, "\n"))
+		want := readLog(t, filepath.Join(dir, "vax", name+".dlg"))
 
-			continue
-		}
-
-		if want := readLog(t, vax); strings.Join(got, "\n") != strings.Join(want, "\n") {
-			t.Logf("%s.dlg differs from VMS's:\ngovax:\n%s\nVMS:\n%s", name, strings.Join(got, "\n"), strings.Join(want, "\n"))
+		for _, h := range logHunks(maskStack(want), maskStack(got)) {
+			if !dbg113Explained(name, h) {
+				t.Errorf("%s.dlg differs from VMS's:\nVMS:\n%s\ngovax:\n%s",
+					name, strings.Join(h.vms, "\n"), strings.Join(h.govax, "\n"))
+			}
 		}
 	}
 
-	t.Logf("DBG113.LOG:\n%s", strings.Join(log, "\n"))
+	// EXIT at a break ran the exit handler, as on VMS, after every session
+	// but DBG113X's, whose program ended by itself.
+	handlers := 0
+
+	for _, l := range log {
+		if l == "DBG113: the exit handler ran" {
+			handlers++
+		}
+	}
+
+	if handlers != len(dbg113Sessions) {
+		t.Errorf("the exit handler ran %d times, want %d", handlers, len(dbg113Sessions))
+	}
+
+}
+
+// dbg113Differences are what may differ from VMS's logs, by session: a
+// hunk is explained when one of its lines, either side, holds one of the
+// texts.
+var dbg113Differences = map[string][]string{
+	// R11 as VMS's image activator left it, and the bytes past R11, AP's
+	// and FP's, which hold stack addresses. DBG113S's DEPOSIT PC = DEEP
+	// made LEAF return to 005001D0: VMS's P0 ends below it, an access
+	// violation; govax's is larger, so the zeros there are a reserved
+	// instruction (OPCDEC), and at the break govax is in its condition
+	// dispatcher, whose PSL (IV clear) is shown.
+	"dbg113s":   {"%R11:", "005001D0", "USER   USER    0  0  0  1 0 0 0 0 0"},
+	"gvdbg113s": {"%R11:", "005001D0", "USER   USER    0  0  0  1 0 0 0 0 0"},
+	"dbg113i":   {"%R11:"},
+	// SYS$LOGIN's translation is the account's directory.
+	"dbg113m": {"= SYS$SYSROOT:[SYSMGR]"},
+	// SHOW CALLS at a break on an exception: govax is paused in the
+	// condition dispatcher (docs/planning/PHASE-42.md, subtask 5).
+	"dbg113x": {"Saved PC", "module name"},
+}
+
+// dbg113Explained reports whether hunk h of session name's log is one
+// dbg113Differences explains.
+func dbg113Explained(name string, h logHunk) bool {
+	for _, text := range dbg113Differences[name] {
+		for _, l := range append(append([]string{}, h.vms...), h.govax...) {
+			if strings.Contains(l, text) {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+// stackAddress matches a user stack address, VMS's (7FExxxxx) or govax's
+// (7FDxxxxx), which differ for reasons not the debugger's.
+var stackAddress = regexp.MustCompile(`\b7F[DE][0-9A-F]{5}\b`)
+
+// maskStack replaces stack addresses with <stack>.
+func maskStack(lines []string) []string {
+	out := make([]string, len(lines))
+
+	for i, l := range lines {
+		out[i] = stackAddress.ReplaceAllString(l, "<stack>")
+	}
+
+	return out
+}
+
+// logHunk is one place two logs differ: VMS's lines and govax's there.
+type logHunk struct {
+	vms, govax []string
+}
+
+// logHunks compares two logs line by line (a longest common subsequence)
+// and returns where they differ.
+func logHunks(vms, govax []string) []logHunk {
+	n, m := len(vms), len(govax)
+	common := make([][]int, n+1)
+
+	for i := range common {
+		common[i] = make([]int, m+1)
+	}
+
+	for i := n - 1; i >= 0; i-- {
+		for j := m - 1; j >= 0; j-- {
+			if vms[i] == govax[j] {
+				common[i][j] = common[i+1][j+1] + 1
+			} else {
+				common[i][j] = max(common[i+1][j], common[i][j+1])
+			}
+		}
+	}
+
+	var (
+		hunks []logHunk
+		cur   logHunk
+	)
+
+	flush := func() {
+		if len(cur.vms)+len(cur.govax) > 0 {
+			hunks = append(hunks, cur)
+			cur = logHunk{}
+		}
+	}
+
+	i, j := 0, 0
+	for i < n || j < m {
+		switch {
+		case i < n && j < m && vms[i] == govax[j]:
+			flush()
+			i++
+			j++
+		case j < m && (i == n || common[i][j+1] >= common[i+1][j]):
+			cur.govax = append(cur.govax, govax[j])
+			j++
+		default:
+			cur.vms = append(cur.vms, vms[i])
+			i++
+		}
+	}
+
+	flush()
+
+	return hunks
 }

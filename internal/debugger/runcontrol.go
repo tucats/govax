@@ -117,6 +117,11 @@ type Breakpoint struct {
 	// A STEP's own breakpoints use it to tell their stop from another's.
 	fired bool
 
+	// stepEnd, when set, makes a STEP/OVER's end one a break interrupted:
+	// it stays set, and when a later run reaches it, it reports as the step
+	// would have ("stepped to DBG113\SUBE\AFTERE", VMS 7.1's DBG113O).
+	stepEnd *stepRequest
+
 	// When is the text of a WHEN (condition) clause, parentheses and all,
 	// as SHOW BREAK shows it; the breakpoint stops only when the
 	// condition is true. Do is a DO (commands) clause, run each time the
@@ -370,6 +375,11 @@ func (d *Debugger) runLoop(skipFirstCheck bool, trace func(pc uint32) func()) (r
 		// process 1's instructions only (a change another process makes
 		// to a shared S0 location is seen after process 1's next one).
 		if c.RunningProcessOne() && d.watchHit(pc) {
+			// A tracepoint where the program stopped is reported now, after
+			// the break, and not again as it goes on (VMS 7.1's trace at
+			// LOOPADD after a watchpoint's break there, testdata/dbg113's
+			// DBG113T).
+			d.traceHit(c.CPU.GPR(registers.PC))
 			d.stopTakesTrace()
 
 			return runStopped, nil

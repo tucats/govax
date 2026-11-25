@@ -77,8 +77,14 @@
      path names     MODULE\ROUTINE\LABEL (see Path_Names).
      lines          %LINE n, or MODULE\%LINE n: a source line's code.
      registers      R0 to R11, AP, FP, SP, PC, and PSL (or %R0, ...), as
-                    their values (see Registers).
-     .name          The contents of an address: .PC, .R1+4.
+                    their values (see Registers).  In a location, as
+                    EXAMINE and DEPOSIT take one, a register is a place
+                    of its own, so EXAMINE AP+4 is FP, and R2+1 the
+                    bytes of R2 from its second on; @AP is AP's value.
+     .name          The contents of an address: .PC, .R1+4.  A datum's
+                    name in a value (EVALUATE, DEPOSIT's value, a WHEN
+                    clause) is its contents already, so WHEN (COUNT EQL
+                    3) tests COUNT, and .COUNT the address COUNT holds.
      operators      + - * / MOD, unary + and -, @ (a shift), the
                     comparisons EQL NEQ LSS LEQ GTR GEQ, and AND, OR,
                     XOR, and NOT, with parentheses.
@@ -1109,7 +1115,15 @@
 
    Format
 
-     CANCEL SOURCE
+     CANCEL SOURCE [/MODULE=name]
+
+4 Qualifiers
+/MODULE
+
+      /MODULE=name
+
+   Forgets only the directories SET SOURCE/MODULE named for that
+   module, which then uses the list for all modules.
 
 3 STRINGS
 
@@ -1673,11 +1687,12 @@
 
 3 Description
 
-   A program still running under the debugger is ended (its exit
-   handlers aren't run), and RUN's status is %X10028009; one that has
-   exited leaves its exit status.  A log being written (SET OUTPUT LOG)
-   is closed.  The end of DBG$INPUT's file ends the session as EXIT
-   does.
+   A program still running under the debugger is ended as $EXIT ends
+   it, so its exit handlers run, and RUN's status is %X10028009; one
+   that has exited leaves its exit status.  A log being written (SET
+   OUTPUT LOG) is closed.  The end of DBG$INPUT's file ends the session
+   as EXIT does.  In a command procedure (@) EXIT ends the procedure,
+   and the debugger reads on after the @.
 
 2 GO
 
@@ -1744,9 +1759,10 @@
 
 2 QUIT
 
-   Ends the debugger session and returns to the console, as EXIT does.
-   On VMS QUIT skips the program's exit handlers, which EXIT runs; govax
-   runs none for either, so the two are the same.
+   Ends the debugger session and returns to the console, as EXIT does,
+   but a program still running under the debugger is ended without
+   running its exit handlers.  In a command procedure (@) QUIT ends the
+   procedure, as EXIT does.
 
    Format
 
@@ -2117,9 +2133,17 @@
 
    Format
 
-     SET SOURCE directory[,directory...]
+     SET SOURCE [/MODULE=name] directory[,directory...]
 
    SHOW SOURCE lists them, and CANCEL SOURCE forgets them.
+
+4 Qualifiers
+/MODULE
+
+      /MODULE=name
+
+   The directories are for that module's source alone, searched in
+   place of the list for all modules.
 
 3 STEP
 
@@ -2616,7 +2640,8 @@
 
 3 SOURCE
 
-   Lists the directories SET SOURCE named.
+   Lists the directories SET SOURCE named, each module's own first,
+   once for EDIT and once for DISPLAY, as VMS's debugger does.
 
    Format
 

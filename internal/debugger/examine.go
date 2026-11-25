@@ -159,6 +159,10 @@ func (d *Dispatcher) examine(r *dcl.Result) error {
 		// With no location, the instruction after the last location
 		// shown: EXAMINE/INSTRUCTION .PC, then EXAMINE/INSTRUCTION, shows
 		// the next instruction (testdata/legacy72's dun72.dlg).
+		if cur := dbg.examined; cur.inRegs {
+			return dbg.registerInstructionAt(cur.regAt+1, opts)
+		}
+
 		next := dbg.Machine.DepositAddr
 		if cur := dbg.examined; cur.set {
 			next = cur.addr + cur.size

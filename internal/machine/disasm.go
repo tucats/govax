@@ -6,6 +6,7 @@ import (
 
 	"github.com/tucats/gopackages/app-cli/settings"
 	"github.com/tucats/govax/internal/disasm"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -157,10 +158,17 @@ func (m *Machine) DisassembleRange(start, end uint32, opts DisassembleOptions) (
 			loc = addressText(pc, opts.Decimal)
 		}
 
+		// Operands explained anywhere but at the PC are explained from the
+		// registers as they are now, which the instruction won't see: VMS
+		// 7.1 says so before each (testdata/dbg113's DBG113I).
+		if opts.Operands != OperandsOff && pc != m.CPU.GPR(registers.PC) {
+			m.Printf("%%%s\n", vmserrors.New(vmserrors.DBG_NOTCURPC))
+		}
+
 		m.Printf("%s\n", debuggerLine(loc, dec.Format(format)))
 
 		if opts.Operands != OperandsOff {
-			m.printOperands(dec, format, names)
+			m.printOperands(dec, format, names, opts.Operands)
 		}
 
 		last = pc
@@ -233,6 +241,30 @@ func debuggerLine(loc, text string) string {
 // real code (govax's choice).
 const maxCaseEntries = 1024
 
+// caseListed is the most branch displacements the debugger lists after a
+// CASE instruction; past it, caseTooLong says so.
+const (
+	caseListed  = 20
+	caseTooLong = "(more than 20 branch displacements)"
+)
+
+// CaseTooLong is the line the debugger writes after a CASE instruction in
+// data, a register's bytes, whose limit says more than caseListed
+// displacements follow; "" when it doesn't.
+func CaseTooLong(data []byte) string {
+	dec, err := disasm.Disassemble(byteSlice(data), 0)
+	if err != nil || !strings.HasPrefix(dec.Mnemonic, "CASE") || len(dec.Operands) < 3 {
+		return ""
+	}
+
+	limit := dec.Operands[2]
+	if (limit.Mode == disasm.ModeLiteral || limit.Mode == disasm.ModeImmediate) && uint64(limit.Value)+1 > caseListed {
+		return caseTooLong
+	}
+
+	return ""
+}
+
 // printCaseTable prints the displacement table that follows a CASEB,
 // CASEW, or CASEL at table, as the debugger does: one line per entry, 16
 // spaces and the destination (DBGDIS\START\%LINE 100), and returns the
@@ -252,6 +284,13 @@ func (m *Machine) printCaseTable(r disasm.ByteReader, dec disasm.Decoded, table 
 	count := uint64(limit.Value) + 1
 	if count > maxCaseEntries {
 		count = maxCaseEntries
+	}
+
+	// A longer table isn't listed (VMS 7.1's, testdata/dbg113's DBG113I).
+	if count > caseListed {
+		m.Printf("%16s%s\n", "", caseTooLong)
+
+		return table + 2*uint32(count)
 	}
 
 	pc := table

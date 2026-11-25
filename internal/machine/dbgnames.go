@@ -3,6 +3,7 @@ package machine
 import (
 	"strings"
 
+	"github.com/tucats/govax/internal/disasm"
 	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/symtab"
 )
@@ -74,6 +75,39 @@ func (n imageNames) DataSize(path string) (uint32, bool) {
 		}
 
 		return min(size, 4), true
+	}
+
+	return 0, false
+}
+
+// CodeLabel implements DebugLabels: path is a label some image's debug
+// symbols have that is neither a routine's entry nor data, and size is the
+// length of the instruction at addr.
+func (n imageNames) CodeLabel(path string, addr uint32) (size uint32, ok bool) {
+	for _, icb := range n.m.images().ICBList {
+		if icb.Debug == nil {
+			continue
+		}
+
+		if _, isData := icb.Debug.DatumPath(path); isData {
+			return 0, false
+		}
+
+		s, found := icb.Debug.Lookup(path)
+		if !found {
+			continue
+		}
+
+		if !s.Has(symtab.Label) || s.IsEntry() {
+			return 0, false
+		}
+
+		dec, err := disasm.Disassemble(memByteReader(n), addr)
+		if err != nil || dec.Length == 0 {
+			return 4, true
+		}
+
+		return dec.Length, true
 	}
 
 	return 0, false

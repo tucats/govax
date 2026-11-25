@@ -104,8 +104,9 @@ func TestCallStopsAtBreakpoint(t *testing.T) {
 }
 
 // TestStepOverEndsAtBreakpoint: a STEP/OVER whose call stops at a user
-// breakpoint leaves no one-shot breakpoint behind, so a later GO runs on
-// rather than stopping with a stray "Stepped to" (bug 2).
+// breakpoint leaves its end set, bound to the frame, so a later GO stops
+// there and reports the step, as VMS 7.1's did (testdata/dbg113's DBG113O;
+// this was bug 2's stray stop, which VMS has too).
 func TestStepOverEndsAtBreakpoint(t *testing.T) {
 	d, buf, _ := stepImage(t, "dbgdis.exe")
 
@@ -120,13 +121,17 @@ func TestStepOverEndsAtBreakpoint(t *testing.T) {
 		t.Fatalf("STEP/OVER: got %q, want it to stop at SUB2's breakpoint", got)
 	}
 
-	if n := stepBreakpoints(d.Console); n != 0 {
-		t.Errorf("after STEP/OVER stopped elsewhere: %d step breakpoints left", n)
+	if n := stepBreakpoints(d.Console); n != 1 {
+		t.Errorf("after STEP/OVER stopped elsewhere: %d step breakpoints left, want its end", n)
 	}
 
 	dispatchOutput(t, d, buf, "CLEAR BREAK/ALL")
 
-	if got := dispatchOutput(t, d, buf, "GO"); strings.Contains(got, "Stepped to") || !strings.Contains(got, "DBGDIS: done") {
+	if got := dispatchOutput(t, d, buf, "GO"); got != "stepped to DBGDIS\\START\\%LINE 91\n" {
+		t.Errorf("GO: got %q, want the step's end", got)
+	}
+
+	if got := dispatchOutput(t, d, buf, "GO"); !strings.Contains(got, "DBGDIS: done") {
 		t.Errorf("GO: got %q, want the image to finish", got)
 	}
 }

@@ -197,8 +197,11 @@ grammar debugger
                         /type=$rest_of_line     -
                         /prompt="Output"
 
-        ! SET SOURCE dir[,dir...]: the directories searched for source files.
+        ! SET SOURCE[/MODULE=name] dir[,dir...]: the directories searched for
+        ! source files, of every module or of one.
         syntax set_source/id=70
+            qualifier   module/id=1835          -
+                        /type=$string/nonegatable
             parameter   directories/id=71       -
                         /type=$rest_of_line     -
                         /prompt="Directories"
@@ -545,7 +548,8 @@ grammar debugger
                         /type=$rest_of_line
             qualifier   all/id=238
 
-    ! CANCEL SOURCE forgets SET SOURCE's directories.
+    ! CANCEL SOURCE forgets SET SOURCE's directories; /MODULE=name one
+    ! module's.
     ! CANCEL BREAK [qualifier] [address[,address...]] removes breakpoints:
     ! at the addresses, of a kind (/CALL, /BRANCH, ...), or all of them
     ! (/ALL).
@@ -608,6 +612,8 @@ grammar debugger
                         /type=$rest_of_line
 
         syntax cancel_source/id=73
+            qualifier   module/id=1836          -
+                        /type=$string/nonegatable
 
         syntax cancel_radix/id=86
 

@@ -1,6 +1,7 @@
 package debugger
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/tucats/govax/internal/dcl"
@@ -97,10 +98,11 @@ type stepRequest struct {
 // many other commands, breaks, and deeper calls come first. from is where
 // the command was given, for the report.
 type pendingReturn struct {
-	frame    uint32
-	from     string
-	silent   bool
-	noSource bool
+	frame         uint32
+	from          string
+	silent        bool
+	noSource      bool
+	byInstruction bool
 }
 
 // parseStepWord applies one SET STEP keyword to the settings: LINE or
@@ -389,9 +391,24 @@ func (d *Debugger) stepUnit(req stepRequest) (runOutcome, bool, error) {
 		// Step over a call: let the routine run, silently, until control
 		// is back at the instruction after the call.
 		if req.mode == StepOver && stepOverInstructions[name] {
+			// The step's end is an address, not a frame: in a recursion
+			// VMS's stopped at the first return there, however deep
+			// (testdata/dbgcmd's step.dlg).
 			bp := d.setStepBreakpoint(dec.NextPC)
 
+			d.lastBreak = nil
 			outcome, err := d.runLoop(false, func(uint32) func() { return func() {} })
+
+			// A break in the routine stepped over leaves the step's end
+			// set, as VMS 7.1's did: a later GO stops there and reports the
+			// step (testdata/dbg113's DBG113O). Anything else ends it.
+			if err == nil && outcome == runStopped && !bp.fired && d.lastBreak != nil {
+				end := req
+				end.silent = false
+				bp.stepEnd = &end
+
+				return outcome, false, nil
+			}
 
 			d.endStep(bp)
 
@@ -528,7 +545,8 @@ func (d *Debugger) stepToClass(req stepRequest) (runOutcome, bool, error) {
 // The wait outlives the command, as VMS's does (testdata/dbgcmd/vax/
 // step.dlg): a break, an exception, or another STEP in between doesn't
 // cancel it, and it fires whenever the RET is next about to run (returnDue).
-// A second STEP/RETURN replaces a pending one (unconfirmed). Until it fires
+// A second STEP/RETURN in a deeper frame waits beside it, and both fire,
+// the inner first (VMS 7.1's DBG113N). Until it fires
 // the program runs as GO does, tracing per Console.Trace.
 func (d *Debugger) stepReturn(req stepRequest) (runOutcome, bool, error) {
 	c := d.Machine
@@ -542,13 +560,24 @@ func (d *Debugger) stepReturn(req stepRequest) (runOutcome, bool, error) {
 		return runEnded, false, err
 	}
 
-	d.pendingReturn = &pendingReturn{
-		frame:  c.CPU.GPR(registers.FP),
-		from:   d.locationText(c.CPU.GPR(registers.PC)),
+	// Given at a routine's first instruction, it's from "routine NAME"
+	// (VMS 7.1's DBG113R and DBG113N).
+	pc := c.CPU.GPR(registers.PC)
+	from := d.routineLocation(pc)
+
+	frame := c.CPU.GPR(registers.FP)
+
+	// One given again in the same frame replaces the one there; one given
+	// in a deeper frame waits beside it (VMS 7.1's DBG113N).
+	d.pendingReturns = slices.DeleteFunc(d.pendingReturns, func(p *pendingReturn) bool { return p.frame == frame })
+	d.pendingReturns = append(d.pendingReturns, &pendingReturn{
+		frame:  frame,
+		from:   from,
 		silent: req.silent,
 
-		noSource: req.noSource,
-	}
+		noSource:      req.noSource,
+		byInstruction: req.byInstruction,
+	})
 
 	outcome, err := d.runLoop(true, func(pc uint32) func() { return c.TraceStep(pc, false) })
 
@@ -561,9 +590,13 @@ func (d *Debugger) stepReturn(req stepRequest) (runOutcome, bool, error) {
 // STEP/RETURN is waiting for: a RET while FP is the frame the command was
 // given in. If so it reports the step and clears it. A wait whose frame has
 // gone without its RET running (the stack unwound past it) is dropped.
+//
+// The report names the instruction only for a step by instruction, as the
+// step's own report does (VMS 7.1's "stepped on return from routine
+// DBG113\SUBB1 to DBG113\SUBB1\END1" by line, testdata/dbgcmd's ": RET" by
+// instruction).
 func (d *Debugger) returnDue() bool {
-	p := d.pendingReturn
-	if p == nil {
+	if len(d.pendingReturns) == 0 {
 		return false
 	}
 
@@ -572,22 +605,29 @@ func (d *Debugger) returnDue() bool {
 
 	// The stack grows toward lower addresses, so a frame above the current
 	// one is gone.
-	if fp > p.frame {
-		d.pendingReturn = nil
+	d.pendingReturns = slices.DeleteFunc(d.pendingReturns, func(p *pendingReturn) bool { return fp > p.frame })
 
+	i := slices.IndexFunc(d.pendingReturns, func(p *pendingReturn) bool { return p.frame == fp })
+	if i < 0 {
 		return false
 	}
 
 	inst, _ := c.Engine.PeekInstruction()
-	if fp != p.frame || inst == nil || inst.Name != "RET" {
+	if inst == nil || inst.Name != "RET" {
 		return false
 	}
 
-	d.pendingReturn = nil
+	p := d.pendingReturns[i]
+	d.pendingReturns = slices.Delete(d.pendingReturns, i, i+1)
 
 	if !p.silent {
 		pc := c.CPU.GPR(registers.PC)
-		c.Printf("stepped on return from %s to %s: %s\n", p.from, d.locationText(pc), d.instructionAt(pc))
+
+		if p.byInstruction {
+			c.Printf("stepped on return from %s to %s: %s\n", p.from, d.locationText(pc), d.instructionAt(pc))
+		} else {
+			c.Printf("stepped on return from %s to %s\n", p.from, d.locationText(pc))
+		}
 
 		if !p.noSource {
 			d.showSource(pc)
@@ -653,4 +693,19 @@ func (d *Dispatcher) bindSetStep() {
 		return d.Debugger.SetStepMode(r.String("WORDS"))
 	})
 	d.Grammar.Bind("SHOW_STEP", func(id int64, r *dcl.Result) error { return d.Debugger.ShowStepMode() })
+}
+
+// routineLocation names pc as a stop does: a routine's first instruction
+// (the one after its entry mask) with no label of its own is "routine
+// NAME", VMS's "stepped on return from routine DBG113\SUBB1" and "watch of
+// DBG113\COUNT at routine DBG113\LOOP"; a label there is the label ("from
+// DBG113\SUBD\IND", testdata/dbg113's DBG113N).
+func (d *Debugger) routineLocation(pc uint32) string {
+	where := d.locationText(pc)
+
+	if pc >= 2 && d.Machine.RoutineEntry(pc-2) && strings.Contains(where, `\%LINE `) {
+		return "routine " + d.locationText(pc-2)
+	}
+
+	return where
 }

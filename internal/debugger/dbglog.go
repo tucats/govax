@@ -113,8 +113,14 @@ func (d *Debugger) logOutput(p []byte) {
 	var b bytes.Buffer
 
 	for len(p) > 0 {
+		// A message's second line, after a tab (NOTCURPC's "results may be
+		// unexpected"), is logged as it is, with no "!", as VMS 7.1's was
+		// (testdata/dbg113's DBG113I).
 		if !o.midLine {
-			b.WriteByte('!')
+			if p[0] != '\t' {
+				b.WriteByte('!')
+			}
+
 			o.midLine = true
 		}
 

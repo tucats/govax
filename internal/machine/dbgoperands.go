@@ -21,10 +21,10 @@ const (
 	// register or a memory location: what it is, and what it holds now.
 	OperandsBrief
 
-	// OperandsFull is /OPERANDS=FULL. The probe's logs show the same
-	// text for it as for the brief form, so govax makes them the same
-	// (unconfirmed: no probe line has an operand the two would show
-	// differently).
+	// OperandsFull is /OPERANDS=FULL: as brief, but a constant gets a
+	// line, and an operand whose address is computed says how, as VMS
+	// 7.1's did (testdata/dbg113's DBG113I): "R2 contains ...  (00000200)+
+	// evaluates to ..., which contains ...".
 	OperandsFull
 )
 
@@ -47,17 +47,25 @@ const (
 //
 // dec is the instruction as decoded at its own address, with the machine
 // as it is *before* the instruction runs: an autoincrement operand's
-// address is the register's present value, and so on. An operand that is
-// a constant (a short literal, an immediate), a branch destination, or an
-// instruction's inline data refers to neither, and has no line
-// (unconfirmed: no probe line has one; govax's choice).
-func (m *Machine) printOperands(dec disasm.Decoded, format disasm.Options, names consoleSymbolizer) {
+// address is the register's present value, and so on. A branch
+// destination or an instruction's inline data refers to neither, and has
+// no line; a constant (a short literal, an immediate) has one only under
+// OperandsFull (VMS 7.1's DBG113I).
+func (m *Machine) printOperands(dec disasm.Decoded, format disasm.Options, names consoleSymbolizer, mode OperandsMode) {
 	if dec.IsMask {
 		return
 	}
 
 	for _, op := range dec.Symbolized(format).Operands {
-		desc, ok := m.describeOperand(op, names)
+		desc, ok := "", false
+		if mode == OperandsFull {
+			desc, ok = m.explainOperand(op, names)
+		}
+
+		if !ok {
+			desc, ok = m.describeOperand(op, names)
+		}
+
 		if !ok {
 			continue
 		}
@@ -97,12 +105,79 @@ func (m *Machine) describeOperand(op disasm.Operand, names consoleSymbolizer) (s
 		return "", false
 	}
 
-	where := fmt.Sprintf("%08X", addr)
+	return where(addr, names) + " contains " + m.memoryValue(addr, op.Size), true
+}
+
+// where names an address as the operand lines do: "DBGDIS\COUNT (address
+// 00000200)", or just the address when nothing names it.
+func where(addr uint32, names consoleSymbolizer) string {
 	if name, named := names.Symbolize(addr); named {
-		where = fmt.Sprintf("%s (address %08X)", name, addr)
+		return fmt.Sprintf("%s (address %08X)", name, addr)
 	}
 
-	return where + " contains " + m.memoryValue(addr, op.Size), true
+	return fmt.Sprintf("%08X", addr)
+}
+
+// explainOperand is OperandsFull's line for the operands it says more of
+// than describeOperand: a constant, a displacement, an autoincrement or
+// autodecrement, and an absolute or relative base with an index, in VMS
+// 7.1's words (testdata/dbg113's DBG113I). ok is false for the rest, which
+// read as in the brief form. A non-deferred displacement and an immediate
+// are written by the same pattern as the probe's (unconfirmed).
+func (m *Machine) explainOperand(op disasm.Operand, names consoleSymbolizer) (string, bool) {
+	switch {
+	case op.Mode == disasm.ModeLiteral && !op.Indexed():
+		return fmt.Sprintf("%02X (constant)", op.Value), true
+
+	case op.Mode == disasm.ModeImmediate && !op.Indexed():
+		return hexValue(uint64(op.Value), min(op.Size, 4)) + " (constant)", true
+
+	case op.Indexed() && (op.Mode == disasm.ModeAbsolute || op.Mode == disasm.ModeRelative) && !op.Deferred:
+		base := op.Target
+		index := m.CPU.GPR(registers.Reg(op.Index))
+		size := uint32(max(op.Size, 1))
+		addr := base + index*size
+
+		return fmt.Sprintf("%s (constant).  %s contains %08X.  %08X[%08X * %d] evaluates to %s, which contains %s",
+			where(base, names), cpu.RegisterName(op.Index), index, base, index, size,
+			where(addr, names), m.memoryValue(addr, op.Size)), true
+
+	case op.Indexed() || op.Register < 0:
+		return "", false
+
+	case op.Mode == disasm.ModeAutoincrement, op.Mode == disasm.ModeAutodecrement:
+		reg := m.CPU.GPR(registers.Reg(op.Register))
+		addr, form := reg, fmt.Sprintf("(%08X)+", reg)
+
+		if op.Mode == disasm.ModeAutodecrement {
+			addr, form = reg-uint32(op.Size), fmt.Sprintf("-(%08X)", reg)
+		}
+
+		return fmt.Sprintf("%s contains %s.  %s  evaluates to %s, which contains %s",
+			cpu.RegisterName(op.Register), where(reg, names), form, where(addr, names), m.memoryValue(addr, op.Size)), true
+
+	case op.Mode == disasm.ModeDisplacement:
+		reg := m.CPU.GPR(registers.Reg(op.Register))
+		name := cpu.RegisterName(op.Register)
+		text := strings.Replace(op.DebuggerText(), "("+name+")", fmt.Sprintf("(%08X)", reg), 1)
+		at := reg + uint32(op.Displacement)
+
+		if !op.Deferred {
+			return fmt.Sprintf("%s contains %s, %s evaluates to %s, which contains %s",
+				name, where(reg, names), text, where(at, names), m.memoryValue(at, op.Size)), true
+		}
+
+		pointer, ok := m.loadAddress(at)
+		if !ok {
+			return fmt.Sprintf("%s contains %s, %s evaluates to @%08X, which contains (no read access)",
+				name, where(reg, names), text, at), true
+		}
+
+		return fmt.Sprintf("%s contains %s, %s evaluates to @%08X, which contains %s, which contains %s",
+			name, where(reg, names), text, at, where(pointer, names), m.memoryValue(pointer, op.Size)), true
+	}
+
+	return "", false
 }
 
 // operandAddress computes the memory address an operand refers to from the
@@ -173,14 +248,14 @@ func (m *Machine) loadAddress(addr uint32) (uint32, bool) {
 
 // memoryValue reads size bytes at addr, as the hexadecimal digits the
 // debugger shows. A location that can't be read (unmapped, or protected)
-// shows as "<inaccessible>" (govax's wording; unconfirmed).
+// shows as "(no read access)", VMS 7.1's words (testdata/dbg113's DBG113I).
 func (m *Machine) memoryValue(addr uint32, size int) string {
 	var value uint64
 
 	for i := 0; i < size && i < 8; i++ {
 		b, err := m.loadSized(addr+uint32(i), SizeByte)
 		if err != nil {
-			return "<inaccessible>"
+			return "(no read access)"
 		}
 
 		value |= uint64(b) << (8 * uint(i))

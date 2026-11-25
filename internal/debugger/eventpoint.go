@@ -104,6 +104,15 @@ func (d *Debugger) breakpointHit(pc uint32) bool {
 	}
 
 	stopped.fired = true
+	d.lastBreak = stopped
+
+	// An interrupted STEP's end reached later reports as the step.
+	if req := stopped.stepEnd; req != nil {
+		d.reportStep(*req, pc)
+		d.pendingDo = stopped.Do
+
+		return true
+	}
 
 	if text := d.stopMessage(stopped, pc); text != "" {
 		d.setStopModule(pc)

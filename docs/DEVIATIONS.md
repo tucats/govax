@@ -897,21 +897,35 @@ choices no fixture has confirmed yet.
   session said, govax made a choice and logged it. The ones a later probe
   should check: the order of `SHOW BREAK` beyond one list of addresses and
   the report order of tracepoints that share a PC (each reported moves to
-  the end of the list); `/AFTER` and `WHEN` on tracepoints and watchpoints;
-  `CANCEL TRACE`/`WATCH` of nothing saying `NOTRACES`/`NOWATCHES`;
-  STEP/RETURN's pending frame (a second one replaces it, GO fires it, an
-  unwind or image exit drops it) and STEP/OVER interrupted by a break
-  ending; a line step ending at a RET in the middle of the caller's line;
-  the instruction text added to exception-break locations only under
-  `SET STEP INSTRUCTION`; `EXAMINE` with no location continuing from the
-  last one, and an entry mask's next location being 2 bytes on;
-  `/OPERANDS=FULL` equal to brief, and the layout of operands that name
-  no register or memory; `SHOW SYMBOL` with both `/ADDRESS` and `/TYPE`
-  and multi-dimension array bounds; `SHOW SCOPE`'s numbering past two
-  levels of one routine *(held to VMS 7.1's logs since Phase 89, `testdata/dbg89`)*; `SHOW LANGUAGE`'s `UNKNOWN`; `SET SOURCE`/`SHOW
-  SOURCE` wording and `%DEBUG-E-NOSUCHMODULE`; a source record over 144
-  columns; `EXIT` and `QUIT` being alike.
-- **Status**: deferred, for a later simh round.
+  the end of the list) *(resolved in Phase 113, subtask 13f: SHOW BREAK
+  was govax's order; at one PC an address tracepoint comes after the
+  classes')*; `/AFTER` and `WHEN` on tracepoints and watchpoints *(resolved:
+  a WHEN's datum is its contents, an /AFTER line goes once reached, a
+  tracepoint where a watchpoint stops is reported then)*; `CANCEL
+  TRACE`/`WATCH` of nothing saying `NOTRACES`/`NOWATCHES` *(resolved: they
+  do)*; STEP/RETURN's pending frame (a second one replaces it, GO fires
+  it, an unwind or image exit drops it) and STEP/OVER interrupted by a
+  break ending *(resolved: a second one in a deeper frame waits beside
+  the first, and an interrupted STEP/OVER's end stays set)*; a line step
+  ending at a RET in the middle of the caller's line *(resolved: it
+  does)*; the instruction text added to exception-break locations only
+  under `SET STEP INSTRUCTION` *(resolved: so)*; `EXAMINE` with no
+  location continuing from the last one, and an entry mask's next
+  location being 2 bytes on *(resolved: so)*; `/OPERANDS=FULL` equal to
+  brief, and the layout of operands that name no register or memory
+  *(resolved: FULL explains a computed address, and a constant gets a
+  line)*; `SHOW SYMBOL` with both `/ADDRESS` and `/TYPE` *(resolved:
+  as govax's)* and multi-dimension array bounds; `SHOW SCOPE`'s numbering
+  past two levels of one routine *(held to VMS 7.1's logs since Phase 89,
+  `testdata/dbg89`)*; `SHOW LANGUAGE`'s `UNKNOWN` *(resolved: the
+  session's language stays the main module's)*; `SET SOURCE`/`SHOW SOURCE`
+  wording and `%DEBUG-E-NOSUCHMODULE` *(resolved: VMS's layouts,
+  `/MODULE`, and NOSUCHMODU)*; a source record over 144 columns
+  *(resolved: wrapped as govax did)*; `EXIT` and `QUIT` being alike
+  *(resolved: EXIT runs the exit handlers, and in an `@` file either
+  ends the file)*. All by `testdata/dbg113`'s round on VMS 7.1.
+- **Status**: all resolved but multi-dimension array bounds in `SHOW
+  SYMBOL`, which MACRO can't describe, so no probe of MACRO's can ask.
 
 ### [Phase 47] File sharing and lock rules chosen without a manual or probe
 

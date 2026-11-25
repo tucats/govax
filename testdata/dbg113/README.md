@@ -54,10 +54,44 @@ In the round's session (`testdata/err113/README.md`), with the round's volume on
 No privileges are needed. `testdata/err113/copyout.cmd` copies the log, the sessions'
 logs, and the listing, map, object, and image back into `vax/`.
 
-`TestDbg113Procedure` (`internal/console/dbg113_test.go`) runs DBG113.COM on govax, so a
-mistake in a session shows first, and once `vax/` is here logs each session that differs
-from VMS's.
+`TestDbg113Procedure` (`internal/console/dbg113_test.go`) runs DBG113.COM on govax and
+holds each session's log to VMS's, stack addresses masked, but for `dbg113Differences`;
+`internal/debugger`'s `TestDebuggerSessionOracle` replays each session on VMS's own image,
+a command at a time, but for its `expectedDifferences`.
 
 ## What came back
 
-Nothing yet.
+The author ran the round on VMS 7.1 (2026-11-24); `vax/` has the eleven sessions' logs,
+GVDBG113S's, DBG113.LOG, and the listing, map, object, and image. What they settled, and
+govax now does (`docs/planning/PHASE-113 - Fortran errata.md`, subtask 13f):
+
+- **Scopes:** an outer scope's PSL is its frame's saved PSW, condition codes clear; scope 5
+  is SYMNOTACT and SET SCOPE/CURRENT past the last is NOTINSCOPE, `%NEXT_SCOPE_ENTRY`
+  staying at 4; a DEPOSIT goes where the value is kept (a frame's slot or the live
+  register); an outer SP is `%DEBUG-I-NOALTERSP`, an outer PSL is taken; a level whose PC
+  is in no routine is named by its number (`1\%PC`, `0\%R2`), and the levels go on past it.
+- **Values and locations:** DEPOSIT's value is an expression's value, so a code label is
+  its instruction's bytes (`DEPOSIT PC = DEEP` stored 005001D0); in a location a register's
+  name is the register's own place, FFFF0000 + 4n, PSL FFFF0040 (`EXAMINE AP+4` is FP,
+  `R2+1` the bytes from R2's second on, `R2:R4` three registers, `@(AP+4)` reads memory at
+  FFFF0034, a number there is no access, DEPOSIT there BADTARGET, SYMBOLIZE names the
+  register); EVALUATE/ADDRESS of a register is its name. A WHEN's datum is its contents
+  too (`.COUNT` reads the address COUNT holds), an error there taking the eventpoint.
+- **EXAMINE:** after PC the PSL, after the PSL NOSUCC; after EXAMINE/INSTRUCTION of a
+  register the next location is a byte on in the registers' bytes (`%R5+1`), and a CASE
+  of more than 20 displacements says so; `/OPERANDS` away from the PC is NOTCURPC first
+  (two lines), FULL explains a computed address and lists constants, and an unreadable
+  value is `(no read access)`.
+- **Eventpoints:** an address tracepoint after the classes' at one PC; a tracepoint where a
+  watchpoint stops is reported then; a watch at a routine's first instruction is "at
+  routine"; `/after` isn't shown once reached; STEP/RETURN from a routine's first
+  instruction is "from routine", by line with no instruction, and a second one in a deeper
+  frame waits beside the first; an interrupted STEP/OVER's end stays set.
+- **The rest:** TYPE with nothing shown is NONXTLIN; SHOW LANGUAGE is the session's;
+  SET/SHOW/CANCEL SOURCE in VMS's layout with `/MODULE`; NOSUCHMODU; EXIT runs the exit
+  handlers, QUIT doesn't, and either in an `@` file ends the file; a command refused as
+  it's read isn't logged, one that fails as it runs is.
+
+Left as differences: the registers VMS's image activator left (R11, and AP and FP's stack
+addresses), the P0 size (govax's reaches 005001D0, so OPCDEC there where VMS's had an access
+violation), and SHOW CALLS and the PSL at an exception break (govax's condition dispatcher).

@@ -43,6 +43,39 @@ func (m *Machine) SetSourceDirs(dirs []string) {
 // SourceDirs returns the SET SOURCE search list.
 func (m *Machine) SourceDirs() []string { return m.sourceDirs }
 
+// SetModuleSourceDirs makes dirs SET SOURCE/MODULE's search list for one
+// module, searched in place of the list for all modules; nil cancels it.
+func (m *Machine) SetModuleSourceDirs(module string, dirs []string) {
+	module = strings.ToUpper(module)
+
+	if dirs == nil {
+		delete(m.moduleSourceDirs, module)
+	} else {
+		if m.moduleSourceDirs == nil {
+			m.moduleSourceDirs = map[string][]string{}
+		}
+
+		m.moduleSourceDirs[module] = dirs
+	}
+
+	m.sourceCache = nil
+	m.numberAllFortranLines()
+}
+
+// ModuleSourceDirs returns the modules SET SOURCE/MODULE named, by name,
+// and their lists.
+func (m *Machine) ModuleSourceDirs() map[string][]string { return m.moduleSourceDirs }
+
+// dirsFor is the search list for a module's source: its own, else the
+// list for all modules.
+func (m *Machine) dirsFor(module string) []string {
+	if dirs, ok := m.moduleSourceDirs[strings.ToUpper(module)]; ok {
+		return dirs
+	}
+
+	return m.sourceDirs
+}
+
 // SourceLine returns the source line that holds the instruction at pc: its
 // number in the listing and its text, with the tabs still in it. ok is
 // false when pc isn't in code the debug symbol table has lines for, or the
@@ -63,7 +96,7 @@ func (m *Machine) SourceLine(pc uint32) (n int, text string, ok bool) {
 		return 0, "", false
 	}
 
-	records := m.sourceRecords(file.Spec)
+	records := m.sourceRecordsOf(mod.Name, file.Spec)
 	if record < 1 || record > len(records) {
 		return 0, "", false
 	}
@@ -99,7 +132,7 @@ func (m *Machine) SourceAt(pc uint32) (records []string, index int, ok bool) {
 		return nil, 0, false
 	}
 
-	records = m.sourceRecords(file.Spec)
+	records = m.sourceRecordsOf(mod.Name, file.Spec)
 	if record < 1 || record > len(records) {
 		return nil, 0, false
 	}
@@ -115,7 +148,7 @@ func (m *Machine) ModuleSource(mod *dbgsym.Module) []string {
 		return nil
 	}
 
-	return m.sourceRecords(mod.Files[0].Spec)
+	return m.sourceRecordsOf(mod.Name, mod.Files[0].Spec)
 }
 
 // sourceRecords returns the lines of the source file whose recorded name
@@ -123,24 +156,33 @@ func (m *Machine) ModuleSource(mod *dbgsym.Module) []string {
 // be found. The answer, including a failure, is remembered until the
 // search list changes.
 func (m *Machine) sourceRecords(spec string) []string {
-	if records, seen := m.sourceCache[spec]; seen {
+	return m.sourceRecordsOf("", spec)
+}
+
+// sourceRecordsOf is sourceRecords for a module's file, searched for in
+// the module's own list if SET SOURCE/MODULE gave it one.
+func (m *Machine) sourceRecordsOf(module, spec string) []string {
+	dirs := m.dirsFor(module)
+	key := strings.Join(dirs, "\x00") + "\x01" + spec
+
+	if records, seen := m.sourceCache[key]; seen {
 		return records
 	}
 
-	records := m.findSource(spec)
+	records := m.findSource(spec, dirs)
 
 	if m.sourceCache == nil {
 		m.sourceCache = map[string][]string{}
 	}
 
-	m.sourceCache[spec] = records
+	m.sourceCache[key] = records
 
 	return records
 }
 
 // findSource looks for the file in each place, in order, and returns the
 // lines of the first one that can be read.
-func (m *Machine) findSource(spec string) []string {
+func (m *Machine) findSource(spec string, dirs []string) []string {
 	s := m.Hooks.Session()
 	if s == nil {
 		return nil
@@ -156,7 +198,7 @@ func (m *Machine) findSource(spec string) []string {
 		names = append(names, lower)
 	}
 
-	for _, dir := range m.sourceDirs {
+	for _, dir := range dirs {
 		for _, name := range names {
 			candidates = append(candidates, joinDirectory(dir, name))
 		}

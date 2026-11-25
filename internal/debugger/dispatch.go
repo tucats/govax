@@ -40,11 +40,8 @@ func (d *Dispatcher) bind() {
 	g := d.Grammar
 
 	// EXIT and QUIT end the session, and an image still running under it
-	// (dbginput.go's exitSession). On VMS they differ in whether the
-	// program's exit handlers run; govax runs none for either.
-	end := func(id int64, r *dcl.Result) error {
-		return d.Debugger.exitSession()
-	}
+	// (dbginput.go's exitSession): EXIT runs the program's exit handlers,
+	// QUIT doesn't.
 
 	d.bindBreak()
 	d.bindTrace()
@@ -56,8 +53,8 @@ func (d *Dispatcher) bind() {
 	d.bindProgram()
 	d.bindProcess()
 
-	g.Bind("EXIT", end)
-	g.Bind("QUIT", end)
+	g.Bind("EXIT", func(id int64, r *dcl.Result) error { return d.Debugger.exitSession(false) })
+	g.Bind("QUIT", func(id int64, r *dcl.Result) error { return d.Debugger.exitSession(true) })
 
 	g.Bind("HELP", func(id int64, r *dcl.Result) error { return d.help(r.String("TOPIC")) })
 
