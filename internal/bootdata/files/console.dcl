@@ -370,6 +370,9 @@ grammar console
         keyword         queue           /syntax=show_queue
         ! ENTRY (Phase 98, subtask 7): jobs, by entry number or user.
         keyword         entry           /syntax=show_entry
+        ! TIME: the system's date and time, as VMS's DCL shows it.
+        keyword         time            /syntax=show_time
+        keyword         daytime         /syntax=show_time
                 
 
     ! SHOW (docs/PHASE-42.md): the console's keywords. The machine's
@@ -436,6 +439,7 @@ grammar console
                         /prompt="Object"
         syntax          show_working_set/id=166
         syntax          show_editor/id=167
+        syntax          show_time/id=168
 
 
     !

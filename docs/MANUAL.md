@@ -2934,6 +2934,7 @@ These are described in [section 7](#7-command-procedures-and-the-dcl-language).
 | `SHOW MEMORY [/FILES [/FULL]]` | Physical memory, the address regions, and with paging on the page lists, faults, and page file. |
 | `SHOW WORKING_SET` | The process's working set limit, quota, and extent. |
 | `SHOW VERSION` | The microkernel's version. |
+| `SHOW TIME`, `SHOW DAYTIME` | The system's date and time, to the second. |
 | `SHOW RADIX` | The console's numeric radix. |
 | `SHOW DEBUG` | The debugging switches. |
 | `HELP [topic ...]` | The help text: govax's own, or with `/LIBRARY=` a help library's, as VMS's HELP shows it (`/[NO]PROMPT`, `/[NO]INSTRUCTIONS`, `/[NO]LIBLIST`, `/[NO]LIBRARY`, `/[NO]USERLIBRARY`, `/[NO]OUTPUT`, `/[NO]PAGE`). |

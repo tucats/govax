@@ -105,6 +105,7 @@ var dclOwnCommands = map[string]bool{
 	"SHOW_EDITOR":       true,
 	"SHOW_PROTECTION":   true,
 	"SHOW_SYM":          true,
+	"SHOW_TIME":         true,
 	"SHOW_TRANSLATION":  true,
 	"SPAWN":             true,
 	"STOP":              true,

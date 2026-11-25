@@ -392,6 +392,7 @@ func (c *Interpreter) BindDCL(g *dcl.Grammar) {
 
 		return c.showDCLSymbols(cmd)
 	})
+	g.Bind("SHOW_TIME", func(id int64, r *dcl.Result) error { return c.showTime() })
 	g.Bind("STOP", c.stopCommand)
 	g.Bind("IF", c.ifCommand)
 	g.Bind("SPAWN", func(id int64, r *dcl.Result) error {

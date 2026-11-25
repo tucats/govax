@@ -527,6 +527,20 @@
 
      SHOW SYSTEM
 
+2 TIME
+
+   Shows the system's date and time, to the second, as F$TIME() gives
+   it.
+
+   Format
+
+     SHOW [DAY]TIME
+
+3 Examples
+
+     $ SHOW TIME
+       25-NOV-2026 12:30:58
+
 2 TRANSLATION
 
    Shows one level of translation of a logical name: the first match

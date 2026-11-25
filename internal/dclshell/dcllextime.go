@@ -539,3 +539,18 @@ func timeText(v uint64) string {
 
 	return s
 }
+
+// showTime is SHOW TIME: the system time, as F$TIME gives it, without its
+// hundredths, after two blanks: "  25-NOV-2026 12:30:58". The day's blank
+// before a single digit is kept, as $ASCTIM writes it (unconfirmed against
+// VMS for a day before the 10th).
+func (c *Interpreter) showTime() error {
+	text := timeText(c.systemTime())
+	if i := strings.LastIndexByte(text, '.'); i >= 0 {
+		text = text[:i]
+	}
+
+	c.Printf("  %s\n", text)
+
+	return nil
+}
