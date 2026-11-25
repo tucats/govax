@@ -280,6 +280,12 @@ func verbError(err error) error {
 		name, _ := ve.Arguments[1].(string)
 
 		return vmserrors.NewSegment(vmserrors.CLI_IVQUAL, strings.TrimPrefix(name, "/"))
+	case ve.Status == vmserrors.CLI_AMBIGUOUS && len(ve.Arguments) == 2 && ve.Arguments[0] == "qualifier":
+		// An abbreviation that names more than one qualifier: EDIT/S, for
+		// /SLP and /SUM (testdata/sum117's V06).
+		name, _ := ve.Arguments[1].(string)
+
+		return vmserrors.NewSegment(vmserrors.CLI_ABKEYW, strings.TrimPrefix(name, "/"))
 	case ve.Status == vmserrors.CLI_NOQUALIFIERVALUE && len(ve.Arguments) == 1:
 		name, _ := ve.Arguments[0].(string)
 

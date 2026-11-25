@@ -283,18 +283,19 @@ func TestParse_paramScopedQualifier_quotedValueThenQualifier(t *testing.T) {
 // carry their own save-set and file qualifiers, and FORTRAN
 // (docs/planning/PHASE-74 - FORTRAN plan.md), whose SOURCES take /HOST, and
 // DIFFERENCES (docs/planning/PHASE-116 - DIFFERENCES.md), whose files each take
-// /CHANGE_BAR.
+// /CHANGE_BAR, and EDIT/SUM (docs/planning/PHASE-117 - SUMSLP.md), whose input
+// takes /UPDATE.
 func TestLoadEvaxGrammar_unaffectedByParamQualifierFeature(t *testing.T) {
 	g := loadEvaxGrammar(t)
 
 	for _, e := range g.entries {
-		if e.Name == "COPY" || e.Name == "MACRO" || e.Name == "LINK" || e.Name == "LIBRARY" || e.Name == "RUN" || e.Name == "ANALYZE_OBJECT" || e.Name == "ANALYZE_IMAGE" || e.Name == "ANALYZE_RMS_FILE" || e.Name == "CREATE" || e.Name == "OPEN" || e.Name == "BACKUP" || e.Name == "FORTRAN" || e.Name == "DIFFERENCES" {
+		if e.Name == "COPY" || e.Name == "MACRO" || e.Name == "LINK" || e.Name == "LIBRARY" || e.Name == "RUN" || e.Name == "ANALYZE_OBJECT" || e.Name == "ANALYZE_IMAGE" || e.Name == "ANALYZE_RMS_FILE" || e.Name == "CREATE" || e.Name == "OPEN" || e.Name == "BACKUP" || e.Name == "FORTRAN" || e.Name == "DIFFERENCES" || e.Name == "EDIT_SUM" {
 			continue
 		}
 
 		for _, p := range e.Parameters {
 			if len(p.Qualifiers) != 0 {
-				t.Errorf("%s parameter %s unexpectedly has parameter-scoped qualifiers %+v (only COPY, MACRO, LINK, LIBRARY, RUN, ANALYZE, CREATE, OPEN, BACKUP, FORTRAN, and DIFFERENCES declare any)",
+				t.Errorf("%s parameter %s unexpectedly has parameter-scoped qualifiers %+v (only COPY, MACRO, LINK, LIBRARY, RUN, ANALYZE, CREATE, OPEN, BACKUP, FORTRAN, DIFFERENCES, and EDIT/SUM declare any)",
 					e.Name, p.Name, p.Qualifiers)
 			}
 		}

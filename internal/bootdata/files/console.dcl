@@ -755,14 +755,34 @@ grammar console
     ! rules; /HOST forces the host. TYPE has one parameter, so /HOST is the
     ! verb's own qualifier: TYPE/HOST X and TYPE X/HOST mean the same.
     !
+    ! EDIT/SUM is VMS's SUMSLP, a batch editor: one input file updated by
+    ! files of SLP edit commands (docs/planning/PHASE-117 - SUMSLP.md;
+    ! internal/dclcmd/sumslp.go, internal/sumslp). /UPDATE is the file's
+    ! alone (after the verb, %DCL-W-IVQLOC); /LISTING, /OUTPUT, and /HEADER
+    ! may go after the verb or the file, as VMS 7.1's (testdata/sum117's C06,
+    ! C07). The file has no prompt: a missing one is %DCL-W-INSFPRM.
+    syntax edit_sum
+        parameter   input/id=3301               -
+                    /type=$file/single
+        qualifier   update/id=3302              -
+                    /parameter=input            -
+                    /type=$file/list/default=""
+        qualifier   listing/id=3303/type=$file/default=""
+        qualifier   output/id=3304/type=$file/default=""
+        qualifier   header/id=3305
+
     ! govax's own: EDIT runs an editor on the host on a copy of the file
     ! (internal/dclcmd/edit.go). VMS's EDT and TPU have no place here.
+    ! /SUM is SUMSLP (above); /SLP is govax's own name for it, the one older
+    ! VMS versions used (on VMS 7.1 EDIT/SLP runs another utility).
     verb edit/id=2253
 
         parameter   spec/id=2254                -
                     /type=$string               -
                     /prompt="File"
         qualifier   host/id=2255
+        qualifier   sum/id=3306/syntax=edit_sum
+        qualifier   slp/id=3307/syntax=edit_sum
 
     !
     ! DIFFERENCES compares two files record by record (docs/planning/PHASE-116

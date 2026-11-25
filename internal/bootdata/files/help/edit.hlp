@@ -12,6 +12,8 @@
 
    SET EDITOR says which editor runs, and where its copies go.
 
+   EDIT/SUM is VMS's SUMSLP batch editor (see /SUM).
+
 2 Parameter
 
  filespec
@@ -66,3 +68,108 @@
      $ EDIT "notes.txt"/HOST
 
      Edits a host file with vim.
+
+2 /SUM
+
+   Runs SUMSLP, a batch editor: one input file is updated by the edit
+   commands in one or more update files, and the result written as a
+   new file.  The input and update files aren't changed.  Each update
+   file's line numbers are the input's, so several can be merged into
+   one list of edits and applied together.
+
+   Format
+
+     EDIT/SUM input-file/UPDATE[=(update-file[,...])]
+
+3 Parameter
+
+ input-file
+
+   The file to update; wildcards aren't allowed.
+
+3 Description
+
+   An update file is lines of text.  A line that starts with one of
+   these characters does something; any other line is a record to
+   insert:
+
+     -m,n    Lines m to n of the input are replaced by the records
+             that follow (deleted, if none do).
+     -m      The records that follow are inserted after line m (after
+             no line, before line 1, for -0 or a bare -).
+     /       The update file ends here.
+     \       The audit trail is off for the lines after.
+     %       The audit trail is on again.
+     <       The next character is an ordinary one: </ is a record
+             that starts with a slash.
+
+   An edit command may end with ,/audit-trail/ (the text that marks the
+   inserted lines in the listing) and ;comment.  A line number may be .,
+   the line the last edit reached.
+
+   With several update files, the last listed takes precedence where
+   their edits meet.  SUMSLP's warnings (edits clash, edits out of
+   sequence, premature end-of-file, SLP command syntax error) go into
+   the listing, or to SYS$OUTPUT without one.
+
+   $STATUS is RMS's success after any run that finished, warnings and
+   all, or the RMS status of the file that stopped it.
+
+   DIFFERENCES/SLP writes an update file that turns one file into
+   another.
+
+3 Qualifiers
+/HEADER
+
+      /HEADER
+      /NOHEADER (default)
+
+   Writes the output with each record's line number, insert number,
+   and audit trail in a 12-byte record header (VFC records).
+
+/LISTING
+
+      /LISTING[=filespec]
+      /NOLISTING (default)
+
+   Writes a listing of the updated file: each line with its number (.1,
+   .2, ... for inserted lines), its audit trail, and a -n mark on the
+   first line after n deleted ones.  By default the input's name with
+   the type .LIS.
+
+/OUTPUT
+
+      /OUTPUT[=filespec] (default)
+      /NOOUTPUT
+
+   Names the updated file: by default the input's name and type, a new
+   version.  /NOOUTPUT writes none.
+
+/UPDATE
+
+      /UPDATE[=(update-file[,...])]
+
+   Follows the input file and names the update files, by default the
+   input's name with the type .UPD; each later one takes its device and
+   directory from the one before.  An update file that can't be opened
+   is reported, and the others applied.  /UPDATE=SYS$INPUT reads the
+   update from the lines after the command in a command procedure.
+   Without /UPDATE, the input is copied (and listed) unchanged.
+
+3 Examples
+
+   1.$ EDIT/SUM/LISTING PROG.MAR/UPDATE=FIX1
+
+     Updates PROG.MAR with FIX1.UPD's edits, making a new version of
+     PROG.MAR and the listing PROG.LIS.
+
+   2.$ DIFFERENCES/SLP OLD.TXT NEW.TXT
+     $ EDIT/SUM/OUTPUT=COPY.TXT OLD.TXT/UPDATE=OLD.DIF
+
+     Makes COPY.TXT, the same as NEW.TXT, from OLD.TXT and the update
+     file DIFFERENCES wrote.
+
+2 /SLP
+
+   The same as /SUM: govax's own name for SUMSLP, the one older VMS
+   versions used.  (On VMS 7.1, EDIT/SLP runs another utility.)

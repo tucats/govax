@@ -403,6 +403,27 @@ func (d *Dispatcher) bindGrammar() {
 	g.Bind("EDIT", func(id int64, r *dcl.Result) error {
 		return d.Console.cmd().Edit(r.String("SPEC"), r.Present("HOST"))
 	})
+	// EDIT/SUM (and govax's EDIT/SLP) is SUMSLP, a batch editor
+	// (docs/planning/PHASE-117 - SUMSLP.md; internal/dclcmd/sumslp.go).
+	g.Bind("EDIT_SUM", func(id int64, r *dcl.Result) error {
+		value := func(name string) dclcmd.DifferencesValue {
+			return dclcmd.DifferencesValue{
+				Given: r.Present(name) && !r.Defaulted(name), Negated: r.Negated(name), Text: r.String(name),
+			}
+		}
+
+		update := r.ParamPresent("INPUT", "UPDATE") && !r.ParamDefaulted("INPUT", "UPDATE") &&
+			!r.ParamNegated("INPUT", "UPDATE")
+
+		return d.Console.cmd().EditSum(dclcmd.EditSumRequest{
+			Input:      r.String("INPUT"),
+			Update:     update,
+			UpdateList: r.ParamList("INPUT", "UPDATE"),
+			Listing:    value("LISTING"),
+			Output:     value("OUTPUT"),
+			Header:     value("HEADER"),
+		})
+	})
 	g.Bind("SET_EDITOR", func(id int64, r *dcl.Result) error {
 		var opts dclcmd.EditorOptions
 

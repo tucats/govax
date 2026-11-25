@@ -605,39 +605,64 @@ func (d *differences) lowerVersion(name string) (string, error) {
 //	%DIFF-F-OPENIN, error opening DUA1:[DIF116.IN]NOSUCH.TXT; as input
 //	-RMS-E-FNF, file not found
 func (d *differences) openFailure(err error, spec, dna string) error {
+	f, ok := d.c.openFailureOf(err, spec, dna)
+	if !ok {
+		return FileFailure(err, spec)
+	}
+
+	return vmserrors.ConditionError{Status: vmsdef.DIFOpenIn, Text: "DIFF-F-OPENIN, error opening " + f.name + " as input\n" + f.lines()}
+}
+
+// openFailed is an input a utility couldn't open, as its OPENIN message shows
+// it: the name RMS expanded, and RMS's status and secondary status.
+type openFailed struct {
+	name     string
+	sts, stv uint32
+}
+
+// lines are the message's lines after its first: RMS's status, and its
+// secondary status for a directory not found.
+func (f openFailed) lines() string {
+	text := ConditionLine(f.sts)
+	if f.stv != 0 && f.sts == vmsdef.Symbols["RMS$_DNF"] {
+		text += "\n" + ConditionLine(f.stv)
+	}
+
+	return text
+}
+
+// openFailureOf reads err, an input spec with default name dna couldn't be
+// opened, as an OPENIN message names it (DIFFERENCES' N12, N20 to N25;
+// EDIT/SUM's C17, C18); ok is false for an error that isn't RMS's.
+func (c *Context) openFailureOf(err error, spec, dna string) (f openFailed, ok bool) {
 	var (
 		failure    *rms.ConvertOpenError
 		notMounted *rms.NotMountedError
 		bad        *rms.NameError
 	)
 
-	name, sts, stv := strings.ToUpper(spec), uint32(0), uint32(0)
+	f.name = strings.ToUpper(spec)
 
 	switch {
 	case errors.As(err, &failure):
-		name, sts, stv = failure.Name, failure.Status, failure.STV
+		f.name, f.sts, f.stv = failure.Name, failure.Status, failure.STV
 	case errors.Is(err, fs.ErrNotExist):
-		sts = vmsdef.Symbols["RMS$_FNF"]
+		f.sts = vmsdef.Symbols["RMS$_FNF"]
 	case errors.As(err, &notMounted):
 		// A device with no volume: RMS's DEV, the name as $PARSE writes
 		// it (N23: DUA99:[X]Y.Z;).
-		if parsed, _, perr := d.c.ContainerSession.Parse(spec, dna, "", true, false); perr == nil {
-			name = parsed.String()
+		if parsed, _, perr := c.ContainerSession.Parse(spec, dna, "", true, false); perr == nil {
+			f.name = parsed.String()
 		}
 
-		sts = vmsdef.Symbols["RMS$_DEV"]
+		f.sts = vmsdef.Symbols["RMS$_DEV"]
 	case errors.As(err, &bad):
-		sts = bad.Status
+		f.sts = bad.Status
 	default:
-		return FileFailure(err, spec)
+		return f, false
 	}
 
-	text := "DIFF-F-OPENIN, error opening " + name + " as input\n" + ConditionLine(sts)
-	if stv != 0 && sts == vmsdef.Symbols["RMS$_DNF"] {
-		text += "\n" + ConditionLine(stv)
-	}
-
-	return vmserrors.ConditionError{Status: vmsdef.DIFOpenIn, Text: text}
+	return f, true
 }
 
 // output is the listing's file: none (SYS$OUTPUT) without /OUTPUT or with

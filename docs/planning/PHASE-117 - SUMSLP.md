@@ -499,7 +499,7 @@ Each is one commit, with tests, stopping for review.
    exchange volume built; run on the VAX by the author (a short round 2
    may follow for what round 1's HELP shows that it didn't ask); A.3
    answered (as A.4) and Part B adjusted.
-3. **The command's frame**: the grammar (EDIT/SUM and EDIT/SLP beside
+3. **The command's frame** (done 2026-11-25): the grammar (EDIT/SUM and EDIT/SLP beside
    plain EDIT), HELP EDIT's `/SUM` topic in VMS's shape, the messages and
    statuses in `vmsdef`, the names (input, updates, output, listing),
    the errors; held to the probe's COMMAND section.
@@ -632,3 +632,40 @@ The author's answers to the plan's four questions:
   end; 255-byte records; message lines on the page; the heading's widths
   and the input's creation date. Decisions 3 and 8 adjusted. Subtask 3
   is next.
+- **2026-11-25 — subtask 3 done: the command's frame.** `console.dcl`'s
+  EDIT has `/SUM` and `/SLP` switching to a syntax of their own,
+  `edit_sum`: the input a `/single` `$file` (two files are VMS's NOLIST,
+  C27), `/UPDATE` the input's alone (IVQLOC after the verb, C05), and
+  `/LISTING`, `/OUTPUT`, `/HEADER` anywhere (C06, C07); a qualifier it
+  lacks is IVQUAL (C25, C26). `internal/dclcmd/sumslp.go` is the command:
+  the names (the first update file the input's device, directory, and
+  name with `.UPD`, each later one the device and directory of the one
+  before, C04, C16, C28; `/UPDATE=SYS$INPUT` the procedure's data lines to
+  the `/`, read once, Decision 8; the output beside the input, a new
+  version; the listing only with `/LISTING`, the input's name and `.LIS`),
+  `%SUM-I-OPENIN` for a file that can't be opened (the input's ending the
+  command with RMS's status, an update file's passed over), `%SUM-E-OPENIN`
+  and WLD for a wildcard, `$STATUS` RMS's with the inhibit bit, and a
+  missing file DCL's INSFPRM. DIFFERENCES' OPENIN analysis is shared
+  (`Context.openFailureOf`). The SUM messages' texts are
+  `vmsdef/summessages.go`, with no numbers (none ever shows).
+  `internal/sumslp` is begun: `Apply` (no edits yet: the output is the
+  input, the listing numbers its lines) and `Listing`, the page layout,
+  held byte for byte to C03's, L01's, and L02's listings (an empty input's
+  listing has no records: a page's heading goes out with its first line,
+  where A.4.6 guessed the heading alone). HELP EDIT has `/SUM` in VMS's
+  shape and `/SLP`. DCL's ABKEYW for an ambiguous qualifier (EDIT/S, V06)
+  replaces govax's own AMBIGUOUS message, as IVQUAL replaced UNRECOGNIZED.
+  `internal/console`'s `sum117_test.go` makes the probe's volume and runs
+  its cases as SUM117.COM does; `TestSum117CommandOracle` holds the
+  COMMAND section's logs, statuses, and files made to VMS's, and the
+  files' records where no edit applies (C03, C18, C24's absent listing);
+  the others' records wait for subtask 4 (`sum117Later`). Not compared:
+  C23 (EDIT/SLP, govax's own), C28's records (a directory file's), C29's
+  and C30's logs (VMS reads SYS$INPUT twice). Found on the way, for a
+  later fix: govax's DELETE leaves `$STATUS` `%X00030001`, VMS's
+  `%X10000001` (C31, masked by `sum117Known`). Unconfirmed: the output's
+  directory (the input's) and the listing's (the default), every case
+  having run in the input's directory; a day before the 10th in the
+  heading shown with a blank. `/HEADER` is accepted and does nothing until
+  subtask 6. Subtask 4 is next.
