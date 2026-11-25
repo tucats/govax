@@ -26,7 +26,7 @@ const (
 
 	// round is where copyout.cmd puts the next VMS run, under vax/ (and DUNGEON's log
 	// as testdata/disks/ftn86d-ROUND.log), to be checked before it replaces vax/'s.
-	round = "round6"
+	round = "round7"
 )
 
 // rtlModules are FTNRTL's sources, in ftnrtl.opt's order.
@@ -198,18 +198,21 @@ $ ENDSUBROUTINE
 	fmt.Fprintf(&out, `! COPYOUT.CMD - copies VMS's results off the exchange volume. Written by
 ! testdata/ftn86/gen.go. Run from the repository root, after the VAX has dismounted it:
 !
-!     mkdir -p testdata/ftn86/vax/%[1]s
+!     mkdir -p testdata/ftn86/vax/%[1]s/mar
 !     govax console < testdata/ftn86/copyout.cmd
 !
-! A run goes to vax/%[1]s, beside the one the tests read in vax/, until it's checked.
+! A run goes to vax/%[1]s, beside the one the tests read in vax/, until it's checked;
+! its mar/ is the sources it built, for TestFTN86Objects.
 MOUNT/NOWRITE %[2]s "%[3]s"
 COPY/QUIET %[2]s[000000]FTN86.LOG "%[4]s/ftn86.log"/HOST
 COPY/QUIET %[2]s[FTN86]FTNRTL.MAP "%[4]s/ftnrtl.map"/HOST
 COPY/QUIET/BINARY %[2]s[FTN86]FTNRTL.EXE "%[4]s/ftnrtl.exe"/HOST
+COPY/QUIET %[2]s[FTN86]FTNRTL.OPT "%[4]s/mar/ftnrtl.opt"/HOST
 `, round, device, volume, dir+"/vax/"+round)
 
 	for _, m := range rtlModules {
 		fmt.Fprintf(&out, "COPY/QUIET %s[FTN86]%s.OBJ \"%s/vax/%s/%s.obj\"/HOST\n", device, m, dir, round, strings.ToLower(m))
+		fmt.Fprintf(&out, "COPY/QUIET %s[FTN86]%s.MAR \"%s/vax/%s/mar/%s.mar\"/HOST\n", device, m, dir, round, strings.ToLower(m))
 	}
 
 	fmt.Fprintf(&out, "DISMOUNT %s\nEXIT\n", device)

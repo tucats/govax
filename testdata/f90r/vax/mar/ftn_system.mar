@@ -26,6 +26,7 @@
 ; in FTN_VECTOR.MAR's "Reading these sources".
 ;
 	$DSCDEF				; descriptors' fields and codes
+	$JPIDEF				; JPI$_CPUTIM
 	$LNMDEF				; LNM$_STRING
 	$SSDEF				; SS$_NORMAL
 
@@ -660,6 +661,67 @@ SYSTEM_CLOCK:
 	SOBGTR	R11,10$
 	MOVH	R0,@4(AP)
 	RET
+
+;
+; CALL CPU_TIME(time) (Fortran 95's 13.14.33), by TIME's format:
+;	FTN$CPU_TIME_F(t), FTN$CPU_TIME_D(t), FTN$CPU_TIME_G(t), FTN$CPU_TIME_H(t)
+;
+; The process's CPU time, JPI$_CPUTIM, which VMS keeps in 10-millisecond
+; ticks from the process's start, in seconds: the ticks divided by 100 in
+; TIME's own format. Only differences between two calls mean anything (the
+; standard's words). If $GETJPI fails, TIME is -1, the standard's "a
+; processor-dependent negative value".
+;
+	.ENTRY	FTN$CPU_TIME_F,^M<>
+	BSBW	CPU_TICKS
+	CVTLF	R0,R0
+	DIVF2	#100.0,R0
+	MOVF	R0,@4(AP)
+	RET
+
+	.ENTRY	FTN$CPU_TIME_D,^M<>
+	BSBW	CPU_TICKS
+	CVTLD	R0,R0
+	DIVD2	#100.0,R0
+	MOVD	R0,@4(AP)
+	RET
+
+	.ENTRY	FTN$CPU_TIME_G,^M<>
+	BSBW	CPU_TICKS
+	CVTLG	R0,R0
+	DIVG2	#100.0,R0
+	MOVG	R0,@4(AP)
+	RET
+
+	.ENTRY	FTN$CPU_TIME_H,^M<R2,R3>
+	BSBW	CPU_TICKS
+	CVTLH	R0,R0			; an H value is four registers, R0 to R3
+	DIVH2	#100.0,R0
+	MOVH	R0,@4(AP)
+	RET
+
+;
+; CPU_TICKS: R0 is the process's CPU time in ticks, or -100 (a second less
+; than none) if $GETJPIW fails. The buffer and a one-item list are built on the
+; stack: the buffer, then the list's end, the return length's address (none),
+; the buffer's address, and the buffer's length (4) with the item's code.
+; R1 isn't kept.
+;
+CPU_TICKS:
+	SUBL2	#4,SP			; the buffer
+	MOVL	SP,R1
+	CLRL	-(SP)			; the list's end
+	CLRL	-(SP)			; no length returned
+	PUSHL	R1			; the buffer's address
+	PUSHL	#<JPI$_CPUTIM@16>!4	; its length, then the item's code
+	MOVL	SP,R0
+	$GETJPIW_S ITMLST=(R0)
+	BLBC	R0,10$
+	MOVL	16(SP),R0		; the ticks
+	BRB	20$
+10$:	MNEGL	#100,R0
+20$:	ADDL2	#20,SP			; the list and the buffer
+	RSB
 
 ;
 ; DRAWS: R0 draws from MTH$RANDOM, F values stored at the frame's bottom in

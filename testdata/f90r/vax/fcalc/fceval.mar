@@ -2,7 +2,7 @@
 	.IDENT	/01/
 ; TBT$ FORTRAN: a traceback's line numbers are the FORTRAN lines below
 ;
-; Compiled by GOVAX FORTRAN V0.0-0 on 22-NOV-2026 14:13:06.74
+; Compiled by GOVAX FORTRAN V0.0-0 on 24-NOV-2026 14:22:47.57
 ; from DUA5:[FCALC]FCEVAL.F90;1
 ; by the command FORTRAN/G_FLOATING FCEVAL
 ; Optimized by /OPTIMIZE's passes: do limits, one character, forward, unreachable, dead code, deferred indexes, loop invariants,
@@ -52,9 +52,9 @@ FCEVAL.ANGLE_MODE = $MOD$FCFUNCS.$BASE	; ANGLE_MODE, in module FCFUNCS's variabl
 FCEVAL.SEED_GIVEN = $MOD$FCFUNCS.$BASE+4 ; SEED_GIVEN, in module FCFUNCS's variables
 FCEVAL.SEED_NUMBER = $MOD$FCFUNCS.$BASE+8 ; SEED_NUMBER, in module FCFUNCS's variables
 FCEVAL.CALLS = $MOD$FCEVAL.$BASE	; CALLS, in module FCEVAL's variables
-$MOD$FCEVAL.945175C1 == 0		; this module's stamp, which its users' objects refer to
+$MOD$FCEVAL.CBCCF686 == 0		; this module's stamp, which its users' objects refer to
 ; the stamps of the modules used
-	.EXTRN	$MOD$FCMESSAGES.63F4C46F,$MOD$FCVALUES.EBF01E5B,$MOD$FCARRAYS.EE19C6D8,$MOD$FCTREE.EC32573A,$MOD$FCSYMBOLS.2A7739DD,$MOD$FCFUNCS.0679CFAC,$MOD$FCMATRIX.23F94DB7
+	.EXTRN	$MOD$FCMESSAGES.25BE58B3,$MOD$FCVALUES.38BED767,$MOD$FCARRAYS.F65D1CE7,$MOD$FCTREE.DFE50A2B,$MOD$FCSYMBOLS.9A59E627,$MOD$FCFUNCS.98B04A8B,$MOD$FCMATRIX.B283FBC0
 
 ;    1  ! fcalc: the evaluator, which walks a tree to its value.
 ;    2  !

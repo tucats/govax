@@ -255,8 +255,9 @@ func TestFTN86Procedure(t *testing.T) {
 // aren't what the same procedure prints on govax, with why. Each runs with its N and R
 // variants; a name ending in R is the /RECURSIVE variant alone.
 var ftn86VMSDifferences = map[string]string{
-	"DIRECTIVES": "STORE AT: the COMMON block's address moved 4 bytes when Phase 113's subtask 8 made a " +
-		"constant format a FORMAT's block, after VMS's run; the next VMS round's build is govax's again",
+	"STRMATH": "round 6 ran it as it was then: VMS's STR$ wrote its CHARACTER results zero-padded, so " +
+		"SHOW's INDEX found no blank and the PRINT was OUTSTAOVE, as govax's is since Phase 113's subtask " +
+		"13a; the program now prints the whole field, and the next VMS round is to run it",
 	"SYSROUTINES": "SECNDS(T1+1.0) less than a second after T1 is a day more, and VMS's run got there in time",
 	"MATHFNS":     "CSIN's last bit: MTHRTL's complex functions aren't always VMS's in it",
 	"POWERS":      "OTS$POWRJ of a negative power: its last bit isn't always VMS's (the phase doc's round 2)",
@@ -272,30 +273,28 @@ var ftn86VMSDifferences = map[string]string{
 }
 
 // ftn86AwaitingVMS are corpus programs newer than VMS's last run of the procedure, which
-// the next VMS round is to run: RECARRAYS, Phase 105's subtask 5a, RECDYN, 5b, and
-// ZEROVAX, Phase 112's subtask 12, and STRMATH, Phase 113's subtask 7. (Round 6 ran
-// STRMATH as it was then: VMS's STR$ wrote its CHARACTER results zero-padded, so SHOW's
-// INDEX found no blank and the PRINT was OUTSTAOVE, as govax's is since subtask 13a; the
-// program now prints the whole field.)
-var ftn86AwaitingVMS = []string{"RECARRAYS", "RECDYN", "ZEROVAX", "STRMATH"}
+// the next VMS round is to run. Round 6 ran them all.
+var ftn86AwaitingVMS = []string{}
 
 // ftn86NewModules are FTNRTL's modules newer than VMS's last run of the procedure, each a
 // MACRO command, and a success in $STATUS, more in govax's FTNRTL section than in VMS's
-// until the next VMS round: FTN_ALLOC is Phase 104's (subtask 2).
-var ftn86NewModules = []string{"FTN_ALLOC"}
+// until the next VMS round. Round 6 built them all (FTN_ALLOC, Phase 104's, among them).
+var ftn86NewModules = []string{}
 
 // ftn86AwaitingRecursive says VMS's last run had no R variants, each program compiled
 // /RECURSIVE. It has since Phase 89's round.
 const ftn86AwaitingRecursive = false
 
-// ftn86Lines is a log's section as both sides can be held to it: without the commands SET
-// VERIFY echoed on VMS, or the options files LINK echoes then. The two numbers a traceback
+// ftn86Lines is a log's section as both sides can be held to it: without the commands and
+// comments SET VERIFY echoed on VMS (a procedure's "$!" lines as they are), or the options
+// files LINK echoes then. The two numbers a traceback
 // prints for a frame in a shareable image are where the image was put.
 func ftn86Lines(text string) string {
 	var lines []string
 
 	for line := range strings.SplitSeq(text, "\n") {
-		if strings.HasPrefix(line, "$ ") || strings.HasPrefix(line, "! ") || line == "FTNRTL/SHAREABLE" {
+		if strings.HasPrefix(line, "$ ") || strings.HasPrefix(line, "$!") || strings.HasPrefix(line, "! ") ||
+			line == "FTNRTL/SHAREABLE" {
 			continue
 		}
 

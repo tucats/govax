@@ -2,7 +2,7 @@
 	.IDENT	/01/
 ; TBT$ FORTRAN: a traceback's line numbers are the FORTRAN lines below
 ;
-; Compiled by GOVAX FORTRAN V0.0-0 on 22-NOV-2026 14:13:06.47
+; Compiled by GOVAX FORTRAN V0.0-0 on 24-NOV-2026 14:22:47.31
 ; from DUA5:[FCALC]FCTREE.F90;1
 ; by the command FORTRAN/G_FLOATING FCTREE
 ; Optimized by /OPTIMIZE's passes: do limits, one character, forward, unreachable, dead code, deferred indexes, loop invariants,
@@ -58,8 +58,8 @@ FCTREE.COUNT = $MOD$FCTREE.$BASE+11200	; COUNT, in module FCTREE's variables
 FCTREE.POS = $MOD$FCTREE.$BASE+11204	; POS, in module FCTREE's variables
 FCTREE.DEPTH = $MOD$FCTREE.$BASE+11208	; DEPTH, in module FCTREE's variables
 FCTREE.NODES = $MOD$FCTREE.$BASE+11212	; NODES, in module FCTREE's variables
-$MOD$FCTREE.EC32573A == 0		; this module's stamp, which its users' objects refer to
-	.EXTRN	$MOD$FCMESSAGES.63F4C46F,$MOD$FCVALUES.EBF01E5B,$MOD$FCLEXER.3BEEEE6E ; the stamps of the modules used
+$MOD$FCTREE.DFE50A2B == 0		; this module's stamp, which its users' objects refer to
+	.EXTRN	$MOD$FCMESSAGES.25BE58B3,$MOD$FCVALUES.38BED767,$MOD$FCLEXER.26ACCCC1 ; the stamps of the modules used
 
 ;    1  ! fcalc: expressions as trees, and the parser that builds them.
 ;    2  !

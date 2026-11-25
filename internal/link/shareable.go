@@ -161,10 +161,23 @@ type dstFixup struct {
 
 // withDSTFixups returns dst with a shareable image's fixup records after
 // it, from the next block, or dst itself if it needs none.
+//
+// The table then has the blocks VMS's LINK gives it, which may be one more
+// than its records use: as many as its records' bytes fill, with the fixup
+// records' counted as if they followed the rest directly, and one more, room
+// for their start on a block of its own. Every image VMS 7.1 linked for the
+// probes fits that rule (testdata/ftn86's and testdata/f90r's FTNRTLs, whose
+// fixup records run past a block, and every smaller shareable image), but
+// whether VMS rounds the sum up and adds one, or rounds it down and adds two,
+// which differ only when the sum is a multiple of 512, is unconfirmed: govax
+// rounds up (docs/planning/PHASE-113 - Fortran errata.md, subtask 13g).
 func (l *linker) withDSTFixups(dst []byte) []byte {
 	if !l.opts.Shareable || len(l.dstFixups) == 0 {
 		return dst
 	}
+
+	// The bytes of the records before the fixup records.
+	records := len(dst)
 
 	// Each address's cluster, by its place in the list; one past them all
 	// for an address no cluster holds.
@@ -208,6 +221,12 @@ func (l *linker) withDSTFixups(dst []byte) []byte {
 		}
 
 		dst = append(dst, rec...)
+	}
+
+	// Both parts' records' bytes, and the blocks VMS's LINK reserves for them.
+	records += len(dst) - int(pageUp(uint32(records)))
+	if reserved := int(pageUp(uint32(records))) + blockSize; len(dst) < reserved {
+		dst = append(dst, make([]byte, reserved-len(dst))...)
 	}
 
 	return dst

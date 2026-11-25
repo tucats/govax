@@ -32,6 +32,9 @@
 ; The context's fields (FTN_STATEMENT's); CTX_INTERNAL is nonzero in every
 ; statement this module serves.
 ;
+; The MACRO and VAX conventions these lines rely on are explained once,
+; in FTN_VECTOR.MAR's "Reading these sources".
+;
 	$DSCDEF				; descriptors' fields and codes
 	$FORDEF				; FORRTL's condition values
 

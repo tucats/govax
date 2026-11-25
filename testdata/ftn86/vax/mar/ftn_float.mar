@@ -30,6 +30,11 @@
 ;		and e digits (asterisks if it needs more); with no Ee it is
 ;		E+nn, or +nnn past 99, or asterisks past 999 (VMS's).
 ;
+;   ENw.dEe	Fortran 90's (the standard's 10.5.1.2.3 and .4): EN's exponent
+;   ESw.dEe	is a multiple of 3, with 1 to 3 digits before the point, ES's
+;		has one digit before it; d digits after it, the exponent as
+;		E's, and the scale factor not used. On input they are F.
+;
 ;   Gw.dEe	the digits rounded to d significant ones choose the form
 ;		(so 999.6 under G13.3 is E form): a magnitude from 0.1 to
 ;		under 10**d is F form with d significant digits and no scale
@@ -39,6 +44,18 @@
 ;
 ; The sign is a minus for a negative value, a plus too after SP, and
 ; nothing else takes room.
+;
+; F0.d (Fortran 95's 10.5.1.2.1), in a statement of a unit compiled /F90
+; (the control block's F90 flag), is the least width that holds the value:
+; its sign, its digits before the point, the point, and d digits. The 0
+; before the point is left out unless it is the only digit (gfortran's, the
+; author's choice; the standard leaves it optional): F0.3 of -0.5 is
+; "-.500", F0.0 of 0.3 is "0.". The field is laid out in the record's room
+; left, as if that were w, and only its own columns are put; a value the
+; room can't hold is a record too long (FTN$$FMT_PUT's), never asterisks. A
+; value that shows only zeros still has no minus sign, as VMS's rule above,
+; where gfortran's F0.2 of -0.001 is "-.00". Without the flag F0.d is VAX
+; FORTRAN's: no room, so asterisks, none here, and FOR$_OUTCONERR.
 ;
 ; The digits come from LIBRTL's OTS$$CVT_F_T_R8 (and its D, G, and H
 ; forms), which writes a value's exact decimal digits, rounded where it's
@@ -66,6 +83,9 @@
 ; a REAL*4 or an item that isn't floating; w 25, d 16 for a REAL*8 of
 ; either format; w 42, d 33, and e 3 for a REAL*16.
 ;
+; The MACRO and VAX conventions these lines rely on are explained once,
+; in FTN_VECTOR.MAR's "Reading these sources".
+;
 
 	$DSCDEF				; descriptors' fields and codes
 	$FORDEF				; FORRTL's condition values
@@ -75,6 +95,8 @@ OTS_IGNORE_BLANKS = 1
 OTS_IGNORE_TABS	= 16
 
 ; The statement's context: FTN_STATEMENT's fields and FTN_FORMAT's.
+CTX_FLAGS	= 12			; word: the control block's flags
+FLAG_F90	= 16			;  a statement of a unit compiled /F90
 CTX_KIND	= 14			; byte: odd for a WRITE
 CTX_RECORD	= 28			; the record
 RECORD_SIZE	= 256
@@ -97,6 +119,8 @@ C_F		= 3			; the codes
 C_E		= 4
 C_D		= 5
 C_G		= 6
+C_EN		= 11			; Fortran 90's
+C_ES		= 12
 
 ;
 ; The routine's frame, below FP: OTS$$CVT_x_T_R8 reads its arguments and
@@ -125,7 +149,10 @@ L_FRAC		= -84			; the columns of digits after it
 L_TAIL		= -88			; the field's last columns, an exponent
 					;  or G's blanks
 L_DESC		= -96			; a descriptor of an input field
-FRAME_SIZE	= 96
+L_LIMIT		= -100			; how many of the buffer's digits are the
+					;  value's: past them, zeros (EN's carry)
+L_ZERO		= -104			; 1 for F0.d in a Fortran 90 statement
+FRAME_SIZE	= 104
 
 ;
 ; VMS's OTS$$CVT_x_T_R8 writes whole groups of nine digits, so it doesn't stop at the
@@ -150,7 +177,7 @@ BUFFER_SPARE	= 9
 ; records say, so DIGITS keeps the ones this routine needs).
 ;
 	.ENTRY	FTN$$EDIT_FLOAT,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
-	SUBL2	#FRAME_SIZE,SP
+	SUBL2	#FRAME_SIZE,SP		; room for the fields above, below FP
 	MOVL	4(AP),R11
 	MOVL	8(AP),R10
 	BSBW	ITEM_FORMAT
@@ -162,9 +189,21 @@ BUFFER_SPARE	= 9
 ;
 ; Output: the digit buffer and the field on the stack, big enough for any
 ; digit a field of w columns shows and the one that rounds it, a field past
-; the record's end having failed first.
+; the record's end having failed first. F0.d's w is the record's room left.
 ;
-OUTPUT:	ADDL3	CTX_POS(R11),R9,R0
+OUTPUT:	CLRL	L_ZERO(FP)
+	CMPB	OP_B_CODE(R10),#C_F
+	BNEQ	3$
+	TSTL	R9
+	BNEQ	3$
+	BBC	#0,OP_B_FLAGS(R10),3$	; F_W: given as 0,
+	BITW	#FLAG_F90,CTX_FLAGS(R11) ;  in a Fortran 90 statement
+	BEQL	3$
+	MOVL	#1,L_ZERO(FP)
+	SUBL3	CTX_POS(R11),CTX_RECMAX(R11),R9
+	BGEQ	3$
+	CLRL	R9
+3$:	ADDL3	CTX_POS(R11),R9,R0
 	CMPL	R0,CTX_RECMAX(R11)
 	BLEQ	5$
 	PUSHL	R9			; no room: FTN$$FMT_PUT says so
@@ -179,13 +218,15 @@ OUTPUT:	ADDL3	CTX_POS(R11),R9,R0
 	ADDL2	R8,R0
 	ADDL2	#BUFFER_MORE,R0
 	MOVL	R0,L_SIZE(FP)
+	MOVL	R0,L_LIMIT(FP)		; every digit the value's, but after EN's carry
 	ADDL2	R9,R0			; the field after it
 	ADDL2	#BUFFER_SPARE,R0
-	ADDL2	#3,R0
-	BICL2	#3,R0
-	SUBL2	R0,SP
+	ADDL2	#3,R0			; rounded up to a multiple of 4, so that
+	BICL2	#3,R0			;  SP stays on a longword
+	SUBL2	R0,SP			; the room, taken from the stack
 	MOVL	SP,CVT_BUFFER(FP)
 	MOVC5	#0,(SP),#^A/0/,L_SIZE(FP),@CVT_BUFFER(FP) ; digits it doesn't write
+					;  (no source bytes: all fill)
 	ADDL3	CVT_BUFFER(FP),L_SIZE(FP),R0
 	ADDL3	#BUFFER_SPARE,R0,L_FIELD(FP)
 	MOVC5	#0,(SP),#^A/ /,R9,@L_FIELD(FP)	; w blanks
@@ -201,12 +242,64 @@ OUTPUT:	ADDL3	CTX_POS(R11),R9,R0
 	MOVL	#4,R0
 20$:	MOVC3	R0,@12(AP),VALUE(FP)
 	MOVAB	VALUE(FP),R6
-30$:	CASEB	OP_B_CODE(R10),#C_F,#<C_G-C_F>
+30$:	CMPB	OP_B_CODE(R10),#C_EN
+	BNEQ	32$
+	BRW	OUT_EN
+32$:	CMPB	OP_B_CODE(R10),#C_ES
+	BNEQ	34$
+	MOVL	#1,R7			; ES: E with one digit before the point, the
+	BRW	OUT_E			;  scale factor not used
+34$:	CASEB	OP_B_CODE(R10),#C_F,#<C_G-C_F>
 40$:	.WORD	OUT_F-40$
 	.WORD	OUT_E-40$
 	.WORD	OUT_E-40$		; D is E, with its own letter
 	.WORD	OUT_G-40$
 	RET
+
+;
+; EN (the standard's 10.5.1.2.3): an exponent that is a multiple of 3, and
+; from 1 to 3 digits before the point, d after it; the scale factor isn't
+; used. How many come before the point depends on the exponent, and rounding
+; may change the exponent, so the digits are found twice. First rounded to
+; d+3, the most EN shows, for the exponent x (the value is 0.ddd times
+; 10**x): then k, the digits before the point, is what makes x-k a multiple
+; of 3, from 1 to 3. With k 3 that rounding was the right one. Otherwise they
+; are rounded again, to k+d; if that carries (9.9996 to 10.00 with d 3),
+; the value is now 10**x, 1 and zeros, and takes a digit more before the
+; point with the same exponent shown: the digits past those rounded are
+; zeros (L_LIMIT). Zero is 0.ddd with the exponent 0 (gfortran's, which the
+; standard leaves open).
+;
+OUT_EN:	CLRB	CVT_KIND(FP)
+	ADDL3	#3,R8,CVT_SIGNIF(FP)
+	BSBW	DIGITS			; R0: x
+	TSTL	CVT_SIGN(FP)
+	BNEQ	10$
+	MOVL	#1,L_INT(FP)		; zero
+	CLRL	R0
+	BRB	50$
+10$:	SUBL3	#1,R0,R1		; k: 1 more than (x-1) mod 3, the mod's
+	DIVL3	#3,R1,R2		;  value from 0 to 2 (DIVL truncates, so
+	MULL2	#3,R2			;  a negative remainder is made positive)
+	SUBL2	R2,R1
+	BGEQ	20$
+	ADDL2	#3,R1
+20$:	INCL	R1
+	MOVL	R1,L_INT(FP)
+	CMPL	R1,#3
+	BEQL	40$
+	MOVL	R0,L_SHIFT(FP)		; x, kept while the digits are found again
+	ADDL3	R1,R8,CVT_SIGNIF(FP)
+	BSBW	DIGITS
+	CMPL	R0,L_SHIFT(FP)
+	BEQL	40$
+	INCL	L_INT(FP)		; a carry: 10**x
+	MOVL	CVT_SIGNIF(FP),L_LIMIT(FP)
+40$:	SUBL2	L_INT(FP),R0		; the exponent shown
+50$:	MOVL	L_INT(FP),L_SHIFT(FP)
+	MOVL	R8,L_FRAC(FP)
+	BSBW	EXPONENT
+	BRW	LAYOUT
 
 ;
 ; F: rounded at d+n digits after the point. Zero's digits have no exponent,
@@ -294,7 +387,7 @@ LAYOUT:	SUBL3	L_TAIL(FP),R9,R6	; the columns the number has
 	INCL	R3
 	CMPL	R3,R6
 	BLEQ	10$
-	BRW	STARS
+	BRW	WIDE
 	;
 	; A minus sign, unless every digit shown is 0; a plus sign after SP.
 	;
@@ -318,13 +411,15 @@ LAYOUT:	SUBL3	L_TAIL(FP),R9,R6	; the columns the number has
 25$:	INCL	R3
 	CMPL	R3,R6
 	BLEQ	30$
-	BRW	STARS
+	BRW	WIDE
 	;
-	; The 0 before the point, if it is wanted and fits: R1 1 if so.
+	; The 0 before the point, if it is wanted and fits: R1 1 if so. F0.d
+	; wants it only as the only digit.
 	;
 30$:	CLRL	R1
 	TSTL	L_INT(FP)
 	BNEQ	40$
+	BLBS	L_ZERO(FP),35$
 	CMPL	R3,R6
 	BGEQ	35$
 	MOVL	#1,R1
@@ -332,15 +427,25 @@ LAYOUT:	SUBL3	L_TAIL(FP),R9,R6	; the columns the number has
 	BRB	40$
 35$:	TSTL	L_FRAC(FP)		; no room, but it can't be left out
 	BNEQ	40$			;  when it is the only digit
+	BLBS	L_ZERO(FP),37$
 	BRW	STARS
+37$:	MOVL	#1,R1			; F0.0's "0."
+	INCL	R3
+	CMPL	R3,R6
+	BLEQ	40$
+	BRW	WIDE
 	;
-	; The columns, from the first.
+	; The columns, from the first. F0.d's field is only these, so its
+	; first column and width become theirs.
 	;
 40$:	SUBL3	R3,R6,R2
 	ADDL2	L_FIELD(FP),R2
-	TSTL	R5
+	BLBC	L_ZERO(FP),42$
+	MOVL	R2,L_FIELD(FP)
+	MOVL	R3,R9
+42$:	TSTL	R5
 	BEQL	45$
-	MOVB	R5,(R2)+
+	MOVB	R5,(R2)+		; the sign, and R2 on to the next column
 45$:	BLBC	R1,50$
 	MOVB	#^A/0/,(R2)+
 50$:	MNEGL	L_INT(FP),R4
@@ -373,6 +478,19 @@ LAYOUT:	SUBL3	L_TAIL(FP),R9,R6	; the columns the number has
 80$:	RET
 
 ;
+; WIDE: a number of R3 columns that won't fit in the field. F0.d's field was
+; the record's room, so the record is too long: FTN$$FMT_PUT says so, as for
+; a field past the record's end (OUTPUT). Any other is asterisks.
+;
+WIDE:	BLBS	L_ZERO(FP),10$
+	BRW	STARS
+10$:	PUSHL	R3
+	CLRL	-(SP)
+	PUSHL	R11
+	CALLS	#3,FTN$$FMT_PUT		; FTN_FORMAT
+	RET
+
+;
 ; STARS: a field of w asterisks, and FOR$_OUTCONERR; the statement goes on.
 ;
 STARS:	MOVC5	#0,(SP),#^A/*/,R9,@L_FIELD(FP)
@@ -403,7 +521,7 @@ INPUT:	JSB	FTN$$EDIT_FIELD		; FTN_EDIT: R2 and R3
 	PUSHL	R8			;  the digits in the fraction,
 	PUSHAB	VALUE(FP)		;  the result,
 	PUSHAQ	L_DESC(FP)		;  and the text
-	CASEL	L_KIND(FP),#0,#3
+	CASEL	L_KIND(FP),#0,#3	; by the format: CASEB's longword form
 20$:	.WORD	21$-20$
 	.WORD	22$-20$
 	.WORD	23$-20$
@@ -486,6 +604,11 @@ FIELD_SIZES:
 ; its count say. Returns the decimal exponent in R0 (0 for zero, whose
 ; CVT_SIGN(FP) is 0). Changes R0 to R5.
 ;
+; OTS$$CVT_x_T_R8 is a JSB entry in another image, LIBRTL: it takes its
+; arguments in registers, not an argument list, and has no entry mask to
+; save the registers it uses, so PUSHR and POPR save and restore the
+; ones this routine still needs around it.
+;
 DIGITS:	CLRL	CVT_SIGN(FP)
 	CLRL	CVT_EXPONENT(FP)
 	PUSHR	#^M<R6,R7,R8>		; the value's address, the scale factor, d
@@ -516,10 +639,11 @@ DIGITS:	CLRL	CVT_SIGN(FP)
 SHOWN:	MOVL	#^A/0/,R0
 	TSTL	CVT_SIGN(FP)		; zero: VMS's routine leaves E's digits
 	BEQL	10$			;  as they were, and only says its sign
-	ADDL3	L_SHIFT(FP),R4,R1
+	ADDL3	L_SHIFT(FP),R4,R1	; which of the value's digits
+	BLSS	10$			;  (before the first: a 0)
+	CMPL	R1,L_LIMIT(FP)
+	BGEQ	10$			;  (past those rounded: a 0)
 	ADDL2	CVT_FIRST(FP),R1
-	CMPL	R1,CVT_FIRST(FP)
-	BLSS	10$
 	CMPL	R1,L_SIZE(FP)
 	BGEQ	10$
 	ADDL2	CVT_BUFFER(FP),R1
@@ -558,9 +682,9 @@ EXPONENT:
 	BLEQ	20$
 	BRW	STARS
 20$:	ADDL3	L_FIELD(FP),R9,R5	; the digits, the last first
-25$:	MOVL	R0,R2
+25$:	MOVL	R0,R2			; R2 and R3 the quadword dividend
 	CLRL	R3
-	EDIV	#10,R2,R0,R2
+	EDIV	#10,R2,R0,R2		; quotient in R0, the digit in R2
 	ADDB3	#^A/0/,R2,-(R5)
 	SOBGTR	R1,25$
 	TSTL	R0			; digits left over: it doesn't fit

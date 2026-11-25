@@ -734,7 +734,7 @@ A.8.1 is not planned.
       terminal lines to be run again.
     - 13f. The debugger to the debugger round (`testdata/dbg113`'s sessions) (done 2026-11-25).
     - 13g. The FORTRAN rounds: `TestFTN86Oracle` on `testdata/ftn86`'s round 6 and
-      `TestF90ROracle` on `testdata/f90r`'s round 3, their awaiting lists emptied.
+      `TestF90ROracle` on `testdata/f90r`'s round 3, their awaiting lists emptied (done 2026-11-25).
 14. The close-out.
 
 Each subtask may begin with a survey of its own, as earlier phases' did.
@@ -1648,3 +1648,32 @@ Each subtask may begin with a survey of its own, as earlier phases' did.
   - Left: the activator's registers, govax's larger P0 (OPCDEC at 005001D0 where VMS had an
     access violation), and the condition dispatcher at an exception break.
   - Subtask 13g, the FORTRAN rounds, is next.
+- **2026-11-25, subtask 13g (done):** the FORTRAN rounds made the oracles' logs. `testdata/ftn86`'s
+  round 6 is now `vax/` (round 5 moved to `vax/round5/`) and `testdata/f90r`'s round 3 is now `vax/`
+  (round 2 to `vax/round2/`); both READMEs say what came back, and gen.go's copy-outs name the next
+  rounds (`round7`, `vax/round4`).
+  - *The awaiting lists are empty.* FTN86's 362 sections (RECARRAYS, RECDYN, ZEROVAX, and STRMATH
+    now among them, and FTN_ALLOC's MACRO in FTNRTL's) and F90R's 482 (Phase 112's and this phase's
+    programs) are govax's but for `ftn86VMSDifferences`: STRMATH joined it, round 6 having run it as
+    it was before subtask 13a (its OUTSTAOVE is govax's too; the program now prints the whole field,
+    for the next round), and DIRECTIVES left it, round 6 having built the program as govax's
+    compiler makes it now. `ftn86NewModules` is empty.
+  - *SET VERIFY.* Round 3 of F90R ran with verification on, as every FTN86 round has (round 2 of
+    F90R hadn't): `ftn86Lines` now also takes out a procedure's `$!` comments as DCL shows them,
+    and `f90rVerifiedData` the data lines DCL showed in ONESHOT as fcalc read them from the
+    procedure. govax shows the same lines under SET VERIFY (run by hand on ONESHOT's form: the
+    `$!` lines, then each data line before fcalc's own echo of it).
+  - *A shareable image's debug symbol table* (`internal/link/shareable.go`'s `withDSTFixups`):
+    `TestFTN86Objects`, on round 6's FTNRTL (its sources copied from F90R's round 3, the same
+    session's, and checked against the round 6 volume's), found VMS's DST 14 blocks to govax's 13,
+    the records the same, VMS's last block all zeros. The fixup records start on a block of their
+    own; VMS's LINK reserves as many blocks as both parts' record bytes fill and one more, which is
+    what every VMS image of the probes has (FTNRTL's rounds, whose fixup records ran to 718, 1,004,
+    and 1,022 bytes, and every smaller shareable image), and govax's gave only the blocks the
+    padded layout used, a block less once the fixup records run past a block. govax now reserves
+    VMS's; whether VMS rounds the sum up and adds one or rounds it down and adds two, which differ
+    only at a multiple of 512, is unconfirmed (govax rounds up). The built-in FTNRTL.EXE was
+    remade (`go generate ./internal/ftnrtl`).
+  - `ftn86.com`'s copy-out now takes the FTNRTL sources VMS built (`vax/roundN/mar/`), which round 6's
+    didn't.
+  - Subtask 14, the close-out, is next.

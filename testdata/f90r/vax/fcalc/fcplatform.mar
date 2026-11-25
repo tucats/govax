@@ -2,7 +2,7 @@
 	.IDENT	/01/
 ; TBT$ FORTRAN: a traceback's line numbers are the FORTRAN lines below
 ;
-; Compiled by GOVAX FORTRAN V0.0-0 on 22-NOV-2026 14:13:06.40
+; Compiled by GOVAX FORTRAN V0.0-0 on 24-NOV-2026 14:22:47.22
 ; from DUA5:[FCALC]FCPLATFORM.F90;1
 ; by the command FORTRAN/G_FLOATING FCPLATFORM
 ; Optimized by /OPTIMIZE's passes: do limits, one character, forward, unreachable, dead code, deferred indexes, loop invariants,
@@ -18,7 +18,7 @@
 ; Storage map for FCPLATFORM, a module
 ;   (no variables)
 ;
-$MOD$FCPLATFORM.0DA80778 == 0		; this module's stamp, which its users' objects refer to
+$MOD$FCPLATFORM.F0D79AA2 == 0		; this module's stamp, which its users' objects refer to
 
 ;    1  ! fcalc: what differs from one system to another, VMS's version. Every other
 ;    2  ! file is the same source on VMS and under gfortran, whose twin of this file
@@ -195,6 +195,64 @@ FCPLATFORM.FOREIGN_TEXT.$K1:
 FCPLATFORM.FOREIGN_TEXT.$1:
 ;   78    end subroutine foreign_text
 	RET
-;   79  end module fcplatform
+
+; Storage map for FCPLATFORM.SHOW_HELP, a LOGICAL function
+;   REQUEST    CHARACTER*(*), INTENT(IN)  argument 1  @FCPLATFORM.SHOW_HELP.REQUEST(AP)
+;   WRITER     INTEGER                    argument 2  @FCPLATFORM.SHOW_HELP.WRITER(AP)
+;   SHOW_HELP  LOGICAL                    $LOCAL+0    FCPLATFORM.SHOW_HELP.SHOW_HELP
+;   STATUS     INTEGER                    $LOCAL+4    FCPLATFORM.SHOW_HELP.STATUS
+;
+FCPLATFORM.SHOW_HELP.REQUEST = 4	; REQUEST is argument 1
+FCPLATFORM.SHOW_HELP.WRITER = 8		; WRITER is argument 2
+	.EXTRN	LBR$OUTPUT_HELP		; named in an EXTERNAL statement
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCPLATFORM.SHOW_HELP.SHOW_HELP:
+	.BLKL	1			; SHOW_HELP, the function's value
+FCPLATFORM.SHOW_HELP.STATUS:
+	.BLKL	1			; STATUS
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCPLATFORM.SHOW_HELP.$K1:
+	.LONG	0
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   79
+;   80    ! SHOW_HELP shows the help text REQUEST names, "FCALC" and the topics
+;   81    ! after it, and is false if there is none to show. fcalc's help is the
+;   82    ! FCALC topic of the system's help library, SYS$HELP:HELPLIB.HLB, the text
+;   83    ! DCL's HELP FCALC shows, so it is written once, in VMS's help format, and
+;   84    ! the library is its one copy. LBR$OUTPUT_HELP, a routine of VMS's
+;   85    ! librarian, finds the topics and lays the text out, as HELP does: its
+;   86    ! arguments are a routine to write each line, the line's width (left out:
+;   87    ! 80), the request, the library (left out: SYS$HELP:HELPLIB), and flags
+;   88    ! (0: no prompting for more topics, and no user libraries). It doesn't
+;   89    ! write the lines itself: it calls WRITER with each, as a CHARACTER
+;   90    ! argument, so they go where all of fcalc's output goes (module
+;   91    ! FCMESSAGES's HELP_LINE). A procedure passed as an argument this way is
+;   92    ! a dummy procedure: INTEGER, EXTERNAL says WRITER is a function, and
+;   93    ! here it is passed on to LBR$OUTPUT_HELP as it came.
+;   94    logical function show_help(request, writer)
+	.ENTRY	FCPLATFORM.SHOW_HELP,^M<>
+;   95      character(len=*), intent(in) :: request
+;   96      integer, external :: writer
+;   97      integer, parameter :: no_flags = 0
+;   98      integer :: status
+;   99      integer, external :: lbr$output_help
+;  100
+;  101      status = lbr$output_help(writer, , request, , no_flags)
+	PUSHAL	FCPLATFORM.SHOW_HELP.$K1
+	PUSHL	#0
+	PUSHL	FCPLATFORM.SHOW_HELP.REQUEST(AP)
+	PUSHL	#0
+	PUSHL	FCPLATFORM.SHOW_HELP.WRITER(AP)
+	CALLS	#5,G^LBR$OUTPUT_HELP
+	MOVL	R0,FCPLATFORM.SHOW_HELP.STATUS
+;  102      show_help = btest(status, 0)
+;  103    end function show_help
+	EXTZV	#0,#1,FCPLATFORM.SHOW_HELP.STATUS,R0 ; the function's value
+	MNEGL	R0,R0
+	RET
+;  104  end module fcplatform
 
 	.END

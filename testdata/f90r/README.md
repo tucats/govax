@@ -42,7 +42,7 @@ exercise yet of VMS's MTHRTL under govax's code: fcalc is built `/G_FLOATING`.
 
 3. Copy the results back:
 
-       mkdir -p testdata/f90r/vax/round3/mar testdata/f90r/vax/round3/fcalc
+       mkdir -p testdata/f90r/vax/round4/mar testdata/f90r/vax/round4/fcalc
        ./govax --profile tbprobe --system-file none console < testdata/f90r/copyout.cmd
 
 `TestF90RProcedure` (`internal/console/f90r_test.go`) runs the same procedure on govax, so a
@@ -79,9 +79,17 @@ old volume is `testdata/disks/f90r-exchange-attempt1.dsk`.
 
 ## What came back
 
-`vax/` is round 2, the author's run on VMS 7.1, 22-NOV-2026, on a volume rebuilt after round
-1's fix: the log, FTNRTL's objects, image, map, and the sources VMS built (`vax/mar/`), and
-fcalc's plain build's `.MAR` files, objects, and image (`vax/fcalc/`). Every program built
+`vax/` is round 3, the author's run on VMS 7.1, 24-NOV-2026 (Phase 113's subtask 12d), with
+the programs Phase 112 and Phase 113 added: the same files as round 2's, below. Every section of
+its log is what govax's run prints (`TestF90ROracle`). It ran with SET VERIFY on, so the log
+also has the commands and comments DCL showed, and in ONESHOT the data lines it showed as fcalc
+read them; the test takes them out (`ftn86Lines`, `f90rVerifiedData`), and govax shows the same
+lines under SET VERIFY. Its FTNRTL's debug symbol table was a block longer than govax's LINK
+made it, which `TestFTN86Objects` found (Phase 113's log, subtask 13g).
+
+`vax/round2/` is round 2, the author's run on VMS 7.1, 22-NOV-2026, on a volume rebuilt after round
+1's fix: the log, FTNRTL's objects, image, map, and the sources VMS built (`mar/`), and
+fcalc's plain build's `.MAR` files, objects, and image (`fcalc/`). Every program built
 with no message, and **every section of the log is what govax's run of the procedure prints**:
 all 366 corpus runs, and fcalc in all four builds, its 11 scripts each, the files they saved,
 and ONESHOT (`TestF90ROracle`, fcalc's file times masked).
@@ -99,4 +107,4 @@ five programs and fcalc never built; the 351 runs that did printed what govax's 
 
 The scripts use DUA5 on govax, since the author's startup mounts XFER on DUA2. Before a
 later round, rename the old volume in `testdata/disks` (`exchange.cmd` makes a new one),
-and point `gen.go`'s `results` at `vax/round3`.
+and point `gen.go`'s `results` at the next round's directory (now `vax/round4`).

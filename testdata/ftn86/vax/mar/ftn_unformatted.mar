@@ -40,6 +40,9 @@
 ; reads) counts logical records: each segment's FTN$$UNIT_PUT or
 ; FTN$$UNIT_GET counts one, and those that don't end a record are taken off.
 ;
+; The MACRO and VAX conventions these lines rely on are explained once,
+; in FTN_VECTOR.MAR's "Reading these sources".
+;
 	$DSCDEF				; descriptors' fields and codes
 	$FORDEF				; FORRTL's condition values
 	$SSDEF
@@ -116,7 +119,7 @@ ALL_MASK	= ^M<R2,R3,R4,R5,R6,R7,R8,R9>
 	BEQL	90$
 	SUBL3	CTX_UNF_POS(R6),CTX_UNF_LEN(R6),R9 ; what the segment has left
 	BNEQ	20$
-	BITL	#S_LAST,CTX_UNF_STATE(R6)
+	BITL	#S_LAST,CTX_UNF_STATE(R6) ; BITL tests bits: Z if none is set
 	BNEQ	80$			; the record's end
 	MOVL	#SEG_MIDDLE,R0		; a segment after the first
 	BSBW	GET_SEGMENT
@@ -236,8 +239,9 @@ GET_SEGMENT:
 	MOVZWL	@CTX_RECP(R6),R0	; the control word
 	CMPL	R0,#SEG_ONLY
 	BGTRU	80$
-	XORL3	R0,R2,R1		; a first segment exactly where one goes
-	BLBS	R1,80$
+	XORL3	R0,R2,R1		; a first segment exactly where one goes:
+	BLBS	R1,80$			;  the low bits of what it is and what
+					;  was wanted differ if not
 	BICL2	#S_LAST,CTX_UNF_STATE(R6)
 	BBC	#1,R0,30$
 	BISL2	#S_LAST,CTX_UNF_STATE(R6)
@@ -256,7 +260,7 @@ GET_SEGMENT:
 ;
 PUT_SEGMENT:
 	MOVL	R0,R2
-	MOVW	R0,@CTX_RECP(R6)
+	MOVW	R0,@CTX_RECP(R6)	; the control word, the buffer's first word
 	PUSHL	CTX_RECLEN(R6)
 	PUSHL	CTX_RECP(R6)
 	PUSHL	CTX_STREAM(R6)

@@ -255,12 +255,41 @@ var f90rVMSDifferences = map[string]string{}
 
 // f90rAwaitingVMS are the sections VMS's last run didn't make as govax's run does, which
 // the next round is to, by prefix. (Round 1's, testdata/f90r/vax/round1, had the five
-// programs and fcalc whose bare .ASCII VMS's MACRO refused; round 2 ran them all.)
-// ZEROSIZE, NULLS, and DEFAULTS are Phase 112's (subtasks 3 to 5), and the rest (M_COLONY too) its later
-// subtasks', added to the corpus after round 2; Phase 113's VMS round is to run them,
-// with Phase 113's own programs (RUNDIMS to M_STAMPS, subtask 2; FORALLREC, subtask 3).
-var f90rAwaitingVMS = []string{"ZEROSIZE", "NULLS", "DEFAULTS", "PURES", "ELEMENTALS", "FORALLS", "FORALLC", "WHERES",
-	"INTRINS", "ZEROWID", "ZEROWIDVMS", "M_COLONY", "RUNDIMS", "ERRATA", "ZEROLEN", "MODELRAW", "M_STAMPS", "FORALLREC"}
+// programs and fcalc whose bare .ASCII VMS's MACRO refused; round 2 ran them all, and
+// round 3, Phase 113's, the programs Phase 112 and Phase 113 added after it.)
+var f90rAwaitingVMS = []string{}
+
+// f90rVerifiedData is VMS's log of ONESHOT.COM without the data lines DCL showed as fcalc
+// read them. Round 3 ran with SET VERIFY on, as the FORTRAN rounds have (ftn86Lines takes
+// out the commands it showed), and verification shows each data record an image reads
+// from the procedure; govax's run of the procedure is without it. (govax shows the same
+// lines under SET VERIFY, as the phase doc's log for subtask 13g says.)
+func f90rVerifiedData(t *testing.T, text string) string {
+	t.Helper()
+
+	procedure, err := os.ReadFile(filepath.Join("..", "..", "testdata", "fcalc", "oneshot.com"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	data := map[string]bool{}
+
+	for line := range strings.SplitSeq(string(procedure), "\n") {
+		if line != "" && !strings.HasPrefix(line, "$") {
+			data[line] = true
+		}
+	}
+
+	var lines []string
+
+	for line := range strings.SplitSeq(text, "\n") {
+		if !data[line] {
+			lines = append(lines, line)
+		}
+	}
+
+	return strings.Join(lines, "\n")
+}
 
 // TestF90ROracle holds the procedure's run on govax to VMS 7.1's: Fortran 90 programs
 // govax's compiler made, assembled and linked by VMS's MACRO and LINK against an FTNRTL
@@ -303,6 +332,10 @@ func TestF90ROracle(t *testing.T) {
 			t.Errorf("%s isn't in VMS's log", name)
 
 			continue
+		}
+
+		if strings.HasSuffix(name, ".ONESHOT") {
+			vmsText = f90rVerifiedData(t, vmsText)
 		}
 
 		base := name

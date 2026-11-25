@@ -1,0 +1,5000 @@
+	.TITLE	FCVALUES
+	.IDENT	/01/
+; TBT$ FORTRAN: a traceback's line numbers are the FORTRAN lines below
+;
+; Compiled by GOVAX FORTRAN V0.0-0 on 22-NOV-2026 14:13:06.41
+; from DUA5:[FCALC]FCVALUES.F90;1
+; by the command FORTRAN/G_FLOATING FCVALUES
+; Optimized by /OPTIMIZE's passes: do limits, one character, forward, unreachable, dead code, deferred indexes, loop invariants,
+; common subexpressions, registers, rotate, peephole, branches
+;
+; Each line of the FORTRAN source appears as a comment, with its line number, before
+; the instructions it became. An INCLUDE file's lines appear only with INCLUDE's
+; /LIST, their include depth before the number; a comment names the file either way.
+; Each routine's storage map says where its variables are.
+;
+	$DSCDEF				; descriptor codes, DSC$K_
+
+; The module FCVALUES's variables, 12 bytes, the most any unit in this file declares
+	.PSECT	$MOD$FCVALUES,PIC,OVR,REL,GBL,SHR,NOEXE,RD,WRT,LONG
+$MOD$FCVALUES.$BASE:
+	.LONG	12			; DIGITS = 12
+	.LONG	1			; NUMBER_FORMAT = F_AUTO
+	.LONG	10			; NUMBER_BASE = 10
+
+; The module FCMESSAGES's variables, 355 bytes, the most any unit in this file declares
+	.PSECT	$MOD$FCMESSAGES,PIC,OVR,REL,GBL,SHR,NOEXE,RD,WRT,LONG
+$MOD$FCMESSAGES.$BASE:
+	.BLKB	355
+
+; Storage map for FCVALUES, a module
+;   DIGITS         INTEGER  $MOD$FCVALUES+0  FCVALUES.DIGITS
+;   NUMBER_FORMAT  INTEGER  $MOD$FCVALUES+4  FCVALUES.NUMBER_FORMAT
+;   NUMBER_BASE    INTEGER  $MOD$FCVALUES+8  FCVALUES.NUMBER_BASE
+;   Type VALUE, 32 bytes
+;     +0     Z     COMPLEX*16
+;     +16    ERR   INTEGER
+;
+FCVALUES.INDENT = $MOD$FCMESSAGES.$BASE+8 ; INDENT, in module FCMESSAGES's variables
+FCVALUES.LOG_UNIT = $MOD$FCMESSAGES.$BASE+12 ; LOG_UNIT, in module FCMESSAGES's variables
+FCVALUES.DIGITS = $MOD$FCVALUES.$BASE	; DIGITS, in module FCVALUES's variables
+FCVALUES.NUMBER_FORMAT = $MOD$FCVALUES.$BASE+4 ; NUMBER_FORMAT, in module FCVALUES's variables
+FCVALUES.NUMBER_BASE = $MOD$FCVALUES.$BASE+8 ; NUMBER_BASE, in module FCVALUES's variables
+$MOD$FCVALUES.EBF01E5B == 0		; this module's stamp, which its users' objects refer to
+	.EXTRN	$MOD$FCMESSAGES.63F4C46F ; the stamps of the modules used
+
+;    1  ! fcalc: values and their arithmetic.
+;    2  !
+;    3  ! A VALUE is a complex number and an error code: an operation that fails
+;    4  ! gives a value with its error set, and an operation on such a value passes
+;    5  ! the error on, as an IEEE NaN would, so the evaluator need only look at the
+;    6  ! last value it gets to know whether everything before it went well.
+;    7  !
+;    8  ! Arithmetic never goes near the machine's limits (module FCKINDS): each
+;    9  ! operation on the real parts is done by R_ADD, R_MUL, or R_DIV, which check
+;   10  ! their operands first, report a result past LIMIT as an overflow, and give
+;   11  ! zero for one below SMALL, without the machine ever overflowing or
+;   12  ! underflowing. So the same expression gives the same value, or the same
+;   13  ! error, on a VAX and on an IEEE machine, and nothing fcalc computes traps.
+;   14  !
+;   15  ! The checks are cheap comparisons made before an operation, never after:
+;   16  ! on a VAX the operation itself would already have stopped the program.
+;   17  ! For a product x*y, |x*y| > LIMIT exactly when |y| > LIMIT/|x| (for |x| of
+;   18  ! 1 or more), and LIMIT/|x| can't overflow; that rewriting of a test so it
+;   19  ! is safe to compute is the main trick of the module.
+;   20  !
+;   21  ! Fortran 90 lets a program give its own meaning to an operator for its
+;   22  ! own types: INTERFACE OPERATOR(+) below names the functions + means for
+;   23  ! VALUEs, so the evaluator writes a + b, and the compiler calls V_ADD(a, b).
+;   24  ! Several functions may share one operator (or one generic name), each for
+;   25  ! different argument types; the compiler picks by the arguments, as it
+;   26  ! picks real or integer addition.
+;   27  module fcvalues
+;   28    use fckinds
+;   29    use fcmessages
+;   30    implicit none
+;   31    private
+;   32
+;   33    public :: value, real_value, complex_value, error_value, format_value
+;   34    public :: format_real, is_real, is_whole, truth, logical_value
+;   35    public :: v_mod, v_factorial, v_compare, v_abs, c_abs
+;   36    public :: operator(+), operator(-), operator(*), operator(/), operator(**)
+;   37    public :: digits, r_add, r_mul, r_div, c_add, c_sub, c_mul, c_div, near_to
+;   38    public :: exp_real, exp_value, log_value, clean, angle_of
+;   39    public :: number_format, number_base, f_auto, f_fixed, f_scientific, f_engineering
+;   40
+;   41    ! A VALUE: Z, the number, and ERR, 0 or the code of the error that made
+;   42    ! it. A function whose result is a VALUE returns both at once.
+;   43    type value
+;   44      complex(rk) :: z
+;   45      integer :: err
+;   46    end type value
+;   47
+;   48    ! The significant digits a value is shown with (SET DIGITS), or under
+;   49    ! FIXED the places after the point.
+;   50    integer, save :: digits = 12
+;   51
+;   52    ! How a value is shown (SET FORMAT), and the base a whole number is shown
+;   53    ! in (SET BASE): 10, 16, 8, or 2.
+;   54    integer, parameter :: f_auto = 1, f_fixed = 2, f_scientific = 3, f_engineering = 4
+;   55    integer, save :: number_format = f_auto
+;   56    integer, save :: number_base = 10
+;   57
+;   58    interface operator(+)
+;   59      module procedure v_add, v_plus
+;   60    end interface
+;   61
+;   62    interface operator(-)
+;   63      module procedure v_sub, v_neg
+;   64    end interface
+;   65
+;   66    interface operator(*)
+;   67      module procedure v_mul
+;   68    end interface
+;   69
+;   70    interface operator(/)
+;   71      module procedure v_div
+;   72    end interface
+;   73
+;   74    interface operator(**)
+;   75      module procedure v_power
+;   76    end interface
+;   77
+;   78    ! Values whose difference is no more than this part of the larger are
+;   79    ! equal (V_COMPARE): 0.1 + 0.2 == 0.3, whatever the machine's rounding.
+;   80    real(rk), parameter :: tolerance = 64 * eps
+;   81
+;   82  contains
+
+; Storage map for FCVALUES.REAL_VALUE, a TYPE(VALUE) function
+;   V     TYPE(VALUE)         hidden argument 1  @FCVALUES.REAL_VALUE.V(AP)
+;   X     REAL*8, INTENT(IN)  argument 2         @FCVALUES.REAL_VALUE.X(AP)
+;
+FCVALUES.REAL_VALUE.V = 4		; V's value goes through hidden argument 1
+FCVALUES.REAL_VALUE.X = 8		; X is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCVALUES.REAL_VALUE.$T1:
+	.BLKL	8			; characters, for one statement
+FCVALUES.REAL_VALUE.$T2:
+	.BLKL	4			; temporary
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   83
+;   84    ! ------------------------------------------------------------------
+;   85    ! Making values.
+;   86
+;   87    ! A FUNCTION's RESULT clause names the variable that holds its value
+;   88    ! (V here), so the function's own name needn't be used as one: needed
+;   89    ! for a recursive function, and clearer anywhere. CMPLX(x, y, rk) makes a
+;   90    ! complex number of kind RK; without the kind, CMPLX's result would be
+;   91    ! the default kind, single precision, and digits would be lost.
+;   92    function real_value(x) result(v)
+	.ENTRY	FCVALUES.REAL_VALUE,^M<R2,R3,R4,R5>
+;   93      real(rk), intent(in) :: x
+;   94      type(value) :: v
+;   95
+;   96      v = clean(cmplx(x, 0.0_rk, rk))
+	MOVG	@FCVALUES.REAL_VALUE.X(AP),FCVALUES.REAL_VALUE.$T2
+	CLRG	FCVALUES.REAL_VALUE.$T2+8
+	PUSHAO	FCVALUES.REAL_VALUE.$T2
+	PUSHAB	FCVALUES.REAL_VALUE.$T1
+	CALLS	#2,G^FCVALUES.CLEAN
+	MOVC3	#32,FCVALUES.REAL_VALUE.$T1,@FCVALUES.REAL_VALUE.V(AP)
+;   97    end function real_value
+	RET
+
+; Storage map for FCVALUES.COMPLEX_VALUE, a TYPE(VALUE) function
+;   V     TYPE(VALUE)         hidden argument 1  @FCVALUES.COMPLEX_VALUE.V(AP)
+;   X     REAL*8, INTENT(IN)  argument 2         @FCVALUES.COMPLEX_VALUE.X(AP)
+;   Y     REAL*8, INTENT(IN)  argument 3         @FCVALUES.COMPLEX_VALUE.Y(AP)
+;
+FCVALUES.COMPLEX_VALUE.V = 4		; V's value goes through hidden argument 1
+FCVALUES.COMPLEX_VALUE.X = 8		; X is argument 2
+FCVALUES.COMPLEX_VALUE.Y = 12		; Y is argument 3
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCVALUES.COMPLEX_VALUE.$T1:
+	.BLKL	8			; characters, for one statement
+FCVALUES.COMPLEX_VALUE.$T2:
+	.BLKL	4			; temporary
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   98
+;   99    function complex_value(x, y) result(v)
+	.ENTRY	FCVALUES.COMPLEX_VALUE,^M<R2,R3,R4,R5>
+;  100      real(rk), intent(in) :: x, y
+;  101      type(value) :: v
+;  102
+;  103      v = clean(cmplx(x, y, rk))
+	MOVG	@FCVALUES.COMPLEX_VALUE.X(AP),FCVALUES.COMPLEX_VALUE.$T2
+	MOVG	@FCVALUES.COMPLEX_VALUE.Y(AP),FCVALUES.COMPLEX_VALUE.$T2+8
+	PUSHAO	FCVALUES.COMPLEX_VALUE.$T2
+	PUSHAB	FCVALUES.COMPLEX_VALUE.$T1
+	CALLS	#2,G^FCVALUES.CLEAN
+	MOVC3	#32,FCVALUES.COMPLEX_VALUE.$T1,@FCVALUES.COMPLEX_VALUE.V(AP)
+;  104    end function complex_value
+	RET
+
+; Storage map for FCVALUES.ERROR_VALUE, a TYPE(VALUE) function
+;   V     TYPE(VALUE)          hidden argument 1  @FCVALUES.ERROR_VALUE.V(AP)
+;   CODE  INTEGER, INTENT(IN)  argument 2         @FCVALUES.ERROR_VALUE.CODE(AP)
+;
+FCVALUES.ERROR_VALUE.V = 4		; V's value goes through hidden argument 1
+FCVALUES.ERROR_VALUE.CODE = 8		; CODE is argument 2
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  105
+;  106    function error_value(code) result(v)
+	.ENTRY	FCVALUES.ERROR_VALUE,^M<>
+;  107      integer, intent(in) :: code
+;  108      type(value) :: v
+;  109
+;  110      v%z = (0.0_rk, 0.0_rk)
+	CLRO	@FCVALUES.ERROR_VALUE.V(AP)
+;  111      v%err = code
+	MOVL	FCVALUES.ERROR_VALUE.V(AP),R0
+	MOVL	@FCVALUES.ERROR_VALUE.CODE(AP),16(R0)
+;  112    end function error_value
+	RET
+
+; Storage map for FCVALUES.CLEAN, a TYPE(VALUE) function
+;   V     TYPE(VALUE)             hidden argument 1  @FCVALUES.CLEAN.V(AP)
+;   Z     COMPLEX*16, INTENT(IN)  argument 2         @FCVALUES.CLEAN.Z(AP)
+;   X     REAL*8                  $LOCAL+0           FCVALUES.CLEAN.X
+;   Y     REAL*8                  $LOCAL+8           FCVALUES.CLEAN.Y
+;   R8 is $T1: temporary
+;   R6 is $T2: temporary
+;
+FCVALUES.CLEAN.V = 4			; V's value goes through hidden argument 1
+FCVALUES.CLEAN.Z = 8			; Z is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCVALUES.CLEAN.X:
+	.BLKL	2			; X
+FCVALUES.CLEAN.Y:
+	.BLKL	2			; Y
+FCVALUES.CLEAN.$T3:
+	.BLKL	8			; characters, for one statement
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCVALUES.CLEAN.$K1:
+	.LONG	10
+FCVALUES.CLEAN.$KF1:
+	.LONG	^XE43C7E57,^X759C8800	; 1D300
+FCVALUES.CLEAN.$KF2:
+	.LONG	^X6E1F01C5,^XF359C2F8	; 1D-300
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  113
+;  114    ! CLEAN makes a computed number a value: a part past LIMIT is an
+;  115    ! overflow, and one below SMALL zero (a positive zero: an IEEE machine's
+;  116    ! -0 shows as 0).
+;  117    function clean(z) result(v)
+	.ENTRY	FCVALUES.CLEAN,^M<R2,R3,R4,R5,R6,R7,R8,R9>
+;  118      complex(rk), intent(in) :: z
+;  119      type(value) :: v
+;  120      real(rk) :: x, y
+;  121
+;  122      x = real(z, rk)
+	MOVG	@FCVALUES.CLEAN.Z(AP),FCVALUES.CLEAN.X
+;  123      y = aimag(z)
+	MOVL	#1,R0
+	MOVG	@FCVALUES.CLEAN.Z(AP)[R0],FCVALUES.CLEAN.Y
+;  124      v%err = 0
+	MOVL	FCVALUES.CLEAN.V(AP),R0
+	CLRL	16(R0)
+;  125      if (abs(x) > limit .or. abs(y) > limit) then
+	MOVG	FCVALUES.CLEAN.X,R8
+	BGEQ	FCVALUES.CLEAN.$1
+	MNEGG	R8,R8
+FCVALUES.CLEAN.$1:
+	MOVG	FCVALUES.CLEAN.Y,R6
+	BGEQ	FCVALUES.CLEAN.$3
+	MNEGG	R6,R6
+FCVALUES.CLEAN.$3:
+	CMPG	R8,FCVALUES.CLEAN.$KF1
+	BGTR	FCVALUES.CLEAN.$6
+	CMPG	R6,FCVALUES.CLEAN.$KF1
+	BLEQ	FCVALUES.CLEAN.$5
+FCVALUES.CLEAN.$6:
+;  126        v = error_value(e_overflow)
+	PUSHAL	FCVALUES.CLEAN.$K1
+	PUSHAB	FCVALUES.CLEAN.$T3
+	CALLS	#2,G^FCVALUES.ERROR_VALUE
+	MOVC3	#32,FCVALUES.CLEAN.$T3,@FCVALUES.CLEAN.V(AP)
+;  127        return
+	RET
+FCVALUES.CLEAN.$5:
+;  128      end if
+;  129      if (abs(x) < small) x = 0
+	MOVG	FCVALUES.CLEAN.X,R6
+	BGEQ	FCVALUES.CLEAN.$9
+	MNEGG	R6,R6
+FCVALUES.CLEAN.$9:
+	CMPG	R6,FCVALUES.CLEAN.$KF2
+	BGEQ	FCVALUES.CLEAN.$11
+	CLRG	FCVALUES.CLEAN.X
+FCVALUES.CLEAN.$11:
+;  130      if (abs(y) < small) y = 0
+	MOVG	FCVALUES.CLEAN.Y,R6
+	BGEQ	FCVALUES.CLEAN.$13
+	MNEGG	R6,R6
+FCVALUES.CLEAN.$13:
+	CMPG	R6,FCVALUES.CLEAN.$KF2
+	BGEQ	FCVALUES.CLEAN.$15
+	CLRG	FCVALUES.CLEAN.Y
+FCVALUES.CLEAN.$15:
+;  131      v%z = cmplx(x, y, rk)
+	MOVG	FCVALUES.CLEAN.X,R6
+	MOVL	FCVALUES.CLEAN.V(AP),R0
+	MOVG	FCVALUES.CLEAN.Y,8(R0)
+	MOVG	R6,@FCVALUES.CLEAN.V(AP)
+;  132    end function clean
+	RET
+
+; Storage map for FCVALUES.IS_REAL, a LOGICAL function
+;   V        TYPE(VALUE), INTENT(IN)  argument 1  @FCVALUES.IS_REAL.V(AP)
+;   IS_REAL  LOGICAL                  $LOCAL+0    FCVALUES.IS_REAL.IS_REAL
+;
+FCVALUES.IS_REAL.V = 4			; V is argument 1
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCVALUES.IS_REAL.IS_REAL:
+	.BLKL	1			; IS_REAL, the function's value
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  133
+;  134    ! ------------------------------------------------------------------
+;  135    ! What a value is.
+;  136
+;  137    logical function is_real(v)
+	.ENTRY	FCVALUES.IS_REAL,^M<>
+;  138      type(value), intent(in) :: v
+;  139
+;  140      is_real = aimag(v%z) == 0
+;  141    end function is_real
+	MOVL	FCVALUES.IS_REAL.V(AP),R0 ; the function's value
+	CLRL	R1
+	TSTG	8(R0)
+	BNEQ	FCVALUES.IS_REAL.$1
+	MNEGL	#1,R1
+FCVALUES.IS_REAL.$1:
+	MOVL	R1,R0
+	RET
+
+; Storage map for FCVALUES.IS_WHOLE, a LOGICAL function
+;   V         TYPE(VALUE), INTENT(IN)  argument 1  @FCVALUES.IS_WHOLE.V(AP)
+;   IS_WHOLE  LOGICAL                  R6          R6
+;   X         REAL*8                   $LOCAL+4    FCVALUES.IS_WHOLE.X
+;   R6 is $T2: temporary
+;
+FCVALUES.IS_WHOLE.V = 4			; V is argument 1
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+	.BLKB	4
+FCVALUES.IS_WHOLE.X:
+	.BLKL	2			; X
+FCVALUES.IS_WHOLE.$T1:
+	.BLKL	1			; temporary
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCVALUES.IS_WHOLE.$KF1:
+	.LONG	^X6BF5434C,^X00002634	; 4D15
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  142
+;  143    ! IS_WHOLE: a real value that is a whole number.
+;  144    logical function is_whole(v)
+	.ENTRY	FCVALUES.IS_WHOLE,^M<R6,R7>
+;  145      type(value), intent(in) :: v
+;  146      real(rk) :: x
+;  147
+;  148      x = real(v%z, rk)
+	MOVG	@FCVALUES.IS_WHOLE.V(AP),FCVALUES.IS_WHOLE.X
+;  149      is_whole = is_real(v) .and. abs(x) < whole_limit
+	PUSHAB	@FCVALUES.IS_WHOLE.V(AP)
+	CALLS	#1,G^FCVALUES.IS_REAL
+	MOVL	R0,FCVALUES.IS_WHOLE.$T1
+	MOVG	FCVALUES.IS_WHOLE.X,R6
+	BGEQ	FCVALUES.IS_WHOLE.$1
+	MNEGG	R6,R6
+FCVALUES.IS_WHOLE.$1:
+	CLRL	R0
+	CMPG	R6,FCVALUES.IS_WHOLE.$KF1
+	BGEQ	FCVALUES.IS_WHOLE.$3
+	MNEGL	#1,R0
+FCVALUES.IS_WHOLE.$3:
+	MCOML	R0,R0
+	BICL3	R0,FCVALUES.IS_WHOLE.$T1,R6
+;  150      if (is_whole) is_whole = aint(x) == x
+	BLBC	R6,FCVALUES.IS_WHOLE.$4
+	PUSHAG	FCVALUES.IS_WHOLE.X
+	CALLS	#1,G^MTH$GINT
+	MOVG	R0,R6
+	CLRL	R0
+	CMPG	R6,FCVALUES.IS_WHOLE.X
+	BNEQ	FCVALUES.IS_WHOLE.$6
+	MNEGL	#1,R0
+FCVALUES.IS_WHOLE.$6:
+	MOVL	R0,R6
+FCVALUES.IS_WHOLE.$4:
+;  151    end function is_whole
+	MOVL	R6,R0			; the function's value
+	RET
+
+; Storage map for FCVALUES.TRUTH, a LOGICAL function
+;   V      TYPE(VALUE), INTENT(IN)  argument 1  @FCVALUES.TRUTH.V(AP)
+;   TRUTH  LOGICAL                  $LOCAL+0    FCVALUES.TRUTH.TRUTH
+;
+FCVALUES.TRUTH.V = 4			; V is argument 1
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCVALUES.TRUTH.TRUTH:
+	.BLKL	1			; TRUTH, the function's value
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  152
+;  153    ! TRUTH: a value is true if it isn't zero.
+;  154    logical function truth(v)
+	.ENTRY	FCVALUES.TRUTH,^M<R2>
+;  155      type(value), intent(in) :: v
+;  156
+;  157      truth = v%z /= (0.0_rk, 0.0_rk)
+;  158    end function truth
+	CLRL	R0			; the function's value
+	TSTG	@FCVALUES.TRUTH.V(AP)
+	BEQL	FCVALUES.TRUTH.$1
+	MNEGL	#1,R0
+FCVALUES.TRUTH.$1:
+	MOVL	FCVALUES.TRUTH.V(AP),R1
+	CLRL	R2
+	TSTG	8(R1)
+	BEQL	FCVALUES.TRUTH.$2
+	MNEGL	#1,R2
+FCVALUES.TRUTH.$2:
+	BISL2	R2,R0
+	RET
+
+; Storage map for FCVALUES.LOGICAL_VALUE, a TYPE(VALUE) function
+;   V     TYPE(VALUE)          hidden argument 1  @FCVALUES.LOGICAL_VALUE.V(AP)
+;   B     LOGICAL, INTENT(IN)  argument 2         @FCVALUES.LOGICAL_VALUE.B(AP)
+;
+FCVALUES.LOGICAL_VALUE.V = 4		; V's value goes through hidden argument 1
+FCVALUES.LOGICAL_VALUE.B = 8		; B is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCVALUES.LOGICAL_VALUE.$T1:
+	.BLKL	8			; characters, for one statement
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCVALUES.LOGICAL_VALUE.$K1:
+	.LONG	^X00004010,^X00000000	; 1D0
+FCVALUES.LOGICAL_VALUE.$K2:
+	.LONG	^X00000000,^X00000000	; 0D0
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  159
+;  160    function logical_value(b) result(v)
+	.ENTRY	FCVALUES.LOGICAL_VALUE,^M<R2,R3,R4,R5>
+;  161      logical, intent(in) :: b
+;  162      type(value) :: v
+;  163
+;  164      if (b) then
+	BLBC	@FCVALUES.LOGICAL_VALUE.B(AP),FCVALUES.LOGICAL_VALUE.$1
+;  165        v = real_value(1.0_rk)
+	PUSHAG	FCVALUES.LOGICAL_VALUE.$K1
+	PUSHAB	FCVALUES.LOGICAL_VALUE.$T1
+	CALLS	#2,G^FCVALUES.REAL_VALUE
+	MOVC3	#32,FCVALUES.LOGICAL_VALUE.$T1,@FCVALUES.LOGICAL_VALUE.V(AP)
+;  166      else
+	RET
+FCVALUES.LOGICAL_VALUE.$1:
+;  167        v = real_value(0.0_rk)
+	PUSHAG	FCVALUES.LOGICAL_VALUE.$K2
+	PUSHAB	FCVALUES.LOGICAL_VALUE.$T1
+	CALLS	#2,G^FCVALUES.REAL_VALUE
+	MOVC3	#32,FCVALUES.LOGICAL_VALUE.$T1,@FCVALUES.LOGICAL_VALUE.V(AP)
+;  168      end if
+;  169    end function logical_value
+	RET
+
+; Storage map for FCVALUES.R_ADD, a REAL*8 function
+;   X      REAL*8, INTENT(IN)      argument 1  @FCVALUES.R_ADD.X(AP)
+;   Y      REAL*8, INTENT(IN)      argument 2  @FCVALUES.R_ADD.Y(AP)
+;   ERR    INTEGER, INTENT(INOUT)  argument 3  @FCVALUES.R_ADD.ERR(AP)
+;   R_ADD  REAL*8                  R8          R8
+;   S      REAL*8                  $LOCAL+8    FCVALUES.R_ADD.S
+;   R10 is $T1: temporary
+;   R6 is $T2: temporary
+;   R6 is $T3: temporary
+;
+FCVALUES.R_ADD.X = 4			; X is argument 1
+FCVALUES.R_ADD.Y = 8			; Y is argument 2
+FCVALUES.R_ADD.ERR = 12			; ERR is argument 3
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+	.BLKB	8
+FCVALUES.R_ADD.S:
+	.BLKL	2			; S
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCVALUES.R_ADD.$KF1:
+	.LONG	^X0B1505ED,^XEB84A491	; 1D-280
+FCVALUES.R_ADD.$KF2:
+	.LONG	^XAF1D4435,^X8C4078B5	; 1D20
+FCVALUES.R_ADD.$KF3:
+	.LONG	^X0B1505ED,^XEB85A491	; 1.0000000000000001D-280
+FCVALUES.R_ADD.$KF4:
+	.LONG	^XE43C7E57,^X759C8800	; 1D300
+FCVALUES.R_ADD.$KF5:
+	.LONG	^X00000000,^X00000000	; 0D0
+FCVALUES.R_ADD.$KF6:
+	.LONG	^X6E1F01C5,^XF359C2F8	; 1D-300
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  170
+;  171    ! ------------------------------------------------------------------
+;  172    ! The guarded operations on real numbers. Each takes ERR, which it sets
+;  173    ! to E_OVERFLOW or E_DIVZERO if it is zero and the operation fails, and
+;  174    ! gives a result whose magnitude is zero or between SMALL and LIMIT.
+;  175    ! Only the first error is kept (IF (ERR == 0)), so a chain of operations
+;  176    ! can share one ERR and report what went wrong first.
+;  177    !
+;  178    ! A result smaller than SMALL becomes 0, as IEEE's gradual underflow and
+;  179    ! a VAX's quiet zero would both nearly do, but alike on both. The
+;  180    ! comparisons are arranged so the machine itself never computes a value
+;  181    ! below its own smallest number: a VAX compiled /CHECK=UNDERFLOW faults
+;  182    ! on that.
+;  183
+;  184    real(rk) function r_add(x, y, err)
+	.ENTRY	FCVALUES.R_ADD,^M<R2,R3,R6,R7,R8,R9,R10,R11>
+;  185      real(rk), intent(in) :: x, y
+;  186      integer, intent(inout) :: err
+;  187      real(rk), parameter :: scale = 1.0e20_rk
+;  188      real(rk) :: s
+;  189
+;  190      r_add = 0
+	CLRG	R8
+;  191      if (max(abs(x), abs(y)) < 1.0e-280_rk) then
+	MOVG	@FCVALUES.R_ADD.X(AP),R6
+	BGEQ	FCVALUES.R_ADD.$1
+	MNEGG	R6,R6
+FCVALUES.R_ADD.$1:
+	MOVG	R6,R10
+	MOVG	@FCVALUES.R_ADD.Y(AP),R6
+	BGEQ	FCVALUES.R_ADD.$3
+	MNEGG	R6,R6
+FCVALUES.R_ADD.$3:
+	CMPG	R6,R10
+	BLEQ	FCVALUES.R_ADD.$5
+	MOVG	R6,R10
+FCVALUES.R_ADD.$5:
+	CMPG	R10,FCVALUES.R_ADD.$KF1
+	BGEQ	FCVALUES.R_ADD.$7
+;  192        ! Two values this small could leave a difference below the VAX's
+;  193        ! smallest number: add them scaled up instead.
+;  194        s = x * scale + y * scale
+	MULG3	@FCVALUES.R_ADD.X(AP),FCVALUES.R_ADD.$KF2,R0
+	MULG3	@FCVALUES.R_ADD.Y(AP),FCVALUES.R_ADD.$KF2,R2
+	ADDG3	R0,R2,FCVALUES.R_ADD.S
+;  195        if (abs(s) >= small * scale) r_add = s / scale
+	MOVG	FCVALUES.R_ADD.S,R6
+	BGEQ	FCVALUES.R_ADD.$9
+	MNEGG	R6,R6
+FCVALUES.R_ADD.$9:
+	CMPG	R6,FCVALUES.R_ADD.$KF3
+	BLSS	FCVALUES.R_ADD.$11
+	DIVG3	FCVALUES.R_ADD.$KF2,FCVALUES.R_ADD.S,R8
+FCVALUES.R_ADD.$11:
+;  196        return
+	MOVG	R8,R0			; the function's value
+	RET
+FCVALUES.R_ADD.$7:
+;  197      end if
+;  198
+;  199      s = x + y
+	ADDG3	@FCVALUES.R_ADD.X(AP),@FCVALUES.R_ADD.Y(AP),FCVALUES.R_ADD.S
+;  200      if (abs(s) > limit) then
+	MOVG	FCVALUES.R_ADD.S,R6
+	BGEQ	FCVALUES.R_ADD.$13
+	MNEGG	R6,R6
+FCVALUES.R_ADD.$13:
+	CMPG	R6,FCVALUES.R_ADD.$KF4
+	BLEQ	FCVALUES.R_ADD.$15
+;  201        if (err == 0) err = e_overflow
+	TSTL	@FCVALUES.R_ADD.ERR(AP)
+	BNEQ	FCVALUES.R_ADD.$17
+	MOVL	#10,@FCVALUES.R_ADD.ERR(AP)
+FCVALUES.R_ADD.$17:
+;  202        return
+	MOVG	FCVALUES.R_ADD.$KF5,R0	; the function's value
+	RET
+FCVALUES.R_ADD.$15:
+;  203      end if
+;  204      if (abs(s) >= small) r_add = s
+	MOVG	FCVALUES.R_ADD.S,R6
+	BGEQ	FCVALUES.R_ADD.$19
+	MNEGG	R6,R6
+FCVALUES.R_ADD.$19:
+	CMPG	R6,FCVALUES.R_ADD.$KF6
+	BLSS	FCVALUES.R_ADD.$21
+	MOVG	FCVALUES.R_ADD.S,R8
+FCVALUES.R_ADD.$21:
+;  205    end function r_add
+	MOVG	R8,R0			; the function's value
+	RET
+
+; Storage map for FCVALUES.R_MUL, a REAL*8 function
+;   X      REAL*8, INTENT(IN)      argument 1  @FCVALUES.R_MUL.X(AP)
+;   Y      REAL*8, INTENT(IN)      argument 2  @FCVALUES.R_MUL.Y(AP)
+;   ERR    INTEGER, INTENT(INOUT)  argument 3  @FCVALUES.R_MUL.ERR(AP)
+;   R_MUL  REAL*8                  $LOCAL+0    FCVALUES.R_MUL.R_MUL
+;   AX     REAL*8                  $LOCAL+8    FCVALUES.R_MUL.AX
+;   AY     REAL*8                  $LOCAL+16   FCVALUES.R_MUL.AY
+;   R6 is $T1: temporary
+;
+FCVALUES.R_MUL.X = 4			; X is argument 1
+FCVALUES.R_MUL.Y = 8			; Y is argument 2
+FCVALUES.R_MUL.ERR = 12			; ERR is argument 3
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCVALUES.R_MUL.R_MUL:
+	.BLKL	2			; R_MUL, the function's value
+FCVALUES.R_MUL.AX:
+	.BLKL	2			; AX
+FCVALUES.R_MUL.AY:
+	.BLKL	2			; AY
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCVALUES.R_MUL.$KF1:
+	.LONG	^X00000000,^X00000000	; 0D0
+FCVALUES.R_MUL.$KF2:
+	.LONG	^X00004010,^X00000000	; 1D0
+FCVALUES.R_MUL.$KF3:
+	.LONG	^XE43C7E57,^X759C8800	; 1D300
+FCVALUES.R_MUL.$KF4:
+	.LONG	^X6E1F01C5,^XF359C2F8	; 1D-300
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  206
+;  207    real(rk) function r_mul(x, y, err)
+	.ENTRY	FCVALUES.R_MUL,^M<R6,R7>
+;  208      real(rk), intent(in) :: x, y
+;  209      integer, intent(inout) :: err
+;  210      real(rk) :: ax, ay
+;  211
+;  212      r_mul = 0
+;  213      ax = abs(x)
+	MOVG	@FCVALUES.R_MUL.X(AP),R6
+	BGEQ	FCVALUES.R_MUL.$1
+	MNEGG	R6,R6
+FCVALUES.R_MUL.$1:
+	MOVG	R6,FCVALUES.R_MUL.AX
+;  214      ay = abs(y)
+	MOVG	@FCVALUES.R_MUL.Y(AP),R6
+	BGEQ	FCVALUES.R_MUL.$3
+	MNEGG	R6,R6
+FCVALUES.R_MUL.$3:
+	MOVG	R6,FCVALUES.R_MUL.AY
+;  215      if (ax == 0 .or. ay == 0) return
+	TSTG	FCVALUES.R_MUL.AX
+	BEQL	FCVALUES.R_MUL.$6
+	TSTG	FCVALUES.R_MUL.AY
+	BNEQ	FCVALUES.R_MUL.$5
+FCVALUES.R_MUL.$6:
+	MOVG	FCVALUES.R_MUL.$KF1,R0	; the function's value
+	RET
+FCVALUES.R_MUL.$5:
+;  216
+;  217      if (ax >= 1) then
+	CMPG	FCVALUES.R_MUL.AX,FCVALUES.R_MUL.$KF2
+	BLSS	FCVALUES.R_MUL.$9
+;  218        if (ay > limit / ax) then
+	DIVG3	FCVALUES.R_MUL.AX,FCVALUES.R_MUL.$KF3,R0
+	CMPG	FCVALUES.R_MUL.AY,R0
+	BLEQ	FCVALUES.R_MUL.$15
+;  219          if (err == 0) err = e_overflow
+	TSTL	@FCVALUES.R_MUL.ERR(AP)
+	BNEQ	FCVALUES.R_MUL.$13
+	MOVL	#10,@FCVALUES.R_MUL.ERR(AP)
+FCVALUES.R_MUL.$13:
+;  220          return
+	MOVG	FCVALUES.R_MUL.$KF1,R0	; the function's value
+	RET
+;  221        end if
+;  222      else if (ay < small / ax) then
+FCVALUES.R_MUL.$9:
+	DIVG3	FCVALUES.R_MUL.AX,FCVALUES.R_MUL.$KF4,R0
+	CMPG	FCVALUES.R_MUL.AY,R0
+	BGEQ	FCVALUES.R_MUL.$15
+;  223        return
+	MOVG	FCVALUES.R_MUL.$KF1,R0	; the function's value
+	RET
+FCVALUES.R_MUL.$15:
+;  224      end if
+;  225
+;  226      r_mul = x * y
+;  227    end function r_mul
+	MULG3	@FCVALUES.R_MUL.X(AP),@FCVALUES.R_MUL.Y(AP),R0 ; the function's value
+	RET
+
+; Storage map for FCVALUES.R_DIV, a REAL*8 function
+;   X      REAL*8, INTENT(IN)      argument 1  @FCVALUES.R_DIV.X(AP)
+;   Y      REAL*8, INTENT(IN)      argument 2  @FCVALUES.R_DIV.Y(AP)
+;   ERR    INTEGER, INTENT(INOUT)  argument 3  @FCVALUES.R_DIV.ERR(AP)
+;   R_DIV  REAL*8                  $LOCAL+0    FCVALUES.R_DIV.R_DIV
+;   AX     REAL*8                  $LOCAL+8    FCVALUES.R_DIV.AX
+;   AY     REAL*8                  $LOCAL+16   FCVALUES.R_DIV.AY
+;   R6 is $T1: temporary
+;
+FCVALUES.R_DIV.X = 4			; X is argument 1
+FCVALUES.R_DIV.Y = 8			; Y is argument 2
+FCVALUES.R_DIV.ERR = 12			; ERR is argument 3
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCVALUES.R_DIV.R_DIV:
+	.BLKL	2			; R_DIV, the function's value
+FCVALUES.R_DIV.AX:
+	.BLKL	2			; AX
+FCVALUES.R_DIV.AY:
+	.BLKL	2			; AY
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCVALUES.R_DIV.$KF1:
+	.LONG	^X00000000,^X00000000	; 0D0
+FCVALUES.R_DIV.$KF2:
+	.LONG	^X00004010,^X00000000	; 1D0
+FCVALUES.R_DIV.$KF3:
+	.LONG	^X6E1F01C5,^XF359C2F8	; 1D-300
+FCVALUES.R_DIV.$KF4:
+	.LONG	^XE43C7E57,^X759C8800	; 1D300
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  228
+;  229    real(rk) function r_div(x, y, err)
+	.ENTRY	FCVALUES.R_DIV,^M<R6,R7>
+;  230      real(rk), intent(in) :: x, y
+;  231      integer, intent(inout) :: err
+;  232      real(rk) :: ax, ay
+;  233
+;  234      r_div = 0
+;  235      ax = abs(x)
+	MOVG	@FCVALUES.R_DIV.X(AP),R6
+	BGEQ	FCVALUES.R_DIV.$1
+	MNEGG	R6,R6
+FCVALUES.R_DIV.$1:
+	MOVG	R6,FCVALUES.R_DIV.AX
+;  236      ay = abs(y)
+	MOVG	@FCVALUES.R_DIV.Y(AP),R6
+	BGEQ	FCVALUES.R_DIV.$3
+	MNEGG	R6,R6
+FCVALUES.R_DIV.$3:
+	MOVG	R6,FCVALUES.R_DIV.AY
+;  237      if (ay == 0) then
+	BNEQ	FCVALUES.R_DIV.$5
+;  238        if (err == 0) err = e_divzero
+	TSTL	@FCVALUES.R_DIV.ERR(AP)
+	BNEQ	FCVALUES.R_DIV.$7
+	MOVL	#9,@FCVALUES.R_DIV.ERR(AP)
+FCVALUES.R_DIV.$7:
+;  239        return
+	MOVG	FCVALUES.R_DIV.$KF1,R0	; the function's value
+	RET
+FCVALUES.R_DIV.$5:
+;  240      end if
+;  241      if (ax == 0) return
+	TSTG	FCVALUES.R_DIV.AX
+	BNEQ	FCVALUES.R_DIV.$9
+	MOVG	FCVALUES.R_DIV.$KF1,R0	; the function's value
+	RET
+FCVALUES.R_DIV.$9:
+;  242
+;  243      if (ay >= 1) then
+	CMPG	FCVALUES.R_DIV.AY,FCVALUES.R_DIV.$KF2
+	BLSS	FCVALUES.R_DIV.$11
+;  244        if (ax < small * ay) return
+	MULG3	FCVALUES.R_DIV.$KF3,FCVALUES.R_DIV.AY,R0
+	CMPG	FCVALUES.R_DIV.AX,R0
+	BGEQ	FCVALUES.R_DIV.$15
+	MOVG	FCVALUES.R_DIV.$KF1,R0	; the function's value
+	RET
+;  245      else if (ax > limit * ay) then
+FCVALUES.R_DIV.$11:
+	MULG3	FCVALUES.R_DIV.$KF4,FCVALUES.R_DIV.AY,R0
+	CMPG	FCVALUES.R_DIV.AX,R0
+	BLEQ	FCVALUES.R_DIV.$15
+;  246        if (err == 0) err = e_overflow
+	TSTL	@FCVALUES.R_DIV.ERR(AP)
+	BNEQ	FCVALUES.R_DIV.$17
+	MOVL	#10,@FCVALUES.R_DIV.ERR(AP)
+FCVALUES.R_DIV.$17:
+;  247        return
+	MOVG	FCVALUES.R_DIV.$KF1,R0	; the function's value
+	RET
+FCVALUES.R_DIV.$15:
+;  248      end if
+;  249
+;  250      r_div = x / y
+;  251    end function r_div
+	DIVG3	@FCVALUES.R_DIV.Y(AP),@FCVALUES.R_DIV.X(AP),R0 ; the function's value
+	RET
+
+; Storage map for FCVALUES.C_ABS, a REAL*8 function
+;   Z           COMPLEX*16, INTENT(IN)  argument 1  @FCVALUES.C_ABS.Z(AP)
+;   C_ABS       REAL*8                  R6          R6
+;   M           REAL*8                  $LOCAL+8    FCVALUES.C_ABS.M
+;   N           REAL*8                  $LOCAL+16   FCVALUES.C_ABS.N
+;   Q           REAL*8                  $LOCAL+24   FCVALUES.C_ABS.Q
+;   SMALL_PART  LOGICAL                 $LOCAL+32   FCVALUES.C_ABS.SMALL_PART
+;   R6 is $T1: temporary
+;   R8 is $T3: temporary
+;
+FCVALUES.C_ABS.Z = 4			; Z is argument 1
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+	.BLKB	8
+FCVALUES.C_ABS.M:
+	.BLKL	2			; M
+FCVALUES.C_ABS.N:
+	.BLKL	2			; N
+FCVALUES.C_ABS.Q:
+	.BLKL	2			; Q
+FCVALUES.C_ABS.SMALL_PART:
+	.BLKL	1			; SMALL_PART
+FCVALUES.C_ABS.$T2:
+	.BLKL	2			; temporary
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCVALUES.C_ABS.$KF1:
+	.LONG	^X00004010,^X00000000	; 1D0
+FCVALUES.C_ABS.$KF2:
+	.LONG	^X0EF53C87,^XD4974646	; 1D-17
+FCVALUES.C_ABS.$KF3:
+	.LONG	^X34574396,^XA00085D8	; 1D17
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  252
+;  253    ! C_ABS is a complex number's magnitude, never squaring a part that could
+;  254    ! overflow or underflow.
+;  255    real(rk) function c_abs(z)
+	.ENTRY	FCVALUES.C_ABS,^M<R2,R6,R7,R8,R9>
+;  256      complex(rk), intent(in) :: z
+;  257      real(rk) :: m, n, q
+;  258      logical :: small_part
+;  259
+;  260      m = max(abs(real(z, rk)), abs(aimag(z)))
+	MOVG	@FCVALUES.C_ABS.Z(AP),FCVALUES.C_ABS.$T2
+	BGEQ	FCVALUES.C_ABS.$1
+	MNEGG	FCVALUES.C_ABS.$T2,FCVALUES.C_ABS.$T2
+FCVALUES.C_ABS.$1:
+	MOVG	FCVALUES.C_ABS.$T2,R6
+	MOVL	#1,R0
+	MOVG	@FCVALUES.C_ABS.Z(AP)[R0],R8
+	BGEQ	FCVALUES.C_ABS.$3
+	MNEGG	R8,R8
+FCVALUES.C_ABS.$3:
+	CMPG	R8,R6
+	BLEQ	FCVALUES.C_ABS.$5
+	MOVG	R8,R6
+FCVALUES.C_ABS.$5:
+	MOVG	R6,FCVALUES.C_ABS.M
+;  261      n = min(abs(real(z, rk)), abs(aimag(z)))
+	MOVG	@FCVALUES.C_ABS.Z(AP),FCVALUES.C_ABS.$T2
+	BGEQ	FCVALUES.C_ABS.$7
+	MNEGG	FCVALUES.C_ABS.$T2,FCVALUES.C_ABS.$T2
+FCVALUES.C_ABS.$7:
+	MOVG	FCVALUES.C_ABS.$T2,R8
+	MOVL	#1,R0
+	MOVG	@FCVALUES.C_ABS.Z(AP)[R0],R6
+	BGEQ	FCVALUES.C_ABS.$9
+	MNEGG	R6,R6
+FCVALUES.C_ABS.$9:
+	CMPG	R6,R8
+	BGEQ	FCVALUES.C_ABS.$11
+	MOVG	R6,R8
+FCVALUES.C_ABS.$11:
+	MOVG	R8,FCVALUES.C_ABS.N
+;  262      ! N is negligible beside M when N <= M * 1E-17; for M below 1 that
+;  263      ! product could underflow, so the test is made as N * 1E17 <= M there.
+;  264      if (m >= 1) then
+	CMPG	FCVALUES.C_ABS.M,FCVALUES.C_ABS.$KF1
+	BLSS	FCVALUES.C_ABS.$13
+;  265        small_part = n <= m * 1.0e-17_rk
+	MULG3	FCVALUES.C_ABS.M,FCVALUES.C_ABS.$KF2,R0
+	CLRL	R2
+	CMPG	FCVALUES.C_ABS.N,R0
+	BGTR	FCVALUES.C_ABS.$15
+	MNEGL	#1,R2
+FCVALUES.C_ABS.$15:
+	MOVL	R2,FCVALUES.C_ABS.SMALL_PART
+;  266      else
+	BRB	FCVALUES.C_ABS.$16
+FCVALUES.C_ABS.$13:
+;  267        small_part = n * 1.0e17_rk <= m
+	MULG3	FCVALUES.C_ABS.N,FCVALUES.C_ABS.$KF3,R0
+	CLRL	R2
+	CMPG	R0,FCVALUES.C_ABS.M
+	BGTR	FCVALUES.C_ABS.$17
+	MNEGL	#1,R2
+FCVALUES.C_ABS.$17:
+	MOVL	R2,FCVALUES.C_ABS.SMALL_PART
+;  268      end if
+FCVALUES.C_ABS.$16:
+;  269      if (small_part) then
+	BLBC	FCVALUES.C_ABS.SMALL_PART,FCVALUES.C_ABS.$18
+;  270        c_abs = m
+	MOVG	FCVALUES.C_ABS.M,R6
+;  271      else
+	BRB	FCVALUES.C_ABS.$20
+FCVALUES.C_ABS.$18:
+;  272        q = n / m
+	DIVG3	FCVALUES.C_ABS.M,FCVALUES.C_ABS.N,FCVALUES.C_ABS.Q
+;  273        c_abs = m * sqrt(1 + q * q)
+	MULG3	FCVALUES.C_ABS.Q,FCVALUES.C_ABS.Q,R0
+	ADDG3	FCVALUES.C_ABS.$KF1,R0,FCVALUES.C_ABS.$T2
+	PUSHAG	FCVALUES.C_ABS.$T2
+	CALLS	#1,G^MTH$GSQRT
+	MOVG	R0,R6
+	MULG2	FCVALUES.C_ABS.M,R6
+;  274      end if
+FCVALUES.C_ABS.$20:
+;  275    end function c_abs
+	MOVG	R6,R0			; the function's value
+	RET
+
+; Storage map for FCVALUES.C_ADD, a COMPLEX*16 function
+;   C_ADD  COMPLEX*16              hidden argument 1  @FCVALUES.C_ADD.C_ADD(AP)
+;   X      COMPLEX*16, INTENT(IN)  argument 2         @FCVALUES.C_ADD.X(AP)
+;   Y      COMPLEX*16, INTENT(IN)  argument 3         @FCVALUES.C_ADD.Y(AP)
+;   ERR    INTEGER, INTENT(INOUT)  argument 4         @FCVALUES.C_ADD.ERR(AP)
+;
+FCVALUES.C_ADD.C_ADD = 4		; C_ADD's value goes through hidden argument 1
+FCVALUES.C_ADD.X = 8			; X is argument 2
+FCVALUES.C_ADD.Y = 12			; Y is argument 3
+FCVALUES.C_ADD.ERR = 16			; ERR is argument 4
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCVALUES.C_ADD.$T1:
+	.BLKL	2			; temporary
+FCVALUES.C_ADD.$T2:
+	.BLKL	2			; temporary
+FCVALUES.C_ADD.$T3:
+	.BLKL	2			; temporary
+FCVALUES.C_ADD.$T4:
+	.BLKL	2			; temporary
+FCVALUES.C_ADD.$T5:
+	.BLKL	2			; temporary
+FCVALUES.C_ADD.$T6:
+	.BLKL	2			; temporary
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  276
+;  277    ! ------------------------------------------------------------------
+;  278    ! The guarded operations on complex numbers, built on those on real
+;  279    ! numbers. Each takes ERR as R_ADD does. The operators below apply them
+;  280    ! to VALUEs; module FCMATRIX applies them to the elements of matrices,
+;  281    ! where making a VALUE of each element would only be in the way.
+;  282
+;  283    complex(rk) function c_add(x, y, err)
+	.ENTRY	FCVALUES.C_ADD,^M<>
+;  284      complex(rk), intent(in) :: x, y
+;  285      integer, intent(inout) :: err
+;  286
+;  287      c_add = cmplx(r_add(real(x, rk), real(y, rk), err), r_add(aimag(x), aimag(y), err), rk)
+	MOVG	@FCVALUES.C_ADD.X(AP),FCVALUES.C_ADD.$T2
+	MOVG	@FCVALUES.C_ADD.Y(AP),FCVALUES.C_ADD.$T3
+	PUSHAL	@FCVALUES.C_ADD.ERR(AP)
+	PUSHAG	FCVALUES.C_ADD.$T3
+	PUSHAG	FCVALUES.C_ADD.$T2
+	CALLS	#3,G^FCVALUES.R_ADD
+	MOVG	R0,FCVALUES.C_ADD.$T1
+	MOVL	#1,R0
+	MOVG	@FCVALUES.C_ADD.X(AP)[R0],FCVALUES.C_ADD.$T5
+	MOVL	#1,R0
+	MOVG	@FCVALUES.C_ADD.Y(AP)[R0],FCVALUES.C_ADD.$T6
+	PUSHAL	@FCVALUES.C_ADD.ERR(AP)
+	PUSHAG	FCVALUES.C_ADD.$T6
+	PUSHAG	FCVALUES.C_ADD.$T5
+	CALLS	#3,G^FCVALUES.R_ADD
+	MOVG	R0,FCVALUES.C_ADD.$T4
+	MOVG	FCVALUES.C_ADD.$T1,@FCVALUES.C_ADD.C_ADD(AP)
+	MOVL	#1,R0
+	MOVG	FCVALUES.C_ADD.$T4,@FCVALUES.C_ADD.C_ADD(AP)[R0]
+;  288    end function c_add
+	RET
+
+; Storage map for FCVALUES.C_SUB, a COMPLEX*16 function
+;   C_SUB  COMPLEX*16              hidden argument 1  @FCVALUES.C_SUB.C_SUB(AP)
+;   X      COMPLEX*16, INTENT(IN)  argument 2         @FCVALUES.C_SUB.X(AP)
+;   Y      COMPLEX*16, INTENT(IN)  argument 3         @FCVALUES.C_SUB.Y(AP)
+;   ERR    INTEGER, INTENT(INOUT)  argument 4         @FCVALUES.C_SUB.ERR(AP)
+;
+FCVALUES.C_SUB.C_SUB = 4		; C_SUB's value goes through hidden argument 1
+FCVALUES.C_SUB.X = 8			; X is argument 2
+FCVALUES.C_SUB.Y = 12			; Y is argument 3
+FCVALUES.C_SUB.ERR = 16			; ERR is argument 4
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCVALUES.C_SUB.$T1:
+	.BLKL	4			; temporary
+FCVALUES.C_SUB.$T2:
+	.BLKL	4			; temporary
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  289
+;  290    ! (Negating a number is exact, so X - Y is X + (-Y).)
+;  291    complex(rk) function c_sub(x, y, err)
+	.ENTRY	FCVALUES.C_SUB,^M<>
+;  292      complex(rk), intent(in) :: x, y
+;  293      integer, intent(inout) :: err
+;  294
+;  295      c_sub = c_add(x, -y, err)
+	MNEGG	@FCVALUES.C_SUB.Y(AP),FCVALUES.C_SUB.$T2
+	MOVL	#1,R0
+	MNEGG	@FCVALUES.C_SUB.Y(AP)[R0],FCVALUES.C_SUB.$T2+8
+	PUSHAL	@FCVALUES.C_SUB.ERR(AP)
+	PUSHAO	FCVALUES.C_SUB.$T2
+	PUSHAO	@FCVALUES.C_SUB.X(AP)
+	PUSHAO	FCVALUES.C_SUB.$T1
+	CALLS	#4,G^FCVALUES.C_ADD
+	MOVO	FCVALUES.C_SUB.$T1,@FCVALUES.C_SUB.C_SUB(AP)
+;  296    end function c_sub
+	RET
+
+; Storage map for FCVALUES.C_MUL, a COMPLEX*16 function
+;   C_MUL  COMPLEX*16              hidden argument 1  @FCVALUES.C_MUL.C_MUL(AP)
+;   X      COMPLEX*16, INTENT(IN)  argument 2         @FCVALUES.C_MUL.X(AP)
+;   Y      COMPLEX*16, INTENT(IN)  argument 3         @FCVALUES.C_MUL.Y(AP)
+;   ERR    INTEGER, INTENT(INOUT)  argument 4         @FCVALUES.C_MUL.ERR(AP)
+;   P      REAL*8                  $LOCAL+0           FCVALUES.C_MUL.P
+;   Q      REAL*8                  $LOCAL+8           FCVALUES.C_MUL.Q
+;   R      REAL*8                  $LOCAL+16          FCVALUES.C_MUL.R
+;   S      REAL*8                  $LOCAL+24          FCVALUES.C_MUL.S
+;
+FCVALUES.C_MUL.C_MUL = 4		; C_MUL's value goes through hidden argument 1
+FCVALUES.C_MUL.X = 8			; X is argument 2
+FCVALUES.C_MUL.Y = 12			; Y is argument 3
+FCVALUES.C_MUL.ERR = 16			; ERR is argument 4
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCVALUES.C_MUL.P:
+	.BLKL	2			; P
+FCVALUES.C_MUL.Q:
+	.BLKL	2			; Q
+FCVALUES.C_MUL.R:
+	.BLKL	2			; R
+FCVALUES.C_MUL.S:
+	.BLKL	2			; S
+FCVALUES.C_MUL.$T1:
+	.BLKL	2			; temporary
+FCVALUES.C_MUL.$T2:
+	.BLKL	2			; temporary
+FCVALUES.C_MUL.$T3:
+	.BLKL	2			; temporary
+FCVALUES.C_MUL.$T4:
+	.BLKL	2			; temporary
+FCVALUES.C_MUL.$T5:
+	.BLKL	2			; temporary
+FCVALUES.C_MUL.$T6:
+	.BLKL	2			; temporary
+FCVALUES.C_MUL.$T7:
+	.BLKL	2			; temporary
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  297
+;  298    ! C_MUL: (p + qi)(r + si) = (pr - qs) + (ps + qr)i.
+;  299    complex(rk) function c_mul(x, y, err)
+	.ENTRY	FCVALUES.C_MUL,^M<>
+;  300      complex(rk), intent(in) :: x, y
+;  301      integer, intent(inout) :: err
+;  302      real(rk) :: p, q, r, s
+;  303
+;  304      p = real(x, rk)
+	MOVG	@FCVALUES.C_MUL.X(AP),FCVALUES.C_MUL.P
+;  305      q = aimag(x)
+	MOVL	#1,R0
+	MOVG	@FCVALUES.C_MUL.X(AP)[R0],FCVALUES.C_MUL.Q
+;  306      r = real(y, rk)
+	MOVG	@FCVALUES.C_MUL.Y(AP),FCVALUES.C_MUL.R
+;  307      s = aimag(y)
+	MOVL	#1,R0
+	MOVG	@FCVALUES.C_MUL.Y(AP)[R0],FCVALUES.C_MUL.S
+;  308      c_mul = cmplx(r_add(r_mul(p, r, err), -r_mul(q, s, err), err), &
+;  309        r_add(r_mul(p, s, err), r_mul(q, r, err), err), rk)
+	PUSHAL	@FCVALUES.C_MUL.ERR(AP)
+	PUSHAG	FCVALUES.C_MUL.R
+	PUSHAG	FCVALUES.C_MUL.P
+	CALLS	#3,G^FCVALUES.R_MUL
+	MOVG	R0,FCVALUES.C_MUL.$T2
+	PUSHAL	@FCVALUES.C_MUL.ERR(AP)
+	PUSHAG	FCVALUES.C_MUL.S
+	PUSHAG	FCVALUES.C_MUL.Q
+	CALLS	#3,G^FCVALUES.R_MUL
+	MOVG	R0,FCVALUES.C_MUL.$T3
+	MNEGG	FCVALUES.C_MUL.$T3,FCVALUES.C_MUL.$T4
+	PUSHAL	@FCVALUES.C_MUL.ERR(AP)
+	PUSHAG	FCVALUES.C_MUL.$T4
+	PUSHAG	FCVALUES.C_MUL.$T2
+	CALLS	#3,G^FCVALUES.R_ADD
+	MOVG	R0,FCVALUES.C_MUL.$T1
+	PUSHAL	@FCVALUES.C_MUL.ERR(AP)
+	PUSHAG	FCVALUES.C_MUL.S
+	PUSHAG	FCVALUES.C_MUL.P
+	CALLS	#3,G^FCVALUES.R_MUL
+	MOVG	R0,FCVALUES.C_MUL.$T6
+	PUSHAL	@FCVALUES.C_MUL.ERR(AP)
+	PUSHAG	FCVALUES.C_MUL.R
+	PUSHAG	FCVALUES.C_MUL.Q
+	CALLS	#3,G^FCVALUES.R_MUL
+	MOVG	R0,FCVALUES.C_MUL.$T7
+	PUSHAL	@FCVALUES.C_MUL.ERR(AP)
+	PUSHAG	FCVALUES.C_MUL.$T7
+	PUSHAG	FCVALUES.C_MUL.$T6
+	CALLS	#3,G^FCVALUES.R_ADD
+	MOVG	R0,FCVALUES.C_MUL.$T5
+	MOVG	FCVALUES.C_MUL.$T1,@FCVALUES.C_MUL.C_MUL(AP)
+	MOVL	#1,R0
+	MOVG	FCVALUES.C_MUL.$T5,@FCVALUES.C_MUL.C_MUL(AP)[R0]
+;  310    end function c_mul
+	RET
+
+; Storage map for FCVALUES.C_DIV, a COMPLEX*16 function
+;   C_DIV  COMPLEX*16              hidden argument 1  @FCVALUES.C_DIV.C_DIV(AP)
+;   X      COMPLEX*16, INTENT(IN)  argument 2         @FCVALUES.C_DIV.X(AP)
+;   Y      COMPLEX*16, INTENT(IN)  argument 3         @FCVALUES.C_DIV.Y(AP)
+;   ERR    INTEGER, INTENT(INOUT)  argument 4         @FCVALUES.C_DIV.ERR(AP)
+;   P      REAL*8                  $LOCAL+0           FCVALUES.C_DIV.P
+;   Q      REAL*8                  $LOCAL+8           FCVALUES.C_DIV.Q
+;   R      REAL*8                  $LOCAL+16          FCVALUES.C_DIV.R
+;   S      REAL*8                  $LOCAL+24          FCVALUES.C_DIV.S
+;   RATIO  REAL*8                  $LOCAL+32          FCVALUES.C_DIV.RATIO
+;   DEN    REAL*8                  $LOCAL+40          FCVALUES.C_DIV.DEN
+;   A      REAL*8                  $LOCAL+48          FCVALUES.C_DIV.A
+;   B      REAL*8                  $LOCAL+56          FCVALUES.C_DIV.B
+;
+FCVALUES.C_DIV.C_DIV = 4		; C_DIV's value goes through hidden argument 1
+FCVALUES.C_DIV.X = 8			; X is argument 2
+FCVALUES.C_DIV.Y = 12			; Y is argument 3
+FCVALUES.C_DIV.ERR = 16			; ERR is argument 4
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCVALUES.C_DIV.P:
+	.BLKL	2			; P
+FCVALUES.C_DIV.Q:
+	.BLKL	2			; Q
+FCVALUES.C_DIV.R:
+	.BLKL	2			; R
+FCVALUES.C_DIV.S:
+	.BLKL	2			; S
+FCVALUES.C_DIV.RATIO:
+	.BLKL	2			; RATIO
+FCVALUES.C_DIV.DEN:
+	.BLKL	2			; DEN
+FCVALUES.C_DIV.A:
+	.BLKL	2			; A
+FCVALUES.C_DIV.B:
+	.BLKL	2			; B
+FCVALUES.C_DIV.$T1:
+	.BLKL	2			; temporary
+FCVALUES.C_DIV.$T2:
+	.BLKL	2			; temporary
+FCVALUES.C_DIV.$T3:
+	.BLKL	2			; temporary
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  311
+;  312    ! C_DIV divides by Smith's method, which scales by the divisor's larger
+;  313    ! part so that no product is larger than it must be. The textbook
+;  314    !     (p + qi) / (r + si) = ((pr + qs) + (qr - ps)i) / (r**2 + s**2)
+;  315    ! squares the divisor's parts, which overflows for parts near 1E154 and
+;  316    ! underflows near 1E-154, although the quotient may be ordinary. Smith
+;  317    ! divides through by the larger of r and s first: with |r| >= |s| and
+;  318    ! t = s/r (at most 1 in size), the denominator is r + s t, never larger
+;  319    ! than 2|r|, and the numerators are p + q t and q - p t.
+;  320    complex(rk) function c_div(x, y, err)
+	.ENTRY	FCVALUES.C_DIV,^M<>
+;  321      complex(rk), intent(in) :: x, y
+;  322      integer, intent(inout) :: err
+;  323      real(rk) :: p, q, r, s, ratio, den, a, b
+;  324
+;  325      p = real(x, rk)
+	MOVG	@FCVALUES.C_DIV.X(AP),FCVALUES.C_DIV.P
+;  326      q = aimag(x)
+	MOVL	#1,R0
+	MOVG	@FCVALUES.C_DIV.X(AP)[R0],FCVALUES.C_DIV.Q
+;  327      r = real(y, rk)
+	MOVG	@FCVALUES.C_DIV.Y(AP),FCVALUES.C_DIV.R
+;  328      s = aimag(y)
+	MOVL	#1,R0
+	MOVG	@FCVALUES.C_DIV.Y(AP)[R0],FCVALUES.C_DIV.S
+;  329
+;  330      if (s == 0) then
+	BNEQ	FCVALUES.C_DIV.$1
+;  331        a = r_div(p, r, err)
+	PUSHAL	@FCVALUES.C_DIV.ERR(AP)
+	PUSHAG	FCVALUES.C_DIV.R
+	PUSHAG	FCVALUES.C_DIV.P
+	CALLS	#3,G^FCVALUES.R_DIV
+	MOVG	R0,FCVALUES.C_DIV.A
+;  332        b = r_div(q, r, err)
+	PUSHAL	@FCVALUES.C_DIV.ERR(AP)
+	PUSHAG	FCVALUES.C_DIV.R
+	PUSHAG	FCVALUES.C_DIV.Q
+	CALLS	#3,G^FCVALUES.R_DIV
+	MOVG	R0,FCVALUES.C_DIV.B
+;  333      else if (r == 0) then
+	BRW	FCVALUES.C_DIV.$3
+FCVALUES.C_DIV.$1:
+	TSTG	FCVALUES.C_DIV.R
+	BNEQ	FCVALUES.C_DIV.$4
+;  334        a = r_div(q, s, err)
+	PUSHAL	@FCVALUES.C_DIV.ERR(AP)
+	PUSHAG	FCVALUES.C_DIV.S
+	PUSHAG	FCVALUES.C_DIV.Q
+	CALLS	#3,G^FCVALUES.R_DIV
+	MOVG	R0,FCVALUES.C_DIV.A
+;  335        b = -r_div(p, s, err)
+	PUSHAL	@FCVALUES.C_DIV.ERR(AP)
+	PUSHAG	FCVALUES.C_DIV.S
+	PUSHAG	FCVALUES.C_DIV.P
+	CALLS	#3,G^FCVALUES.R_DIV
+	MOVG	R0,FCVALUES.C_DIV.$T1
+	MNEGG	FCVALUES.C_DIV.$T1,FCVALUES.C_DIV.B
+;  336      else if (abs(r) >= abs(s)) then
+	BRW	FCVALUES.C_DIV.$3
+FCVALUES.C_DIV.$4:
+	MOVG	FCVALUES.C_DIV.R,FCVALUES.C_DIV.$T1
+	BGEQ	FCVALUES.C_DIV.$6
+	MNEGG	FCVALUES.C_DIV.$T1,FCVALUES.C_DIV.$T1
+FCVALUES.C_DIV.$6:
+	MOVG	FCVALUES.C_DIV.S,FCVALUES.C_DIV.$T2
+	BGEQ	FCVALUES.C_DIV.$8
+	MNEGG	FCVALUES.C_DIV.$T2,FCVALUES.C_DIV.$T2
+FCVALUES.C_DIV.$8:
+	CMPG	FCVALUES.C_DIV.$T1,FCVALUES.C_DIV.$T2
+	BGEQ	FCVALUES.C_DIV.$11
+	BRW	FCVALUES.C_DIV.$10
+FCVALUES.C_DIV.$11:
+;  337        ratio = s / r
+	DIVG3	FCVALUES.C_DIV.R,FCVALUES.C_DIV.S,FCVALUES.C_DIV.RATIO
+;  338        den = r_add(r, r_mul(s, ratio, err), err)
+	PUSHAL	@FCVALUES.C_DIV.ERR(AP)
+	PUSHAG	FCVALUES.C_DIV.RATIO
+	PUSHAG	FCVALUES.C_DIV.S
+	CALLS	#3,G^FCVALUES.R_MUL
+	MOVG	R0,FCVALUES.C_DIV.$T2
+	PUSHAL	@FCVALUES.C_DIV.ERR(AP)
+	PUSHAG	FCVALUES.C_DIV.$T2
+	PUSHAG	FCVALUES.C_DIV.R
+	CALLS	#3,G^FCVALUES.R_ADD
+	MOVG	R0,FCVALUES.C_DIV.DEN
+;  339        a = r_div(r_add(p, r_mul(q, ratio, err), err), den, err)
+	PUSHAL	@FCVALUES.C_DIV.ERR(AP)
+	PUSHAG	FCVALUES.C_DIV.RATIO
+	PUSHAG	FCVALUES.C_DIV.Q
+	CALLS	#3,G^FCVALUES.R_MUL
+	MOVG	R0,FCVALUES.C_DIV.$T1
+	PUSHAL	@FCVALUES.C_DIV.ERR(AP)
+	PUSHAG	FCVALUES.C_DIV.$T1
+	PUSHAG	FCVALUES.C_DIV.P
+	CALLS	#3,G^FCVALUES.R_ADD
+	MOVG	R0,FCVALUES.C_DIV.$T2
+	PUSHAL	@FCVALUES.C_DIV.ERR(AP)
+	PUSHAG	FCVALUES.C_DIV.DEN
+	PUSHAG	FCVALUES.C_DIV.$T2
+	CALLS	#3,G^FCVALUES.R_DIV
+	MOVG	R0,FCVALUES.C_DIV.A
+;  340        b = r_div(r_add(q, -r_mul(p, ratio, err), err), den, err)
+	PUSHAL	@FCVALUES.C_DIV.ERR(AP)
+	PUSHAG	FCVALUES.C_DIV.RATIO
+	PUSHAG	FCVALUES.C_DIV.P
+	CALLS	#3,G^FCVALUES.R_MUL
+	MOVG	R0,FCVALUES.C_DIV.$T2
+	MNEGG	FCVALUES.C_DIV.$T2,FCVALUES.C_DIV.$T3
+	PUSHAL	@FCVALUES.C_DIV.ERR(AP)
+	PUSHAG	FCVALUES.C_DIV.$T3
+	PUSHAG	FCVALUES.C_DIV.Q
+	CALLS	#3,G^FCVALUES.R_ADD
+	MOVG	R0,FCVALUES.C_DIV.$T1
+	PUSHAL	@FCVALUES.C_DIV.ERR(AP)
+	PUSHAG	FCVALUES.C_DIV.DEN
+	PUSHAG	FCVALUES.C_DIV.$T1
+	CALLS	#3,G^FCVALUES.R_DIV
+	MOVG	R0,FCVALUES.C_DIV.B
+;  341      else
+	BRW	FCVALUES.C_DIV.$3
+FCVALUES.C_DIV.$10:
+;  342        ratio = r / s
+	DIVG3	FCVALUES.C_DIV.S,FCVALUES.C_DIV.R,FCVALUES.C_DIV.RATIO
+;  343        den = r_add(s, r_mul(r, ratio, err), err)
+	PUSHAL	@FCVALUES.C_DIV.ERR(AP)
+	PUSHAG	FCVALUES.C_DIV.RATIO
+	PUSHAG	FCVALUES.C_DIV.R
+	CALLS	#3,G^FCVALUES.R_MUL
+	MOVG	R0,FCVALUES.C_DIV.$T3
+	PUSHAL	@FCVALUES.C_DIV.ERR(AP)
+	PUSHAG	FCVALUES.C_DIV.$T3
+	PUSHAG	FCVALUES.C_DIV.S
+	CALLS	#3,G^FCVALUES.R_ADD
+	MOVG	R0,FCVALUES.C_DIV.DEN
+;  344        a = r_div(r_add(r_mul(p, ratio, err), q, err), den, err)
+	PUSHAL	@FCVALUES.C_DIV.ERR(AP)
+	PUSHAG	FCVALUES.C_DIV.RATIO
+	PUSHAG	FCVALUES.C_DIV.P
+	CALLS	#3,G^FCVALUES.R_MUL
+	MOVG	R0,FCVALUES.C_DIV.$T2
+	PUSHAL	@FCVALUES.C_DIV.ERR(AP)
+	PUSHAG	FCVALUES.C_DIV.Q
+	PUSHAG	FCVALUES.C_DIV.$T2
+	CALLS	#3,G^FCVALUES.R_ADD
+	MOVG	R0,FCVALUES.C_DIV.$T3
+	PUSHAL	@FCVALUES.C_DIV.ERR(AP)
+	PUSHAG	FCVALUES.C_DIV.DEN
+	PUSHAG	FCVALUES.C_DIV.$T3
+	CALLS	#3,G^FCVALUES.R_DIV
+	MOVG	R0,FCVALUES.C_DIV.A
+;  345        b = r_div(r_add(r_mul(q, ratio, err), -p, err), den, err)
+	PUSHAL	@FCVALUES.C_DIV.ERR(AP)
+	PUSHAG	FCVALUES.C_DIV.RATIO
+	PUSHAG	FCVALUES.C_DIV.Q
+	CALLS	#3,G^FCVALUES.R_MUL
+	MOVG	R0,FCVALUES.C_DIV.$T3
+	MNEGG	FCVALUES.C_DIV.P,FCVALUES.C_DIV.$T1
+	PUSHAL	@FCVALUES.C_DIV.ERR(AP)
+	PUSHAG	FCVALUES.C_DIV.$T1
+	PUSHAG	FCVALUES.C_DIV.$T3
+	CALLS	#3,G^FCVALUES.R_ADD
+	MOVG	R0,FCVALUES.C_DIV.$T2
+	PUSHAL	@FCVALUES.C_DIV.ERR(AP)
+	PUSHAG	FCVALUES.C_DIV.DEN
+	PUSHAG	FCVALUES.C_DIV.$T2
+	CALLS	#3,G^FCVALUES.R_DIV
+	MOVG	R0,FCVALUES.C_DIV.B
+;  346      end if
+FCVALUES.C_DIV.$3:
+;  347
+;  348      ! A part negated above may be an IEEE machine's -0, which a VAX hasn't:
+;  349      ! assigning 0 makes it +0, so later functions (ATAN2's branch) agree on
+;  350      ! both.
+;  351      if (a == 0) a = 0
+	TSTG	FCVALUES.C_DIV.A
+	BNEQ	FCVALUES.C_DIV.$12
+	CLRG	FCVALUES.C_DIV.A
+FCVALUES.C_DIV.$12:
+;  352      if (b == 0) b = 0
+	TSTG	FCVALUES.C_DIV.B
+	BNEQ	FCVALUES.C_DIV.$14
+	CLRG	FCVALUES.C_DIV.B
+FCVALUES.C_DIV.$14:
+;  353      c_div = cmplx(a, b, rk)
+	MOVG	FCVALUES.C_DIV.A,FCVALUES.C_DIV.$T1
+	MOVL	#1,R0
+	MOVG	FCVALUES.C_DIV.B,@FCVALUES.C_DIV.C_DIV(AP)[R0]
+	MOVG	FCVALUES.C_DIV.$T1,@FCVALUES.C_DIV.C_DIV(AP)
+;  354    end function c_div
+	RET
+
+; Storage map for FCVALUES.V_PLUS, a TYPE(VALUE) function
+;   V     TYPE(VALUE)              hidden argument 1  @FCVALUES.V_PLUS.V(AP)
+;   A     TYPE(VALUE), INTENT(IN)  argument 2         @FCVALUES.V_PLUS.A(AP)
+;
+FCVALUES.V_PLUS.V = 4			; V's value goes through hidden argument 1
+FCVALUES.V_PLUS.A = 8			; A is argument 2
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  355
+;  356    ! ------------------------------------------------------------------
+;  357    ! The operators.
+;  358
+;  359    function v_plus(a) result(v)
+	.ENTRY	FCVALUES.V_PLUS,^M<R2,R3,R4,R5>
+;  360      type(value), intent(in) :: a
+;  361      type(value) :: v
+;  362
+;  363      v = a
+	MOVC3	#32,@FCVALUES.V_PLUS.A(AP),@FCVALUES.V_PLUS.V(AP)
+;  364    end function v_plus
+	RET
+
+; Storage map for FCVALUES.V_NEG, a TYPE(VALUE) function
+;   V     TYPE(VALUE)              hidden argument 1  @FCVALUES.V_NEG.V(AP)
+;   A     TYPE(VALUE), INTENT(IN)  argument 2         @FCVALUES.V_NEG.A(AP)
+;
+FCVALUES.V_NEG.V = 4			; V's value goes through hidden argument 1
+FCVALUES.V_NEG.A = 8			; A is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCVALUES.V_NEG.$T1:
+	.BLKL	8			; characters, for one statement
+FCVALUES.V_NEG.$T2:
+	.BLKL	4			; temporary
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  365
+;  366    function v_neg(a) result(v)
+	.ENTRY	FCVALUES.V_NEG,^M<R2,R3,R4,R5>
+;  367      type(value), intent(in) :: a
+;  368      type(value) :: v
+;  369
+;  370      if (a%err /= 0) then
+	MOVL	FCVALUES.V_NEG.A(AP),R0
+	TSTL	16(R0)
+	BEQL	FCVALUES.V_NEG.$1
+;  371        v = a
+	MOVC3	#32,@FCVALUES.V_NEG.A(AP),@FCVALUES.V_NEG.V(AP)
+;  372      else
+	RET
+FCVALUES.V_NEG.$1:
+;  373        v = clean(-a%z)
+	MNEGG	@FCVALUES.V_NEG.A(AP),FCVALUES.V_NEG.$T2
+	MOVL	FCVALUES.V_NEG.A(AP),R0
+	MNEGG	8(R0),FCVALUES.V_NEG.$T2+8
+	PUSHAO	FCVALUES.V_NEG.$T2
+	PUSHAB	FCVALUES.V_NEG.$T1
+	CALLS	#2,G^FCVALUES.CLEAN
+	MOVC3	#32,FCVALUES.V_NEG.$T1,@FCVALUES.V_NEG.V(AP)
+;  374      end if
+;  375    end function v_neg
+	RET
+
+; Storage map for FCVALUES.V_ADD, a TYPE(VALUE) function
+;   V     TYPE(VALUE)              hidden argument 1  @FCVALUES.V_ADD.V(AP)
+;   A     TYPE(VALUE), INTENT(IN)  argument 2         @FCVALUES.V_ADD.A(AP)
+;   B     TYPE(VALUE), INTENT(IN)  argument 3         @FCVALUES.V_ADD.B(AP)
+;   ERR   INTEGER                  $LOCAL+0           FCVALUES.V_ADD.ERR
+;
+FCVALUES.V_ADD.V = 4			; V's value goes through hidden argument 1
+FCVALUES.V_ADD.A = 8			; A is argument 2
+FCVALUES.V_ADD.B = 12			; B is argument 3
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCVALUES.V_ADD.ERR:
+	.BLKL	1			; ERR
+FCVALUES.V_ADD.$T1:
+	.BLKL	1			; temporary
+FCVALUES.V_ADD.$T2:
+	.BLKL	4			; temporary
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  376
+;  377    function v_add(a, b) result(v)
+	.ENTRY	FCVALUES.V_ADD,^M<>
+;  378      type(value), intent(in) :: a, b
+;  379      type(value) :: v
+;  380      integer :: err
+;  381
+;  382      if (pass_error(a, b, v)) return
+	PUSHAB	@FCVALUES.V_ADD.V(AP)
+	PUSHAB	@FCVALUES.V_ADD.B(AP)
+	PUSHAB	@FCVALUES.V_ADD.A(AP)
+	CALLS	#3,G^FCVALUES.PASS_ERROR
+	MOVL	R0,FCVALUES.V_ADD.$T1
+	BLBC	FCVALUES.V_ADD.$T1,FCVALUES.V_ADD.$1
+	RET
+FCVALUES.V_ADD.$1:
+;  383      err = 0
+	CLRL	FCVALUES.V_ADD.ERR
+;  384      v%z = c_add(a%z, b%z, err)
+	PUSHAL	FCVALUES.V_ADD.ERR
+	PUSHAO	@FCVALUES.V_ADD.B(AP)
+	PUSHAO	@FCVALUES.V_ADD.A(AP)
+	PUSHAO	FCVALUES.V_ADD.$T2
+	CALLS	#4,G^FCVALUES.C_ADD
+	MOVO	FCVALUES.V_ADD.$T2,@FCVALUES.V_ADD.V(AP)
+;  385      v%err = err
+	MOVL	FCVALUES.V_ADD.V(AP),R0
+	MOVL	FCVALUES.V_ADD.ERR,16(R0)
+;  386    end function v_add
+	RET
+
+; Storage map for FCVALUES.V_SUB, a TYPE(VALUE) function
+;   V     TYPE(VALUE)              hidden argument 1  @FCVALUES.V_SUB.V(AP)
+;   A     TYPE(VALUE), INTENT(IN)  argument 2         @FCVALUES.V_SUB.A(AP)
+;   B     TYPE(VALUE), INTENT(IN)  argument 3         @FCVALUES.V_SUB.B(AP)
+;
+FCVALUES.V_SUB.V = 4			; V's value goes through hidden argument 1
+FCVALUES.V_SUB.A = 8			; A is argument 2
+FCVALUES.V_SUB.B = 12			; B is argument 3
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCVALUES.V_SUB.$T1:
+	.BLKL	8			; characters, for one statement
+FCVALUES.V_SUB.$T2:
+	.BLKL	8			; characters, for one statement
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  387
+;  388    function v_sub(a, b) result(v)
+	.ENTRY	FCVALUES.V_SUB,^M<R2,R3,R4,R5>
+;  389      type(value), intent(in) :: a, b
+;  390      type(value) :: v
+;  391
+;  392      v = a + (-b)
+	PUSHAB	@FCVALUES.V_SUB.B(AP)
+	PUSHAB	FCVALUES.V_SUB.$T2
+	CALLS	#2,G^FCVALUES.V_NEG
+	PUSHAB	FCVALUES.V_SUB.$T2
+	PUSHAB	@FCVALUES.V_SUB.A(AP)
+	PUSHAB	FCVALUES.V_SUB.$T1
+	CALLS	#3,G^FCVALUES.V_ADD
+	MOVC3	#32,FCVALUES.V_SUB.$T1,@FCVALUES.V_SUB.V(AP)
+;  393    end function v_sub
+	RET
+
+; Storage map for FCVALUES.V_MUL, a TYPE(VALUE) function
+;   V     TYPE(VALUE)              hidden argument 1  @FCVALUES.V_MUL.V(AP)
+;   A     TYPE(VALUE), INTENT(IN)  argument 2         @FCVALUES.V_MUL.A(AP)
+;   B     TYPE(VALUE), INTENT(IN)  argument 3         @FCVALUES.V_MUL.B(AP)
+;   ERR   INTEGER                  $LOCAL+0           FCVALUES.V_MUL.ERR
+;
+FCVALUES.V_MUL.V = 4			; V's value goes through hidden argument 1
+FCVALUES.V_MUL.A = 8			; A is argument 2
+FCVALUES.V_MUL.B = 12			; B is argument 3
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCVALUES.V_MUL.ERR:
+	.BLKL	1			; ERR
+FCVALUES.V_MUL.$T1:
+	.BLKL	1			; temporary
+FCVALUES.V_MUL.$T2:
+	.BLKL	4			; temporary
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  394
+;  395    function v_mul(a, b) result(v)
+	.ENTRY	FCVALUES.V_MUL,^M<>
+;  396      type(value), intent(in) :: a, b
+;  397      type(value) :: v
+;  398      integer :: err
+;  399
+;  400      if (pass_error(a, b, v)) return
+	PUSHAB	@FCVALUES.V_MUL.V(AP)
+	PUSHAB	@FCVALUES.V_MUL.B(AP)
+	PUSHAB	@FCVALUES.V_MUL.A(AP)
+	CALLS	#3,G^FCVALUES.PASS_ERROR
+	MOVL	R0,FCVALUES.V_MUL.$T1
+	BLBC	FCVALUES.V_MUL.$T1,FCVALUES.V_MUL.$1
+	RET
+FCVALUES.V_MUL.$1:
+;  401      err = 0
+	CLRL	FCVALUES.V_MUL.ERR
+;  402      v%z = c_mul(a%z, b%z, err)
+	PUSHAL	FCVALUES.V_MUL.ERR
+	PUSHAO	@FCVALUES.V_MUL.B(AP)
+	PUSHAO	@FCVALUES.V_MUL.A(AP)
+	PUSHAO	FCVALUES.V_MUL.$T2
+	CALLS	#4,G^FCVALUES.C_MUL
+	MOVO	FCVALUES.V_MUL.$T2,@FCVALUES.V_MUL.V(AP)
+;  403      v%err = err
+	MOVL	FCVALUES.V_MUL.V(AP),R0
+	MOVL	FCVALUES.V_MUL.ERR,16(R0)
+;  404    end function v_mul
+	RET
+
+; Storage map for FCVALUES.V_DIV, a TYPE(VALUE) function
+;   V     TYPE(VALUE)              hidden argument 1  @FCVALUES.V_DIV.V(AP)
+;   A     TYPE(VALUE), INTENT(IN)  argument 2         @FCVALUES.V_DIV.A(AP)
+;   B     TYPE(VALUE), INTENT(IN)  argument 3         @FCVALUES.V_DIV.B(AP)
+;   ERR   INTEGER                  $LOCAL+0           FCVALUES.V_DIV.ERR
+;
+FCVALUES.V_DIV.V = 4			; V's value goes through hidden argument 1
+FCVALUES.V_DIV.A = 8			; A is argument 2
+FCVALUES.V_DIV.B = 12			; B is argument 3
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCVALUES.V_DIV.ERR:
+	.BLKL	1			; ERR
+FCVALUES.V_DIV.$T1:
+	.BLKL	1			; temporary
+FCVALUES.V_DIV.$T2:
+	.BLKL	4			; temporary
+FCVALUES.V_DIV.$T3:
+	.BLKL	8			; characters, for one statement
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  405
+;  406    ! V_DIV is A / B, by C_DIV.
+;  407    function v_div(a, b) result(v)
+	.ENTRY	FCVALUES.V_DIV,^M<R2,R3,R4,R5>
+;  408      type(value), intent(in) :: a, b
+;  409      type(value) :: v
+;  410      integer :: err
+;  411
+;  412      if (pass_error(a, b, v)) return
+	PUSHAB	@FCVALUES.V_DIV.V(AP)
+	PUSHAB	@FCVALUES.V_DIV.B(AP)
+	PUSHAB	@FCVALUES.V_DIV.A(AP)
+	CALLS	#3,G^FCVALUES.PASS_ERROR
+	MOVL	R0,FCVALUES.V_DIV.$T1
+	BLBC	FCVALUES.V_DIV.$T1,FCVALUES.V_DIV.$1
+	RET
+FCVALUES.V_DIV.$1:
+;  413      err = 0
+	CLRL	FCVALUES.V_DIV.ERR
+;  414      v%z = c_div(a%z, b%z, err)
+	PUSHAL	FCVALUES.V_DIV.ERR
+	PUSHAO	@FCVALUES.V_DIV.B(AP)
+	PUSHAO	@FCVALUES.V_DIV.A(AP)
+	PUSHAO	FCVALUES.V_DIV.$T2
+	CALLS	#4,G^FCVALUES.C_DIV
+	MOVO	FCVALUES.V_DIV.$T2,@FCVALUES.V_DIV.V(AP)
+;  415      if (err == 0) then
+	TSTL	FCVALUES.V_DIV.ERR
+	BNEQ	FCVALUES.V_DIV.$3
+;  416        v = clean(v%z)
+	PUSHAO	@FCVALUES.V_DIV.V(AP)
+	PUSHAB	FCVALUES.V_DIV.$T3
+	CALLS	#2,G^FCVALUES.CLEAN
+	MOVC3	#32,FCVALUES.V_DIV.$T3,@FCVALUES.V_DIV.V(AP)
+;  417      else
+	RET
+FCVALUES.V_DIV.$3:
+;  418        v%err = err
+	MOVL	FCVALUES.V_DIV.V(AP),R0
+	MOVL	FCVALUES.V_DIV.ERR,16(R0)
+;  419      end if
+;  420    end function v_div
+	RET
+
+; Storage map for FCVALUES.V_POWER, a RECURSIVE TYPE(VALUE) function
+;   V     TYPE(VALUE)              hidden argument 1  @FCVALUES.V_POWER.V(AP)
+;   A     TYPE(VALUE), INTENT(IN)  argument 2         @FCVALUES.V_POWER.A(AP)
+;   B     TYPE(VALUE), INTENT(IN)  argument 3         @FCVALUES.V_POWER.B(AP)
+;   BASE  TYPE(VALUE)              FP-168             FCVALUES.V_POWER.BASE(FP)
+;   N     INTEGER                  R6                 R6
+;   X     REAL*8                   FP-132             FCVALUES.V_POWER.X(FP)
+;   T     REAL*8                   FP-124             FCVALUES.V_POWER.T(FP)
+;   R7 is $T1: temporary
+;   R7 is $R1: V's address
+;
+FCVALUES.V_POWER.V = 4			; V's value goes through hidden argument 1
+FCVALUES.V_POWER.A = 8			; A is argument 2
+FCVALUES.V_POWER.B = 12			; B is argument 3
+FCVALUES.V_POWER.BASE = -168		; BASE, in the frame
+FCVALUES.V_POWER.X = -132		; X, in the frame
+FCVALUES.V_POWER.T = -124		; T, in the frame
+FCVALUES.V_POWER.$T2 = -116		; temporary, in the frame
+FCVALUES.V_POWER.$T3 = -108		; characters, for one statement, in the frame
+FCVALUES.V_POWER.$T4 = -76		; characters, for one statement, in the frame
+FCVALUES.V_POWER.$T5 = -44		; temporary, in the frame
+FCVALUES.V_POWER.$T6 = -40		; temporary, in the frame
+FCVALUES.V_POWER.$T7 = -32		; characters, for one statement, in the frame
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCVALUES.V_POWER.$K1:
+	.LONG	^X00004010,^X00000000	; 1D0
+FCVALUES.V_POWER.$K2:
+	.LONG	9
+FCVALUES.V_POWER.$K3:
+	.LONG	^X00000000,^X00000000	; 0D0
+FCVALUES.V_POWER.$K4:
+	.LONG	11
+FCVALUES.V_POWER.$KF1:
+	.LONG	^XCD6541ED,^X00000000	; 1D09
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  421
+;  422    ! V_POWER is A ** B, fcalc's ^: a whole power by repeated squaring (so
+;  423    ! 2^10 is exactly 1024), a positive real number's real power by EXP and
+;  424    ! LOG, and anything else as EXP(B * LOG(A)) with LOG's principal branch,
+;  425    ! so (-8)^(1/3) is 1 + 1.73205080757i.
+;  426    !
+;  427    ! Repeated squaring computes a**n in about log2(n) multiplications rather
+;  428    ! than n: n's binary digits are read from the lowest, BASE is squared at
+;  429    ! each step (a, a**2, a**4, a**8, ...), and multiplied into the result
+;  430    ! where a digit is 1. For n = 10 (binary 1010): a**2 * a**8.
+;  431    !
+;  432    ! RECURSIVE: V_POWER uses the operators *, /, which are other functions,
+;  433    ! and (through EXP_VALUE and LOG_VALUE) may come back to itself; a
+;  434    ! procedure that may be active twice at once must say RECURSIVE in
+;  435    ! Fortran 90, so the compiler gives each activation its own variables.
+;  436    recursive function v_power(a, b) result(v)
+	.ENTRY	FCVALUES.V_POWER,^M<R2,R3,R4,R5,R6,R7>
+	SUBL2	#168,SP			; this activation's own storage
+;  437      type(value), intent(in) :: a, b
+;  438      type(value) :: v
+;  439      type(value) :: base
+;  440      integer :: n
+;  441      real(rk) :: x, t
+;  442
+;  443      if (pass_error(a, b, v)) return
+	PUSHAB	@FCVALUES.V_POWER.V(AP)
+	PUSHAB	@FCVALUES.V_POWER.B(AP)
+	PUSHAB	@FCVALUES.V_POWER.A(AP)
+	CALLS	#3,G^FCVALUES.PASS_ERROR
+	MOVL	R0,R7
+	BLBC	R7,FCVALUES.V_POWER.$1
+	RET
+FCVALUES.V_POWER.$1:
+;  444
+;  445      if (is_whole(b) .and. abs(real(b%z, rk)) <= 1.0e9_rk) then
+	PUSHAB	@FCVALUES.V_POWER.B(AP)
+	CALLS	#1,G^FCVALUES.IS_WHOLE
+	MOVL	R0,R7
+	MOVG	@FCVALUES.V_POWER.B(AP),FCVALUES.V_POWER.$T2(FP)
+	BGEQ	FCVALUES.V_POWER.$3
+	MNEGG	FCVALUES.V_POWER.$T2(FP),FCVALUES.V_POWER.$T2(FP)
+FCVALUES.V_POWER.$3:
+	BLBS	R7,FCVALUES.V_POWER.$6
+	BRW	FCVALUES.V_POWER.$5
+FCVALUES.V_POWER.$6:
+	CMPG	FCVALUES.V_POWER.$T2(FP),FCVALUES.V_POWER.$KF1
+	BLEQ	FCVALUES.V_POWER.$7
+	BRW	FCVALUES.V_POWER.$5
+FCVALUES.V_POWER.$7:
+;  446        n = nint(real(b%z, rk))
+	CVTRGL	@FCVALUES.V_POWER.B(AP),R6
+;  447        v = real_value(1.0_rk)
+	PUSHAG	FCVALUES.V_POWER.$K1
+	PUSHAB	FCVALUES.V_POWER.$T3(FP)
+	CALLS	#2,G^FCVALUES.REAL_VALUE
+	MOVC3	#32,FCVALUES.V_POWER.$T3(FP),@FCVALUES.V_POWER.V(AP)
+;  448        if (n == 0) return
+	TSTL	R6
+	BNEQ	FCVALUES.V_POWER.$8
+	RET
+FCVALUES.V_POWER.$8:
+;  449        base = a
+	MOVC3	#32,@FCVALUES.V_POWER.A(AP),FCVALUES.V_POWER.BASE(FP)
+;  450        if (n < 0) then
+	TSTL	R6
+	BGEQ	FCVALUES.V_POWER.$10
+;  451          if (.not. truth(a)) then
+	PUSHAB	@FCVALUES.V_POWER.A(AP)
+	CALLS	#1,G^FCVALUES.TRUTH
+	MOVL	R0,R7
+	BLBS	R7,FCVALUES.V_POWER.$12
+;  452            v = error_value(e_divzero)
+	PUSHAL	FCVALUES.V_POWER.$K2
+	PUSHAB	FCVALUES.V_POWER.$T3(FP)
+	CALLS	#2,G^FCVALUES.ERROR_VALUE
+	MOVC3	#32,FCVALUES.V_POWER.$T3(FP),@FCVALUES.V_POWER.V(AP)
+;  453            return
+	RET
+FCVALUES.V_POWER.$12:
+;  454          end if
+;  455          base = real_value(1.0_rk) / a
+	PUSHAG	FCVALUES.V_POWER.$K1
+	PUSHAB	FCVALUES.V_POWER.$T4(FP)
+	CALLS	#2,G^FCVALUES.REAL_VALUE
+	PUSHAB	@FCVALUES.V_POWER.A(AP)
+	PUSHAB	FCVALUES.V_POWER.$T4(FP)
+	PUSHAB	FCVALUES.V_POWER.$T3(FP)
+	CALLS	#3,G^FCVALUES.V_DIV
+	MOVC3	#32,FCVALUES.V_POWER.$T3(FP),FCVALUES.V_POWER.BASE(FP)
+;  456          n = -n
+	MNEGL	R6,R6
+;  457        end if
+FCVALUES.V_POWER.$10:
+;  458        do
+	MOVL	FCVALUES.V_POWER.V(AP),R7
+FCVALUES.V_POWER.$14:			; DO (line 458)'s body
+;  459          if (mod(n, 2) == 1) v = v * base
+	DIVL3	#2,R6,R0
+	MULL2	#2,R0
+	SUBL3	R0,R6,R0
+	CMPL	R0,#1
+	BNEQ	FCVALUES.V_POWER.$15
+	PUSHAB	FCVALUES.V_POWER.BASE(FP)
+	PUSHAB	(R7)
+	PUSHAB	FCVALUES.V_POWER.$T4(FP)
+	CALLS	#3,G^FCVALUES.V_MUL
+	MOVC3	#32,FCVALUES.V_POWER.$T4(FP),(R7)
+FCVALUES.V_POWER.$15:
+;  460          n = n / 2
+	DIVL2	#2,R6
+;  461          if (n == 0 .or. v%err /= 0) exit
+	BEQL	FCVALUES.V_POWER.$17
+	TSTL	16(R7)
+	BNEQ	FCVALUES.V_POWER.$17
+;  462          base = base * base
+	PUSHAB	FCVALUES.V_POWER.BASE(FP)
+	PUSHAB	FCVALUES.V_POWER.BASE(FP)
+	PUSHAB	FCVALUES.V_POWER.$T4(FP)
+	CALLS	#3,G^FCVALUES.V_MUL
+	MOVC3	#32,FCVALUES.V_POWER.$T4(FP),FCVALUES.V_POWER.BASE(FP)
+;  463          if (base%err /= 0) then
+	TSTL	FCVALUES.V_POWER.BASE+16(FP)
+	BEQL	FCVALUES.V_POWER.$14
+;  464            v = base
+	MOVC3	#32,FCVALUES.V_POWER.BASE(FP),@FCVALUES.V_POWER.V(AP)
+;  465            exit
+	RET
+;  466          end if
+;  467        end do
+FCVALUES.V_POWER.$17:
+;  468        return
+	RET
+FCVALUES.V_POWER.$5:
+;  469      end if
+;  470
+;  471      if (.not. truth(a)) then
+	PUSHAB	@FCVALUES.V_POWER.A(AP)
+	CALLS	#1,G^FCVALUES.TRUTH
+	MOVL	R0,R7
+	BLBS	R7,FCVALUES.V_POWER.$22
+;  472        ! Zero to a power that isn't whole: zero if the power's real part
+;  473        ! is positive.
+;  474        if (real(b%z, rk) > 0) then
+	TSTG	@FCVALUES.V_POWER.B(AP)
+	BLEQ	FCVALUES.V_POWER.$24
+;  475          v = real_value(0.0_rk)
+	PUSHAG	FCVALUES.V_POWER.$K3
+	PUSHAB	FCVALUES.V_POWER.$T4(FP)
+	CALLS	#2,G^FCVALUES.REAL_VALUE
+	MOVC3	#32,FCVALUES.V_POWER.$T4(FP),@FCVALUES.V_POWER.V(AP)
+;  476        else
+	RET
+FCVALUES.V_POWER.$24:
+;  477          v = error_value(e_domain)
+	PUSHAL	FCVALUES.V_POWER.$K4
+	PUSHAB	FCVALUES.V_POWER.$T4(FP)
+	CALLS	#2,G^FCVALUES.ERROR_VALUE
+	MOVC3	#32,FCVALUES.V_POWER.$T4(FP),@FCVALUES.V_POWER.V(AP)
+;  478        end if
+;  479        return
+	RET
+FCVALUES.V_POWER.$22:
+;  480      end if
+;  481
+;  482      x = real(a%z, rk)
+	MOVG	@FCVALUES.V_POWER.A(AP),FCVALUES.V_POWER.X(FP)
+;  483      if (is_real(a) .and. x > 0 .and. is_real(b)) then
+	PUSHAB	@FCVALUES.V_POWER.A(AP)
+	CALLS	#1,G^FCVALUES.IS_REAL
+	MOVL	R0,R7
+	PUSHAB	@FCVALUES.V_POWER.B(AP)
+	CALLS	#1,G^FCVALUES.IS_REAL
+	MOVL	R0,FCVALUES.V_POWER.$T5(FP)
+	BLBC	R7,FCVALUES.V_POWER.$27
+	TSTG	FCVALUES.V_POWER.X(FP)
+	BLEQ	FCVALUES.V_POWER.$27
+	BLBC	FCVALUES.V_POWER.$T5(FP),FCVALUES.V_POWER.$27
+;  484        v%err = 0
+	MOVL	FCVALUES.V_POWER.V(AP),R0
+	CLRL	16(R0)
+;  485        t = r_mul(real(b%z, rk), log(x), v%err)
+	MOVG	@FCVALUES.V_POWER.B(AP),FCVALUES.V_POWER.$T2(FP)
+	PUSHAG	FCVALUES.V_POWER.X(FP)
+	CALLS	#1,G^MTH$GLOG
+	MOVG	R0,FCVALUES.V_POWER.$T6(FP)
+	MOVL	FCVALUES.V_POWER.V(AP),R0
+	PUSHAL	16(R0)
+	PUSHAG	FCVALUES.V_POWER.$T6(FP)
+	PUSHAG	FCVALUES.V_POWER.$T2(FP)
+	CALLS	#3,G^FCVALUES.R_MUL
+	MOVG	R0,FCVALUES.V_POWER.T(FP)
+;  486        if (v%err == 0) v = exp_real(t)
+	MOVL	FCVALUES.V_POWER.V(AP),R0
+	TSTL	16(R0)
+	BNEQ	FCVALUES.V_POWER.$31
+	PUSHAG	FCVALUES.V_POWER.T(FP)
+	PUSHAB	FCVALUES.V_POWER.$T4(FP)
+	CALLS	#2,G^FCVALUES.EXP_REAL
+	MOVC3	#32,FCVALUES.V_POWER.$T4(FP),@FCVALUES.V_POWER.V(AP)
+FCVALUES.V_POWER.$31:
+;  487        return
+	RET
+FCVALUES.V_POWER.$27:
+;  488      end if
+;  489
+;  490      v = exp_value(b * log_value(a))
+	PUSHAB	@FCVALUES.V_POWER.A(AP)
+	PUSHAB	FCVALUES.V_POWER.$T7(FP)
+	CALLS	#2,G^FCVALUES.LOG_VALUE
+	PUSHAB	FCVALUES.V_POWER.$T7(FP)
+	PUSHAB	@FCVALUES.V_POWER.B(AP)
+	PUSHAB	FCVALUES.V_POWER.$T3(FP)
+	CALLS	#3,G^FCVALUES.V_MUL
+	PUSHAB	FCVALUES.V_POWER.$T3(FP)
+	PUSHAB	FCVALUES.V_POWER.$T4(FP)
+	CALLS	#2,G^FCVALUES.EXP_VALUE
+	MOVC3	#32,FCVALUES.V_POWER.$T4(FP),@FCVALUES.V_POWER.V(AP)
+;  491    end function v_power
+	RET
+
+; Storage map for FCVALUES.EXP_REAL, a TYPE(VALUE) function
+;   V     TYPE(VALUE)         hidden argument 1  @FCVALUES.EXP_REAL.V(AP)
+;   T     REAL*8, INTENT(IN)  argument 2         @FCVALUES.EXP_REAL.T(AP)
+;
+FCVALUES.EXP_REAL.V = 4			; V's value goes through hidden argument 1
+FCVALUES.EXP_REAL.T = 8			; T is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCVALUES.EXP_REAL.$T1:
+	.BLKL	8			; characters, for one statement
+FCVALUES.EXP_REAL.$T2:
+	.BLKL	2			; temporary
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCVALUES.EXP_REAL.$K1:
+	.LONG	10
+FCVALUES.EXP_REAL.$K2:
+	.LONG	^X00000000,^X00000000	; 0D0
+FCVALUES.EXP_REAL.$KF1:
+	.LONG	^X963440A5,^X7FB547F8	; 690.7755278982137D0
+FCVALUES.EXP_REAL.$KF2:
+	.LONG	^X9634C0A5,^X7FB547F8	; -690.7755278982137D0
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  492
+;  493    ! EXP_REAL is EXP(T) as a value: an overflow past LOG_LIMIT, zero below
+;  494    ! LOG_SMALL.
+;  495    function exp_real(t) result(v)
+	.ENTRY	FCVALUES.EXP_REAL,^M<R2,R3,R4,R5>
+;  496      real(rk), intent(in) :: t
+;  497      type(value) :: v
+;  498
+;  499      if (t > log_limit) then
+	CMPG	@FCVALUES.EXP_REAL.T(AP),FCVALUES.EXP_REAL.$KF1
+	BLEQ	FCVALUES.EXP_REAL.$1
+;  500        v = error_value(e_overflow)
+	PUSHAL	FCVALUES.EXP_REAL.$K1
+	PUSHAB	FCVALUES.EXP_REAL.$T1
+	CALLS	#2,G^FCVALUES.ERROR_VALUE
+	MOVC3	#32,FCVALUES.EXP_REAL.$T1,@FCVALUES.EXP_REAL.V(AP)
+;  501      else if (t < log_small) then
+	RET
+FCVALUES.EXP_REAL.$1:
+	CMPG	@FCVALUES.EXP_REAL.T(AP),FCVALUES.EXP_REAL.$KF2
+	BGEQ	FCVALUES.EXP_REAL.$4
+;  502        v = real_value(0.0_rk)
+	PUSHAG	FCVALUES.EXP_REAL.$K2
+	PUSHAB	FCVALUES.EXP_REAL.$T1
+	CALLS	#2,G^FCVALUES.REAL_VALUE
+	MOVC3	#32,FCVALUES.EXP_REAL.$T1,@FCVALUES.EXP_REAL.V(AP)
+;  503      else
+	RET
+FCVALUES.EXP_REAL.$4:
+;  504        v = real_value(exp(t))
+	PUSHAG	@FCVALUES.EXP_REAL.T(AP)
+	CALLS	#1,G^MTH$GEXP
+	MOVG	R0,FCVALUES.EXP_REAL.$T2
+	PUSHAG	FCVALUES.EXP_REAL.$T2
+	PUSHAB	FCVALUES.EXP_REAL.$T1
+	CALLS	#2,G^FCVALUES.REAL_VALUE
+	MOVC3	#32,FCVALUES.EXP_REAL.$T1,@FCVALUES.EXP_REAL.V(AP)
+;  505      end if
+;  506    end function exp_real
+	RET
+
+; Storage map for FCVALUES.EXP_VALUE, a TYPE(VALUE) function
+;   V     TYPE(VALUE)              hidden argument 1  @FCVALUES.EXP_VALUE.V(AP)
+;   A     TYPE(VALUE), INTENT(IN)  argument 2         @FCVALUES.EXP_VALUE.A(AP)
+;   M     REAL*8                   $LOCAL+0           FCVALUES.EXP_VALUE.M
+;   Y     REAL*8                   $LOCAL+8           FCVALUES.EXP_VALUE.Y
+;   ERR   INTEGER                  $LOCAL+16          FCVALUES.EXP_VALUE.ERR
+;
+FCVALUES.EXP_VALUE.V = 4		; V's value goes through hidden argument 1
+FCVALUES.EXP_VALUE.A = 8		; A is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCVALUES.EXP_VALUE.M:
+	.BLKL	2			; M
+FCVALUES.EXP_VALUE.Y:
+	.BLKL	2			; Y
+FCVALUES.EXP_VALUE.ERR:
+	.BLKL	1			; ERR
+FCVALUES.EXP_VALUE.$T1:
+	.BLKL	2			; temporary
+FCVALUES.EXP_VALUE.$T2:
+	.BLKL	8			; characters, for one statement
+FCVALUES.EXP_VALUE.$T3:
+	.BLKL	2			; temporary
+FCVALUES.EXP_VALUE.$T4:
+	.BLKL	2			; temporary
+FCVALUES.EXP_VALUE.$T5:
+	.BLKL	2			; temporary
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCVALUES.EXP_VALUE.$K1:
+	.LONG	11
+FCVALUES.EXP_VALUE.$KF1:
+	.LONG	^X6BF5432C,^X00002634	; 1D15
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  507
+;  508    ! EXP_VALUE is a complex value's exponential, by Euler's formula:
+;  509    !     exp(x + iy) = e**x (cos y + i sin y)
+;  510    function exp_value(a) result(v)
+	.ENTRY	FCVALUES.EXP_VALUE,^M<R2,R3,R4,R5>
+;  511      type(value), intent(in) :: a
+;  512      type(value) :: v
+;  513      real(rk) :: m, y
+;  514      integer :: err
+;  515
+;  516      if (a%err /= 0) then
+	MOVL	FCVALUES.EXP_VALUE.A(AP),R0
+	TSTL	16(R0)
+	BEQL	FCVALUES.EXP_VALUE.$1
+;  517        v = a
+	MOVC3	#32,@FCVALUES.EXP_VALUE.A(AP),@FCVALUES.EXP_VALUE.V(AP)
+;  518        return
+	RET
+FCVALUES.EXP_VALUE.$1:
+;  519      end if
+;  520      y = aimag(a%z)
+	MOVL	FCVALUES.EXP_VALUE.A(AP),R0
+	MOVG	8(R0),FCVALUES.EXP_VALUE.Y
+;  521      if (abs(y) > 1.0e15_rk) then
+	MOVG	FCVALUES.EXP_VALUE.Y,FCVALUES.EXP_VALUE.$T1
+	BGEQ	FCVALUES.EXP_VALUE.$3
+	MNEGG	FCVALUES.EXP_VALUE.$T1,FCVALUES.EXP_VALUE.$T1
+FCVALUES.EXP_VALUE.$3:
+	CMPG	FCVALUES.EXP_VALUE.$T1,FCVALUES.EXP_VALUE.$KF1
+	BLEQ	FCVALUES.EXP_VALUE.$5
+;  522        ! An angle so large that its sine has no significant digits.
+;  523        v = error_value(e_domain)
+	PUSHAL	FCVALUES.EXP_VALUE.$K1
+	PUSHAB	FCVALUES.EXP_VALUE.$T2
+	CALLS	#2,G^FCVALUES.ERROR_VALUE
+	MOVC3	#32,FCVALUES.EXP_VALUE.$T2,@FCVALUES.EXP_VALUE.V(AP)
+;  524        return
+	RET
+FCVALUES.EXP_VALUE.$5:
+;  525      end if
+;  526      v = exp_real(real(a%z, rk))
+	MOVG	@FCVALUES.EXP_VALUE.A(AP),FCVALUES.EXP_VALUE.$T1
+	PUSHAG	FCVALUES.EXP_VALUE.$T1
+	PUSHAB	FCVALUES.EXP_VALUE.$T2
+	CALLS	#2,G^FCVALUES.EXP_REAL
+	MOVC3	#32,FCVALUES.EXP_VALUE.$T2,@FCVALUES.EXP_VALUE.V(AP)
+;  527      if (v%err /= 0 .or. y == 0) return
+	MOVL	FCVALUES.EXP_VALUE.V(AP),R0
+	TSTL	16(R0)
+	BNEQ	FCVALUES.EXP_VALUE.$8
+	TSTG	FCVALUES.EXP_VALUE.Y
+	BNEQ	FCVALUES.EXP_VALUE.$7
+FCVALUES.EXP_VALUE.$8:
+	RET
+FCVALUES.EXP_VALUE.$7:
+;  528      m = real(v%z, rk)
+	MOVG	@FCVALUES.EXP_VALUE.V(AP),FCVALUES.EXP_VALUE.M
+;  529      err = 0
+	CLRL	FCVALUES.EXP_VALUE.ERR
+;  530      v%z = cmplx(r_mul(m, cos(y), err), r_mul(m, sin(y), err), rk)
+	PUSHAG	FCVALUES.EXP_VALUE.Y
+	CALLS	#1,G^MTH$GCOS
+	MOVG	R0,FCVALUES.EXP_VALUE.$T3
+	PUSHAL	FCVALUES.EXP_VALUE.ERR
+	PUSHAG	FCVALUES.EXP_VALUE.$T3
+	PUSHAG	FCVALUES.EXP_VALUE.M
+	CALLS	#3,G^FCVALUES.R_MUL
+	MOVG	R0,FCVALUES.EXP_VALUE.$T1
+	PUSHAG	FCVALUES.EXP_VALUE.Y
+	CALLS	#1,G^MTH$GSIN
+	MOVG	R0,FCVALUES.EXP_VALUE.$T5
+	PUSHAL	FCVALUES.EXP_VALUE.ERR
+	PUSHAG	FCVALUES.EXP_VALUE.$T5
+	PUSHAG	FCVALUES.EXP_VALUE.M
+	CALLS	#3,G^FCVALUES.R_MUL
+	MOVG	R0,FCVALUES.EXP_VALUE.$T4
+	MOVG	FCVALUES.EXP_VALUE.$T1,@FCVALUES.EXP_VALUE.V(AP)
+	MOVL	FCVALUES.EXP_VALUE.V(AP),R0
+	MOVG	FCVALUES.EXP_VALUE.$T4,8(R0)
+;  531      v%err = err
+	MOVL	FCVALUES.EXP_VALUE.V(AP),R0
+	MOVL	FCVALUES.EXP_VALUE.ERR,16(R0)
+;  532    end function exp_value
+	RET
+
+; Storage map for FCVALUES.LOG_VALUE, a TYPE(VALUE) function
+;   V     TYPE(VALUE)              hidden argument 1  @FCVALUES.LOG_VALUE.V(AP)
+;   A     TYPE(VALUE), INTENT(IN)  argument 2         @FCVALUES.LOG_VALUE.A(AP)
+;
+FCVALUES.LOG_VALUE.V = 4		; V's value goes through hidden argument 1
+FCVALUES.LOG_VALUE.A = 8		; A is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCVALUES.LOG_VALUE.$T1:
+	.BLKL	8			; characters, for one statement
+FCVALUES.LOG_VALUE.$T2:
+	.BLKL	2			; temporary
+FCVALUES.LOG_VALUE.$T3:
+	.BLKL	2			; temporary
+FCVALUES.LOG_VALUE.$T4:
+	.BLKL	2			; temporary
+FCVALUES.LOG_VALUE.$T5:
+	.BLKL	2			; temporary
+FCVALUES.LOG_VALUE.$T6:
+	.BLKL	2			; temporary
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  533
+;  534    ! LOG_VALUE is a nonzero value's principal logarithm,
+;  535    !     ln z = ln |z| + i arg z,   arg z in (-pi, pi]
+;  536    ! A complex number has infinitely many logarithms, 2 pi i apart; the
+;  537    ! principal one takes the angle nearest zero, and the negative real axis,
+;  538    ! where the angle jumps from pi to -pi, is its branch cut.
+;  539    function log_value(a) result(v)
+	.ENTRY	FCVALUES.LOG_VALUE,^M<R2,R3,R4,R5>
+;  540      type(value), intent(in) :: a
+;  541      type(value) :: v
+;  542
+;  543      v = complex_value(log(c_abs(a%z)), angle_of(aimag(a%z), real(a%z, rk)))
+	PUSHAO	@FCVALUES.LOG_VALUE.A(AP)
+	CALLS	#1,G^FCVALUES.C_ABS
+	MOVG	R0,FCVALUES.LOG_VALUE.$T3
+	PUSHAG	FCVALUES.LOG_VALUE.$T3
+	CALLS	#1,G^MTH$GLOG
+	MOVG	R0,FCVALUES.LOG_VALUE.$T2
+	MOVL	FCVALUES.LOG_VALUE.A(AP),R0
+	MOVG	8(R0),FCVALUES.LOG_VALUE.$T5
+	MOVG	@FCVALUES.LOG_VALUE.A(AP),FCVALUES.LOG_VALUE.$T6
+	PUSHAG	FCVALUES.LOG_VALUE.$T6
+	PUSHAG	FCVALUES.LOG_VALUE.$T5
+	CALLS	#2,G^FCVALUES.ANGLE_OF
+	MOVG	R0,FCVALUES.LOG_VALUE.$T4
+	PUSHAG	FCVALUES.LOG_VALUE.$T4
+	PUSHAG	FCVALUES.LOG_VALUE.$T2
+	PUSHAB	FCVALUES.LOG_VALUE.$T1
+	CALLS	#3,G^FCVALUES.COMPLEX_VALUE
+	MOVC3	#32,FCVALUES.LOG_VALUE.$T1,@FCVALUES.LOG_VALUE.V(AP)
+;  544    end function log_value
+	RET
+
+; Storage map for FCVALUES.ANGLE_OF, a REAL*8 function
+;   Y         REAL*8, INTENT(IN)  argument 1  @FCVALUES.ANGLE_OF.Y(AP)
+;   X         REAL*8, INTENT(IN)  argument 2  @FCVALUES.ANGLE_OF.X(AP)
+;   ANGLE_OF  REAL*8              R6          R6
+;   R6 is $T1: temporary
+;   R8 is $T2: temporary
+;
+FCVALUES.ANGLE_OF.Y = 4			; Y is argument 1
+FCVALUES.ANGLE_OF.X = 8			; X is argument 2
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCVALUES.ANGLE_OF.$KF1:
+	.LONG	^X7E921688,^XF7AC154E	; 1D-200
+FCVALUES.ANGLE_OF.$KF2:
+	.LONG	^X21FB4029,^X2D185444	; 3.141592653589793D0
+FCVALUES.ANGLE_OF.$KF3:
+	.LONG	^X21FBC029,^X2D185444	; -3.141592653589793D0
+FCVALUES.ANGLE_OF.$KF4:
+	.LONG	^X21FB4019,^X2D185444	; 1.5707963267948966D0
+FCVALUES.ANGLE_OF.$KF5:
+	.LONG	^X21FBC019,^X2D185444	; -1.5707963267948966D0
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  545
+;  546    ! ANGLE_OF is ATAN2(Y, X) for a point other than the origin, where one
+;  547    ! coordinate is so much smaller than the other that ATAN2 would
+;  548    ! underflow, the angle to the axis it is on.
+;  549    real(rk) function angle_of(y, x)
+	.ENTRY	FCVALUES.ANGLE_OF,^M<R6,R7,R8,R9>
+;  550      real(rk), intent(in) :: y, x
+;  551
+;  552      if (abs(y) < abs(x) * 1.0e-200_rk) then
+	MOVG	@FCVALUES.ANGLE_OF.Y(AP),R6
+	BGEQ	FCVALUES.ANGLE_OF.$1
+	MNEGG	R6,R6
+FCVALUES.ANGLE_OF.$1:
+	MOVG	@FCVALUES.ANGLE_OF.X(AP),R8
+	BGEQ	FCVALUES.ANGLE_OF.$3
+	MNEGG	R8,R8
+FCVALUES.ANGLE_OF.$3:
+	MULG3	R8,FCVALUES.ANGLE_OF.$KF1,R0
+	CMPG	R6,R0
+	BGEQ	FCVALUES.ANGLE_OF.$5
+;  553        angle_of = 0
+	CLRG	R6
+;  554        if (x < 0) then
+	TSTG	@FCVALUES.ANGLE_OF.X(AP)
+	BGEQ	FCVALUES.ANGLE_OF.$11
+;  555          angle_of = pi
+	MOVG	FCVALUES.ANGLE_OF.$KF2,R6 ; 3.141592653589793D0
+;  556          if (y < 0) angle_of = -pi
+	TSTG	@FCVALUES.ANGLE_OF.Y(AP)
+	BGEQ	FCVALUES.ANGLE_OF.$11
+	MOVG	FCVALUES.ANGLE_OF.$KF3,R6 ; -3.141592653589793D0
+;  557        end if
+;  558      else if (abs(x) < abs(y) * 1.0e-200_rk) then
+	BRB	FCVALUES.ANGLE_OF.$11
+FCVALUES.ANGLE_OF.$5:
+	MOVG	@FCVALUES.ANGLE_OF.X(AP),R8
+	BGEQ	FCVALUES.ANGLE_OF.$12
+	MNEGG	R8,R8
+FCVALUES.ANGLE_OF.$12:
+	MOVG	@FCVALUES.ANGLE_OF.Y(AP),R6
+	BGEQ	FCVALUES.ANGLE_OF.$14
+	MNEGG	R6,R6
+FCVALUES.ANGLE_OF.$14:
+	MULG3	R6,FCVALUES.ANGLE_OF.$KF1,R0
+	CMPG	R8,R0
+	BGEQ	FCVALUES.ANGLE_OF.$16
+;  559        angle_of = pi / 2
+	MOVG	FCVALUES.ANGLE_OF.$KF4,R6 ; 1.5707963267948966D0
+;  560        if (y < 0) angle_of = -pi / 2
+	TSTG	@FCVALUES.ANGLE_OF.Y(AP)
+	BGEQ	FCVALUES.ANGLE_OF.$11
+	MOVG	FCVALUES.ANGLE_OF.$KF5,R6 ; -1.5707963267948966D0
+;  561      else
+	BRB	FCVALUES.ANGLE_OF.$11
+FCVALUES.ANGLE_OF.$16:
+;  562        angle_of = atan2(y, x)
+	PUSHAG	@FCVALUES.ANGLE_OF.X(AP)
+	PUSHAG	@FCVALUES.ANGLE_OF.Y(AP)
+	CALLS	#2,G^MTH$GATAN2
+	MOVG	R0,R6
+;  563      end if
+FCVALUES.ANGLE_OF.$11:
+;  564    end function angle_of
+	MOVG	R6,R0			; the function's value
+	RET
+
+; Storage map for FCVALUES.V_ABS, a TYPE(VALUE) function
+;   V     TYPE(VALUE)              hidden argument 1  @FCVALUES.V_ABS.V(AP)
+;   A     TYPE(VALUE), INTENT(IN)  argument 2         @FCVALUES.V_ABS.A(AP)
+;
+FCVALUES.V_ABS.V = 4			; V's value goes through hidden argument 1
+FCVALUES.V_ABS.A = 8			; A is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCVALUES.V_ABS.$T1:
+	.BLKL	8			; characters, for one statement
+FCVALUES.V_ABS.$T2:
+	.BLKL	2			; temporary
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  565
+;  566    ! V_ABS is a value's magnitude.
+;  567    function v_abs(a) result(v)
+	.ENTRY	FCVALUES.V_ABS,^M<R2,R3,R4,R5>
+;  568      type(value), intent(in) :: a
+;  569      type(value) :: v
+;  570
+;  571      if (a%err /= 0) then
+	MOVL	FCVALUES.V_ABS.A(AP),R0
+	TSTL	16(R0)
+	BEQL	FCVALUES.V_ABS.$1
+;  572        v = a
+	MOVC3	#32,@FCVALUES.V_ABS.A(AP),@FCVALUES.V_ABS.V(AP)
+;  573      else
+	RET
+FCVALUES.V_ABS.$1:
+;  574        v = real_value(c_abs(a%z))
+	PUSHAO	@FCVALUES.V_ABS.A(AP)
+	CALLS	#1,G^FCVALUES.C_ABS
+	MOVG	R0,FCVALUES.V_ABS.$T2
+	PUSHAG	FCVALUES.V_ABS.$T2
+	PUSHAB	FCVALUES.V_ABS.$T1
+	CALLS	#2,G^FCVALUES.REAL_VALUE
+	MOVC3	#32,FCVALUES.V_ABS.$T1,@FCVALUES.V_ABS.V(AP)
+;  575      end if
+;  576    end function v_abs
+	RET
+
+; Storage map for FCVALUES.V_MOD, a TYPE(VALUE) function
+;   V     TYPE(VALUE)              hidden argument 1  @FCVALUES.V_MOD.V(AP)
+;   A     TYPE(VALUE), INTENT(IN)  argument 2         @FCVALUES.V_MOD.A(AP)
+;   B     TYPE(VALUE), INTENT(IN)  argument 3         @FCVALUES.V_MOD.B(AP)
+;   R     REAL*8                   $LOCAL+0           FCVALUES.V_MOD.R
+;   D     REAL*8                   $LOCAL+8           FCVALUES.V_MOD.D
+;   T     REAL*8                   $LOCAL+16          FCVALUES.V_MOD.T
+;   R6 is $T1: temporary
+;   R6 is $T4: temporary
+;   R8 is $H1: a value computed before a loop
+;   R6 is $R1: T, during a loop
+;   R10 is $R2: R, during a loop
+;
+FCVALUES.V_MOD.V = 4			; V's value goes through hidden argument 1
+FCVALUES.V_MOD.A = 8			; A is argument 2
+FCVALUES.V_MOD.B = 12			; B is argument 3
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCVALUES.V_MOD.R:
+	.BLKL	2			; R
+FCVALUES.V_MOD.D:
+	.BLKL	2			; D
+FCVALUES.V_MOD.T:
+	.BLKL	2			; T
+FCVALUES.V_MOD.$T2:
+	.BLKL	1			; temporary
+FCVALUES.V_MOD.$T3:
+	.BLKL	8			; characters, for one statement
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCVALUES.V_MOD.$K1:
+	.LONG	12
+FCVALUES.V_MOD.$K2:
+	.LONG	9
+FCVALUES.V_MOD.$KF1:
+	.LONG	^X00004020,^X00000000	; 2D0
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  577
+;  578    ! V_MOD is A mod B, for real values: the remainder with the divisor's
+;  579    ! sign, as MODULO's. It is computed exactly, by subtracting the divisor
+;  580    ! doubled as often as fits, so a large quotient loses nothing.
+;  581    function v_mod(a, b) result(v)
+	.ENTRY	FCVALUES.V_MOD,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+;  582      type(value), intent(in) :: a, b
+;  583      type(value) :: v
+;  584      real(rk) :: r, d, t
+;  585
+;  586      if (pass_error(a, b, v)) return
+	PUSHAB	@FCVALUES.V_MOD.V(AP)
+	PUSHAB	@FCVALUES.V_MOD.B(AP)
+	PUSHAB	@FCVALUES.V_MOD.A(AP)
+	CALLS	#3,G^FCVALUES.PASS_ERROR
+	MOVL	R0,R6
+	BLBC	R6,FCVALUES.V_MOD.$1
+	RET
+FCVALUES.V_MOD.$1:
+;  587      if (.not. (is_real(a) .and. is_real(b))) then
+	PUSHAB	@FCVALUES.V_MOD.A(AP)
+	CALLS	#1,G^FCVALUES.IS_REAL
+	MOVL	R0,R6
+	PUSHAB	@FCVALUES.V_MOD.B(AP)
+	CALLS	#1,G^FCVALUES.IS_REAL
+	MOVL	R0,FCVALUES.V_MOD.$T2
+	BLBC	R6,FCVALUES.V_MOD.$4
+	BLBS	FCVALUES.V_MOD.$T2,FCVALUES.V_MOD.$3
+FCVALUES.V_MOD.$4:
+;  588        v = error_value(e_notreal)
+	PUSHAL	FCVALUES.V_MOD.$K1
+	PUSHAB	FCVALUES.V_MOD.$T3
+	CALLS	#2,G^FCVALUES.ERROR_VALUE
+	MOVC3	#32,FCVALUES.V_MOD.$T3,@FCVALUES.V_MOD.V(AP)
+;  589        return
+	RET
+FCVALUES.V_MOD.$3:
+;  590      end if
+;  591      d = abs(real(b%z, rk))
+	MOVG	@FCVALUES.V_MOD.B(AP),R6
+	BGEQ	FCVALUES.V_MOD.$7
+	MNEGG	R6,R6
+FCVALUES.V_MOD.$7:
+	MOVG	R6,FCVALUES.V_MOD.D
+;  592      if (d == 0) then
+	BNEQ	FCVALUES.V_MOD.$9
+;  593        v = error_value(e_divzero)
+	PUSHAL	FCVALUES.V_MOD.$K2
+	PUSHAB	FCVALUES.V_MOD.$T3
+	CALLS	#2,G^FCVALUES.ERROR_VALUE
+	MOVC3	#32,FCVALUES.V_MOD.$T3,@FCVALUES.V_MOD.V(AP)
+;  594        return
+	RET
+FCVALUES.V_MOD.$9:
+;  595      end if
+;  596
+;  597      r = abs(real(a%z, rk))
+	MOVG	@FCVALUES.V_MOD.A(AP),R6
+	BGEQ	FCVALUES.V_MOD.$11
+	MNEGG	R6,R6
+FCVALUES.V_MOD.$11:
+	MOVG	R6,FCVALUES.V_MOD.R
+;  598      do while (r >= d)
+	MOVQ	FCVALUES.V_MOD.T,R6
+	MOVQ	FCVALUES.V_MOD.R,R10
+	BRB	FCVALUES.V_MOD.$13
+FCVALUES.V_MOD.$14:			; DO (line 598)'s body
+;  599        t = d
+	MOVG	FCVALUES.V_MOD.D,R6
+;  600        do while (t <= r / 2)
+	DIVG3	FCVALUES.V_MOD.$KF1,R10,R8 ; from line 600
+	BRB	FCVALUES.V_MOD.$15
+FCVALUES.V_MOD.$16:			; DO (line 600)'s body
+;  601          t = t * 2
+	MULG2	FCVALUES.V_MOD.$KF1,R6
+;  602        end do
+FCVALUES.V_MOD.$15:			; DO (line 600)'s test
+	CMPG	R6,R8			; from line 600
+	BLEQ	FCVALUES.V_MOD.$16
+;  603        r = r - t
+	SUBG2	R6,R10
+;  604      end do
+FCVALUES.V_MOD.$13:			; DO (line 598)'s test
+	CMPG	R10,FCVALUES.V_MOD.D	; from line 598
+	BGEQ	FCVALUES.V_MOD.$14
+	MOVQ	R6,FCVALUES.V_MOD.T
+	MOVQ	R10,FCVALUES.V_MOD.R
+;  605
+;  606      ! R is |A| mod |B|; give it the divisor's sign.
+;  607      if (r /= 0 .and. real(a%z, rk) < 0) r = d - r
+	TSTG	FCVALUES.V_MOD.R
+	BEQL	FCVALUES.V_MOD.$19
+	TSTG	@FCVALUES.V_MOD.A(AP)
+	BGEQ	FCVALUES.V_MOD.$19
+	SUBG3	FCVALUES.V_MOD.R,FCVALUES.V_MOD.D,FCVALUES.V_MOD.R
+FCVALUES.V_MOD.$19:
+;  608      if (real(b%z, rk) < 0 .and. r /= 0) r = r - d
+	TSTG	@FCVALUES.V_MOD.B(AP)
+	BGEQ	FCVALUES.V_MOD.$22
+	TSTG	FCVALUES.V_MOD.R
+	BEQL	FCVALUES.V_MOD.$22
+	SUBG2	FCVALUES.V_MOD.D,FCVALUES.V_MOD.R
+FCVALUES.V_MOD.$22:
+;  609      v = real_value(r)
+	PUSHAG	FCVALUES.V_MOD.R
+	PUSHAB	FCVALUES.V_MOD.$T3
+	CALLS	#2,G^FCVALUES.REAL_VALUE
+	MOVC3	#32,FCVALUES.V_MOD.$T3,@FCVALUES.V_MOD.V(AP)
+;  610    end function v_mod
+	RET
+
+; Storage map for FCVALUES.V_FACTORIAL, a TYPE(VALUE) function
+;   V     TYPE(VALUE)              hidden argument 1  @FCVALUES.V_FACTORIAL.V(AP)
+;   A     TYPE(VALUE), INTENT(IN)  argument 2         @FCVALUES.V_FACTORIAL.A(AP)
+;   N     INTEGER                  $LOCAL+0           FCVALUES.V_FACTORIAL.N
+;   K     INTEGER                  $LOCAL+4           FCVALUES.V_FACTORIAL.K
+;   X     REAL*8                   $LOCAL+8           FCVALUES.V_FACTORIAL.X
+;   R6 is $T1: temporary
+;   R8 is $L1: DO (line 644)'s limit
+;   R6 is $R1: K, during a loop
+;   R7 is $R2: V's address
+;
+FCVALUES.V_FACTORIAL.V = 4		; V's value goes through hidden argument 1
+FCVALUES.V_FACTORIAL.A = 8		; A is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCVALUES.V_FACTORIAL.N:
+	.BLKL	1			; N
+FCVALUES.V_FACTORIAL.K:
+	.BLKL	1			; K
+FCVALUES.V_FACTORIAL.X:
+	.BLKL	2			; X
+FCVALUES.V_FACTORIAL.$T2:
+	.BLKL	8			; characters, for one statement
+FCVALUES.V_FACTORIAL.$T3:
+	.BLKL	2			; temporary
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCVALUES.V_FACTORIAL.$K1:
+	.LONG	12
+FCVALUES.V_FACTORIAL.$K2:
+	.LONG	16
+FCVALUES.V_FACTORIAL.$K3:
+	.LONG	11
+FCVALUES.V_FACTORIAL.$K4:
+	.LONG	10
+FCVALUES.V_FACTORIAL.$KF1:
+	.LONG	^X00004089,^X00000000	; 200D0
+FCVALUES.V_FACTORIAL.$KF2:
+	.LONG	^X00004010,^X00000000	; 1D0
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  611
+;  612    ! V_FACTORIAL is N!, for a whole N from 0 up.
+;  613    function v_factorial(a) result(v)
+	.ENTRY	FCVALUES.V_FACTORIAL,^M<R2,R3,R4,R5,R6,R7,R8>
+;  614      type(value), intent(in) :: a
+;  615      type(value) :: v
+;  616      integer :: n, k
+;  617      real(rk) :: x
+;  618
+;  619      if (a%err /= 0) then
+	MOVL	FCVALUES.V_FACTORIAL.A(AP),R0
+	TSTL	16(R0)
+	BEQL	FCVALUES.V_FACTORIAL.$1
+;  620        v = a
+	MOVC3	#32,@FCVALUES.V_FACTORIAL.A(AP),@FCVALUES.V_FACTORIAL.V(AP)
+;  621        return
+	RET
+FCVALUES.V_FACTORIAL.$1:
+;  622      end if
+;  623      if (.not. is_real(a)) then
+	PUSHAB	@FCVALUES.V_FACTORIAL.A(AP)
+	CALLS	#1,G^FCVALUES.IS_REAL
+	MOVL	R0,R6
+	BLBS	R6,FCVALUES.V_FACTORIAL.$3
+;  624        v = error_value(e_notreal)
+	PUSHAL	FCVALUES.V_FACTORIAL.$K1
+	PUSHAB	FCVALUES.V_FACTORIAL.$T2
+	CALLS	#2,G^FCVALUES.ERROR_VALUE
+	MOVC3	#32,FCVALUES.V_FACTORIAL.$T2,@FCVALUES.V_FACTORIAL.V(AP)
+;  625        return
+	RET
+FCVALUES.V_FACTORIAL.$3:
+;  626      end if
+;  627      if (.not. is_whole(a)) then
+	PUSHAB	@FCVALUES.V_FACTORIAL.A(AP)
+	CALLS	#1,G^FCVALUES.IS_WHOLE
+	MOVL	R0,R6
+	BLBS	R6,FCVALUES.V_FACTORIAL.$5
+;  628        v = error_value(e_notwhole)
+	PUSHAL	FCVALUES.V_FACTORIAL.$K2
+	PUSHAB	FCVALUES.V_FACTORIAL.$T2
+	CALLS	#2,G^FCVALUES.ERROR_VALUE
+	MOVC3	#32,FCVALUES.V_FACTORIAL.$T2,@FCVALUES.V_FACTORIAL.V(AP)
+;  629        return
+	RET
+FCVALUES.V_FACTORIAL.$5:
+;  630      end if
+;  631      x = real(a%z, rk)
+	MOVG	@FCVALUES.V_FACTORIAL.A(AP),FCVALUES.V_FACTORIAL.X
+;  632      if (x < 0) then
+	BGEQ	FCVALUES.V_FACTORIAL.$7
+;  633        v = error_value(e_domain)
+	PUSHAL	FCVALUES.V_FACTORIAL.$K3
+	PUSHAB	FCVALUES.V_FACTORIAL.$T2
+	CALLS	#2,G^FCVALUES.ERROR_VALUE
+	MOVC3	#32,FCVALUES.V_FACTORIAL.$T2,@FCVALUES.V_FACTORIAL.V(AP)
+;  634        return
+	RET
+FCVALUES.V_FACTORIAL.$7:
+;  635      end if
+;  636      if (x > 200) then
+	CMPG	FCVALUES.V_FACTORIAL.X,FCVALUES.V_FACTORIAL.$KF1
+	BLEQ	FCVALUES.V_FACTORIAL.$9
+;  637        v = error_value(e_overflow)
+	PUSHAL	FCVALUES.V_FACTORIAL.$K4
+	PUSHAB	FCVALUES.V_FACTORIAL.$T2
+	CALLS	#2,G^FCVALUES.ERROR_VALUE
+	MOVC3	#32,FCVALUES.V_FACTORIAL.$T2,@FCVALUES.V_FACTORIAL.V(AP)
+;  638        return
+	RET
+FCVALUES.V_FACTORIAL.$9:
+;  639      end if
+;  640
+;  641      n = nint(x)
+	CVTRGL	FCVALUES.V_FACTORIAL.X,FCVALUES.V_FACTORIAL.N
+;  642      v%err = 0
+	MOVL	FCVALUES.V_FACTORIAL.V(AP),R0
+	CLRL	16(R0)
+;  643      x = 1
+	MOVG	FCVALUES.V_FACTORIAL.$KF2,FCVALUES.V_FACTORIAL.X ; 1D0
+;  644      do k = 2, n
+	MOVL	FCVALUES.V_FACTORIAL.N,R8 ; DO (line 644)'s limit
+	MOVL	#2,FCVALUES.V_FACTORIAL.K
+	CMPL	#2,R8
+	BGTR	FCVALUES.V_FACTORIAL.$11
+	MOVL	FCVALUES.V_FACTORIAL.K,R6
+	MOVL	FCVALUES.V_FACTORIAL.V(AP),R7
+FCVALUES.V_FACTORIAL.$13:		; DO (line 644)'s body
+;  645        x = r_mul(x, real(k, rk), v%err)
+	CVTLG	R6,FCVALUES.V_FACTORIAL.$T3
+	PUSHAL	16(R7)
+	PUSHAG	FCVALUES.V_FACTORIAL.$T3
+	PUSHAG	FCVALUES.V_FACTORIAL.X
+	CALLS	#3,G^FCVALUES.R_MUL
+	MOVG	R0,FCVALUES.V_FACTORIAL.X
+;  646      end do
+	AOBLEQ	R8,R6,FCVALUES.V_FACTORIAL.$13
+	MOVL	R6,FCVALUES.V_FACTORIAL.K
+FCVALUES.V_FACTORIAL.$11:
+;  647      if (v%err == 0) v = real_value(x)
+	MOVL	FCVALUES.V_FACTORIAL.V(AP),R0
+	TSTL	16(R0)
+	BNEQ	FCVALUES.V_FACTORIAL.$15
+	PUSHAG	FCVALUES.V_FACTORIAL.X
+	PUSHAB	FCVALUES.V_FACTORIAL.$T2
+	CALLS	#2,G^FCVALUES.REAL_VALUE
+	MOVC3	#32,FCVALUES.V_FACTORIAL.$T2,@FCVALUES.V_FACTORIAL.V(AP)
+FCVALUES.V_FACTORIAL.$15:
+;  648    end function v_factorial
+	RET
+
+; Storage map for FCVALUES.V_COMPARE, a TYPE(VALUE) function
+;   V         TYPE(VALUE)              hidden argument 1  @FCVALUES.V_COMPARE.V(AP)
+;   A         TYPE(VALUE), INTENT(IN)  argument 2         @FCVALUES.V_COMPARE.A(AP)
+;   B         TYPE(VALUE), INTENT(IN)  argument 3         @FCVALUES.V_COMPARE.B(AP)
+;   RELATION  INTEGER, INTENT(IN)      argument 4         @FCVALUES.V_COMPARE.RELATION(AP)
+;   SAME      LOGICAL                  $LOCAL+0           FCVALUES.V_COMPARE.SAME
+;   LESS      LOGICAL                  $LOCAL+4           FCVALUES.V_COMPARE.LESS
+;   X         REAL*8                   $LOCAL+8           FCVALUES.V_COMPARE.X
+;   Y         REAL*8                   $LOCAL+16          FCVALUES.V_COMPARE.Y
+;
+FCVALUES.V_COMPARE.V = 4		; V's value goes through hidden argument 1
+FCVALUES.V_COMPARE.A = 8		; A is argument 2
+FCVALUES.V_COMPARE.B = 12		; B is argument 3
+FCVALUES.V_COMPARE.RELATION = 16	; RELATION is argument 4
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCVALUES.V_COMPARE.SAME:
+	.BLKL	1			; SAME
+FCVALUES.V_COMPARE.LESS:
+	.BLKL	1			; LESS
+FCVALUES.V_COMPARE.X:
+	.BLKL	2			; X
+FCVALUES.V_COMPARE.Y:
+	.BLKL	2			; Y
+FCVALUES.V_COMPARE.$T1:
+	.BLKL	1			; temporary
+FCVALUES.V_COMPARE.$T2:
+	.BLKL	2			; temporary
+FCVALUES.V_COMPARE.$T3:
+	.BLKL	2			; temporary
+FCVALUES.V_COMPARE.$T4:
+	.BLKL	1			; temporary
+FCVALUES.V_COMPARE.$T5:
+	.BLKL	2			; temporary
+FCVALUES.V_COMPARE.$T6:
+	.BLKL	2			; temporary
+FCVALUES.V_COMPARE.$T7:
+	.BLKL	8			; characters, for one statement
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  649
+;  650    ! V_COMPARE compares two values by a relation, 1 to 6: ==, <>, <, <=, >,
+;  651    ! >=. Equality is the whole value's, to within TOLERANCE; the order is
+;  652    ! the real parts'. The result is 1 for true and 0 for false.
+;  653    function v_compare(a, b, relation) result(v)
+	.ENTRY	FCVALUES.V_COMPARE,^M<R2,R3,R4,R5>
+;  654      type(value), intent(in) :: a, b
+;  655      integer, intent(in) :: relation
+;  656      type(value) :: v
+;  657      logical :: same, less
+;  658      real(rk) :: x, y
+;  659
+;  660      if (pass_error(a, b, v)) return
+	PUSHAB	@FCVALUES.V_COMPARE.V(AP)
+	PUSHAB	@FCVALUES.V_COMPARE.B(AP)
+	PUSHAB	@FCVALUES.V_COMPARE.A(AP)
+	CALLS	#3,G^FCVALUES.PASS_ERROR
+	MOVL	R0,FCVALUES.V_COMPARE.$T1
+	BLBC	FCVALUES.V_COMPARE.$T1,FCVALUES.V_COMPARE.$1
+	RET
+FCVALUES.V_COMPARE.$1:
+;  661      same = near(real(a%z, rk), real(b%z, rk)) .and. near(aimag(a%z), aimag(b%z))
+	MOVG	@FCVALUES.V_COMPARE.A(AP),FCVALUES.V_COMPARE.$T2
+	MOVG	@FCVALUES.V_COMPARE.B(AP),FCVALUES.V_COMPARE.$T3
+	PUSHAG	FCVALUES.V_COMPARE.$T3
+	PUSHAG	FCVALUES.V_COMPARE.$T2
+	CALLS	#2,G^FCVALUES.NEAR
+	MOVL	R0,FCVALUES.V_COMPARE.$T1
+	MOVL	FCVALUES.V_COMPARE.A(AP),R0
+	MOVG	8(R0),FCVALUES.V_COMPARE.$T5
+	MOVL	FCVALUES.V_COMPARE.B(AP),R0
+	MOVG	8(R0),FCVALUES.V_COMPARE.$T6
+	PUSHAG	FCVALUES.V_COMPARE.$T6
+	PUSHAG	FCVALUES.V_COMPARE.$T5
+	CALLS	#2,G^FCVALUES.NEAR
+	MOVL	R0,FCVALUES.V_COMPARE.$T4
+	MCOML	FCVALUES.V_COMPARE.$T4,R0
+	BICL3	R0,FCVALUES.V_COMPARE.$T1,FCVALUES.V_COMPARE.SAME
+;  662      x = real(a%z, rk)
+	MOVG	@FCVALUES.V_COMPARE.A(AP),FCVALUES.V_COMPARE.X
+;  663      y = real(b%z, rk)
+	MOVG	@FCVALUES.V_COMPARE.B(AP),FCVALUES.V_COMPARE.Y
+;  664      less = x < y .and. .not. near(x, y)
+	PUSHAG	FCVALUES.V_COMPARE.Y
+	PUSHAG	FCVALUES.V_COMPARE.X
+	CALLS	#2,G^FCVALUES.NEAR
+	MOVL	R0,FCVALUES.V_COMPARE.$T4
+	CLRL	R0
+	CMPG	FCVALUES.V_COMPARE.X,FCVALUES.V_COMPARE.Y
+	BGEQ	FCVALUES.V_COMPARE.$3
+	MNEGL	#1,R0
+FCVALUES.V_COMPARE.$3:
+	BICL3	FCVALUES.V_COMPARE.$T4,R0,FCVALUES.V_COMPARE.LESS
+;  665      select case (relation)
+	CASEL	@FCVALUES.V_COMPARE.RELATION(AP),#1,#4
+FCVALUES.V_COMPARE.$4:
+	.WORD	FCVALUES.V_COMPARE.$5-FCVALUES.V_COMPARE.$4
+	.WORD	FCVALUES.V_COMPARE.$6-FCVALUES.V_COMPARE.$4
+	.WORD	FCVALUES.V_COMPARE.$7-FCVALUES.V_COMPARE.$4
+	.WORD	FCVALUES.V_COMPARE.$8-FCVALUES.V_COMPARE.$4
+	.WORD	FCVALUES.V_COMPARE.$9-FCVALUES.V_COMPARE.$4
+	BRW	FCVALUES.V_COMPARE.$10
+FCVALUES.V_COMPARE.$5:
+;  666      case (1)
+;  667        v = logical_value(same)
+	PUSHAL	FCVALUES.V_COMPARE.SAME
+	PUSHAB	FCVALUES.V_COMPARE.$T7
+	CALLS	#2,G^FCVALUES.LOGICAL_VALUE
+	MOVC3	#32,FCVALUES.V_COMPARE.$T7,@FCVALUES.V_COMPARE.V(AP)
+;  668      case (2)
+	RET
+FCVALUES.V_COMPARE.$6:
+;  669        v = logical_value(.not. same)
+	MCOML	FCVALUES.V_COMPARE.SAME,FCVALUES.V_COMPARE.$T4
+	PUSHAL	FCVALUES.V_COMPARE.$T4
+	PUSHAB	FCVALUES.V_COMPARE.$T7
+	CALLS	#2,G^FCVALUES.LOGICAL_VALUE
+	MOVC3	#32,FCVALUES.V_COMPARE.$T7,@FCVALUES.V_COMPARE.V(AP)
+;  670      case (3)
+	RET
+FCVALUES.V_COMPARE.$7:
+;  671        v = logical_value(less)
+	PUSHAL	FCVALUES.V_COMPARE.LESS
+	PUSHAB	FCVALUES.V_COMPARE.$T7
+	CALLS	#2,G^FCVALUES.LOGICAL_VALUE
+	MOVC3	#32,FCVALUES.V_COMPARE.$T7,@FCVALUES.V_COMPARE.V(AP)
+;  672      case (4)
+	RET
+FCVALUES.V_COMPARE.$8:
+;  673        v = logical_value(less .or. near(x, y))
+	PUSHAG	FCVALUES.V_COMPARE.Y
+	PUSHAG	FCVALUES.V_COMPARE.X
+	CALLS	#2,G^FCVALUES.NEAR
+	MOVL	R0,FCVALUES.V_COMPARE.$T4
+	BISL3	FCVALUES.V_COMPARE.LESS,FCVALUES.V_COMPARE.$T4,FCVALUES.V_COMPARE.$T1
+	PUSHAL	FCVALUES.V_COMPARE.$T1
+	PUSHAB	FCVALUES.V_COMPARE.$T7
+	CALLS	#2,G^FCVALUES.LOGICAL_VALUE
+	MOVC3	#32,FCVALUES.V_COMPARE.$T7,@FCVALUES.V_COMPARE.V(AP)
+;  674      case (5)
+	RET
+FCVALUES.V_COMPARE.$9:
+;  675        v = logical_value(.not. (less .or. near(x, y)))
+	PUSHAG	FCVALUES.V_COMPARE.Y
+	PUSHAG	FCVALUES.V_COMPARE.X
+	CALLS	#2,G^FCVALUES.NEAR
+	MOVL	R0,FCVALUES.V_COMPARE.$T1
+	BISL3	FCVALUES.V_COMPARE.LESS,FCVALUES.V_COMPARE.$T1,R0
+	MCOML	R0,FCVALUES.V_COMPARE.$T4
+	PUSHAL	FCVALUES.V_COMPARE.$T4
+	PUSHAB	FCVALUES.V_COMPARE.$T7
+	CALLS	#2,G^FCVALUES.LOGICAL_VALUE
+	MOVC3	#32,FCVALUES.V_COMPARE.$T7,@FCVALUES.V_COMPARE.V(AP)
+;  676      case default
+	RET
+FCVALUES.V_COMPARE.$10:
+;  677        v = logical_value(.not. less)
+	MCOML	FCVALUES.V_COMPARE.LESS,FCVALUES.V_COMPARE.$T4
+	PUSHAL	FCVALUES.V_COMPARE.$T4
+	PUSHAB	FCVALUES.V_COMPARE.$T7
+	CALLS	#2,G^FCVALUES.LOGICAL_VALUE
+	MOVC3	#32,FCVALUES.V_COMPARE.$T7,@FCVALUES.V_COMPARE.V(AP)
+;  678      end select
+;  679    end function v_compare
+	RET
+
+; Storage map for FCVALUES.NEAR, a LOGICAL function
+;   X     REAL*8, INTENT(IN)  argument 1  @FCVALUES.NEAR.X(AP)
+;   Y     REAL*8, INTENT(IN)  argument 2  @FCVALUES.NEAR.Y(AP)
+;   NEAR  LOGICAL             $LOCAL+0    FCVALUES.NEAR.NEAR
+;
+FCVALUES.NEAR.X = 4			; X is argument 1
+FCVALUES.NEAR.Y = 8			; Y is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCVALUES.NEAR.NEAR:
+	.BLKL	1			; NEAR, the function's value
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCVALUES.NEAR.$K1:
+	.LONG	^X00003D30,^X00000000	; 1.4210854715202004D-14
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  680
+;  681    logical function near(x, y)
+	.ENTRY	FCVALUES.NEAR,^M<>
+;  682      real(rk), intent(in) :: x, y
+;  683
+;  684      near = near_to(x, y, tolerance)
+	PUSHAG	FCVALUES.NEAR.$K1
+	PUSHAG	@FCVALUES.NEAR.Y(AP)
+	PUSHAG	@FCVALUES.NEAR.X(AP)
+	CALLS	#3,G^FCVALUES.NEAR_TO
+	MOVL	R0,FCVALUES.NEAR.NEAR
+;  685    end function near
+	MOVL	FCVALUES.NEAR.NEAR,R0	; the function's value
+	RET
+
+; Storage map for FCVALUES.NEAR_TO, a LOGICAL function
+;   X        REAL*8, INTENT(IN)  argument 1  @FCVALUES.NEAR_TO.X(AP)
+;   Y        REAL*8, INTENT(IN)  argument 2  @FCVALUES.NEAR_TO.Y(AP)
+;   TOL      REAL*8, INTENT(IN)  argument 3  @FCVALUES.NEAR_TO.TOL(AP)
+;   NEAR_TO  LOGICAL             R6          R6
+;   D        REAL*8              $LOCAL+4    FCVALUES.NEAR_TO.D
+;   M        REAL*8              $LOCAL+12   FCVALUES.NEAR_TO.M
+;   R6 is $T1: temporary
+;   R6 is $T2: temporary
+;   R8 is $T3: temporary
+;
+FCVALUES.NEAR_TO.X = 4			; X is argument 1
+FCVALUES.NEAR_TO.Y = 8			; Y is argument 2
+FCVALUES.NEAR_TO.TOL = 12		; TOL is argument 3
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+	.BLKB	4
+FCVALUES.NEAR_TO.D:
+	.BLKL	2			; D
+FCVALUES.NEAR_TO.M:
+	.BLKL	2			; M
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCVALUES.NEAR_TO.$KF1:
+	.LONG	^X00004010,^X00000000	; 1D0
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  686
+;  687    ! NEAR_TO: X and Y differ by no more than the part TOL of the larger.
+;  688    ! (Values within LIMIT can't overflow in X - Y; TOL is well above EPS, so
+;  689    ! TOL times the larger can't underflow but where both are near SMALL,
+;  690    ! when the test is made as a quotient.)
+;  691    logical function near_to(x, y, tol)
+	.ENTRY	FCVALUES.NEAR_TO,^M<R2,R6,R7,R8,R9>
+;  692      real(rk), intent(in) :: x, y, tol
+;  693      real(rk) :: d, m
+;  694
+;  695      d = abs(x - y)
+	SUBG3	@FCVALUES.NEAR_TO.Y(AP),@FCVALUES.NEAR_TO.X(AP),R6
+	BGEQ	FCVALUES.NEAR_TO.$1
+	MNEGG	R6,R6
+FCVALUES.NEAR_TO.$1:
+	MOVG	R6,FCVALUES.NEAR_TO.D
+;  696      m = max(abs(x), abs(y))
+	MOVG	@FCVALUES.NEAR_TO.X(AP),R6
+	BGEQ	FCVALUES.NEAR_TO.$3
+	MNEGG	R6,R6
+FCVALUES.NEAR_TO.$3:
+	MOVG	@FCVALUES.NEAR_TO.Y(AP),R8
+	BGEQ	FCVALUES.NEAR_TO.$5
+	MNEGG	R8,R8
+FCVALUES.NEAR_TO.$5:
+	CMPG	R8,R6
+	BLEQ	FCVALUES.NEAR_TO.$7
+	MOVG	R8,R6
+FCVALUES.NEAR_TO.$7:
+	MOVG	R6,FCVALUES.NEAR_TO.M
+;  697      if (m >= 1) then
+	CMPG	FCVALUES.NEAR_TO.M,FCVALUES.NEAR_TO.$KF1
+	BLSS	FCVALUES.NEAR_TO.$9
+;  698        near_to = d <= tol * m
+	MULG3	@FCVALUES.NEAR_TO.TOL(AP),FCVALUES.NEAR_TO.M,R0
+	CLRL	R2
+	CMPG	FCVALUES.NEAR_TO.D,R0
+	BGTR	FCVALUES.NEAR_TO.$11
+	MNEGL	#1,R2
+FCVALUES.NEAR_TO.$11:
+	MOVL	R2,R6
+;  699      else
+	BRB	FCVALUES.NEAR_TO.$12
+FCVALUES.NEAR_TO.$9:
+;  700        near_to = d / tol <= m
+	DIVG3	@FCVALUES.NEAR_TO.TOL(AP),FCVALUES.NEAR_TO.D,R0
+	CLRL	R2
+	CMPG	R0,FCVALUES.NEAR_TO.M
+	BGTR	FCVALUES.NEAR_TO.$13
+	MNEGL	#1,R2
+FCVALUES.NEAR_TO.$13:
+	MOVL	R2,R6
+;  701      end if
+FCVALUES.NEAR_TO.$12:
+;  702    end function near_to
+	MOVL	R6,R0			; the function's value
+	RET
+
+; Storage map for FCVALUES.PASS_ERROR, a LOGICAL function
+;   A           TYPE(VALUE), INTENT(IN)   argument 1  @FCVALUES.PASS_ERROR.A(AP)
+;   B           TYPE(VALUE), INTENT(IN)   argument 2  @FCVALUES.PASS_ERROR.B(AP)
+;   V           TYPE(VALUE), INTENT(OUT)  argument 3  @FCVALUES.PASS_ERROR.V(AP)
+;   PASS_ERROR  LOGICAL                   R6          R6
+;
+FCVALUES.PASS_ERROR.A = 4		; A is argument 1
+FCVALUES.PASS_ERROR.B = 8		; B is argument 2
+FCVALUES.PASS_ERROR.V = 12		; V is argument 3
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  703
+;  704    ! PASS_ERROR: if A or B has an error, V is that value and the result is
+;  705    ! true.
+;  706    logical function pass_error(a, b, v)
+	.ENTRY	FCVALUES.PASS_ERROR,^M<R2,R3,R4,R5,R6>
+;  707      type(value), intent(in) :: a, b
+;  708      type(value), intent(out) :: v
+;  709
+;  710      pass_error = .true.
+	MOVL	#-1,R6
+;  711      if (a%err /= 0) then
+	MOVL	FCVALUES.PASS_ERROR.A(AP),R0
+	TSTL	16(R0)
+	BEQL	FCVALUES.PASS_ERROR.$1
+;  712        v = a
+	MOVC3	#32,@FCVALUES.PASS_ERROR.A(AP),@FCVALUES.PASS_ERROR.V(AP)
+;  713      else if (b%err /= 0) then
+	BRB	FCVALUES.PASS_ERROR.$3
+FCVALUES.PASS_ERROR.$1:
+	MOVL	FCVALUES.PASS_ERROR.B(AP),R0
+	TSTL	16(R0)
+	BEQL	FCVALUES.PASS_ERROR.$4
+;  714        v = b
+	MOVC3	#32,@FCVALUES.PASS_ERROR.B(AP),@FCVALUES.PASS_ERROR.V(AP)
+;  715      else
+	BRB	FCVALUES.PASS_ERROR.$3
+FCVALUES.PASS_ERROR.$4:
+;  716        pass_error = .false.
+	CLRL	R6
+;  717        v%err = 0
+	MOVL	FCVALUES.PASS_ERROR.V(AP),R0
+	CLRL	16(R0)
+;  718        v%z = (0.0_rk, 0.0_rk)
+	CLRO	@FCVALUES.PASS_ERROR.V(AP)
+;  719      end if
+FCVALUES.PASS_ERROR.$3:
+;  720    end function pass_error
+	MOVL	R6,R0			; the function's value
+	RET
+
+; Storage map for FCVALUES.FORMAT_REAL, a CHARACTER*32 function
+;   TEXT  CHARACTER*32        hidden argument 1  @FCVALUES.FORMAT_REAL.TEXT(AP)
+;   X     REAL*8, INTENT(IN)  argument 2         @FCVALUES.FORMAT_REAL.X(AP)
+;   R8 is $T4: temporary
+;   R7 is $T5: temporary
+;   R6 is $T6: temporary
+;
+FCVALUES.FORMAT_REAL.TEXT = 4		; TEXT's value goes through hidden argument 1
+FCVALUES.FORMAT_REAL.X = 8		; X is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCVALUES.FORMAT_REAL.$T1:
+	.BLKL	8			; characters, for one statement
+FCVALUES.FORMAT_REAL.$T2:
+	.BLKL	2			; temporary
+FCVALUES.FORMAT_REAL.$T3:
+	.BLKL	1			; temporary
+FCVALUES.FORMAT_REAL.$D2:
+	.WORD	32			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+FCVALUES.FORMAT_REAL.$D4:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_D
+	.LONG	0			; set when the descriptor is used
+FCVALUES.FORMAT_REAL.$T7:
+	.BLKB	2			; temporary
+	.BLKB	2
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCVALUES.FORMAT_REAL.$D1:
+	.WORD	32			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCVALUES.FORMAT_REAL.$T1
+FCVALUES.FORMAT_REAL.$D3:
+	.WORD	9			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCVALUES.FORMAT_REAL.$K1
+FCVALUES.FORMAT_REAL.$K2:
+	.LONG	0
+FCVALUES.FORMAT_REAL.$K1:
+	.ASCII	/123456789/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  721
+;  722    ! ------------------------------------------------------------------
+;  723    ! Showing values.
+;  724    !
+;  725    ! How a number is shown depends on three settings: DIGITS (SET DIGITS),
+;  726    ! NUMBER_FORMAT (SET FORMAT), and NUMBER_BASE (SET BASE). The formats are
+;  727    ! a scientific calculator's:
+;  728    !
+;  729    !   AUTO         DIGITS significant digits, trailing zeros dropped, in
+;  730    !                fixed notation from 1E-5 up to where the digits run out,
+;  731    !                scientific outside that: 2, 0.125, 6.02214076e+23
+;  732    !   FIXED        DIGITS places after the point, every one shown: 2.0000
+;  733    !   SCIENTIFIC   DIGITS significant digits, one before the point, every
+;  734    !                one shown: 2.00000000000e+0
+;  735    !   ENGINEERING  as SCIENTIFIC, but the exponent a multiple of 3, so one to
+;  736    !                three digits before the point: 12.3456789012e+3
+;  737    !
+;  738    ! A whole number (a real value, or both parts of a complex one) shown in
+;  739    ! another base (SET BASE) is written with a prefix, 0x, 0o, or 0b, as
+;  740    ! fcalc reads it back; any other value is shown in decimal.
+;  741
+;  742    ! FORMAT_REAL shows X by the format. A negative number is shown with its
+;  743    ! minus sign, unless it shows as all zeros (FIXED's 0.0000).
+;  744    function format_real(x) result(text)
+	.ENTRY	FCVALUES.FORMAT_REAL,^M<R2,R3,R4,R5,R6,R7,R8>
+;  745      real(rk), intent(in) :: x
+;  746      character(len=32) :: text
+;  747
+;  748      select case (number_format)
+	CMPL	FCVALUES.NUMBER_FORMAT,#2
+	BEQL	FCVALUES.FORMAT_REAL.$1
+	CMPL	FCVALUES.NUMBER_FORMAT,#3
+	BEQL	FCVALUES.FORMAT_REAL.$3
+	CMPL	FCVALUES.NUMBER_FORMAT,#4
+	BEQL	FCVALUES.FORMAT_REAL.$5
+	BRW	FCVALUES.FORMAT_REAL.$7
+FCVALUES.FORMAT_REAL.$1:
+;  749      case (f_fixed)
+;  750        text = fixed_text(abs(x))
+	MOVG	@FCVALUES.FORMAT_REAL.X(AP),FCVALUES.FORMAT_REAL.$T2
+	BGEQ	FCVALUES.FORMAT_REAL.$8
+	MNEGG	FCVALUES.FORMAT_REAL.$T2,FCVALUES.FORMAT_REAL.$T2
+FCVALUES.FORMAT_REAL.$8:
+	PUSHAG	FCVALUES.FORMAT_REAL.$T2
+	PUSHAQ	FCVALUES.FORMAT_REAL.$D1
+	CALLS	#2,G^FCVALUES.FIXED_TEXT
+	MOVL	FCVALUES.FORMAT_REAL.TEXT(AP),R0
+	MOVC3	#32,FCVALUES.FORMAT_REAL.$T1,@4(R0)
+;  751      case (f_scientific)
+	BRW	FCVALUES.FORMAT_REAL.$10
+FCVALUES.FORMAT_REAL.$3:
+;  752        text = scientific_text(abs(x), digits)
+	MOVG	@FCVALUES.FORMAT_REAL.X(AP),FCVALUES.FORMAT_REAL.$T2
+	BGEQ	FCVALUES.FORMAT_REAL.$11
+	MNEGG	FCVALUES.FORMAT_REAL.$T2,FCVALUES.FORMAT_REAL.$T2
+FCVALUES.FORMAT_REAL.$11:
+	PUSHAL	FCVALUES.DIGITS
+	PUSHAG	FCVALUES.FORMAT_REAL.$T2
+	PUSHAQ	FCVALUES.FORMAT_REAL.$D1
+	CALLS	#3,G^FCVALUES.SCIENTIFIC_TEXT
+	MOVL	FCVALUES.FORMAT_REAL.TEXT(AP),R0
+	MOVC3	#32,FCVALUES.FORMAT_REAL.$T1,@4(R0)
+;  753      case (f_engineering)
+	BRB	FCVALUES.FORMAT_REAL.$10
+FCVALUES.FORMAT_REAL.$5:
+;  754        text = engineering_text(abs(x))
+	MOVG	@FCVALUES.FORMAT_REAL.X(AP),FCVALUES.FORMAT_REAL.$T2
+	BGEQ	FCVALUES.FORMAT_REAL.$13
+	MNEGG	FCVALUES.FORMAT_REAL.$T2,FCVALUES.FORMAT_REAL.$T2
+FCVALUES.FORMAT_REAL.$13:
+	PUSHAG	FCVALUES.FORMAT_REAL.$T2
+	PUSHAQ	FCVALUES.FORMAT_REAL.$D1
+	CALLS	#2,G^FCVALUES.ENGINEERING_TEXT
+	MOVL	FCVALUES.FORMAT_REAL.TEXT(AP),R0
+	MOVC3	#32,FCVALUES.FORMAT_REAL.$T1,@4(R0)
+;  755      case default
+	BRB	FCVALUES.FORMAT_REAL.$10
+FCVALUES.FORMAT_REAL.$7:
+;  756        text = auto_text(abs(x))
+	MOVG	@FCVALUES.FORMAT_REAL.X(AP),FCVALUES.FORMAT_REAL.$T2
+	BGEQ	FCVALUES.FORMAT_REAL.$15
+	MNEGG	FCVALUES.FORMAT_REAL.$T2,FCVALUES.FORMAT_REAL.$T2
+FCVALUES.FORMAT_REAL.$15:
+	PUSHAG	FCVALUES.FORMAT_REAL.$T2
+	PUSHAQ	FCVALUES.FORMAT_REAL.$D1
+	CALLS	#2,G^FCVALUES.AUTO_TEXT
+	MOVL	FCVALUES.FORMAT_REAL.TEXT(AP),R0
+	MOVC3	#32,FCVALUES.FORMAT_REAL.$T1,@4(R0)
+;  757      end select
+FCVALUES.FORMAT_REAL.$10:
+;  758
+;  759      ! SCAN finds the first of a set of characters in a string (0 if none):
+;  760      ! here, any digit that isn't zero.
+;  761      if (x < 0 .and. scan(text, '123456789') > 0) text = '-' // trim(text)
+	MOVL	FCVALUES.FORMAT_REAL.TEXT(AP),R0
+	MOVAB	@4(R0),FCVALUES.FORMAT_REAL.$D2+4
+	PUSHAL	FCVALUES.FORMAT_REAL.$K2
+	PUSHAQ	FCVALUES.FORMAT_REAL.$D3
+	PUSHAQ	FCVALUES.FORMAT_REAL.$D2
+	CALLS	#3,G^FTN$SCAN
+	MOVL	R0,FCVALUES.FORMAT_REAL.$T3
+	TSTG	@FCVALUES.FORMAT_REAL.X(AP)
+	BLSS	FCVALUES.FORMAT_REAL.$18
+	RET
+FCVALUES.FORMAT_REAL.$18:
+	TSTL	FCVALUES.FORMAT_REAL.$T3
+	BLEQ	FCVALUES.FORMAT_REAL.$17
+	MOVL	FCVALUES.FORMAT_REAL.TEXT(AP),R0
+	MOVAB	@4(R0),R8
+	MOVAB	(R8),R7
+	MOVL	#32,R6
+	BRB	FCVALUES.FORMAT_REAL.$20
+FCVALUES.FORMAT_REAL.$21:
+	CMPB	-1(R7)[R6],#32
+	BNEQ	FCVALUES.FORMAT_REAL.$22
+	DECL	R6
+FCVALUES.FORMAT_REAL.$20:
+	TSTL	R6			; from line 761
+	BNEQ	FCVALUES.FORMAT_REAL.$21
+FCVALUES.FORMAT_REAL.$22:
+	ADDL3	R6,#1,R0
+	CVTLW	R0,FCVALUES.FORMAT_REAL.$T7
+	PUSHAQ	FCVALUES.FORMAT_REAL.$D4
+	PUSHAW	FCVALUES.FORMAT_REAL.$T7
+	CALLS	#2,G^LIB$SGET1_DD
+	MOVB	#45,@FCVALUES.FORMAT_REAL.$D4+4
+	MOVL	FCVALUES.FORMAT_REAL.$D4+4,R0
+	MOVC3	R6,(R8),1(R0)
+	ADDL3	R6,#1,R0
+	MOVL	FCVALUES.FORMAT_REAL.TEXT(AP),R1
+	MOVC5	R0,@FCVALUES.FORMAT_REAL.$D4+4,#^A/ /,#32,@4(R1)
+	PUSHAQ	FCVALUES.FORMAT_REAL.$D4
+	CALLS	#1,G^LIB$SFREE1_DD
+FCVALUES.FORMAT_REAL.$17:
+;  762    end function format_real
+	RET
+
+; Storage map for FCVALUES.DECIMAL_DIGITS, a subroutine
+;   A     REAL*8, INTENT(IN)         argument 1  @FCVALUES.DECIMAL_DIGITS.A(AP)
+;   N     INTEGER, INTENT(IN)        argument 2  @FCVALUES.DECIMAL_DIGITS.N(AP)
+;   D     CHARACTER*15, INTENT(OUT)  argument 3  @FCVALUES.DECIMAL_DIGITS.D(AP)
+;   EX    INTEGER, INTENT(OUT)       argument 4  @FCVALUES.DECIMAL_DIGITS.EX(AP)
+;   BUF   CHARACTER*40               $LOCAL+0    FCVALUES.DECIMAL_DIGITS.BUF
+;   FORM  CHARACTER*20               $LOCAL+40   FCVALUES.DECIMAL_DIGITS.FORM
+;   AT    INTEGER                    $LOCAL+60   FCVALUES.DECIMAL_DIGITS.AT
+;
+FCVALUES.DECIMAL_DIGITS.A = 4		; A is argument 1
+FCVALUES.DECIMAL_DIGITS.N = 8		; N is argument 2
+FCVALUES.DECIMAL_DIGITS.D = 12		; D is argument 3
+FCVALUES.DECIMAL_DIGITS.EX = 16		; EX is argument 4
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCVALUES.DECIMAL_DIGITS.BUF:
+	.BLKL	10			; BUF
+FCVALUES.DECIMAL_DIGITS.FORM:
+	.BLKL	5			; FORM
+FCVALUES.DECIMAL_DIGITS.AT:
+	.BLKL	1			; AT
+FCVALUES.DECIMAL_DIGITS.$T1:
+	.BLKL	1			; temporary
+FCVALUES.DECIMAL_DIGITS.$T2:
+	.BLKL	1			; temporary
+FCVALUES.DECIMAL_DIGITS.$D9:
+	.WORD	8			; length
+	.BYTE	DSC$K_DTYPE_G,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+FCVALUES.DECIMAL_DIGITS.$T3:
+	.BLKL	10			; characters, for one statement
+FCVALUES.DECIMAL_DIGITS.$T4:
+	.BLKB	41			; characters, for one statement
+	.BLKB	3
+FCVALUES.DECIMAL_DIGITS.$D11:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+FCVALUES.DECIMAL_DIGITS.$D13:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCVALUES.DECIMAL_DIGITS.$IO1:
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0018			; flags: run-time format F90
+	.LONG	0			; (not used yet)
+FCVALUES.DECIMAL_DIGITS.$D1:
+	.WORD	20			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCVALUES.DECIMAL_DIGITS.FORM
+FCVALUES.DECIMAL_DIGITS.$D2:
+	.WORD	17			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCVALUES.DECIMAL_DIGITS.$K1
+FCVALUES.DECIMAL_DIGITS.$D3:
+	.WORD	3			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCVALUES.DECIMAL_DIGITS.$K2
+FCVALUES.DECIMAL_DIGITS.$D4:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.ADDRESS FCVALUES.DECIMAL_DIGITS.$T1
+FCVALUES.DECIMAL_DIGITS.$D5:
+	.WORD	1			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCVALUES.DECIMAL_DIGITS.$K3
+FCVALUES.DECIMAL_DIGITS.$D6:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.ADDRESS FCVALUES.DECIMAL_DIGITS.$T2
+FCVALUES.DECIMAL_DIGITS.$D7:
+	.WORD	3			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCVALUES.DECIMAL_DIGITS.$K4
+FCVALUES.DECIMAL_DIGITS.$D8:
+	.WORD	40			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCVALUES.DECIMAL_DIGITS.BUF
+FCVALUES.DECIMAL_DIGITS.$D10:
+	.WORD	40			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCVALUES.DECIMAL_DIGITS.$T3
+FCVALUES.DECIMAL_DIGITS.$D12:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCVALUES.DECIMAL_DIGITS.$K6
+FCVALUES.DECIMAL_DIGITS.$K1:
+	.ASCII	/(A, I2, A, I2, A)/
+FCVALUES.DECIMAL_DIGITS.$K2:
+	.ASCII	/(ES/
+FCVALUES.DECIMAL_DIGITS.$K3:
+	.ASCII	/./
+FCVALUES.DECIMAL_DIGITS.$K4:
+	.ASCII	/E3)/
+FCVALUES.DECIMAL_DIGITS.$K5:
+	.ASCII	/E/
+FCVALUES.DECIMAL_DIGITS.$K6:
+	.ASCII	/(I4)/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  763
+;  764    ! DECIMAL_DIGITS writes A (positive) to N significant digits: D(1:N) the
+;  765    ! digits, without the point, and EX the power of ten of the first.
+;  766    !
+;  767    ! The number is written by Fortran's own conversion, to an internal file:
+;  768    ! a WRITE whose unit is a CHARACTER variable writes into the variable
+;  769    ! instead of to a device, and a READ from one reads it, so these are
+;  770    ! Fortran's way to turn numbers into text and back. The format is itself
+;  771    ! built at run time as text, (ESw.dE3): ES is scientific notation with one
+;  772    ! digit before the point, w the field's width, d the digits after the
+;  773    ! point, E3 a three-digit exponent. Fortran's conversion rounds the decimal
+;  774    ! digits correctly, so fcalc needn't; it only rearranges them. (Fortran 90
+;  775    ! has no I0, which would write a number in as few characters as it needs:
+;  776    ! I2 writes 1 as " 1", and a blank in a format is nothing.)
+;  777    subroutine decimal_digits(a, n, d, ex)
+	.ENTRY	FCVALUES.DECIMAL_DIGITS,^M<R2,R3,R4,R5>
+;  778      real(rk), intent(in) :: a
+;  779      integer, intent(in) :: n
+;  780      character(len=max_digits), intent(out) :: d
+;  781      integer, intent(out) :: ex
+;  782      character(len=40) :: buf
+;  783      character(len=20) :: form
+;  784      integer :: at
+;  785
+;  786      write (form, '(A, I2, A, I2, A)') '(ES', n + 10, '.', n - 1, 'E3)'
+	PUSHAQ	FCVALUES.DECIMAL_DIGITS.$D2
+	PUSHAQ	FCVALUES.DECIMAL_DIGITS.$D1
+	PUSHAB	FCVALUES.DECIMAL_DIGITS.$IO1
+	CALLS	#3,G^FTN$WRITE_IF
+	PUSHAQ	FCVALUES.DECIMAL_DIGITS.$D3
+	CALLS	#1,G^FTN$IO_ITEM
+	ADDL3	@FCVALUES.DECIMAL_DIGITS.N(AP),#10,FCVALUES.DECIMAL_DIGITS.$T1
+	PUSHAQ	FCVALUES.DECIMAL_DIGITS.$D4
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAQ	FCVALUES.DECIMAL_DIGITS.$D5
+	CALLS	#1,G^FTN$IO_ITEM
+	SUBL3	#1,@FCVALUES.DECIMAL_DIGITS.N(AP),FCVALUES.DECIMAL_DIGITS.$T2
+	PUSHAQ	FCVALUES.DECIMAL_DIGITS.$D6
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAQ	FCVALUES.DECIMAL_DIGITS.$D7
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;  787      write (buf, form) a
+	PUSHAQ	FCVALUES.DECIMAL_DIGITS.$D1
+	PUSHAQ	FCVALUES.DECIMAL_DIGITS.$D8
+	PUSHAB	FCVALUES.DECIMAL_DIGITS.$IO1
+	CALLS	#3,G^FTN$WRITE_IF
+	MOVAG	@FCVALUES.DECIMAL_DIGITS.A(AP),FCVALUES.DECIMAL_DIGITS.$D9+4
+	PUSHAQ	FCVALUES.DECIMAL_DIGITS.$D9
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;  788      buf = adjustl(buf)
+	PUSHAQ	FCVALUES.DECIMAL_DIGITS.$D8
+	PUSHAQ	FCVALUES.DECIMAL_DIGITS.$D10
+	CALLS	#2,G^FTN$ADJUSTL
+	MOVC3	#40,FCVALUES.DECIMAL_DIGITS.$T3,FCVALUES.DECIMAL_DIGITS.BUF
+;  789
+;  790      ! BUF is d.ddd...E+xxx (or d.E+xxx for one digit).
+;  791      d = buf(1:1) // buf(3:n + 1)
+	SUBL3	#1,@FCVALUES.DECIMAL_DIGITS.N(AP),FCVALUES.DECIMAL_DIGITS.$T2
+	BGEQ	FCVALUES.DECIMAL_DIGITS.$1
+	CLRL	FCVALUES.DECIMAL_DIGITS.$T2
+FCVALUES.DECIMAL_DIGITS.$1:
+	MOVB	FCVALUES.DECIMAL_DIGITS.BUF,FCVALUES.DECIMAL_DIGITS.$T4
+	MOVC3	FCVALUES.DECIMAL_DIGITS.$T2,FCVALUES.DECIMAL_DIGITS.BUF+2,FCVALUES.DECIMAL_DIGITS.$T4+1
+	ADDL3	FCVALUES.DECIMAL_DIGITS.$T2,#1,R0
+	MOVL	FCVALUES.DECIMAL_DIGITS.D(AP),R1
+	MOVC5	R0,FCVALUES.DECIMAL_DIGITS.$T4,#^A/ /,#15,@4(R1)
+;  792      at = index(buf, 'E')
+	MATCHC	#1,FCVALUES.DECIMAL_DIGITS.$K5,#40,FCVALUES.DECIMAL_DIGITS.BUF
+	BNEQ	FCVALUES.DECIMAL_DIGITS.$3
+	SUBL3	R2,#40,R0
+	BRB	FCVALUES.DECIMAL_DIGITS.$4
+FCVALUES.DECIMAL_DIGITS.$3:
+	CLRL	R0
+FCVALUES.DECIMAL_DIGITS.$4:
+	MOVL	R0,FCVALUES.DECIMAL_DIGITS.$T2
+	MOVL	FCVALUES.DECIMAL_DIGITS.$T2,FCVALUES.DECIMAL_DIGITS.AT
+;  793      read (buf(at + 1:at + 4), '(I4)') ex
+	MOVL	FCVALUES.DECIMAL_DIGITS.AT,R0
+	MOVAB	FCVALUES.DECIMAL_DIGITS.BUF[R0],FCVALUES.DECIMAL_DIGITS.$D11+4
+	PUSHAQ	FCVALUES.DECIMAL_DIGITS.$D12
+	PUSHAQ	FCVALUES.DECIMAL_DIGITS.$D11
+	PUSHAB	FCVALUES.DECIMAL_DIGITS.$IO1
+	CALLS	#3,G^FTN$READ_IF
+	MOVAL	@FCVALUES.DECIMAL_DIGITS.EX(AP),FCVALUES.DECIMAL_DIGITS.$D13+4
+	PUSHAQ	FCVALUES.DECIMAL_DIGITS.$D13
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;  794    end subroutine decimal_digits
+	RET
+
+; Storage map for FCVALUES.EXPONENT_TEXT, a CHARACTER*6 function
+;   TEXT  CHARACTER*6          hidden argument 1  @FCVALUES.EXPONENT_TEXT.TEXT(AP)
+;   EX    INTEGER, INTENT(IN)  argument 2         @FCVALUES.EXPONENT_TEXT.EX(AP)
+;   BUF   CHARACTER*4          $LOCAL+0           FCVALUES.EXPONENT_TEXT.BUF
+;
+FCVALUES.EXPONENT_TEXT.TEXT = 4		; TEXT's value goes through hidden argument 1
+FCVALUES.EXPONENT_TEXT.EX = 8		; EX is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCVALUES.EXPONENT_TEXT.BUF:
+	.BLKL	1			; BUF
+FCVALUES.EXPONENT_TEXT.$T1:
+	.BLKL	1			; temporary
+FCVALUES.EXPONENT_TEXT.$T2:
+	.BLKL	1			; characters, for one statement
+FCVALUES.EXPONENT_TEXT.$T3:
+	.BLKB	6			; characters, for one statement
+	.BLKB	2
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCVALUES.EXPONENT_TEXT.$IO1:
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0018			; flags: run-time format F90
+	.LONG	0			; (not used yet)
+FCVALUES.EXPONENT_TEXT.$D1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCVALUES.EXPONENT_TEXT.BUF
+FCVALUES.EXPONENT_TEXT.$D2:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCVALUES.EXPONENT_TEXT.$K1
+FCVALUES.EXPONENT_TEXT.$D3:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.ADDRESS FCVALUES.EXPONENT_TEXT.$T1
+FCVALUES.EXPONENT_TEXT.$D4:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCVALUES.EXPONENT_TEXT.$T2
+FCVALUES.EXPONENT_TEXT.$K1:
+	.ASCII	/(I4)/
+FCVALUES.EXPONENT_TEXT.$K2:
+	.ASCII	/e-/
+FCVALUES.EXPONENT_TEXT.$K3:
+	.ASCII	/e+/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  795
+;  796    ! EXPONENT_TEXT is e+7 or e-12: as few digits as the exponent needs.
+;  797    function exponent_text(ex) result(text)
+	.ENTRY	FCVALUES.EXPONENT_TEXT,^M<R2,R3,R4,R5>
+;  798      integer, intent(in) :: ex
+;  799      character(len=6) :: text
+;  800      character(len=4) :: buf
+;  801
+;  802      write (buf, '(I4)') abs(ex)
+	PUSHAQ	FCVALUES.EXPONENT_TEXT.$D2
+	PUSHAQ	FCVALUES.EXPONENT_TEXT.$D1
+	PUSHAB	FCVALUES.EXPONENT_TEXT.$IO1
+	CALLS	#3,G^FTN$WRITE_IF
+	MOVL	@FCVALUES.EXPONENT_TEXT.EX(AP),FCVALUES.EXPONENT_TEXT.$T1
+	BGEQ	FCVALUES.EXPONENT_TEXT.$1
+	MNEGL	FCVALUES.EXPONENT_TEXT.$T1,FCVALUES.EXPONENT_TEXT.$T1
+FCVALUES.EXPONENT_TEXT.$1:
+	PUSHAQ	FCVALUES.EXPONENT_TEXT.$D3
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;  803      if (ex < 0) then
+	TSTL	@FCVALUES.EXPONENT_TEXT.EX(AP)
+	BGEQ	FCVALUES.EXPONENT_TEXT.$3
+;  804        text = 'e-' // adjustl(buf)
+	PUSHAQ	FCVALUES.EXPONENT_TEXT.$D1
+	PUSHAQ	FCVALUES.EXPONENT_TEXT.$D4
+	CALLS	#2,G^FTN$ADJUSTL
+	MOVC3	#2,FCVALUES.EXPONENT_TEXT.$K2,FCVALUES.EXPONENT_TEXT.$T3
+	MOVC3	#4,FCVALUES.EXPONENT_TEXT.$T2,FCVALUES.EXPONENT_TEXT.$T3+2
+	MOVL	FCVALUES.EXPONENT_TEXT.TEXT(AP),R0
+	MOVC3	#6,FCVALUES.EXPONENT_TEXT.$T3,@4(R0)
+;  805      else
+	RET
+FCVALUES.EXPONENT_TEXT.$3:
+;  806        text = 'e+' // adjustl(buf)
+	PUSHAQ	FCVALUES.EXPONENT_TEXT.$D1
+	PUSHAQ	FCVALUES.EXPONENT_TEXT.$D4
+	CALLS	#2,G^FTN$ADJUSTL
+	MOVC3	#2,FCVALUES.EXPONENT_TEXT.$K3,FCVALUES.EXPONENT_TEXT.$T3
+	MOVC3	#4,FCVALUES.EXPONENT_TEXT.$T2,FCVALUES.EXPONENT_TEXT.$T3+2
+	MOVL	FCVALUES.EXPONENT_TEXT.TEXT(AP),R0
+	MOVC3	#6,FCVALUES.EXPONENT_TEXT.$T3,@4(R0)
+;  807      end if
+;  808    end function exponent_text
+	RET
+
+; Storage map for FCVALUES.AUTO_TEXT, a CHARACTER*32 function
+;   TEXT  CHARACTER*32        hidden argument 1  @FCVALUES.AUTO_TEXT.TEXT(AP)
+;   A     REAL*8, INTENT(IN)  argument 2         @FCVALUES.AUTO_TEXT.A(AP)
+;   D     CHARACTER*15        $LOCAL+0           FCVALUES.AUTO_TEXT.D
+;   K     INTEGER             $LOCAL+16          FCVALUES.AUTO_TEXT.K
+;   EX    INTEGER             $LOCAL+20          FCVALUES.AUTO_TEXT.EX
+;   R7 is $T2: temporary
+;   R6 is $T6: temporary
+;   R6 is $R1: K, during a loop
+;
+FCVALUES.AUTO_TEXT.TEXT = 4		; TEXT's value goes through hidden argument 1
+FCVALUES.AUTO_TEXT.A = 8		; A is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCVALUES.AUTO_TEXT.D:
+	.BLKB	15			; D
+	.BLKB	1
+FCVALUES.AUTO_TEXT.K:
+	.BLKL	1			; K
+FCVALUES.AUTO_TEXT.EX:
+	.BLKL	1			; EX
+FCVALUES.AUTO_TEXT.$D2:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_D
+	.LONG	0			; set when the descriptor is used
+FCVALUES.AUTO_TEXT.$T1:
+	.BLKL	1			; temporary
+FCVALUES.AUTO_TEXT.$D4:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_D
+	.LONG	0			; set when the descriptor is used
+FCVALUES.AUTO_TEXT.$T3:
+	.BLKB	2			; temporary
+	.BLKB	2
+FCVALUES.AUTO_TEXT.$T4:
+	.BLKB	31			; characters, for one statement
+	.BLKB	1
+FCVALUES.AUTO_TEXT.$T5:
+	.BLKB	17			; characters, for one statement
+	.BLKB	3
+FCVALUES.AUTO_TEXT.$T7:
+	.BLKB	6			; characters, for one statement
+	.BLKB	2
+FCVALUES.AUTO_TEXT.$U1:
+	.BLKL	1			; temporary
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCVALUES.AUTO_TEXT.$D1:
+	.WORD	15			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCVALUES.AUTO_TEXT.D
+FCVALUES.AUTO_TEXT.$D3:
+	.WORD	1			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCVALUES.AUTO_TEXT.$K1
+FCVALUES.AUTO_TEXT.$D5:
+	.WORD	6			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCVALUES.AUTO_TEXT.$T7
+FCVALUES.AUTO_TEXT.$K1:
+	.ASCII	/0/
+FCVALUES.AUTO_TEXT.$K2:
+	.ASCII	/0./
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  809
+;  810    ! AUTO_TEXT shows A (not negative) to DIGITS significant digits, with no
+;  811    ! trailing zeros: in fixed notation from 1E-5 up to where the digits run
+;  812    ! out, in scientific notation outside that, as 1.5e-7 or 6.02214076e+23.
+;  813    function auto_text(a) result(text)
+	.ENTRY	FCVALUES.AUTO_TEXT,^M<R2,R3,R4,R5,R6,R7>
+;  814      real(rk), intent(in) :: a
+;  815      character(len=32) :: text
+;  816      character(len=max_digits) :: d
+;  817      integer :: k, ex
+;  818
+;  819      if (a == 0) then
+	TSTG	@FCVALUES.AUTO_TEXT.A(AP)
+	BNEQ	FCVALUES.AUTO_TEXT.$1
+;  820        text = '0'
+	MOVL	FCVALUES.AUTO_TEXT.TEXT(AP),R0
+	MOVC5	#1,FCVALUES.AUTO_TEXT.$K1,#^A/ /,#32,@4(R0)
+;  821        return
+	RET
+FCVALUES.AUTO_TEXT.$1:
+;  822      end if
+;  823
+;  824      call decimal_digits(a, digits, d, ex)
+	PUSHAL	FCVALUES.AUTO_TEXT.EX
+	PUSHAQ	FCVALUES.AUTO_TEXT.$D1
+	PUSHAL	FCVALUES.DIGITS
+	PUSHAG	@FCVALUES.AUTO_TEXT.A(AP)
+	CALLS	#4,G^FCVALUES.DECIMAL_DIGITS
+;  825
+;  826      ! K is the last digit that isn't a zero.
+;  827      k = digits
+	MOVL	FCVALUES.DIGITS,FCVALUES.AUTO_TEXT.K
+;  828      do while (k > 1)
+	MOVL	FCVALUES.AUTO_TEXT.K,R6
+	BRB	FCVALUES.AUTO_TEXT.$3
+FCVALUES.AUTO_TEXT.$4:			; DO (line 828)'s body
+;  829        if (d(k:k) /= '0') exit
+	CMPB	FCVALUES.AUTO_TEXT.D-1[R6],#48
+	BEQL	FCVALUES.AUTO_TEXT.$6
+	BRW	FCVALUES.AUTO_TEXT.$5
+FCVALUES.AUTO_TEXT.$6:
+;  830        k = k - 1
+	DECL	R6
+;  831      end do
+FCVALUES.AUTO_TEXT.$3:			; DO (line 828)'s test
+	CMPL	R6,#1			; from line 828
+	BGTR	FCVALUES.AUTO_TEXT.$4
+	MOVL	R6,FCVALUES.AUTO_TEXT.K
+FCVALUES.AUTO_TEXT.$8:
+;  832
+;  833      if (ex >= -5 .and. ex < digits) then
+	CMPL	FCVALUES.AUTO_TEXT.EX,#-5
+	BGEQ	FCVALUES.AUTO_TEXT.$10
+	BRW	FCVALUES.AUTO_TEXT.$9
+FCVALUES.AUTO_TEXT.$10:
+	CMPL	FCVALUES.AUTO_TEXT.EX,FCVALUES.DIGITS
+	BLSS	FCVALUES.AUTO_TEXT.$11
+	BRW	FCVALUES.AUTO_TEXT.$9
+FCVALUES.AUTO_TEXT.$11:
+;  834        if (ex < 0) then
+	TSTL	FCVALUES.AUTO_TEXT.EX
+	BLSS	FCVALUES.AUTO_TEXT.$13
+	BRW	FCVALUES.AUTO_TEXT.$12
+FCVALUES.AUTO_TEXT.$13:
+;  835          text = '0.' // repeat('0', -ex - 1) // d(1:k)
+	MNEGL	FCVALUES.AUTO_TEXT.EX,R0
+	SUBL3	#1,R0,FCVALUES.AUTO_TEXT.$T1
+	PUSHAL	FCVALUES.AUTO_TEXT.$T1
+	PUSHAQ	FCVALUES.AUTO_TEXT.$D3
+	PUSHAQ	FCVALUES.AUTO_TEXT.$D2
+	CALLS	#3,G^FTN$REPEAT
+	MOVL	FCVALUES.AUTO_TEXT.K,R7
+	BGEQ	FCVALUES.AUTO_TEXT.$14
+	CLRL	R7
+FCVALUES.AUTO_TEXT.$14:
+	MOVZWL	FCVALUES.AUTO_TEXT.$D2,R0
+	ADDL2	R7,R0
+	ADDL2	#2,R0
+	CVTLW	R0,FCVALUES.AUTO_TEXT.$T3
+	PUSHAQ	FCVALUES.AUTO_TEXT.$D4
+	PUSHAW	FCVALUES.AUTO_TEXT.$T3
+	CALLS	#2,G^LIB$SGET1_DD
+	MOVC3	#2,FCVALUES.AUTO_TEXT.$K2,@FCVALUES.AUTO_TEXT.$D4+4
+	MOVZWL	FCVALUES.AUTO_TEXT.$D2,FCVALUES.AUTO_TEXT.$U1
+	MOVL	FCVALUES.AUTO_TEXT.$D4+4,R0
+	MOVC3	FCVALUES.AUTO_TEXT.$U1,@FCVALUES.AUTO_TEXT.$D2+4,2(R0)
+	ADDL3	FCVALUES.AUTO_TEXT.$U1,#2,R0
+	MOVC3	R7,FCVALUES.AUTO_TEXT.D,@FCVALUES.AUTO_TEXT.$D4+4[R0]
+	ADDL3	FCVALUES.AUTO_TEXT.$U1,R7,R0
+	ADDL2	#2,R0
+	MOVL	FCVALUES.AUTO_TEXT.TEXT(AP),R1
+	MOVC5	R0,@FCVALUES.AUTO_TEXT.$D4+4,#^A/ /,#32,@4(R1)
+	PUSHAQ	FCVALUES.AUTO_TEXT.$D2
+	CALLS	#1,G^LIB$SFREE1_DD
+	PUSHAQ	FCVALUES.AUTO_TEXT.$D4
+	CALLS	#1,G^LIB$SFREE1_DD
+;  836        else if (k <= ex + 1) then
+	RET
+FCVALUES.AUTO_TEXT.$12:
+	ADDL3	FCVALUES.AUTO_TEXT.EX,#1,R0
+	CMPL	FCVALUES.AUTO_TEXT.K,R0
+	BLEQ	FCVALUES.AUTO_TEXT.$18
+	BRW	FCVALUES.AUTO_TEXT.$17
+FCVALUES.AUTO_TEXT.$18:
+;  837          text = d(1:k) // repeat('0', ex + 1 - k)
+	MOVL	FCVALUES.AUTO_TEXT.K,R7
+	BGEQ	FCVALUES.AUTO_TEXT.$19
+	CLRL	R7
+FCVALUES.AUTO_TEXT.$19:
+	SUBL3	FCVALUES.AUTO_TEXT.K,FCVALUES.AUTO_TEXT.EX,R0
+	ADDL3	R0,#1,FCVALUES.AUTO_TEXT.$T1
+	PUSHAL	FCVALUES.AUTO_TEXT.$T1
+	PUSHAQ	FCVALUES.AUTO_TEXT.$D3
+	PUSHAQ	FCVALUES.AUTO_TEXT.$D4
+	CALLS	#3,G^FTN$REPEAT
+	MOVZWL	FCVALUES.AUTO_TEXT.$D4,R0
+	ADDL2	R7,R0
+	CVTLW	R0,FCVALUES.AUTO_TEXT.$T3
+	PUSHAQ	FCVALUES.AUTO_TEXT.$D2
+	PUSHAW	FCVALUES.AUTO_TEXT.$T3
+	CALLS	#2,G^LIB$SGET1_DD
+	MOVC3	R7,FCVALUES.AUTO_TEXT.D,@FCVALUES.AUTO_TEXT.$D2+4
+	MOVZWL	FCVALUES.AUTO_TEXT.$D4,FCVALUES.AUTO_TEXT.$U1
+	MOVC3	FCVALUES.AUTO_TEXT.$U1,@FCVALUES.AUTO_TEXT.$D4+4,@FCVALUES.AUTO_TEXT.$D2+4[R7]
+	ADDL3	R7,FCVALUES.AUTO_TEXT.$U1,R0
+	MOVL	FCVALUES.AUTO_TEXT.TEXT(AP),R1
+	MOVC5	R0,@FCVALUES.AUTO_TEXT.$D2+4,#^A/ /,#32,@4(R1)
+	PUSHAQ	FCVALUES.AUTO_TEXT.$D4
+	CALLS	#1,G^LIB$SFREE1_DD
+	PUSHAQ	FCVALUES.AUTO_TEXT.$D2
+	CALLS	#1,G^LIB$SFREE1_DD
+;  838        else
+	RET
+FCVALUES.AUTO_TEXT.$17:
+;  839          text = d(1:ex + 1) // '.' // d(ex + 2:k)
+	ADDL3	FCVALUES.AUTO_TEXT.EX,#1,FCVALUES.AUTO_TEXT.$T1
+	BGEQ	FCVALUES.AUTO_TEXT.$21
+	CLRL	FCVALUES.AUTO_TEXT.$T1
+FCVALUES.AUTO_TEXT.$21:
+	SUBL3	FCVALUES.AUTO_TEXT.EX,FCVALUES.AUTO_TEXT.K,R0
+	SUBL3	#1,R0,R7
+	BGEQ	FCVALUES.AUTO_TEXT.$23
+	CLRL	R7
+FCVALUES.AUTO_TEXT.$23:
+	MOVC3	FCVALUES.AUTO_TEXT.$T1,FCVALUES.AUTO_TEXT.D,FCVALUES.AUTO_TEXT.$T4
+	MOVL	FCVALUES.AUTO_TEXT.$T1,R0
+	MOVB	#46,FCVALUES.AUTO_TEXT.$T4[R0]
+	MOVL	FCVALUES.AUTO_TEXT.EX,R0
+	MOVL	FCVALUES.AUTO_TEXT.$T1,R1
+	MOVC3	R7,FCVALUES.AUTO_TEXT.D+1[R0],FCVALUES.AUTO_TEXT.$T4+1[R1]
+	ADDL3	FCVALUES.AUTO_TEXT.$T1,R7,R0
+	INCL	R0
+	MOVL	FCVALUES.AUTO_TEXT.TEXT(AP),R1
+	MOVC5	R0,FCVALUES.AUTO_TEXT.$T4,#^A/ /,#32,@4(R1)
+;  840        end if
+;  841      else
+	RET
+FCVALUES.AUTO_TEXT.$9:
+;  842        text = d(1:1)
+	MOVL	FCVALUES.AUTO_TEXT.TEXT(AP),R0
+	MOVC5	#1,FCVALUES.AUTO_TEXT.D,#^A/ /,#32,@4(R0)
+;  843        if (k > 1) text = d(1:1) // '.' // d(2:k)
+	CMPL	FCVALUES.AUTO_TEXT.K,#1
+	BLEQ	FCVALUES.AUTO_TEXT.$26
+	SUBL3	#1,FCVALUES.AUTO_TEXT.K,R7
+	BGEQ	FCVALUES.AUTO_TEXT.$28
+	CLRL	R7
+FCVALUES.AUTO_TEXT.$28:
+	MOVB	FCVALUES.AUTO_TEXT.D,FCVALUES.AUTO_TEXT.$T5
+	MOVB	#46,FCVALUES.AUTO_TEXT.$T5+1
+	MOVC3	R7,FCVALUES.AUTO_TEXT.D+1,FCVALUES.AUTO_TEXT.$T5+2
+	ADDL3	R7,#2,R0
+	MOVL	FCVALUES.AUTO_TEXT.TEXT(AP),R1
+	MOVC5	R0,FCVALUES.AUTO_TEXT.$T5,#^A/ /,#32,@4(R1)
+FCVALUES.AUTO_TEXT.$26:
+;  844        text = trim(text) // exponent_text(ex)
+	MOVL	FCVALUES.AUTO_TEXT.TEXT(AP),R0
+	MOVAB	@4(R0),R7
+	MOVAB	(R7),FCVALUES.AUTO_TEXT.$T1
+	MOVL	#32,R6
+	BRB	FCVALUES.AUTO_TEXT.$30
+FCVALUES.AUTO_TEXT.$31:
+	SUBL3	#1,R6,R0
+	CMPB	@FCVALUES.AUTO_TEXT.$T1[R0],#32
+	BNEQ	FCVALUES.AUTO_TEXT.$32
+	DECL	R6
+FCVALUES.AUTO_TEXT.$30:
+	TSTL	R6			; from line 844
+	BNEQ	FCVALUES.AUTO_TEXT.$31
+FCVALUES.AUTO_TEXT.$32:
+	PUSHAL	FCVALUES.AUTO_TEXT.EX
+	PUSHAQ	FCVALUES.AUTO_TEXT.$D5
+	CALLS	#2,G^FCVALUES.EXPONENT_TEXT
+	ADDL3	R6,#6,R0
+	CVTLW	R0,FCVALUES.AUTO_TEXT.$T3
+	PUSHAQ	FCVALUES.AUTO_TEXT.$D2
+	PUSHAW	FCVALUES.AUTO_TEXT.$T3
+	CALLS	#2,G^LIB$SGET1_DD
+	MOVC3	R6,(R7),@FCVALUES.AUTO_TEXT.$D2+4
+	MOVC3	#6,FCVALUES.AUTO_TEXT.$T7,@FCVALUES.AUTO_TEXT.$D2+4[R6]
+	ADDL3	R6,#6,R0
+	MOVL	FCVALUES.AUTO_TEXT.TEXT(AP),R1
+	MOVC5	R0,@FCVALUES.AUTO_TEXT.$D2+4,#^A/ /,#32,@4(R1)
+	PUSHAQ	FCVALUES.AUTO_TEXT.$D2
+	CALLS	#1,G^LIB$SFREE1_DD
+;  845      end if
+;  846    end function auto_text
+	RET
+FCVALUES.AUTO_TEXT.$5:			; leaving the loop
+	MOVL	R6,FCVALUES.AUTO_TEXT.K
+	BRW	FCVALUES.AUTO_TEXT.$8
+
+; Storage map for FCVALUES.SCIENTIFIC_TEXT, a CHARACTER*32 function
+;   TEXT  CHARACTER*32         hidden argument 1  @FCVALUES.SCIENTIFIC_TEXT.TEXT(AP)
+;   A     REAL*8, INTENT(IN)   argument 2         @FCVALUES.SCIENTIFIC_TEXT.A(AP)
+;   N     INTEGER, INTENT(IN)  argument 3         @FCVALUES.SCIENTIFIC_TEXT.N(AP)
+;   D     CHARACTER*15         $LOCAL+0           FCVALUES.SCIENTIFIC_TEXT.D
+;   EX    INTEGER              $LOCAL+16          FCVALUES.SCIENTIFIC_TEXT.EX
+;   R7 is $T3: temporary
+;   R6 is $T4: temporary
+;
+FCVALUES.SCIENTIFIC_TEXT.TEXT = 4	; TEXT's value goes through hidden argument 1
+FCVALUES.SCIENTIFIC_TEXT.A = 8		; A is argument 2
+FCVALUES.SCIENTIFIC_TEXT.N = 12		; N is argument 3
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCVALUES.SCIENTIFIC_TEXT.D:
+	.BLKB	15			; D
+	.BLKB	1
+FCVALUES.SCIENTIFIC_TEXT.EX:
+	.BLKL	1			; EX
+FCVALUES.SCIENTIFIC_TEXT.$D1:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_D
+	.LONG	0			; set when the descriptor is used
+FCVALUES.SCIENTIFIC_TEXT.$T1:
+	.BLKL	1			; temporary
+FCVALUES.SCIENTIFIC_TEXT.$T2:
+	.BLKB	17			; characters, for one statement
+	.BLKB	3
+FCVALUES.SCIENTIFIC_TEXT.$T5:
+	.BLKB	6			; characters, for one statement
+	.BLKB	2
+FCVALUES.SCIENTIFIC_TEXT.$T6:
+	.BLKB	2			; temporary
+	.BLKB	2
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCVALUES.SCIENTIFIC_TEXT.$D2:
+	.WORD	1			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCVALUES.SCIENTIFIC_TEXT.$K1
+FCVALUES.SCIENTIFIC_TEXT.$D3:
+	.WORD	15			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCVALUES.SCIENTIFIC_TEXT.D
+FCVALUES.SCIENTIFIC_TEXT.$D4:
+	.WORD	6			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCVALUES.SCIENTIFIC_TEXT.$T5
+FCVALUES.SCIENTIFIC_TEXT.$K1:
+	.ASCII	/0/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  847
+;  848    ! SCIENTIFIC_TEXT shows A (not negative) to N significant digits, every
+;  849    ! one shown, one before the point: 3.14159265359e+0. Zero is
+;  850    ! 0.00000000000e+0, the same width as the rest.
+;  851    function scientific_text(a, n) result(text)
+	.ENTRY	FCVALUES.SCIENTIFIC_TEXT,^M<R2,R3,R4,R5,R6,R7>
+;  852      real(rk), intent(in) :: a
+;  853      integer, intent(in) :: n
+;  854      character(len=32) :: text
+;  855      character(len=max_digits) :: d
+;  856      integer :: ex
+;  857
+;  858      if (a == 0) then
+	TSTG	@FCVALUES.SCIENTIFIC_TEXT.A(AP)
+	BNEQ	FCVALUES.SCIENTIFIC_TEXT.$1
+;  859        d = repeat('0', n)
+	MOVL	@FCVALUES.SCIENTIFIC_TEXT.N(AP),FCVALUES.SCIENTIFIC_TEXT.$T1
+	PUSHAL	FCVALUES.SCIENTIFIC_TEXT.$T1
+	PUSHAQ	FCVALUES.SCIENTIFIC_TEXT.$D2
+	PUSHAQ	FCVALUES.SCIENTIFIC_TEXT.$D1
+	CALLS	#3,G^FTN$REPEAT
+	MOVZWL	FCVALUES.SCIENTIFIC_TEXT.$D1,R0
+	MOVC5	R0,@FCVALUES.SCIENTIFIC_TEXT.$D1+4,#^A/ /,#15,FCVALUES.SCIENTIFIC_TEXT.D
+	PUSHAQ	FCVALUES.SCIENTIFIC_TEXT.$D1
+	CALLS	#1,G^LIB$SFREE1_DD
+;  860        ex = 0
+	CLRL	FCVALUES.SCIENTIFIC_TEXT.EX
+;  861      else
+	BRB	FCVALUES.SCIENTIFIC_TEXT.$3
+FCVALUES.SCIENTIFIC_TEXT.$1:
+;  862        call decimal_digits(a, n, d, ex)
+	PUSHAL	FCVALUES.SCIENTIFIC_TEXT.EX
+	PUSHAQ	FCVALUES.SCIENTIFIC_TEXT.$D3
+	PUSHAL	@FCVALUES.SCIENTIFIC_TEXT.N(AP)
+	PUSHAG	@FCVALUES.SCIENTIFIC_TEXT.A(AP)
+	CALLS	#4,G^FCVALUES.DECIMAL_DIGITS
+;  863      end if
+FCVALUES.SCIENTIFIC_TEXT.$3:
+;  864      text = d(1:1)
+	MOVL	FCVALUES.SCIENTIFIC_TEXT.TEXT(AP),R0
+	MOVC5	#1,FCVALUES.SCIENTIFIC_TEXT.D,#^A/ /,#32,@4(R0)
+;  865      if (n > 1) text = d(1:1) // '.' // d(2:n)
+	CMPL	@FCVALUES.SCIENTIFIC_TEXT.N(AP),#1
+	BLEQ	FCVALUES.SCIENTIFIC_TEXT.$4
+	SUBL3	#1,@FCVALUES.SCIENTIFIC_TEXT.N(AP),FCVALUES.SCIENTIFIC_TEXT.$T1
+	BGEQ	FCVALUES.SCIENTIFIC_TEXT.$6
+	CLRL	FCVALUES.SCIENTIFIC_TEXT.$T1
+FCVALUES.SCIENTIFIC_TEXT.$6:
+	MOVB	FCVALUES.SCIENTIFIC_TEXT.D,FCVALUES.SCIENTIFIC_TEXT.$T2
+	MOVB	#46,FCVALUES.SCIENTIFIC_TEXT.$T2+1
+	MOVC3	FCVALUES.SCIENTIFIC_TEXT.$T1,FCVALUES.SCIENTIFIC_TEXT.D+1,FCVALUES.SCIENTIFIC_TEXT.$T2+2
+	ADDL3	FCVALUES.SCIENTIFIC_TEXT.$T1,#2,R0
+	MOVL	FCVALUES.SCIENTIFIC_TEXT.TEXT(AP),R1
+	MOVC5	R0,FCVALUES.SCIENTIFIC_TEXT.$T2,#^A/ /,#32,@4(R1)
+FCVALUES.SCIENTIFIC_TEXT.$4:
+;  866      text = trim(text) // exponent_text(ex)
+	MOVL	FCVALUES.SCIENTIFIC_TEXT.TEXT(AP),R0
+	MOVAB	@4(R0),FCVALUES.SCIENTIFIC_TEXT.$T1
+	MOVAB	@FCVALUES.SCIENTIFIC_TEXT.$T1,R7
+	MOVL	#32,R6
+	BRB	FCVALUES.SCIENTIFIC_TEXT.$8
+FCVALUES.SCIENTIFIC_TEXT.$9:
+	CMPB	-1(R7)[R6],#32
+	BNEQ	FCVALUES.SCIENTIFIC_TEXT.$10
+	DECL	R6
+FCVALUES.SCIENTIFIC_TEXT.$8:
+	TSTL	R6			; from line 866
+	BNEQ	FCVALUES.SCIENTIFIC_TEXT.$9
+FCVALUES.SCIENTIFIC_TEXT.$10:
+	PUSHAL	FCVALUES.SCIENTIFIC_TEXT.EX
+	PUSHAQ	FCVALUES.SCIENTIFIC_TEXT.$D4
+	CALLS	#2,G^FCVALUES.EXPONENT_TEXT
+	ADDL3	R6,#6,R0
+	CVTLW	R0,FCVALUES.SCIENTIFIC_TEXT.$T6
+	PUSHAQ	FCVALUES.SCIENTIFIC_TEXT.$D1
+	PUSHAW	FCVALUES.SCIENTIFIC_TEXT.$T6
+	CALLS	#2,G^LIB$SGET1_DD
+	MOVC3	R6,@FCVALUES.SCIENTIFIC_TEXT.$T1,@FCVALUES.SCIENTIFIC_TEXT.$D1+4
+	MOVC3	#6,FCVALUES.SCIENTIFIC_TEXT.$T5,@FCVALUES.SCIENTIFIC_TEXT.$D1+4[R6]
+	ADDL3	R6,#6,R0
+	MOVL	FCVALUES.SCIENTIFIC_TEXT.TEXT(AP),R1
+	MOVC5	R0,@FCVALUES.SCIENTIFIC_TEXT.$D1+4,#^A/ /,#32,@4(R1)
+	PUSHAQ	FCVALUES.SCIENTIFIC_TEXT.$D1
+	CALLS	#1,G^LIB$SFREE1_DD
+;  867    end function scientific_text
+	RET
+
+; Storage map for FCVALUES.ENGINEERING_TEXT, a CHARACTER*32 function
+;   TEXT   CHARACTER*32        hidden argument 1  @FCVALUES.ENGINEERING_TEXT.TEXT(AP)
+;   A      REAL*8, INTENT(IN)  argument 2         @FCVALUES.ENGINEERING_TEXT.A(AP)
+;   D      CHARACTER*15        $LOCAL+0           FCVALUES.ENGINEERING_TEXT.D
+;   EX     INTEGER             $LOCAL+16          FCVALUES.ENGINEERING_TEXT.EX
+;   SHIFT  INTEGER             $LOCAL+20          FCVALUES.ENGINEERING_TEXT.SHIFT
+;   LEAD   INTEGER             $LOCAL+24          FCVALUES.ENGINEERING_TEXT.LEAD
+;   R6 is $T5: temporary
+;
+FCVALUES.ENGINEERING_TEXT.TEXT = 4	; TEXT's value goes through hidden argument 1
+FCVALUES.ENGINEERING_TEXT.A = 8		; A is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCVALUES.ENGINEERING_TEXT.D:
+	.BLKB	15			; D
+	.BLKB	1
+FCVALUES.ENGINEERING_TEXT.EX:
+	.BLKL	1			; EX
+FCVALUES.ENGINEERING_TEXT.SHIFT:
+	.BLKL	1			; SHIFT
+FCVALUES.ENGINEERING_TEXT.LEAD:
+	.BLKL	1			; LEAD
+FCVALUES.ENGINEERING_TEXT.$D1:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_D
+	.LONG	0			; set when the descriptor is used
+FCVALUES.ENGINEERING_TEXT.$T1:
+	.BLKL	1			; temporary
+FCVALUES.ENGINEERING_TEXT.$T2:
+	.BLKL	1			; temporary
+FCVALUES.ENGINEERING_TEXT.$D4:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_D
+	.LONG	0			; set when the descriptor is used
+FCVALUES.ENGINEERING_TEXT.$T3:
+	.BLKB	2			; temporary
+	.BLKB	2
+FCVALUES.ENGINEERING_TEXT.$T4:
+	.BLKB	31			; characters, for one statement
+	.BLKB	1
+FCVALUES.ENGINEERING_TEXT.$T6:
+	.BLKB	6			; characters, for one statement
+	.BLKB	2
+FCVALUES.ENGINEERING_TEXT.$T7:
+	.BLKL	1			; temporary
+FCVALUES.ENGINEERING_TEXT.$U1:
+	.BLKL	1			; temporary
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCVALUES.ENGINEERING_TEXT.$D2:
+	.WORD	1			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCVALUES.ENGINEERING_TEXT.$K1
+FCVALUES.ENGINEERING_TEXT.$D3:
+	.WORD	15			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCVALUES.ENGINEERING_TEXT.D
+FCVALUES.ENGINEERING_TEXT.$D5:
+	.WORD	6			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCVALUES.ENGINEERING_TEXT.$T6
+FCVALUES.ENGINEERING_TEXT.$K1:
+	.ASCII	/0/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  868
+;  869    ! ENGINEERING_TEXT is SCIENTIFIC_TEXT with the exponent a multiple of 3
+;  870    ! (the powers that have names: kilo, mega, milli, micro), so the point
+;  871    ! moves right by MODULO(EX, 3), leaving one to three digits before it.
+;  872    ! MODULO, unlike MOD, takes the sign of the divisor: MODULO(-7, 3) is 2,
+;  873    ! so 1.5e-7 is 150e-9. With fewer digits than go before the point, zeros
+;  874    ! fill the places: 1.5e+5 to two digits is 150e+3.
+;  875    function engineering_text(a) result(text)
+	.ENTRY	FCVALUES.ENGINEERING_TEXT,^M<R2,R3,R4,R5,R6>
+;  876      real(rk), intent(in) :: a
+;  877      character(len=32) :: text
+;  878      character(len=max_digits) :: d
+;  879      integer :: ex, shift, lead
+;  880
+;  881      if (a == 0) then
+	TSTG	@FCVALUES.ENGINEERING_TEXT.A(AP)
+	BNEQ	FCVALUES.ENGINEERING_TEXT.$1
+;  882        d = repeat('0', digits)
+	MOVL	FCVALUES.DIGITS,FCVALUES.ENGINEERING_TEXT.$T1
+	PUSHAL	FCVALUES.ENGINEERING_TEXT.$T1
+	PUSHAQ	FCVALUES.ENGINEERING_TEXT.$D2
+	PUSHAQ	FCVALUES.ENGINEERING_TEXT.$D1
+	CALLS	#3,G^FTN$REPEAT
+	MOVZWL	FCVALUES.ENGINEERING_TEXT.$D1,R0
+	MOVC5	R0,@FCVALUES.ENGINEERING_TEXT.$D1+4,#^A/ /,#15,FCVALUES.ENGINEERING_TEXT.D
+	PUSHAQ	FCVALUES.ENGINEERING_TEXT.$D1
+	CALLS	#1,G^LIB$SFREE1_DD
+;  883        ex = 0
+	CLRL	FCVALUES.ENGINEERING_TEXT.EX
+;  884      else
+	BRB	FCVALUES.ENGINEERING_TEXT.$3
+FCVALUES.ENGINEERING_TEXT.$1:
+;  885        call decimal_digits(a, digits, d, ex)
+	PUSHAL	FCVALUES.ENGINEERING_TEXT.EX
+	PUSHAQ	FCVALUES.ENGINEERING_TEXT.$D3
+	PUSHAL	FCVALUES.DIGITS
+	PUSHAG	@FCVALUES.ENGINEERING_TEXT.A(AP)
+	CALLS	#4,G^FCVALUES.DECIMAL_DIGITS
+;  886      end if
+FCVALUES.ENGINEERING_TEXT.$3:
+;  887      shift = modulo(ex, 3)
+	DIVL3	#3,FCVALUES.ENGINEERING_TEXT.EX,R0
+	MULL2	#3,R0
+	SUBL3	R0,FCVALUES.ENGINEERING_TEXT.EX,FCVALUES.ENGINEERING_TEXT.$T1
+	BGEQ	FCVALUES.ENGINEERING_TEXT.$4
+	ADDL2	#3,FCVALUES.ENGINEERING_TEXT.$T1
+FCVALUES.ENGINEERING_TEXT.$4:
+	MOVL	FCVALUES.ENGINEERING_TEXT.$T1,FCVALUES.ENGINEERING_TEXT.SHIFT
+;  888      lead = shift + 1
+	ADDL3	FCVALUES.ENGINEERING_TEXT.SHIFT,#1,FCVALUES.ENGINEERING_TEXT.LEAD
+;  889
+;  890      if (digits < lead) then
+	CMPL	FCVALUES.DIGITS,FCVALUES.ENGINEERING_TEXT.LEAD
+	BLSS	FCVALUES.ENGINEERING_TEXT.$7
+	BRW	FCVALUES.ENGINEERING_TEXT.$6
+FCVALUES.ENGINEERING_TEXT.$7:
+;  891        text = d(1:digits) // repeat('0', lead - digits)
+	MOVL	FCVALUES.DIGITS,FCVALUES.ENGINEERING_TEXT.$T1
+	BGEQ	FCVALUES.ENGINEERING_TEXT.$8
+	CLRL	FCVALUES.ENGINEERING_TEXT.$T1
+FCVALUES.ENGINEERING_TEXT.$8:
+	SUBL3	FCVALUES.DIGITS,FCVALUES.ENGINEERING_TEXT.LEAD,FCVALUES.ENGINEERING_TEXT.$T2
+	PUSHAL	FCVALUES.ENGINEERING_TEXT.$T2
+	PUSHAQ	FCVALUES.ENGINEERING_TEXT.$D2
+	PUSHAQ	FCVALUES.ENGINEERING_TEXT.$D1
+	CALLS	#3,G^FTN$REPEAT
+	MOVZWL	FCVALUES.ENGINEERING_TEXT.$D1,R0
+	ADDL2	FCVALUES.ENGINEERING_TEXT.$T1,R0
+	CVTLW	R0,FCVALUES.ENGINEERING_TEXT.$T3
+	PUSHAQ	FCVALUES.ENGINEERING_TEXT.$D4
+	PUSHAW	FCVALUES.ENGINEERING_TEXT.$T3
+	CALLS	#2,G^LIB$SGET1_DD
+	MOVC3	FCVALUES.ENGINEERING_TEXT.$T1,FCVALUES.ENGINEERING_TEXT.D,@FCVALUES.ENGINEERING_TEXT.$D4+4
+	MOVZWL	FCVALUES.ENGINEERING_TEXT.$D1,FCVALUES.ENGINEERING_TEXT.$U1
+	MOVL	FCVALUES.ENGINEERING_TEXT.$T1,R0
+	MOVC3	FCVALUES.ENGINEERING_TEXT.$U1,@FCVALUES.ENGINEERING_TEXT.$D1+4,@FCVALUES.ENGINEERING_TEXT.$D4+4[R0]
+	ADDL3	FCVALUES.ENGINEERING_TEXT.$T1,FCVALUES.ENGINEERING_TEXT.$U1,R0
+	MOVL	FCVALUES.ENGINEERING_TEXT.TEXT(AP),R1
+	MOVC5	R0,@FCVALUES.ENGINEERING_TEXT.$D4+4,#^A/ /,#32,@4(R1)
+	PUSHAQ	FCVALUES.ENGINEERING_TEXT.$D1
+	CALLS	#1,G^LIB$SFREE1_DD
+	PUSHAQ	FCVALUES.ENGINEERING_TEXT.$D4
+	CALLS	#1,G^LIB$SFREE1_DD
+;  892      else if (digits == lead) then
+	BRW	FCVALUES.ENGINEERING_TEXT.$10
+FCVALUES.ENGINEERING_TEXT.$6:
+	CMPL	FCVALUES.DIGITS,FCVALUES.ENGINEERING_TEXT.LEAD
+	BNEQ	FCVALUES.ENGINEERING_TEXT.$11
+;  893        text = d(1:lead)
+	MOVL	FCVALUES.ENGINEERING_TEXT.LEAD,FCVALUES.ENGINEERING_TEXT.$T2
+	BGEQ	FCVALUES.ENGINEERING_TEXT.$13
+	CLRL	FCVALUES.ENGINEERING_TEXT.$T2
+FCVALUES.ENGINEERING_TEXT.$13:
+	MOVL	FCVALUES.ENGINEERING_TEXT.TEXT(AP),R0
+	MOVC5	FCVALUES.ENGINEERING_TEXT.$T2,FCVALUES.ENGINEERING_TEXT.D,#^A/ /,#32,@4(R0)
+;  894      else
+	BRW	FCVALUES.ENGINEERING_TEXT.$10
+FCVALUES.ENGINEERING_TEXT.$11:
+;  895        text = d(1:lead) // '.' // d(lead + 1:digits)
+	MOVL	FCVALUES.ENGINEERING_TEXT.LEAD,FCVALUES.ENGINEERING_TEXT.$T2
+	BGEQ	FCVALUES.ENGINEERING_TEXT.$15
+	CLRL	FCVALUES.ENGINEERING_TEXT.$T2
+FCVALUES.ENGINEERING_TEXT.$15:
+	SUBL3	FCVALUES.ENGINEERING_TEXT.LEAD,FCVALUES.DIGITS,FCVALUES.ENGINEERING_TEXT.$T1
+	BGEQ	FCVALUES.ENGINEERING_TEXT.$17
+	CLRL	FCVALUES.ENGINEERING_TEXT.$T1
+FCVALUES.ENGINEERING_TEXT.$17:
+	MOVC3	FCVALUES.ENGINEERING_TEXT.$T2,FCVALUES.ENGINEERING_TEXT.D,FCVALUES.ENGINEERING_TEXT.$T4
+	MOVL	FCVALUES.ENGINEERING_TEXT.$T2,R0
+	MOVB	#46,FCVALUES.ENGINEERING_TEXT.$T4[R0]
+	MOVL	FCVALUES.ENGINEERING_TEXT.LEAD,R0
+	MOVL	FCVALUES.ENGINEERING_TEXT.$T2,R1
+	MOVC3	FCVALUES.ENGINEERING_TEXT.$T1,FCVALUES.ENGINEERING_TEXT.D[R0],FCVALUES.ENGINEERING_TEXT.$T4+1[R1]
+	ADDL3	FCVALUES.ENGINEERING_TEXT.$T2,FCVALUES.ENGINEERING_TEXT.$T1,R0
+	INCL	R0
+	MOVL	FCVALUES.ENGINEERING_TEXT.TEXT(AP),R1
+	MOVC5	R0,FCVALUES.ENGINEERING_TEXT.$T4,#^A/ /,#32,@4(R1)
+;  896      end if
+FCVALUES.ENGINEERING_TEXT.$10:
+;  897      text = trim(text) // exponent_text(ex - shift)
+	MOVL	FCVALUES.ENGINEERING_TEXT.TEXT(AP),R0
+	MOVAB	@4(R0),FCVALUES.ENGINEERING_TEXT.$T1
+	MOVAB	@FCVALUES.ENGINEERING_TEXT.$T1,FCVALUES.ENGINEERING_TEXT.$T2
+	MOVL	#32,R6
+	BRB	FCVALUES.ENGINEERING_TEXT.$19
+FCVALUES.ENGINEERING_TEXT.$20:
+	SUBL3	#1,R6,R0
+	CMPB	@FCVALUES.ENGINEERING_TEXT.$T2[R0],#32
+	BNEQ	FCVALUES.ENGINEERING_TEXT.$21
+	DECL	R6
+FCVALUES.ENGINEERING_TEXT.$19:
+	TSTL	R6			; from line 897
+	BNEQ	FCVALUES.ENGINEERING_TEXT.$20
+FCVALUES.ENGINEERING_TEXT.$21:
+	SUBL3	FCVALUES.ENGINEERING_TEXT.SHIFT,FCVALUES.ENGINEERING_TEXT.EX,FCVALUES.ENGINEERING_TEXT.$T7
+	PUSHAL	FCVALUES.ENGINEERING_TEXT.$T7
+	PUSHAQ	FCVALUES.ENGINEERING_TEXT.$D5
+	CALLS	#2,G^FCVALUES.EXPONENT_TEXT
+	ADDL3	R6,#6,R0
+	CVTLW	R0,FCVALUES.ENGINEERING_TEXT.$T3
+	PUSHAQ	FCVALUES.ENGINEERING_TEXT.$D4
+	PUSHAW	FCVALUES.ENGINEERING_TEXT.$T3
+	CALLS	#2,G^LIB$SGET1_DD
+	MOVC3	R6,@FCVALUES.ENGINEERING_TEXT.$T1,@FCVALUES.ENGINEERING_TEXT.$D4+4
+	MOVC3	#6,FCVALUES.ENGINEERING_TEXT.$T6,@FCVALUES.ENGINEERING_TEXT.$D4+4[R6]
+	ADDL3	R6,#6,R0
+	MOVL	FCVALUES.ENGINEERING_TEXT.TEXT(AP),R1
+	MOVC5	R0,@FCVALUES.ENGINEERING_TEXT.$D4+4,#^A/ /,#32,@4(R1)
+	PUSHAQ	FCVALUES.ENGINEERING_TEXT.$D4
+	CALLS	#1,G^LIB$SFREE1_DD
+;  898    end function engineering_text
+	RET
+
+; Storage map for FCVALUES.FIXED_TEXT, a CHARACTER*32 function
+;   TEXT  CHARACTER*32        hidden argument 1  @FCVALUES.FIXED_TEXT.TEXT(AP)
+;   A     REAL*8, INTENT(IN)  argument 2         @FCVALUES.FIXED_TEXT.A(AP)
+;   BUF   CHARACTER*40        $LOCAL+0           FCVALUES.FIXED_TEXT.BUF
+;   FORM  CHARACTER*20        $LOCAL+40          FCVALUES.FIXED_TEXT.FORM
+;   R8 is $T1: temporary
+;   R7 is $T6: temporary
+;   R6 is $T7: temporary
+;
+FCVALUES.FIXED_TEXT.TEXT = 4		; TEXT's value goes through hidden argument 1
+FCVALUES.FIXED_TEXT.A = 8		; A is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCVALUES.FIXED_TEXT.BUF:
+	.BLKL	10			; BUF
+FCVALUES.FIXED_TEXT.FORM:
+	.BLKL	5			; FORM
+FCVALUES.FIXED_TEXT.$D1:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_D
+	.LONG	0			; set when the descriptor is used
+FCVALUES.FIXED_TEXT.$T2:
+	.BLKL	1			; temporary
+FCVALUES.FIXED_TEXT.$D3:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_D
+	.LONG	0			; set when the descriptor is used
+FCVALUES.FIXED_TEXT.$T3:
+	.BLKB	2			; temporary
+	.BLKB	2
+FCVALUES.FIXED_TEXT.$T4:
+	.BLKL	8			; characters, for one statement
+FCVALUES.FIXED_TEXT.$D11:
+	.WORD	8			; length
+	.BYTE	DSC$K_DTYPE_G,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+FCVALUES.FIXED_TEXT.$T5:
+	.BLKL	10			; characters, for one statement
+FCVALUES.FIXED_TEXT.$U1:
+	.BLKL	1			; temporary
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCVALUES.FIXED_TEXT.$D2:
+	.WORD	1			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCVALUES.FIXED_TEXT.$K2
+FCVALUES.FIXED_TEXT.$D4:
+	.WORD	32			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCVALUES.FIXED_TEXT.$T4
+FCVALUES.FIXED_TEXT.$IO1:
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0018			; flags: run-time format F90
+	.LONG	0			; (not used yet)
+FCVALUES.FIXED_TEXT.$D5:
+	.WORD	20			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCVALUES.FIXED_TEXT.FORM
+FCVALUES.FIXED_TEXT.$D6:
+	.WORD	10			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCVALUES.FIXED_TEXT.$K3
+FCVALUES.FIXED_TEXT.$D7:
+	.WORD	5			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCVALUES.FIXED_TEXT.$K4
+FCVALUES.FIXED_TEXT.$D8:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.ADDRESS FCVALUES.DIGITS
+FCVALUES.FIXED_TEXT.$D9:
+	.WORD	1			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCVALUES.FIXED_TEXT.$K5
+FCVALUES.FIXED_TEXT.$D10:
+	.WORD	40			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCVALUES.FIXED_TEXT.BUF
+FCVALUES.FIXED_TEXT.$D12:
+	.WORD	40			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCVALUES.FIXED_TEXT.$T5
+FCVALUES.FIXED_TEXT.$KF1:
+	.LONG	^X00004044,^X00000000	; 10D0
+FCVALUES.FIXED_TEXT.$KF2:
+	.LONG	^X00004000,^X00000000	; 0.5D0
+FCVALUES.FIXED_TEXT.$K1:
+	.ASCII	/0./
+FCVALUES.FIXED_TEXT.$K2:
+	.ASCII	/0/
+FCVALUES.FIXED_TEXT.$K3:
+	.ASCII	/(A, I2, A)/
+FCVALUES.FIXED_TEXT.$K4:
+	.ASCII	/(F40./
+FCVALUES.FIXED_TEXT.$K5:
+	.ASCII	/)/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  899
+;  900    ! FIXED_TEXT shows A (not negative) with DIGITS places after the point,
+;  901    ! by Fortran's F editing: (F40.4) writes 3.14159... as 3.1416, rounded.
+;  902    ! A number too small to show any digit is all zeros, 0.0000. One so large
+;  903    ! that its digits before the point and the places after would pass the
+;  904    ! MAX_DIGITS the kind holds is shown in scientific notation instead, with
+;  905    ! as many digits after the point, so no digit is shown that the machines'
+;  906    ! last bits could make differ. Fortran may write a number below 1 with
+;  907    ! no zero before the point (.5000), and fcalc puts one there.
+;  908    function fixed_text(a) result(text)
+	.ENTRY	FCVALUES.FIXED_TEXT,^M<R2,R3,R4,R5,R6,R7,R8,R9>
+;  909      real(rk), intent(in) :: a
+;  910      character(len=32) :: text
+;  911      character(len=40) :: buf
+;  912      character(len=20) :: form
+;  913
+;  914      if (a < 0.5_rk * 10.0_rk ** (-digits)) then
+	MNEGL	FCVALUES.DIGITS,R0
+	PUSHL	R0
+	MOVQ	FCVALUES.FIXED_TEXT.$KF1,-(SP)
+	CALLS	#3,G^OTS$POWGJ
+	MOVG	R0,R8
+	MULG3	FCVALUES.FIXED_TEXT.$KF2,R8,R0
+	CMPG	@FCVALUES.FIXED_TEXT.A(AP),R0
+	BLSS	FCVALUES.FIXED_TEXT.$2
+	BRW	FCVALUES.FIXED_TEXT.$1
+FCVALUES.FIXED_TEXT.$2:
+;  915        text = '0.' // repeat('0', digits)
+	MOVL	FCVALUES.DIGITS,FCVALUES.FIXED_TEXT.$T2
+	PUSHAL	FCVALUES.FIXED_TEXT.$T2
+	PUSHAQ	FCVALUES.FIXED_TEXT.$D2
+	PUSHAQ	FCVALUES.FIXED_TEXT.$D1
+	CALLS	#3,G^FTN$REPEAT
+	MOVZWL	FCVALUES.FIXED_TEXT.$D1,R0
+	ADDL2	#2,R0
+	CVTLW	R0,FCVALUES.FIXED_TEXT.$T3
+	PUSHAQ	FCVALUES.FIXED_TEXT.$D3
+	PUSHAW	FCVALUES.FIXED_TEXT.$T3
+	CALLS	#2,G^LIB$SGET1_DD
+	MOVC3	#2,FCVALUES.FIXED_TEXT.$K1,@FCVALUES.FIXED_TEXT.$D3+4
+	MOVZWL	FCVALUES.FIXED_TEXT.$D1,FCVALUES.FIXED_TEXT.$U1
+	MOVL	FCVALUES.FIXED_TEXT.$D3+4,R0
+	MOVC3	FCVALUES.FIXED_TEXT.$U1,@FCVALUES.FIXED_TEXT.$D1+4,2(R0)
+	ADDL3	FCVALUES.FIXED_TEXT.$U1,#2,R0
+	MOVL	FCVALUES.FIXED_TEXT.TEXT(AP),R1
+	MOVC5	R0,@FCVALUES.FIXED_TEXT.$D3+4,#^A/ /,#32,@4(R1)
+	PUSHAQ	FCVALUES.FIXED_TEXT.$D1
+	CALLS	#1,G^LIB$SFREE1_DD
+	PUSHAQ	FCVALUES.FIXED_TEXT.$D3
+	CALLS	#1,G^LIB$SFREE1_DD
+;  916        return
+	RET
+FCVALUES.FIXED_TEXT.$1:
+;  917      end if
+;  918      if (a >= 10.0_rk ** (max_digits - digits)) then
+	SUBL3	FCVALUES.DIGITS,#15,R0
+	PUSHL	R0
+	MOVQ	FCVALUES.FIXED_TEXT.$KF1,-(SP)
+	CALLS	#3,G^OTS$POWGJ
+	MOVG	R0,R8
+	CMPG	@FCVALUES.FIXED_TEXT.A(AP),R8
+	BLSS	FCVALUES.FIXED_TEXT.$3
+;  919        text = scientific_text(a, min(digits + 1, max_digits))
+	ADDL3	FCVALUES.DIGITS,#1,FCVALUES.FIXED_TEXT.$T2
+	CMPL	#15,FCVALUES.FIXED_TEXT.$T2
+	BGEQ	FCVALUES.FIXED_TEXT.$5
+	MOVL	#15,FCVALUES.FIXED_TEXT.$T2
+FCVALUES.FIXED_TEXT.$5:
+	PUSHAL	FCVALUES.FIXED_TEXT.$T2
+	PUSHAG	@FCVALUES.FIXED_TEXT.A(AP)
+	PUSHAQ	FCVALUES.FIXED_TEXT.$D4
+	CALLS	#3,G^FCVALUES.SCIENTIFIC_TEXT
+	MOVL	FCVALUES.FIXED_TEXT.TEXT(AP),R0
+	MOVC3	#32,FCVALUES.FIXED_TEXT.$T4,@4(R0)
+;  920        return
+	RET
+FCVALUES.FIXED_TEXT.$3:
+;  921      end if
+;  922
+;  923      write (form, '(A, I2, A)') '(F40.', digits, ')'
+	PUSHAQ	FCVALUES.FIXED_TEXT.$D6
+	PUSHAQ	FCVALUES.FIXED_TEXT.$D5
+	PUSHAB	FCVALUES.FIXED_TEXT.$IO1
+	CALLS	#3,G^FTN$WRITE_IF
+	PUSHAQ	FCVALUES.FIXED_TEXT.$D7
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAQ	FCVALUES.FIXED_TEXT.$D8
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAQ	FCVALUES.FIXED_TEXT.$D9
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;  924      write (buf, form) a
+	PUSHAQ	FCVALUES.FIXED_TEXT.$D5
+	PUSHAQ	FCVALUES.FIXED_TEXT.$D10
+	PUSHAB	FCVALUES.FIXED_TEXT.$IO1
+	CALLS	#3,G^FTN$WRITE_IF
+	MOVAG	@FCVALUES.FIXED_TEXT.A(AP),FCVALUES.FIXED_TEXT.$D11+4
+	PUSHAQ	FCVALUES.FIXED_TEXT.$D11
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;  925      buf = adjustl(buf)
+	PUSHAQ	FCVALUES.FIXED_TEXT.$D10
+	PUSHAQ	FCVALUES.FIXED_TEXT.$D12
+	CALLS	#2,G^FTN$ADJUSTL
+	MOVC3	#40,FCVALUES.FIXED_TEXT.$T5,FCVALUES.FIXED_TEXT.BUF
+;  926      if (buf(1:1) == '.') buf = '0' // trim(buf)
+	CMPB	FCVALUES.FIXED_TEXT.BUF,#46
+	BNEQ	FCVALUES.FIXED_TEXT.$7
+	MOVAB	FCVALUES.FIXED_TEXT.BUF,FCVALUES.FIXED_TEXT.$T2
+	MOVAB	@FCVALUES.FIXED_TEXT.$T2,R7
+	MOVL	#40,R6
+	BRB	FCVALUES.FIXED_TEXT.$9
+FCVALUES.FIXED_TEXT.$10:
+	CMPB	-1(R7)[R6],#32
+	BNEQ	FCVALUES.FIXED_TEXT.$11
+	DECL	R6
+FCVALUES.FIXED_TEXT.$9:
+	TSTL	R6			; from line 926
+	BNEQ	FCVALUES.FIXED_TEXT.$10
+FCVALUES.FIXED_TEXT.$11:
+	ADDL3	R6,#1,R0
+	CVTLW	R0,FCVALUES.FIXED_TEXT.$T3
+	PUSHAQ	FCVALUES.FIXED_TEXT.$D3
+	PUSHAW	FCVALUES.FIXED_TEXT.$T3
+	CALLS	#2,G^LIB$SGET1_DD
+	MOVB	#48,@FCVALUES.FIXED_TEXT.$D3+4
+	MOVL	FCVALUES.FIXED_TEXT.$D3+4,R0
+	MOVC3	R6,@FCVALUES.FIXED_TEXT.$T2,1(R0)
+	ADDL3	R6,#1,R0
+	MOVC5	R0,@FCVALUES.FIXED_TEXT.$D3+4,#^A/ /,#40,FCVALUES.FIXED_TEXT.BUF
+	PUSHAQ	FCVALUES.FIXED_TEXT.$D3
+	CALLS	#1,G^LIB$SFREE1_DD
+FCVALUES.FIXED_TEXT.$7:
+;  927      text = trim(buf)
+	MOVAB	FCVALUES.FIXED_TEXT.BUF,R6
+	MOVAB	(R6),R7
+	MOVL	#40,FCVALUES.FIXED_TEXT.$T2
+	BRB	FCVALUES.FIXED_TEXT.$14
+FCVALUES.FIXED_TEXT.$15:
+	MOVL	FCVALUES.FIXED_TEXT.$T2,R0
+	CMPB	-1(R7)[R0],#32
+	BNEQ	FCVALUES.FIXED_TEXT.$16
+	DECL	FCVALUES.FIXED_TEXT.$T2
+FCVALUES.FIXED_TEXT.$14:
+	TSTL	FCVALUES.FIXED_TEXT.$T2	; from line 927
+	BNEQ	FCVALUES.FIXED_TEXT.$15
+FCVALUES.FIXED_TEXT.$16:
+	MOVL	FCVALUES.FIXED_TEXT.TEXT(AP),R0
+	MOVC5	FCVALUES.FIXED_TEXT.$T2,(R6),#^A/ /,#32,@4(R0)
+;  928    end function fixed_text
+	RET
+
+; Storage map for FCVALUES.IS_WHOLE_PART, a LOGICAL function
+;   X              REAL*8, INTENT(IN)  argument 1  @FCVALUES.IS_WHOLE_PART.X(AP)
+;   IS_WHOLE_PART  LOGICAL             R6          R6
+;   R6 is $T1: temporary
+;
+FCVALUES.IS_WHOLE_PART.X = 4		; X is argument 1
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCVALUES.IS_WHOLE_PART.$KF1:
+	.LONG	^X6BF5434C,^X00002634	; 4D15
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  929
+;  930    ! IS_WHOLE_PART: X is a whole number fcalc may show in another base.
+;  931    logical function is_whole_part(x)
+	.ENTRY	FCVALUES.IS_WHOLE_PART,^M<R6,R7>
+;  932      real(rk), intent(in) :: x
+;  933
+;  934      is_whole_part = abs(x) < whole_limit
+	MOVG	@FCVALUES.IS_WHOLE_PART.X(AP),R6
+	BGEQ	FCVALUES.IS_WHOLE_PART.$1
+	MNEGG	R6,R6
+FCVALUES.IS_WHOLE_PART.$1:
+	CLRL	R0
+	CMPG	R6,FCVALUES.IS_WHOLE_PART.$KF1
+	BGEQ	FCVALUES.IS_WHOLE_PART.$3
+	MNEGL	#1,R0
+FCVALUES.IS_WHOLE_PART.$3:
+	MOVL	R0,R6
+;  935      if (is_whole_part) is_whole_part = aint(x) == x
+	BLBC	R6,FCVALUES.IS_WHOLE_PART.$4
+	PUSHAG	@FCVALUES.IS_WHOLE_PART.X(AP)
+	CALLS	#1,G^MTH$GINT
+	MOVG	R0,R6
+	CLRL	R0
+	CMPG	R6,@FCVALUES.IS_WHOLE_PART.X(AP)
+	BNEQ	FCVALUES.IS_WHOLE_PART.$6
+	MNEGL	#1,R0
+FCVALUES.IS_WHOLE_PART.$6:
+	MOVL	R0,R6
+FCVALUES.IS_WHOLE_PART.$4:
+;  936    end function is_whole_part
+	MOVL	R6,R0			; the function's value
+	RET
+
+; Storage map for FCVALUES.BASED_TEXT, a CHARACTER*64 function
+;   TEXT   CHARACTER*64        hidden argument 1  @FCVALUES.BASED_TEXT.TEXT(AP)
+;   X      REAL*8, INTENT(IN)  argument 2         @FCVALUES.BASED_TEXT.X(AP)
+;   SHOWN  CHARACTER*56        $LOCAL+0           FCVALUES.BASED_TEXT.SHOWN
+;   A      REAL*8              $LOCAL+56          FCVALUES.BASED_TEXT.A
+;   Q      REAL*8              $LOCAL+64          FCVALUES.BASED_TEXT.Q
+;   B      REAL*8              $LOCAL+72          FCVALUES.BASED_TEXT.B
+;   K      INTEGER             $LOCAL+80          FCVALUES.BASED_TEXT.K
+;   R      INTEGER             $LOCAL+84          FCVALUES.BASED_TEXT.R
+;   R7 is $T3: temporary
+;   R8 is $T5: temporary
+;   R6 is $T6: temporary
+;   R6 is $R1: K, during a loop
+;   R7 is $R2: R, during a loop
+;   R8 is $R3: A, during a loop
+;   R10 is $R4: Q, during a loop
+;
+FCVALUES.BASED_TEXT.TEXT = 4		; TEXT's value goes through hidden argument 1
+FCVALUES.BASED_TEXT.X = 8		; X is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCVALUES.BASED_TEXT.SHOWN:
+	.BLKL	14			; SHOWN
+FCVALUES.BASED_TEXT.A:
+	.BLKL	2			; A
+FCVALUES.BASED_TEXT.Q:
+	.BLKL	2			; Q
+FCVALUES.BASED_TEXT.B:
+	.BLKL	2			; B
+FCVALUES.BASED_TEXT.K:
+	.BLKL	1			; K
+FCVALUES.BASED_TEXT.R:
+	.BLKL	1			; R
+FCVALUES.BASED_TEXT.$T1:
+	.BLKL	2			; temporary
+FCVALUES.BASED_TEXT.$T2:
+	.BLKL	2			; temporary
+FCVALUES.BASED_TEXT.$T4:
+	.BLKB	58			; characters, for one statement
+	.BLKB	2
+FCVALUES.BASED_TEXT.$D1:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_D
+	.LONG	0			; set when the descriptor is used
+FCVALUES.BASED_TEXT.$T7:
+	.BLKB	2			; temporary
+	.BLKB	2
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCVALUES.BASED_TEXT.$K1:
+	.ASCII	/0/
+FCVALUES.BASED_TEXT.$K2:
+	.ASCII	/0123456789ABCDEF/
+FCVALUES.BASED_TEXT.$K3:
+	.ASCII	/0x/
+FCVALUES.BASED_TEXT.$K4:
+	.ASCII	/0o/
+FCVALUES.BASED_TEXT.$K5:
+	.ASCII	/0b/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  937
+;  938    ! BASED_TEXT shows the whole number X in NUMBER_BASE, with its prefix:
+;  939    ! 0xFF, 0o377, 0b11111111; zero is 0 in every base. The digits come
+;  940    ! last first, each the remainder of a division by the base. The bases
+;  941    ! are powers of two, so on a binary machine each division, AINT, and
+;  942    ! product here is exact: whole numbers below WHOLE_LIMIT need no integer
+;  943    ! type wider than the 32 bits every Fortran 90 compiler has.
+;  944    function based_text(x) result(text)
+	.ENTRY	FCVALUES.BASED_TEXT,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+;  945      real(rk), intent(in) :: x
+;  946      character(len=64) :: text
+;  947      character(len=*), parameter :: hex = '0123456789ABCDEF'
+;  948      character(len=56) :: shown
+;  949      real(rk) :: a, q, b
+;  950      integer :: k, r
+;  951
+;  952      if (x == 0) then
+	TSTG	@FCVALUES.BASED_TEXT.X(AP)
+	BNEQ	FCVALUES.BASED_TEXT.$1
+;  953        text = '0'
+	MOVL	FCVALUES.BASED_TEXT.TEXT(AP),R0
+	MOVC5	#1,FCVALUES.BASED_TEXT.$K1,#^A/ /,#64,@4(R0)
+;  954        return
+	RET
+FCVALUES.BASED_TEXT.$1:
+;  955      end if
+;  956
+;  957      b = number_base
+	CVTLG	FCVALUES.NUMBER_BASE,FCVALUES.BASED_TEXT.B
+;  958      a = abs(x)
+	MOVG	@FCVALUES.BASED_TEXT.X(AP),FCVALUES.BASED_TEXT.$T1
+	BGEQ	FCVALUES.BASED_TEXT.$3
+	MNEGG	FCVALUES.BASED_TEXT.$T1,FCVALUES.BASED_TEXT.$T1
+FCVALUES.BASED_TEXT.$3:
+	MOVG	FCVALUES.BASED_TEXT.$T1,FCVALUES.BASED_TEXT.A
+;  959      k = len(shown) + 1
+	MOVL	#57,FCVALUES.BASED_TEXT.K
+;  960      do
+	MOVL	FCVALUES.BASED_TEXT.K,R6
+	MOVL	FCVALUES.BASED_TEXT.R,R7
+	MOVQ	FCVALUES.BASED_TEXT.A,R8
+	MOVQ	FCVALUES.BASED_TEXT.Q,R10
+FCVALUES.BASED_TEXT.$6:
+;  961        q = aint(a / b)
+;  962        r = nint(a - q * b)
+;  963        k = k - 1
+;  964        shown(k:k) = hex(r + 1:r + 1)
+;  965        a = q
+;  966        if (a == 0) exit
+;  967      end do
+	DIVG3	FCVALUES.BASED_TEXT.B,R8,FCVALUES.BASED_TEXT.$T2 ; from line 961
+	PUSHAG	FCVALUES.BASED_TEXT.$T2
+	CALLS	#1,G^MTH$GINT
+	MOVG	R0,FCVALUES.BASED_TEXT.$T1
+	MOVG	FCVALUES.BASED_TEXT.$T1,R10
+	MULG3	R10,FCVALUES.BASED_TEXT.B,R0
+	SUBG3	R0,R8,R0
+	CVTRGL	R0,R7
+	DECL	R6
+	MOVB	FCVALUES.BASED_TEXT.$K2[R7],FCVALUES.BASED_TEXT.SHOWN-1[R6]
+	MOVG	R10,R8
+	BNEQ	FCVALUES.BASED_TEXT.$6
+	MOVL	R6,FCVALUES.BASED_TEXT.K
+	MOVL	R7,FCVALUES.BASED_TEXT.R
+	MOVQ	R8,FCVALUES.BASED_TEXT.A
+	MOVQ	R10,FCVALUES.BASED_TEXT.Q
+;  968
+;  969      select case (number_base)
+	CMPL	FCVALUES.NUMBER_BASE,#16
+	BEQL	FCVALUES.BASED_TEXT.$8
+	CMPL	FCVALUES.NUMBER_BASE,#8
+	BEQL	FCVALUES.BASED_TEXT.$10
+	BRW	FCVALUES.BASED_TEXT.$12
+FCVALUES.BASED_TEXT.$8:
+;  970      case (16)
+;  971        text = '0x' // shown(k:)
+	SUBL3	FCVALUES.BASED_TEXT.K,#57,R7
+	BGEQ	FCVALUES.BASED_TEXT.$13
+	CLRL	R7
+FCVALUES.BASED_TEXT.$13:
+	MOVC3	#2,FCVALUES.BASED_TEXT.$K3,FCVALUES.BASED_TEXT.$T4
+	MOVL	FCVALUES.BASED_TEXT.K,R0
+	MOVC3	R7,FCVALUES.BASED_TEXT.SHOWN-1[R0],FCVALUES.BASED_TEXT.$T4+2
+	ADDL3	R7,#2,R0
+	MOVL	FCVALUES.BASED_TEXT.TEXT(AP),R1
+	MOVC5	R0,FCVALUES.BASED_TEXT.$T4,#^A/ /,#64,@4(R1)
+;  972      case (8)
+	BRW	FCVALUES.BASED_TEXT.$15
+FCVALUES.BASED_TEXT.$10:
+;  973        text = '0o' // shown(k:)
+	SUBL3	FCVALUES.BASED_TEXT.K,#57,R7
+	BGEQ	FCVALUES.BASED_TEXT.$16
+	CLRL	R7
+FCVALUES.BASED_TEXT.$16:
+	MOVC3	#2,FCVALUES.BASED_TEXT.$K4,FCVALUES.BASED_TEXT.$T4
+	MOVL	FCVALUES.BASED_TEXT.K,R0
+	MOVC3	R7,FCVALUES.BASED_TEXT.SHOWN-1[R0],FCVALUES.BASED_TEXT.$T4+2
+	ADDL3	R7,#2,R0
+	MOVL	FCVALUES.BASED_TEXT.TEXT(AP),R1
+	MOVC5	R0,FCVALUES.BASED_TEXT.$T4,#^A/ /,#64,@4(R1)
+;  974      case default
+	BRB	FCVALUES.BASED_TEXT.$15
+FCVALUES.BASED_TEXT.$12:
+;  975        text = '0b' // shown(k:)
+	SUBL3	FCVALUES.BASED_TEXT.K,#57,R7
+	BGEQ	FCVALUES.BASED_TEXT.$18
+	CLRL	R7
+FCVALUES.BASED_TEXT.$18:
+	MOVC3	#2,FCVALUES.BASED_TEXT.$K5,FCVALUES.BASED_TEXT.$T4
+	MOVL	FCVALUES.BASED_TEXT.K,R0
+	MOVC3	R7,FCVALUES.BASED_TEXT.SHOWN-1[R0],FCVALUES.BASED_TEXT.$T4+2
+	ADDL3	R7,#2,R0
+	MOVL	FCVALUES.BASED_TEXT.TEXT(AP),R1
+	MOVC5	R0,FCVALUES.BASED_TEXT.$T4,#^A/ /,#64,@4(R1)
+;  976      end select
+FCVALUES.BASED_TEXT.$15:
+;  977      if (x < 0) text = '-' // trim(text)
+	TSTG	@FCVALUES.BASED_TEXT.X(AP)
+	BGEQ	FCVALUES.BASED_TEXT.$20
+	MOVL	FCVALUES.BASED_TEXT.TEXT(AP),R0
+	MOVAB	@4(R0),R7
+	MOVAB	(R7),R8
+	MOVL	#64,R6
+	BRB	FCVALUES.BASED_TEXT.$22
+FCVALUES.BASED_TEXT.$23:
+	CMPB	-1(R8)[R6],#32
+	BNEQ	FCVALUES.BASED_TEXT.$24
+	DECL	R6
+FCVALUES.BASED_TEXT.$22:
+	TSTL	R6			; from line 977
+	BNEQ	FCVALUES.BASED_TEXT.$23
+FCVALUES.BASED_TEXT.$24:
+	ADDL3	R6,#1,R0
+	CVTLW	R0,FCVALUES.BASED_TEXT.$T7
+	PUSHAQ	FCVALUES.BASED_TEXT.$D1
+	PUSHAW	FCVALUES.BASED_TEXT.$T7
+	CALLS	#2,G^LIB$SGET1_DD
+	MOVB	#45,@FCVALUES.BASED_TEXT.$D1+4
+	MOVL	FCVALUES.BASED_TEXT.$D1+4,R0
+	MOVC3	R6,(R7),1(R0)
+	ADDL3	R6,#1,R0
+	MOVL	FCVALUES.BASED_TEXT.TEXT(AP),R1
+	MOVC5	R0,@FCVALUES.BASED_TEXT.$D1+4,#^A/ /,#64,@4(R1)
+	PUSHAQ	FCVALUES.BASED_TEXT.$D1
+	CALLS	#1,G^LIB$SFREE1_DD
+FCVALUES.BASED_TEXT.$20:
+;  978    end function based_text
+	RET
+
+; Storage map for FCVALUES.FORMAT_VALUE, a CHARACTER*120 function
+;   TEXT    CHARACTER*120                 hidden argument 1  @FCVALUES.FORMAT_VALUE.TEXT(AP)
+;   V       TYPE(VALUE), INTENT(IN)       argument 2         @FCVALUES.FORMAT_VALUE.V(AP)
+;   BESIDE  REAL*8, INTENT(IN), OPTIONAL  an argument        @FCVALUES.FORMAT_VALUE.$A3
+;   X       REAL*8                        $LOCAL+0           FCVALUES.FORMAT_VALUE.X
+;   Y       REAL*8                        $LOCAL+8           FCVALUES.FORMAT_VALUE.Y
+;   PART    REAL*8                        $LOCAL+16          FCVALUES.FORMAT_VALUE.PART
+;   BIG     REAL*8                        $LOCAL+24          FCVALUES.FORMAT_VALUE.BIG
+;   BASED   LOGICAL                       $LOCAL+32          FCVALUES.FORMAT_VALUE.BASED
+;   R7 is $T1: temporary
+;   R6 is $T2: temporary
+;   FCVALUES.FORMAT_VALUE.$N1 is FCVALUES.FORMAT_VALUE.NEGLIGIBLE
+;
+FCVALUES.FORMAT_VALUE.TEXT = 4		; TEXT's value goes through hidden argument 1
+FCVALUES.FORMAT_VALUE.V = 8		; V is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCVALUES.FORMAT_VALUE.X:
+	.BLKL	2			; X
+FCVALUES.FORMAT_VALUE.Y:
+	.BLKL	2			; Y
+FCVALUES.FORMAT_VALUE.PART:
+	.BLKL	2			; PART
+FCVALUES.FORMAT_VALUE.BIG:
+	.BLKL	2			; BIG
+FCVALUES.FORMAT_VALUE.BASED:
+	.BLKL	1			; BASED
+FCVALUES.FORMAT_VALUE.$A3:
+	.BLKL	1			; BESIDE's longword of the argument list, set at each entry point
+FCVALUES.FORMAT_VALUE.$T3:
+	.BLKL	2			; temporary
+FCVALUES.FORMAT_VALUE.$T4:
+	.BLKL	2			; temporary
+FCVALUES.FORMAT_VALUE.$T5:
+	.BLKL	16			; characters, for one statement
+FCVALUES.FORMAT_VALUE.$T6:
+	.BLKL	1			; temporary
+FCVALUES.FORMAT_VALUE.$D2:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_D
+	.LONG	0			; set when the descriptor is used
+FCVALUES.FORMAT_VALUE.$T7:
+	.BLKB	2			; temporary
+	.BLKB	2
+FCVALUES.FORMAT_VALUE.$T8:
+	.BLKL	16			; characters, for one statement
+FCVALUES.FORMAT_VALUE.$T9:
+	.BLKL	1			; temporary
+FCVALUES.FORMAT_VALUE.$T10:
+	.BLKL	1			; temporary
+FCVALUES.FORMAT_VALUE.$T11:
+	.BLKL	1			; temporary
+FCVALUES.FORMAT_VALUE.$U1:
+	.BLKL	1			; temporary
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCVALUES.FORMAT_VALUE.$D1:
+	.WORD	64			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCVALUES.FORMAT_VALUE.$T5
+FCVALUES.FORMAT_VALUE.$D3:
+	.WORD	64			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCVALUES.FORMAT_VALUE.$T8
+FCVALUES.FORMAT_VALUE.$KF1:
+	.LONG	^X00004044,^X00000000	; 10D0
+FCVALUES.FORMAT_VALUE.$KF2:
+	.LONG	^X00004000,^X00000000	; 0.5D0
+FCVALUES.FORMAT_VALUE.$K2:
+	.ASCII	/ - /
+FCVALUES.FORMAT_VALUE.$K3:
+	.ASCII	/ + /
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;  979
+;  980    ! FORMAT_VALUE shows a value: a real one as a number, a complex one as
+;  981    ! a + bi. A part smaller than the other by more than the digits shown
+;  982    ! is shown as zero: what the digits can't show. BESIDE, if it is given,
+;  983    ! is a magnitude the parts are shown beside, so a part smaller than it by
+;  984    ! more than the digits is shown as zero too: an element of a matrix is
+;  985    ! shown beside the matrix's largest (module FCARRAYS). Under FIXED, a part
+;  986    ! too small to show a digit is zero as well, so 1e-9 + 1e-6i is 0.0000.
+;  987    ! A value whose parts are whole numbers is shown in NUMBER_BASE, exactly:
+;  988    ! a whole number has no rounding to hide.
+;  989    function format_value(v, beside) result(text)
+	.ENTRY	FCVALUES.FORMAT_VALUE,^M<R2,R3,R4,R5,R6,R7>
+	CLRL	FCVALUES.FORMAT_VALUE.$A3 ; BESIDE is argument 3, if the caller passed it
+	CMPB	(AP),#3
+	BLSSU	FCVALUES.FORMAT_VALUE.$60
+	MOVL	12(AP),FCVALUES.FORMAT_VALUE.$A3
+FCVALUES.FORMAT_VALUE.$60:
+;  990      type(value), intent(in) :: v
+;  991      real(rk), intent(in), optional :: beside
+;  992      character(len=120) :: text
+;  993      real(rk) :: x, y, part, big
+;  994      logical :: based
+;  995
+;  996      x = real(v%z, rk)
+	MOVG	@FCVALUES.FORMAT_VALUE.V(AP),FCVALUES.FORMAT_VALUE.X
+;  997      y = aimag(v%z)
+	MOVL	FCVALUES.FORMAT_VALUE.V(AP),R0
+	MOVG	8(R0),FCVALUES.FORMAT_VALUE.Y
+;  998      based = number_base /= 10 .and. is_whole_part(x) .and. is_whole_part(y)
+	PUSHAG	FCVALUES.FORMAT_VALUE.X
+	CALLS	#1,G^FCVALUES.IS_WHOLE_PART
+	MOVL	R0,R7
+	PUSHAG	FCVALUES.FORMAT_VALUE.Y
+	CALLS	#1,G^FCVALUES.IS_WHOLE_PART
+	MOVL	R0,R6
+	CLRL	R0
+	CMPL	FCVALUES.NUMBER_BASE,#10
+	BEQL	FCVALUES.FORMAT_VALUE.$1
+	MNEGL	#1,R0
+FCVALUES.FORMAT_VALUE.$1:
+	MCOML	R7,R1
+	BICL2	R1,R0
+	MCOML	R6,R1
+	BICL3	R1,R0,FCVALUES.FORMAT_VALUE.BASED
+;  999
+; 1000      if (.not. based) then
+	BLBC	FCVALUES.FORMAT_VALUE.BASED,FCVALUES.FORMAT_VALUE.$3
+	BRW	FCVALUES.FORMAT_VALUE.$2
+FCVALUES.FORMAT_VALUE.$3:
+; 1001        part = 10.0_rk ** (-digits)
+	MNEGL	FCVALUES.DIGITS,R0
+	PUSHL	R0
+	MOVQ	FCVALUES.FORMAT_VALUE.$KF1,-(SP)
+	CALLS	#3,G^OTS$POWGJ
+	MOVG	R0,FCVALUES.FORMAT_VALUE.$T3
+	MOVG	FCVALUES.FORMAT_VALUE.$T3,FCVALUES.FORMAT_VALUE.PART
+; 1002        big = 0
+	CLRG	FCVALUES.FORMAT_VALUE.BIG
+; 1003        if (present(beside)) big = beside
+	TSTL	FCVALUES.FORMAT_VALUE.$A3
+	BEQL	FCVALUES.FORMAT_VALUE.$4
+	MOVG	@FCVALUES.FORMAT_VALUE.$A3,FCVALUES.FORMAT_VALUE.BIG
+FCVALUES.FORMAT_VALUE.$4:
+; 1004        if (negligible(y, max(abs(x), big))) y = 0
+	MOVG	FCVALUES.FORMAT_VALUE.X,FCVALUES.FORMAT_VALUE.$T4
+	BGEQ	FCVALUES.FORMAT_VALUE.$6
+	MNEGG	FCVALUES.FORMAT_VALUE.$T4,FCVALUES.FORMAT_VALUE.$T4
+FCVALUES.FORMAT_VALUE.$6:
+	MOVG	FCVALUES.FORMAT_VALUE.$T4,FCVALUES.FORMAT_VALUE.$T3
+	CMPG	FCVALUES.FORMAT_VALUE.BIG,FCVALUES.FORMAT_VALUE.$T3
+	BLEQ	FCVALUES.FORMAT_VALUE.$8
+	MOVG	FCVALUES.FORMAT_VALUE.BIG,FCVALUES.FORMAT_VALUE.$T3
+FCVALUES.FORMAT_VALUE.$8:
+	PUSHAG	FCVALUES.FORMAT_VALUE.$T3
+	PUSHAG	FCVALUES.FORMAT_VALUE.Y
+	CALLS	#2,FCVALUES.FORMAT_VALUE.$N1
+	MOVL	R0,R6
+	BLBC	R6,FCVALUES.FORMAT_VALUE.$10
+	CLRG	FCVALUES.FORMAT_VALUE.Y
+FCVALUES.FORMAT_VALUE.$10:
+; 1005        if (negligible(x, max(abs(y), big))) x = 0
+	MOVG	FCVALUES.FORMAT_VALUE.Y,FCVALUES.FORMAT_VALUE.$T3
+	BGEQ	FCVALUES.FORMAT_VALUE.$12
+	MNEGG	FCVALUES.FORMAT_VALUE.$T3,FCVALUES.FORMAT_VALUE.$T3
+FCVALUES.FORMAT_VALUE.$12:
+	MOVG	FCVALUES.FORMAT_VALUE.$T3,FCVALUES.FORMAT_VALUE.$T4
+	CMPG	FCVALUES.FORMAT_VALUE.BIG,FCVALUES.FORMAT_VALUE.$T4
+	BLEQ	FCVALUES.FORMAT_VALUE.$14
+	MOVG	FCVALUES.FORMAT_VALUE.BIG,FCVALUES.FORMAT_VALUE.$T4
+FCVALUES.FORMAT_VALUE.$14:
+	PUSHAG	FCVALUES.FORMAT_VALUE.$T4
+	PUSHAG	FCVALUES.FORMAT_VALUE.X
+	CALLS	#2,FCVALUES.FORMAT_VALUE.$N1
+	MOVL	R0,R6
+	BLBC	R6,FCVALUES.FORMAT_VALUE.$16
+	CLRG	FCVALUES.FORMAT_VALUE.X
+FCVALUES.FORMAT_VALUE.$16:
+; 1006        if (number_format == f_fixed) then
+	CMPL	FCVALUES.NUMBER_FORMAT,#2
+	BNEQ	FCVALUES.FORMAT_VALUE.$18
+; 1007          if (abs(x) < 0.5_rk * part) x = 0
+	MOVG	FCVALUES.FORMAT_VALUE.X,FCVALUES.FORMAT_VALUE.$T3
+	BGEQ	FCVALUES.FORMAT_VALUE.$20
+	MNEGG	FCVALUES.FORMAT_VALUE.$T3,FCVALUES.FORMAT_VALUE.$T3
+FCVALUES.FORMAT_VALUE.$20:
+	MULG3	FCVALUES.FORMAT_VALUE.$KF2,FCVALUES.FORMAT_VALUE.PART,R0
+	CMPG	FCVALUES.FORMAT_VALUE.$T3,R0
+	BGEQ	FCVALUES.FORMAT_VALUE.$22
+	CLRG	FCVALUES.FORMAT_VALUE.X
+FCVALUES.FORMAT_VALUE.$22:
+; 1008          if (abs(y) < 0.5_rk * part) y = 0
+	MOVG	FCVALUES.FORMAT_VALUE.Y,FCVALUES.FORMAT_VALUE.$T3
+	BGEQ	FCVALUES.FORMAT_VALUE.$24
+	MNEGG	FCVALUES.FORMAT_VALUE.$T3,FCVALUES.FORMAT_VALUE.$T3
+FCVALUES.FORMAT_VALUE.$24:
+	MULG3	FCVALUES.FORMAT_VALUE.$KF2,FCVALUES.FORMAT_VALUE.PART,R0
+	CMPG	FCVALUES.FORMAT_VALUE.$T3,R0
+	BGEQ	FCVALUES.FORMAT_VALUE.$26
+	CLRG	FCVALUES.FORMAT_VALUE.Y
+FCVALUES.FORMAT_VALUE.$26:
+; 1009        end if
+FCVALUES.FORMAT_VALUE.$18:
+; 1010      end if
+FCVALUES.FORMAT_VALUE.$2:
+; 1011
+; 1012      if (y == 0) then
+	TSTG	FCVALUES.FORMAT_VALUE.Y
+	BNEQ	FCVALUES.FORMAT_VALUE.$28
+; 1013        text = part_text(x)
+	PUSHAG	FCVALUES.FORMAT_VALUE.X
+	PUSHAQ	FCVALUES.FORMAT_VALUE.$D1
+	CALLS	#2,FCVALUES.FORMAT_VALUE.PART_TEXT
+	MOVL	FCVALUES.FORMAT_VALUE.TEXT(AP),R0
+	MOVC5	#64,FCVALUES.FORMAT_VALUE.$T5,#^A/ /,#120,@4(R0)
+; 1014      else if (x == 0) then
+	RET
+FCVALUES.FORMAT_VALUE.$28:
+	TSTG	FCVALUES.FORMAT_VALUE.X
+	BEQL	FCVALUES.FORMAT_VALUE.$32
+	BRW	FCVALUES.FORMAT_VALUE.$31
+FCVALUES.FORMAT_VALUE.$32:
+; 1015        text = trim(part_text(y)) // 'i'
+	PUSHAG	FCVALUES.FORMAT_VALUE.Y
+	PUSHAQ	FCVALUES.FORMAT_VALUE.$D1
+	CALLS	#2,FCVALUES.FORMAT_VALUE.PART_TEXT
+	MOVAB	FCVALUES.FORMAT_VALUE.$T5,R6
+	MOVAB	(R6),R7
+	MOVL	#64,FCVALUES.FORMAT_VALUE.$T6
+	BRB	FCVALUES.FORMAT_VALUE.$33
+FCVALUES.FORMAT_VALUE.$34:
+	MOVL	FCVALUES.FORMAT_VALUE.$T6,R0
+	CMPB	-1(R7)[R0],#32
+	BNEQ	FCVALUES.FORMAT_VALUE.$35
+	DECL	FCVALUES.FORMAT_VALUE.$T6
+FCVALUES.FORMAT_VALUE.$33:
+	TSTL	FCVALUES.FORMAT_VALUE.$T6 ; from line 1015
+	BNEQ	FCVALUES.FORMAT_VALUE.$34
+FCVALUES.FORMAT_VALUE.$35:
+	ADDL3	FCVALUES.FORMAT_VALUE.$T6,#1,R0
+	CVTLW	R0,FCVALUES.FORMAT_VALUE.$T7
+	PUSHAQ	FCVALUES.FORMAT_VALUE.$D2
+	PUSHAW	FCVALUES.FORMAT_VALUE.$T7
+	CALLS	#2,G^LIB$SGET1_DD
+	MOVC3	FCVALUES.FORMAT_VALUE.$T6,(R6),@FCVALUES.FORMAT_VALUE.$D2+4
+	MOVL	FCVALUES.FORMAT_VALUE.$T6,R0
+	MOVB	#105,@FCVALUES.FORMAT_VALUE.$D2+4[R0]
+	ADDL3	FCVALUES.FORMAT_VALUE.$T6,#1,R0
+	MOVL	FCVALUES.FORMAT_VALUE.TEXT(AP),R1
+	MOVC5	R0,@FCVALUES.FORMAT_VALUE.$D2+4,#^A/ /,#120,@4(R1)
+	PUSHAQ	FCVALUES.FORMAT_VALUE.$D2
+	CALLS	#1,G^LIB$SFREE1_DD
+; 1016      else if (y < 0) then
+	RET
+FCVALUES.FORMAT_VALUE.$31:
+	TSTG	FCVALUES.FORMAT_VALUE.Y
+	BLSS	FCVALUES.FORMAT_VALUE.$39
+	BRW	FCVALUES.FORMAT_VALUE.$38
+FCVALUES.FORMAT_VALUE.$39:
+; 1017        text = trim(part_text(x)) // ' - ' // trim(part_text(-y)) // 'i'
+	PUSHAG	FCVALUES.FORMAT_VALUE.X
+	PUSHAQ	FCVALUES.FORMAT_VALUE.$D1
+	CALLS	#2,FCVALUES.FORMAT_VALUE.PART_TEXT
+	MOVAB	FCVALUES.FORMAT_VALUE.$T5,FCVALUES.FORMAT_VALUE.$T6
+	MOVAB	@FCVALUES.FORMAT_VALUE.$T6,R7
+	MOVL	#64,R6
+	BRB	FCVALUES.FORMAT_VALUE.$40
+FCVALUES.FORMAT_VALUE.$41:
+	CMPB	-1(R7)[R6],#32
+	BNEQ	FCVALUES.FORMAT_VALUE.$42
+	DECL	R6
+FCVALUES.FORMAT_VALUE.$40:
+	TSTL	R6			; from line 1017
+	BNEQ	FCVALUES.FORMAT_VALUE.$41
+FCVALUES.FORMAT_VALUE.$42:
+	MNEGG	FCVALUES.FORMAT_VALUE.Y,FCVALUES.FORMAT_VALUE.$T3
+	PUSHAG	FCVALUES.FORMAT_VALUE.$T3
+	PUSHAQ	FCVALUES.FORMAT_VALUE.$D3
+	CALLS	#2,FCVALUES.FORMAT_VALUE.PART_TEXT
+	MOVAB	FCVALUES.FORMAT_VALUE.$T8,FCVALUES.FORMAT_VALUE.$T9
+	MOVAB	@FCVALUES.FORMAT_VALUE.$T9,FCVALUES.FORMAT_VALUE.$T10
+	MOVL	#64,FCVALUES.FORMAT_VALUE.$T11
+	BRB	FCVALUES.FORMAT_VALUE.$45
+FCVALUES.FORMAT_VALUE.$46:
+	SUBL3	#1,FCVALUES.FORMAT_VALUE.$T11,R0
+	CMPB	@FCVALUES.FORMAT_VALUE.$T10[R0],#32
+	BNEQ	FCVALUES.FORMAT_VALUE.$47
+	DECL	FCVALUES.FORMAT_VALUE.$T11
+FCVALUES.FORMAT_VALUE.$45:
+	TSTL	FCVALUES.FORMAT_VALUE.$T11 ; from line 1017
+	BNEQ	FCVALUES.FORMAT_VALUE.$46
+FCVALUES.FORMAT_VALUE.$47:
+	ADDL3	R6,FCVALUES.FORMAT_VALUE.$T11,R0
+	ADDL3	R0,#4,FCVALUES.FORMAT_VALUE.$U1
+	CVTLW	FCVALUES.FORMAT_VALUE.$U1,FCVALUES.FORMAT_VALUE.$T7
+	PUSHAQ	FCVALUES.FORMAT_VALUE.$D2
+	PUSHAW	FCVALUES.FORMAT_VALUE.$T7
+	CALLS	#2,G^LIB$SGET1_DD
+	MOVC3	R6,@FCVALUES.FORMAT_VALUE.$T6,@FCVALUES.FORMAT_VALUE.$D2+4
+	MOVC3	#3,FCVALUES.FORMAT_VALUE.$K2,@FCVALUES.FORMAT_VALUE.$D2+4[R6]
+	ADDL3	R6,#3,R0
+	MOVC3	FCVALUES.FORMAT_VALUE.$T11,@FCVALUES.FORMAT_VALUE.$T9,@FCVALUES.FORMAT_VALUE.$D2+4[R0]
+	ADDL3	R6,FCVALUES.FORMAT_VALUE.$T11,R0
+	ADDL2	#3,R0
+	MOVB	#105,@FCVALUES.FORMAT_VALUE.$D2+4[R0]
+	MOVL	FCVALUES.FORMAT_VALUE.TEXT(AP),R0
+	MOVC5	FCVALUES.FORMAT_VALUE.$U1,@FCVALUES.FORMAT_VALUE.$D2+4,#^A/ /,#120,@4(R0)
+	PUSHAQ	FCVALUES.FORMAT_VALUE.$D2
+	CALLS	#1,G^LIB$SFREE1_DD
+; 1018      else
+	RET
+FCVALUES.FORMAT_VALUE.$38:
+; 1019        text = trim(part_text(x)) // ' + ' // trim(part_text(y)) // 'i'
+	PUSHAG	FCVALUES.FORMAT_VALUE.X
+	PUSHAQ	FCVALUES.FORMAT_VALUE.$D3
+	CALLS	#2,FCVALUES.FORMAT_VALUE.PART_TEXT
+	MOVAB	FCVALUES.FORMAT_VALUE.$T8,FCVALUES.FORMAT_VALUE.$T11
+	MOVAB	@FCVALUES.FORMAT_VALUE.$T11,FCVALUES.FORMAT_VALUE.$T10
+	MOVL	#64,FCVALUES.FORMAT_VALUE.$T9
+	BRB	FCVALUES.FORMAT_VALUE.$50
+FCVALUES.FORMAT_VALUE.$51:
+	SUBL3	#1,FCVALUES.FORMAT_VALUE.$T9,R0
+	CMPB	@FCVALUES.FORMAT_VALUE.$T10[R0],#32
+	BNEQ	FCVALUES.FORMAT_VALUE.$52
+	DECL	FCVALUES.FORMAT_VALUE.$T9
+FCVALUES.FORMAT_VALUE.$50:
+	TSTL	FCVALUES.FORMAT_VALUE.$T9 ; from line 1019
+	BNEQ	FCVALUES.FORMAT_VALUE.$51
+FCVALUES.FORMAT_VALUE.$52:
+	PUSHAG	FCVALUES.FORMAT_VALUE.Y
+	PUSHAQ	FCVALUES.FORMAT_VALUE.$D1
+	CALLS	#2,FCVALUES.FORMAT_VALUE.PART_TEXT
+	MOVAB	FCVALUES.FORMAT_VALUE.$T5,R6
+	MOVAB	(R6),R7
+	MOVL	#64,FCVALUES.FORMAT_VALUE.$T6
+	BRB	FCVALUES.FORMAT_VALUE.$55
+FCVALUES.FORMAT_VALUE.$56:
+	MOVL	FCVALUES.FORMAT_VALUE.$T6,R0
+	CMPB	-1(R7)[R0],#32
+	BNEQ	FCVALUES.FORMAT_VALUE.$57
+	DECL	FCVALUES.FORMAT_VALUE.$T6
+FCVALUES.FORMAT_VALUE.$55:
+	TSTL	FCVALUES.FORMAT_VALUE.$T6 ; from line 1019
+	BNEQ	FCVALUES.FORMAT_VALUE.$56
+FCVALUES.FORMAT_VALUE.$57:
+	ADDL3	FCVALUES.FORMAT_VALUE.$T9,FCVALUES.FORMAT_VALUE.$T6,R0
+	ADDL3	R0,#4,FCVALUES.FORMAT_VALUE.$U1
+	CVTLW	FCVALUES.FORMAT_VALUE.$U1,FCVALUES.FORMAT_VALUE.$T7
+	PUSHAQ	FCVALUES.FORMAT_VALUE.$D2
+	PUSHAW	FCVALUES.FORMAT_VALUE.$T7
+	CALLS	#2,G^LIB$SGET1_DD
+	MOVC3	FCVALUES.FORMAT_VALUE.$T9,@FCVALUES.FORMAT_VALUE.$T11,@FCVALUES.FORMAT_VALUE.$D2+4
+	MOVL	FCVALUES.FORMAT_VALUE.$T9,R0
+	MOVC3	#3,FCVALUES.FORMAT_VALUE.$K3,@FCVALUES.FORMAT_VALUE.$D2+4[R0]
+	ADDL3	FCVALUES.FORMAT_VALUE.$T9,#3,R0
+	MOVC3	FCVALUES.FORMAT_VALUE.$T6,(R6),@FCVALUES.FORMAT_VALUE.$D2+4[R0]
+	ADDL3	FCVALUES.FORMAT_VALUE.$T9,FCVALUES.FORMAT_VALUE.$T6,R0
+	ADDL2	#3,R0
+	MOVB	#105,@FCVALUES.FORMAT_VALUE.$D2+4[R0]
+	MOVL	FCVALUES.FORMAT_VALUE.TEXT(AP),R0
+	MOVC5	FCVALUES.FORMAT_VALUE.$U1,@FCVALUES.FORMAT_VALUE.$D2+4,#^A/ /,#120,@4(R0)
+	PUSHAQ	FCVALUES.FORMAT_VALUE.$D2
+	CALLS	#1,G^LIB$SFREE1_DD
+; 1020      end if
+; 1021    contains
+	RET
+
+; Storage map for FCVALUES.FORMAT_VALUE.PART_TEXT, a CHARACTER*64 function
+;   T     CHARACTER*64        hidden argument 1  @FCVALUES.FORMAT_VALUE.PART_.$N7(AP)
+;   P     REAL*8, INTENT(IN)  argument 2         @FCVALUES.FORMAT_VALUE.PART_.$N4(AP)
+;   FCVALUES.FORMAT_VALUE.PART_.$N2 is FCVALUES.FORMAT_VALUE.PART_TEXT.$1
+;   FCVALUES.FORMAT_VALUE.PART_.$N3 is FCVALUES.FORMAT_VALUE.PART_TEXT.$2
+;   FCVALUES.FORMAT_VALUE.PART_.$N4 is FCVALUES.FORMAT_VALUE.PART_TEXT.P
+;   FCVALUES.FORMAT_VALUE.PART_.$N5 is FCVALUES.FORMAT_VALUE.PART_TEXT.$D1
+;   FCVALUES.FORMAT_VALUE.PART_.$N6 is FCVALUES.FORMAT_VALUE.PART_TEXT.$T1
+;   FCVALUES.FORMAT_VALUE.PART_.$N7 is FCVALUES.FORMAT_VALUE.PART_TEXT.T
+;   FCVALUES.FORMAT_VALUE.PART_.$N8 is FCVALUES.FORMAT_VALUE.PART_TEXT.$3
+;   FCVALUES.FORMAT_VALUE.PART_.$N9 is FCVALUES.FORMAT_VALUE.PART_TEXT.$D2
+;   FCVALUES.FORMAT_VALUE.PART.$N10 is FCVALUES.FORMAT_VALUE.PART_TEXT.$T2
+;
+FCVALUES.FORMAT_VALUE.PART_.$N7 = 4	; T's value goes through hidden argument 1
+FCVALUES.FORMAT_VALUE.PART_.$N4 = 8	; P is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FCVALUES.FORMAT_VALUE.PART_.$N6:
+	.BLKL	16			; characters, for one statement
+FCVALUES.FORMAT_VALUE.PART.$N10:
+	.BLKL	8			; characters, for one statement
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCVALUES.FORMAT_VALUE.PART_.$N5:
+	.WORD	64			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCVALUES.FORMAT_VALUE.PART_.$N6
+FCVALUES.FORMAT_VALUE.PART_.$N9:
+	.WORD	32			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FCVALUES.FORMAT_VALUE.PART.$N10
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+; 1022
+; 1023      ! PART_TEXT shows one part, in the base or by the format.
+; 1024      function part_text(p) result(t)
+FCVALUES.FORMAT_VALUE.PART_TEXT:
+	.WORD	^M<R2,R3,R4,R5>		; internal procedure PART_TEXT of FCVALUES.FORMAT_VALUE
+; 1025        real(rk), intent(in) :: p
+; 1026        character(len=64) :: t
+; 1027
+; 1028        if (based) then
+	BLBC	FCVALUES.FORMAT_VALUE.BASED,FCVALUES.FORMAT_VALUE.PART_.$N2
+; 1029          t = based_text(p)
+	PUSHAG	@FCVALUES.FORMAT_VALUE.PART_.$N4(AP)
+	PUSHAQ	FCVALUES.FORMAT_VALUE.PART_.$N5
+	CALLS	#2,G^FCVALUES.BASED_TEXT
+	MOVL	FCVALUES.FORMAT_VALUE.PART_.$N7(AP),R0
+	MOVC3	#64,FCVALUES.FORMAT_VALUE.PART_.$N6,@4(R0)
+; 1030        else
+	RET
+FCVALUES.FORMAT_VALUE.PART_.$N2:
+; 1031          t = format_real(p)
+	PUSHAG	@FCVALUES.FORMAT_VALUE.PART_.$N4(AP)
+	PUSHAQ	FCVALUES.FORMAT_VALUE.PART_.$N9
+	CALLS	#2,G^FCVALUES.FORMAT_REAL
+	MOVL	FCVALUES.FORMAT_VALUE.PART_.$N7(AP),R0
+	MOVC5	#32,FCVALUES.FORMAT_VALUE.PART.$N10,#^A/ /,#64,@4(R0)
+; 1032        end if
+; 1033      end function part_text
+	RET
+
+; Storage map for FCVALUES.FORMAT_VALUE.NEGLIGIBLE, a LOGICAL function
+;   A           REAL*8, INTENT(IN)  argument 1  @FCVALUES.FORMAT_VALUE.$N1.A(AP)
+;   B           REAL*8, INTENT(IN)  argument 2  @FCVALUES.FORMAT_VALUE.$N1.B(AP)
+;   NEGLIGIBLE  LOGICAL             R6          R6
+;   R6 is $T1: temporary
+;   R8 is $T2: temporary
+;
+FCVALUES.FORMAT_VALUE.$N1.A = 4		; A is argument 1
+FCVALUES.FORMAT_VALUE.$N1.B = 8		; B is argument 2
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FCVALUES.FORMAT_VALUE.$N1.$KF1:
+	.LONG	^X00004010,^X00000000	; 1D0
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+; 1034
+; 1035      ! NEGLIGIBLE: |A| < |B| * PART, A too small beside B to show. The
+; 1036      ! product is never formed where it could underflow (B near SMALL),
+; 1037      ! which a VAX compiled /CHECK=UNDERFLOW would fault on: for |B| below 1
+; 1038      ! the test is |A| / PART < |B|, whose quotient can't underflow, and an
+; 1039      ! A of 1 or more can't be smaller than such a B.
+; 1040      logical function negligible(a, b)
+FCVALUES.FORMAT_VALUE.$N1:
+	.WORD	^M<R2,R6,R7,R8,R9>	; internal procedure NEGLIGIBLE of FCVALUES.FORMAT_VALUE
+; 1041        real(rk), intent(in) :: a, b
+; 1042
+; 1043        if (abs(b) >= 1) then
+	MOVG	@FCVALUES.FORMAT_VALUE.$N1.B(AP),R6
+	BGEQ	FCVALUES.FORMAT_VALUE.$N1.$1
+	MNEGG	R6,R6
+FCVALUES.FORMAT_VALUE.$N1.$1:
+	CMPG	R6,FCVALUES.FORMAT_VALUE.$N1.$KF1
+	BLSS	FCVALUES.FORMAT_VALUE.$N1.$3
+; 1044          negligible = abs(a) < abs(b) * part
+	MOVG	@FCVALUES.FORMAT_VALUE.$N1.A(AP),R6
+	BGEQ	FCVALUES.FORMAT_VALUE.$N1.$5
+	MNEGG	R6,R6
+FCVALUES.FORMAT_VALUE.$N1.$5:
+	MOVG	@FCVALUES.FORMAT_VALUE.$N1.B(AP),R8
+	BGEQ	FCVALUES.FORMAT_VALUE.$N1.$7
+	MNEGG	R8,R8
+FCVALUES.FORMAT_VALUE.$N1.$7:
+	MULG3	R8,FCVALUES.FORMAT_VALUE.PART,R0
+	CLRL	R2
+	CMPG	R6,R0
+	BGEQ	FCVALUES.FORMAT_VALUE.$N1.$9
+	MNEGL	#1,R2
+FCVALUES.FORMAT_VALUE.$N1.$9:
+	MOVL	R2,R6
+; 1045        else if (abs(a) >= 1) then
+	BRB	FCVALUES.FORMAT_VALUE.$N1.$10
+FCVALUES.FORMAT_VALUE.$N1.$3:
+	MOVG	@FCVALUES.FORMAT_VALUE.$N1.A(AP),R8
+	BGEQ	FCVALUES.FORMAT_VALUE.$N1.$11
+	MNEGG	R8,R8
+FCVALUES.FORMAT_VALUE.$N1.$11:
+	CMPG	R8,FCVALUES.FORMAT_VALUE.$N1.$KF1
+	BLSS	FCVALUES.FORMAT_VALUE.$N1.$13
+; 1046          negligible = .false.
+	CLRL	R6
+; 1047        else
+	BRB	FCVALUES.FORMAT_VALUE.$N1.$10
+FCVALUES.FORMAT_VALUE.$N1.$13:
+; 1048          negligible = abs(a) / part < abs(b)
+	MOVG	@FCVALUES.FORMAT_VALUE.$N1.A(AP),R8
+	BGEQ	FCVALUES.FORMAT_VALUE.$N1.$15
+	MNEGG	R8,R8
+FCVALUES.FORMAT_VALUE.$N1.$15:
+	MOVG	@FCVALUES.FORMAT_VALUE.$N1.B(AP),R6
+	BGEQ	FCVALUES.FORMAT_VALUE.$N1.$17
+	MNEGG	R6,R6
+FCVALUES.FORMAT_VALUE.$N1.$17:
+	DIVG3	FCVALUES.FORMAT_VALUE.PART,R8,R0
+	CLRL	R2
+	CMPG	R0,R6
+	BGEQ	FCVALUES.FORMAT_VALUE.$N1.$19
+	MNEGL	#1,R2
+FCVALUES.FORMAT_VALUE.$N1.$19:
+	MOVL	R2,R6
+; 1049        end if
+FCVALUES.FORMAT_VALUE.$N1.$10:
+; 1050      end function negligible
+	MOVL	R6,R0			; the function's value
+	RET
+; 1051    end function format_value
+; 1052  end module fcvalues
+
+	.END

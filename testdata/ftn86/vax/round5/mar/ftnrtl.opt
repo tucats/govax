@@ -1,0 +1,55 @@
+! FTNRTL.OPT - the options that link FTNRTL.EXE, govax's FORTRAN run-time
+! library (docs/PHASE-74 - FORTRAN plan.md, Decision 13). go generate
+! ./internal/ftnrtl builds the image from these, as
+!
+!	$ MACRO FTN_VECTOR
+!	$ MACRO FTN_CONTROL
+!	$ MACRO FTN_UNITS
+!	$ MACRO FTN_STATEMENT
+!	$ MACRO FTN_FORMAT
+!	$ MACRO FTN_EDIT
+!	$ MACRO FTN_FLOAT
+!	$ MACRO FTN_LISTOUT
+!	$ MACRO FTN_LISTIN
+!	$ MACRO FTN_NAMELIST
+!	$ MACRO FTN_INTERNAL
+!	$ MACRO FTN_OPEN
+!	$ MACRO FTN_INQUIRE
+!	$ MACRO FTN_POSITION
+!	$ MACRO FTN_UNFORMATTED
+!	$ MACRO FTN_DIRECT
+!	$ MACRO FTN_RECORD
+!	$ MACRO FTN_KEYED
+!	$ MACRO FTN_INTRINSICS
+!	$ MACRO FTN_SYSTEM
+!	$ LINK/SHAREABLE=FTNRTL/NOSYSLIB FTNRTL/OPTIONS
+!
+! would, with internal/asm and internal/link, which take LIBRTL's and MTHRTL's
+! symbols from govax's own tables. VMS's LINK finds them in IMAGELIB, so on VMS
+! it is the same LINK without /NOSYSLIB (testdata/ftn86). The transfer vector is a
+! cluster of its own, first, so that it starts the image; the modules
+! follow. GSMATCH=LEQUAL lets a program linked against this FTNRTL run on
+! any later one: add 1 to the minor number whenever the vector gains an
+! entry, and change the major number only if an entry's meaning changes.
+CLUSTER=FTNRTL_VECTOR,,,FTN_VECTOR.OBJ
+FTN_CONTROL.OBJ
+FTN_UNITS.OBJ
+FTN_STATEMENT.OBJ
+FTN_FORMAT.OBJ
+FTN_EDIT.OBJ
+FTN_FLOAT.OBJ
+FTN_LISTOUT.OBJ
+FTN_LISTIN.OBJ
+FTN_NAMELIST.OBJ
+FTN_INTERNAL.OBJ
+FTN_OPEN.OBJ
+FTN_INQUIRE.OBJ
+FTN_POSITION.OBJ
+FTN_UNFORMATTED.OBJ
+FTN_DIRECT.OBJ
+FTN_RECORD.OBJ
+FTN_KEYED.OBJ
+FTN_INTRINSICS.OBJ
+FTN_SYSTEM.OBJ
+GSMATCH=LEQUAL,1,19
+IDENTIFICATION="V1.0"

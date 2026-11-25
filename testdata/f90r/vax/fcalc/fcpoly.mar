@@ -2,7 +2,7 @@
 	.IDENT	/01/
 ; TBT$ FORTRAN: a traceback's line numbers are the FORTRAN lines below
 ;
-; Compiled by GOVAX FORTRAN V0.0-0 on 22-NOV-2026 14:13:06.57
+; Compiled by GOVAX FORTRAN V0.0-0 on 24-NOV-2026 14:22:47.40
 ; from DUA5:[FCALC]FCPOLY.F90;1
 ; by the command FORTRAN/G_FLOATING FCPOLY
 ; Optimized by /OPTIMIZE's passes: do limits, one character, forward, unreachable, dead code, deferred indexes, loop invariants,
@@ -33,8 +33,8 @@ FCPOLY.LOG_UNIT = $MOD$FCMESSAGES.$BASE+12 ; LOG_UNIT, in module FCMESSAGES's va
 FCPOLY.DIGITS = $MOD$FCVALUES.$BASE	; DIGITS, in module FCVALUES's variables
 FCPOLY.NUMBER_FORMAT = $MOD$FCVALUES.$BASE+4 ; NUMBER_FORMAT, in module FCVALUES's variables
 FCPOLY.NUMBER_BASE = $MOD$FCVALUES.$BASE+8 ; NUMBER_BASE, in module FCVALUES's variables
-$MOD$FCPOLY.A91A0DD7 == 0		; this module's stamp, which its users' objects refer to
-	.EXTRN	$MOD$FCMESSAGES.63F4C46F,$MOD$FCVALUES.EBF01E5B,$MOD$FCARRAYS.EE19C6D8 ; the stamps of the modules used
+$MOD$FCPOLY.767F368A == 0		; this module's stamp, which its users' objects refer to
+	.EXTRN	$MOD$FCMESSAGES.25BE58B3,$MOD$FCVALUES.38BED767,$MOD$FCARRAYS.F65D1CE7 ; the stamps of the modules used
 
 ;    1  ! fcalc: polynomials, as vectors of their coefficients.
 ;    2  !
@@ -989,7 +989,7 @@ FCPOLY.DURAND_KERNER.$18:
 	MOVQ	R10,FCPOLY.DURAND_KERNER.RADIUS
 FCPOLY.DURAND_KERNER.$13:
 ;  184      radius = 2 * radius
-	MULG2	FCPOLY.DURAND_KERNER.$KF2,FCPOLY.DURAND_KERNER.RADIUS
+	MULG2	S^#2.0,FCPOLY.DURAND_KERNER.RADIUS
 ;  185
 ;  186      ! The guesses: N points around the circle, the first at an angle of
 ;  187      ! 0.4 radians. (Complex arithmetic on parts no larger than RADIUS,

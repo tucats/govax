@@ -2,7 +2,7 @@
 	.IDENT	/01/
 ; TBT$ FORTRAN: a traceback's line numbers are the FORTRAN lines below
 ;
-; Compiled by GOVAX FORTRAN V0.0-0 on 22-NOV-2026 14:13:06.40
+; Compiled by GOVAX FORTRAN V0.0-0 on 24-NOV-2026 14:22:47.23
 ; from DUA5:[FCALC]FCKINDS.F90;1
 ; by the command FORTRAN/G_FLOATING FCKINDS
 ; Optimized by /OPTIMIZE's passes: do limits, one character, forward, unreachable, dead code, deferred indexes, loop invariants,
@@ -42,9 +42,9 @@ $MOD$FCKINDS.9C225BC4 == 0		; this module's stamp, which its users' objects refe
 ;   21  ! p significant decimal digits and a decimal exponent range of at least r.
 ;   22  ! Here that is the kind with 15 digits and a range of 300, which is
 ;   23  ! G_floating on a VAX, where fcalc is compiled /G_FLOATING, and IEEE double
-;   24  ! precision elsewhere. (Under the VAX's default D_floating no kind has that
-;   25  ! range, SELECTED_REAL_KIND gives -2, and the compile stops: fcalc must be
-;   26  ! built /G_FLOATING.) A constant of the kind is written with the kind after
+;   24  ! precision elsewhere. (Under the VAX's default D_floating REAL(8) reaches
+;   25  ! only 1E38, so the kind is REAL(16), H_floating, larger and slower; hence
+;   26  ! /G_FLOATING.) A constant of the kind is written with the kind after
 ;   27  ! an underscore: 1.0_rk. Without it, 1.0 would be a default REAL, single
 ;   28  ! precision, and 0.1 would be correct to only 7 digits.
 ;   29  !

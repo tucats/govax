@@ -2,7 +2,7 @@
 	.IDENT	/01/
 ; TBT$ FORTRAN: a traceback's line numbers are the FORTRAN lines below
 ;
-; Compiled by GOVAX FORTRAN V0.0-0 on 22-NOV-2026 14:13:06.85
+; Compiled by GOVAX FORTRAN V0.0-0 on 24-NOV-2026 14:22:47.67
 ; from DUA5:[FCALC]FCPLOT.F90;1
 ; by the command FORTRAN/G_FLOATING FCPLOT
 ; Optimized by /OPTIMIZE's passes: do limits, one character, forward, unreachable, dead code, deferred indexes, loop invariants,
@@ -37,9 +37,9 @@ FCPLOT.LOG_UNIT = $MOD$FCMESSAGES.$BASE+12 ; LOG_UNIT, in module FCMESSAGES's va
 FCPLOT.DIGITS = $MOD$FCVALUES.$BASE	; DIGITS, in module FCVALUES's variables
 FCPLOT.NUMBER_FORMAT = $MOD$FCVALUES.$BASE+4 ; NUMBER_FORMAT, in module FCVALUES's variables
 FCPLOT.NUMBER_BASE = $MOD$FCVALUES.$BASE+8 ; NUMBER_BASE, in module FCVALUES's variables
-$MOD$FCPLOT.808B1030 == 0		; this module's stamp, which its users' objects refer to
+$MOD$FCPLOT.CAF04C40 == 0		; this module's stamp, which its users' objects refer to
 ; the stamps of the modules used
-	.EXTRN	$MOD$FCMESSAGES.63F4C46F,$MOD$FCVALUES.EBF01E5B,$MOD$FCARRAYS.EE19C6D8,$MOD$FCTREE.EC32573A,$MOD$FCEVAL.945175C1,$MOD$FCNUMERIC.457616FE
+	.EXTRN	$MOD$FCMESSAGES.25BE58B3,$MOD$FCVALUES.38BED767,$MOD$FCARRAYS.F65D1CE7,$MOD$FCTREE.DFE50A2B,$MOD$FCEVAL.CBCCF686,$MOD$FCNUMERIC.7845B1EB
 
 ;    1  ! fcalc: TABLE and PLOT, an expression's values in columns and as a graph.
 ;    2  !
@@ -4023,10 +4023,6 @@ FCPLOT.PLOT_COMMAND.$N7.$L4:
 FCPLOT.PLOT_COMMAND.$N7.$L6:
 	.BLKL	1			; array (line 680), dimension 2's limit
 
-	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
-FCPLOT.PLOT_COMMAND.$N7.$KF1:
-	.LONG	^X00004010,^X00000000	; 1D0
-
 	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
 ;  657
 ;  658      ! POINTS_BY_INDEX: each expression a vector, against its index; the
@@ -4215,7 +4211,7 @@ FCPLOT.PLOT_COMMAND.$N7.$43:		; DO (line 681)'s body
 	SOBGTR	R6,FCPLOT.PLOT_COMMAND.$N7.$43 ; one pass fewer
 FCPLOT.PLOT_COMMAND.$N7.$41:
 ;  685        xlo = 1
-	MOVG	FCPLOT.PLOT_COMMAND.$N7.$KF1,FCPLOT.PLOT_COMMAND.XLO ; 1D0
+	MOVG	S^#1.0,FCPLOT.PLOT_COMMAND.XLO ; 1D0
 ;  686        xhi = n
 	CVTLG	FCPLOT.PLOT_COMMAND.$N7.N,FCPLOT.PLOT_COMMAND.XHI
 ;  687      end subroutine points_by_index
@@ -4394,10 +4390,6 @@ FCPLOT.WIDEN.HI = 8			; HI is argument 2
 FCPLOT.WIDEN.D:
 	.BLKL	2			; D
 
-	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
-FCPLOT.WIDEN.$KF1:
-	.LONG	^X00004010,^X00000000	; 1D0
-
 	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
 ;  721    end subroutine plot_command
 ;  722
@@ -4414,12 +4406,12 @@ FCPLOT.WIDEN.$KF1:
 	RET
 FCPLOT.WIDEN.$1:
 ;  730      d = max(1.0_rk, abs(lo))
-	MOVG	FCPLOT.WIDEN.$KF1,R8	; 1D0
+	MOVG	S^#1.0,R8		; 1D0
 	MOVG	@FCPLOT.WIDEN.LO(AP),R6
 	BGEQ	FCPLOT.WIDEN.$3
 	MNEGG	R6,R6
 FCPLOT.WIDEN.$3:
-	CMPG	R6,FCPLOT.WIDEN.$KF1
+	CMPG	R6,S^#1.0
 	BLEQ	FCPLOT.WIDEN.$5
 	MOVG	R6,R8
 FCPLOT.WIDEN.$5:

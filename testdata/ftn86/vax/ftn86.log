@@ -75,6 +75,9 @@ $ SHOW SYMBOL $STATUS
 $ MACRO/NOLIST FTN_SYSTEM
 $ SHOW SYMBOL $STATUS
   $STATUS == "%X10000001"
+$ MACRO/NOLIST FTN_ALLOC
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
 $ IF F$TRNLNM("FTNRTL") .NES. "" THEN DEASSIGN FTNRTL
 $ LINK/SHAREABLE=FTNRTL/MAP=FTNRTL/FULL FTNRTL/OPTIONS
 ! FTNRTL.OPT - the options that link FTNRTL.EXE, govax's FORTRAN run-time
@@ -101,6 +104,7 @@ $ LINK/SHAREABLE=FTNRTL/MAP=FTNRTL/FULL FTNRTL/OPTIONS
 !	$ MACRO FTN_KEYED
 !	$ MACRO FTN_INTRINSICS
 !	$ MACRO FTN_SYSTEM
+!	$ MACRO FTN_ALLOC
 !	$ LINK/SHAREABLE=FTNRTL/NOSYSLIB FTNRTL/OPTIONS
 !
 ! would, with internal/asm and internal/link, which take LIBRTL's and MTHRTL's
@@ -130,7 +134,8 @@ FTN_RECORD.OBJ
 FTN_KEYED.OBJ
 FTN_INTRINSICS.OBJ
 FTN_SYSTEM.OBJ
-GSMATCH=LEQUAL,1,19
+FTN_ALLOC.OBJ
+GSMATCH=LEQUAL,1,33
 IDENTIFICATION="V1.0"
 $ SHOW SYMBOL $STATUS
   $STATUS == "%X10000001"
@@ -1953,7 +1958,7 @@ Command: %FOR-F-OPEFAI, open failure
 %TRACE-F-TRACEBACK, symbolic stack dump follows
 module name     routine name                     line       rel PC    abs PC
 
-                                                           000256AC  000256AC
+                                                           0005014F  0005014F
 DIALOG          DIALOG                                     00000110  00000710
 $   SHOW SYMBOL $STATUS
   $STATUS == "%X101880F4"
@@ -1981,7 +1986,7 @@ Command: %FOR-F-OPEFAI, open failure
 %TRACE-F-TRACEBACK, symbolic stack dump follows
 module name     routine name                     line       rel PC    abs PC
 
-                                                           000256AC  000256AC
+                                                           0005014F  0005014F
 DIALOG          DIALOG                                     00000111  00000711
 $   SHOW SYMBOL $STATUS
   $STATUS == "%X101880F4"
@@ -2009,7 +2014,7 @@ Command: %FOR-F-OPEFAI, open failure
 %TRACE-F-TRACEBACK, symbolic stack dump follows
 module name     routine name                     line       rel PC    abs PC
 
-                                                           000256AC  000256AC
+                                                           0005014F  0005014F
 DIALOG          DIALOG                                     00000110  00000710
 $   SHOW SYMBOL $STATUS
   $STATUS == "%X101880F4"
@@ -2138,8 +2143,8 @@ WORD           0
 READ          60
 NOTES           7    9
 FIXED          10          20          30
-STORE AT      304
-%SYSTEM-F-ACCVIO, access violation, reason mask=04, virtual address=00000304, PC=00000B7B, PSL=03C00000
+STORE AT      300
+%SYSTEM-F-ACCVIO, access violation, reason mask=04, virtual address=00000300, PC=00000B7B, PSL=03C00000
 %TRACE-F-TRACEBACK, symbolic stack dump follows
 module name     routine name                     line       rel PC    abs PC
 
@@ -2170,8 +2175,8 @@ WORD           0
 READ          60
 NOTES           7    9
 FIXED          10          20          30
-STORE AT      304
-%SYSTEM-F-ACCVIO, access violation, reason mask=04, virtual address=00000304, PC=00000B88, PSL=03C00000
+STORE AT      300
+%SYSTEM-F-ACCVIO, access violation, reason mask=04, virtual address=00000300, PC=00000B88, PSL=03C00000
 %TRACE-F-TRACEBACK, symbolic stack dump follows
 module name     routine name                     line       rel PC    abs PC
 
@@ -2202,8 +2207,8 @@ WORD           0
 READ          60
 NOTES           7    9
 FIXED          10          20          30
-STORE AT      2F4
-%SYSTEM-F-ACCVIO, access violation, reason mask=04, virtual address=000002F4, PC=00000B8F, PSL=03C00000
+STORE AT      2F0
+%SYSTEM-F-ACCVIO, access violation, reason mask=04, virtual address=000002F0, PC=00000B8F, PSL=03C00000
 %TRACE-F-TRACEBACK, symbolic stack dump follows
 module name     routine name                     line       rel PC    abs PC
 
@@ -4120,7 +4125,7 @@ TYPE           4
 %TRACE-F-TRACEBACK, symbolic stack dump follows
 module name     routine name                     line       rel PC    abs PC
 
-                                                           000258AC  000258AC
+                                                           0005034F  0005034F
 IOSTMT          IOSTMT                                     000000FE  000006FE
 $   SHOW SYMBOL $STATUS
   $STATUS == "%X10188134"
@@ -4149,7 +4154,7 @@ TYPE           4
 %TRACE-F-TRACEBACK, symbolic stack dump follows
 module name     routine name                     line       rel PC    abs PC
 
-                                                           000258AC  000258AC
+                                                           0005034F  0005034F
 IOSTMT          IOSTMT                                     000000FE  000006FE
 $   SHOW SYMBOL $STATUS
   $STATUS == "%X10188134"
@@ -4178,7 +4183,7 @@ TYPE           4
 %TRACE-F-TRACEBACK, symbolic stack dump follows
 module name     routine name                     line       rel PC    abs PC
 
-                                                           000258AC  000258AC
+                                                           0005034F  0005034F
 IOSTMT          IOSTMT                                     000000FE  000006FE
 $   SHOW SYMBOL $STATUS
   $STATUS == "%X10188134"
@@ -6141,7 +6146,7 @@ TEXT ABXDEF XD
 CHARS       2       4
 FUNC       3       6      10
 KEPT       7       0
-KEPT    3988
+KEPT    3980
 DIVIDE       1       8
 RESERVED       2
 FIXED   1.500
@@ -7885,6 +7890,126 @@ BETWEEN
 $   SHOW SYMBOL $STATUS
   $STATUS == "%X00000001"
 $ ENDSUBROUTINE
+$ CALL ONE RECARRAYS RECARRAYS RECARRAYS
+$ ONE: SUBROUTINE
+$   SET NOON
+$   WRITE SYS$OUTPUT "==== RECARRAYS"
+==== RECARRAYS
+$   SET DEFAULT DUA1:[RECARRAYS]
+$   MACRO/NOLIST RECARRAYS
+$   LINK/NOMAP/EXECUTABLE=RECARRAYS RECARRAYS,DUA1:[FTN86]FTN86/OPTIONS
+! FTN86.OPT - links a compiled FORTRAN program against FTNRTL, which FTN86.COM has built
+! and defined. govax's LINK finds FTNRTL by itself; VMS's has to be told.
+FTNRTL/SHAREABLE
+$   IF F$SEARCH("RECARRAYS.IN") .NES. "" THEN DEFINE/USER_MODE SYS$INPUT RECARRAYS.IN
+$   RUN RECARRAYS
+  10  20  30  40  10  10  20  99
+BOLT   BOLT   BOLT   NUT    LTS2
+   1.5  11.5  12.5   2.0   4.0   6.0   8.0
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ ENDSUBROUTINE
+$ CALL ONE RECARRAYSN RECARRAYS RECARRAYS
+$ ONE: SUBROUTINE
+$   SET NOON
+$   WRITE SYS$OUTPUT "==== RECARRAYSN"
+==== RECARRAYSN
+$   SET DEFAULT DUA1:[RECARRAYSN]
+$   MACRO/NOLIST RECARRAYS
+$   LINK/NOMAP/EXECUTABLE=RECARRAYS RECARRAYS,DUA1:[FTN86]FTN86/OPTIONS
+! FTN86.OPT - links a compiled FORTRAN program against FTNRTL, which FTN86.COM has built
+! and defined. govax's LINK finds FTNRTL by itself; VMS's has to be told.
+FTNRTL/SHAREABLE
+$   IF F$SEARCH("RECARRAYS.IN") .NES. "" THEN DEFINE/USER_MODE SYS$INPUT RECARRAYS.IN
+$   RUN RECARRAYS
+  10  20  30  40  10  10  20  99
+BOLT   BOLT   BOLT   NUT    LTS2
+   1.5  11.5  12.5   2.0   4.0   6.0   8.0
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ ENDSUBROUTINE
+$ CALL ONE RECARRAYSR RECARRAYS RECARRAYS
+$ ONE: SUBROUTINE
+$   SET NOON
+$   WRITE SYS$OUTPUT "==== RECARRAYSR"
+==== RECARRAYSR
+$   SET DEFAULT DUA1:[RECARRAYSR]
+$   MACRO/NOLIST RECARRAYS
+$   LINK/NOMAP/EXECUTABLE=RECARRAYS RECARRAYS,DUA1:[FTN86]FTN86/OPTIONS
+! FTN86.OPT - links a compiled FORTRAN program against FTNRTL, which FTN86.COM has built
+! and defined. govax's LINK finds FTNRTL by itself; VMS's has to be told.
+FTNRTL/SHAREABLE
+$   IF F$SEARCH("RECARRAYS.IN") .NES. "" THEN DEFINE/USER_MODE SYS$INPUT RECARRAYS.IN
+$   RUN RECARRAYS
+  10  20  30  40  10  10  20  99
+BOLT   BOLT   BOLT   NUT    LTS2
+   1.5  11.5  12.5   2.0   4.0   6.0   8.0
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ ENDSUBROUTINE
+$ CALL ONE RECDYN RECDYN RECDYN
+$ ONE: SUBROUTINE
+$   SET NOON
+$   WRITE SYS$OUTPUT "==== RECDYN"
+==== RECDYN
+$   SET DEFAULT DUA1:[RECDYN]
+$   MACRO/NOLIST RECDYN
+$   LINK/NOMAP/EXECUTABLE=RECDYN RECDYN,DUA1:[FTN86]FTN86/OPTIONS
+! FTN86.OPT - links a compiled FORTRAN program against FTNRTL, which FTN86.COM has built
+! and defined. govax's LINK finds FTNRTL by itself; VMS's has to be told.
+FTNRTL/SHAREABLE
+$   IF F$SEARCH("RECDYN.IN") .NES. "" THEN DEFINE/USER_MODE SYS$INPUT RECDYN.IN
+$   RUN RECDYN
+    41 -1030  1020   -11  1021 -1031 -1041
+PART   PART Y PART Y PART   PART X PART X PART X
+   4.0  80.0  12.0   3.0  60.0   9.0   2.0  40.0   6.0   1.0  20.0   3.0
+   4.0   4.0   6.0   3.0   3.0   4.5   8.0   8.0  12.0
+  30.0
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ ENDSUBROUTINE
+$ CALL ONE RECDYNN RECDYN RECDYN
+$ ONE: SUBROUTINE
+$   SET NOON
+$   WRITE SYS$OUTPUT "==== RECDYNN"
+==== RECDYNN
+$   SET DEFAULT DUA1:[RECDYNN]
+$   MACRO/NOLIST RECDYN
+$   LINK/NOMAP/EXECUTABLE=RECDYN RECDYN,DUA1:[FTN86]FTN86/OPTIONS
+! FTN86.OPT - links a compiled FORTRAN program against FTNRTL, which FTN86.COM has built
+! and defined. govax's LINK finds FTNRTL by itself; VMS's has to be told.
+FTNRTL/SHAREABLE
+$   IF F$SEARCH("RECDYN.IN") .NES. "" THEN DEFINE/USER_MODE SYS$INPUT RECDYN.IN
+$   RUN RECDYN
+    41 -1030  1020   -11  1021 -1031 -1041
+PART   PART Y PART Y PART   PART X PART X PART X
+   4.0  80.0  12.0   3.0  60.0   9.0   2.0  40.0   6.0   1.0  20.0   3.0
+   4.0   4.0   6.0   3.0   3.0   4.5   8.0   8.0  12.0
+  30.0
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ ENDSUBROUTINE
+$ CALL ONE RECDYNR RECDYN RECDYN
+$ ONE: SUBROUTINE
+$   SET NOON
+$   WRITE SYS$OUTPUT "==== RECDYNR"
+==== RECDYNR
+$   SET DEFAULT DUA1:[RECDYNR]
+$   MACRO/NOLIST RECDYN
+$   LINK/NOMAP/EXECUTABLE=RECDYN RECDYN,DUA1:[FTN86]FTN86/OPTIONS
+! FTN86.OPT - links a compiled FORTRAN program against FTNRTL, which FTN86.COM has built
+! and defined. govax's LINK finds FTNRTL by itself; VMS's has to be told.
+FTNRTL/SHAREABLE
+$   IF F$SEARCH("RECDYN.IN") .NES. "" THEN DEFINE/USER_MODE SYS$INPUT RECDYN.IN
+$   RUN RECDYN
+    41 -1030  1020   -11  1021 -1031 -1041
+PART   PART Y PART Y PART   PART X PART X PART X
+   4.0  80.0  12.0   3.0  60.0   9.0   2.0  40.0   6.0   1.0  20.0   3.0
+   4.0   4.0   6.0   3.0   3.0   4.5   8.0   8.0  12.0
+  30.0
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ ENDSUBROUTINE
 $ CALL ONE RECORDS RECORDS RECORDS
 $ ONE: SUBROUTINE
 $   SET NOON
@@ -7996,7 +8121,7 @@ $   IF F$SEARCH("RECURAST.IN") .NES. "" THEN DEFINE/USER_MODE SYS$INPUT RECURAST
 $   RUN RECURAST
 F:   606    80   ASTS 1
 NEST: ((((*))))        (((#)))            ASTS 1
-SPIN:   944  1896   BAD 0   DONE 1   WAITED T
+SPIN:   944  1896   BAD 0   DONE 1   WAITED F
 $   SHOW SYMBOL $STATUS
   $STATUS == "%X00000001"
 $ ENDSUBROUTINE
@@ -8034,7 +8159,7 @@ $   IF F$SEARCH("RECURAST.IN") .NES. "" THEN DEFINE/USER_MODE SYS$INPUT RECURAST
 $   RUN RECURAST
 F:   606    80   ASTS 1
 NEST: ((((*))))        (((#)))            ASTS 1
-SPIN:   944  1896   BAD 0   DONE 1   WAITED F
+SPIN:   944  1896   BAD 0   DONE 1   WAITED T
 $   SHOW SYMBOL $STATUS
   $STATUS == "%X00000001"
 $ ENDSUBROUTINE
@@ -10045,6 +10170,81 @@ not MIDDLE
 $   SHOW SYMBOL $STATUS
   $STATUS == "%X00000001"
 $ ENDSUBROUTINE
+$ CALL ONE STRMATH STRMATH STRMATH
+$ ONE: SUBROUTINE
+$   SET NOON
+$   WRITE SYS$OUTPUT "==== STRMATH"
+==== STRMATH
+$   SET DEFAULT DUA1:[STRMATH]
+$   MACRO/NOLIST STRMATH
+$   LINK/NOMAP/EXECUTABLE=STRMATH STRMATH,DUA1:[FTN86]FTN86/OPTIONS
+! FTN86.OPT - links a compiled FORTRAN program against FTNRTL, which FTN86.COM has built
+! and defined. govax's LINK finds FTNRTL by itself; VMS's has to be told.
+FTNRTL/SHAREABLE
+$   IF F$SEARCH("STRMATH.IN") .NES. "" THEN DEFINE/USER_MODE SYS$INPUT STRMATH.IN
+$   RUN STRMATH
+%FOR-F-OUTSTAOVE, output statement overflows record
+  unit -1  file SYS$OUTPUT:.;
+  user PC 00000B4A
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+                                                           0005034F  0005034F
+STRMATH         SHOW                                       000000D7  00000B4A
+STRMATH         STRMATH                                    0000006B  0000066B
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10188214"
+$ ENDSUBROUTINE
+$ CALL ONE STRMATHN STRMATH STRMATH
+$ ONE: SUBROUTINE
+$   SET NOON
+$   WRITE SYS$OUTPUT "==== STRMATHN"
+==== STRMATHN
+$   SET DEFAULT DUA1:[STRMATHN]
+$   MACRO/NOLIST STRMATH
+$   LINK/NOMAP/EXECUTABLE=STRMATH STRMATH,DUA1:[FTN86]FTN86/OPTIONS
+! FTN86.OPT - links a compiled FORTRAN program against FTNRTL, which FTN86.COM has built
+! and defined. govax's LINK finds FTNRTL by itself; VMS's has to be told.
+FTNRTL/SHAREABLE
+$   IF F$SEARCH("STRMATH.IN") .NES. "" THEN DEFINE/USER_MODE SYS$INPUT STRMATH.IN
+$   RUN STRMATH
+%FOR-F-OUTSTAOVE, output statement overflows record
+  unit -1  file SYS$OUTPUT:.;
+  user PC 00000B56
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+                                                           0005034F  0005034F
+STRMATH         SHOW                                       000000E3  00000B56
+STRMATH         STRMATH                                    0000006B  0000066B
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10188214"
+$ ENDSUBROUTINE
+$ CALL ONE STRMATHR STRMATH STRMATH
+$ ONE: SUBROUTINE
+$   SET NOON
+$   WRITE SYS$OUTPUT "==== STRMATHR"
+==== STRMATHR
+$   SET DEFAULT DUA1:[STRMATHR]
+$   MACRO/NOLIST STRMATH
+$   LINK/NOMAP/EXECUTABLE=STRMATH STRMATH,DUA1:[FTN86]FTN86/OPTIONS
+! FTN86.OPT - links a compiled FORTRAN program against FTNRTL, which FTN86.COM has built
+! and defined. govax's LINK finds FTNRTL by itself; VMS's has to be told.
+FTNRTL/SHAREABLE
+$   IF F$SEARCH("STRMATH.IN") .NES. "" THEN DEFINE/USER_MODE SYS$INPUT STRMATH.IN
+$   RUN STRMATH
+%FOR-F-OUTSTAOVE, output statement overflows record
+  unit -1  file SYS$OUTPUT:.;
+  user PC 00000B50
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+                                                           0005034F  0005034F
+STRMATH         SHOW                                       000000DD  00000B50
+STRMATH         STRMATH                                    0000006B  0000066B
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10188214"
+$ ENDSUBROUTINE
 $ CALL ONE STRRTL STRRTL STRRTL
 $ ONE: SUBROUTINE
 $   SET NOON
@@ -11314,6 +11514,72 @@ NOSUCH.DAT opened: F
 DATE agrees: T
 IDATE in range: T
 Exit handler: status 00000001
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ ENDSUBROUTINE
+$ CALL ONE ZEROVAX ZEROVAX ZEROVAX
+$ ONE: SUBROUTINE
+$   SET NOON
+$   WRITE SYS$OUTPUT "==== ZEROVAX"
+==== ZEROVAX
+$   SET DEFAULT DUA1:[ZEROVAX]
+$   MACRO/NOLIST ZEROVAX
+$   LINK/NOMAP/EXECUTABLE=ZEROVAX ZEROVAX,DUA1:[FTN86]FTN86/OPTIONS
+! FTN86.OPT - links a compiled FORTRAN program against FTNRTL, which FTN86.COM has built
+! and defined. govax's LINK finds FTNRTL by itself; VMS's has to be told.
+FTNRTL/SHAREABLE
+$   IF F$SEARCH("ZEROVAX.IN") .NES. "" THEN DEFINE/USER_MODE SYS$INPUT ZEROVAX.IN
+$   RUN ZEROVAX
+[]
+ 63
+[]
+ 63
+[]
+ 63
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ ENDSUBROUTINE
+$ CALL ONE ZEROVAXN ZEROVAX ZEROVAX
+$ ONE: SUBROUTINE
+$   SET NOON
+$   WRITE SYS$OUTPUT "==== ZEROVAXN"
+==== ZEROVAXN
+$   SET DEFAULT DUA1:[ZEROVAXN]
+$   MACRO/NOLIST ZEROVAX
+$   LINK/NOMAP/EXECUTABLE=ZEROVAX ZEROVAX,DUA1:[FTN86]FTN86/OPTIONS
+! FTN86.OPT - links a compiled FORTRAN program against FTNRTL, which FTN86.COM has built
+! and defined. govax's LINK finds FTNRTL by itself; VMS's has to be told.
+FTNRTL/SHAREABLE
+$   IF F$SEARCH("ZEROVAX.IN") .NES. "" THEN DEFINE/USER_MODE SYS$INPUT ZEROVAX.IN
+$   RUN ZEROVAX
+[]
+ 63
+[]
+ 63
+[]
+ 63
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ ENDSUBROUTINE
+$ CALL ONE ZEROVAXR ZEROVAX ZEROVAX
+$ ONE: SUBROUTINE
+$   SET NOON
+$   WRITE SYS$OUTPUT "==== ZEROVAXR"
+==== ZEROVAXR
+$   SET DEFAULT DUA1:[ZEROVAXR]
+$   MACRO/NOLIST ZEROVAX
+$   LINK/NOMAP/EXECUTABLE=ZEROVAX ZEROVAX,DUA1:[FTN86]FTN86/OPTIONS
+! FTN86.OPT - links a compiled FORTRAN program against FTNRTL, which FTN86.COM has built
+! and defined. govax's LINK finds FTNRTL by itself; VMS's has to be told.
+FTNRTL/SHAREABLE
+$   IF F$SEARCH("ZEROVAX.IN") .NES. "" THEN DEFINE/USER_MODE SYS$INPUT ZEROVAX.IN
+$   RUN ZEROVAX
+[]
+ 63
+[]
+ 63
+[]
+ 63
 $   SHOW SYMBOL $STATUS
   $STATUS == "%X00000001"
 $ ENDSUBROUTINE

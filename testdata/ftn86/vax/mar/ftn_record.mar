@@ -37,6 +37,9 @@
 ; leaves no current record, so that a second is FOR$_NO_CURREC. DELETE (u'r) is
 ; FOR$_DELERR, a record there having no number.
 ;
+; The MACRO and VAX conventions these lines rely on are explained once,
+; in FTN_VECTOR.MAR's "Reading these sources".
+;
 	$FABDEF
 	$FORDEF				; FORRTL's condition values
 	$RABDEF
@@ -47,13 +50,13 @@ UB_OPEN		= 0			; A unit's block (FTN_UNITS)
 UB_STS		= 8
 UB_STV		= 12
 UB_ACCESS	= 37
-UB_READONLY	= 40
 UB_FAB		= 76
 UB_RAB		= UB_FAB+FAB$C_BLN
 UB_ASV		= 620
 UB_KEY		= UB_ASV+8
 UB_MAXREC	= UB_ASV+12
 UB_CURRENT	= UB_ASV+36
+UB_ACTION	= UB_ASV+39
 
 CTX_STATUS	= 16			; A statement's context (FTN_STATEMENT)
 
@@ -65,7 +68,9 @@ ALL_MASK	= ^M<R2,R3,R4,R5,R6,R7,R8,R9>
 
 ;
 ; START: begins the statement. R9 is the context, R7 the unit's block, R6 its
-; RAB. R0's low bit is clear if the statement has failed already.
+; RAB. R0's low bit is clear if the statement has failed already. START is a
+; BSBW subroutine, so FP is still the entry's frame: 16(FP) is where the
+; program's call returns, the user PC a message shows.
 ;
 START:	PUSHL	4(AP)			; the control block
 	PUSHL	16(FP)			; the user PC, saved in this frame
@@ -109,8 +114,8 @@ RELATIVE:
 	BNEQ	2$
 	MOVL	#1,R8
 	MOVL	#FOR$_WRIREAFIL,R0
-	TSTB	UB_READONLY(R7)
-	BNEQ	2$
+	CMPB	UB_ACTION(R7),#1	; READONLY, or ACTION='READ'
+	BEQL	2$
 15$:	MOVL	#FOR$_NO_CURREC,R0
 	TSTB	UB_CURRENT(R7)
 	BNEQ	3$

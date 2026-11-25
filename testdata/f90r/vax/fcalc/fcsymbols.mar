@@ -2,7 +2,7 @@
 	.IDENT	/01/
 ; TBT$ FORTRAN: a traceback's line numbers are the FORTRAN lines below
 ;
-; Compiled by GOVAX FORTRAN V0.0-0 on 22-NOV-2026 14:13:06.49
+; Compiled by GOVAX FORTRAN V0.0-0 on 24-NOV-2026 14:22:47.33
 ; from DUA5:[FCALC]FCSYMBOLS.F90;1
 ; by the command FORTRAN/G_FLOATING FCSYMBOLS
 ; Optimized by /OPTIMIZE's passes: do limits, one character, forward, unreachable, dead code, deferred indexes, loop invariants,
@@ -54,8 +54,8 @@ FCSYMBOLS.NUMBER_FORMAT = $MOD$FCVALUES.$BASE+4 ; NUMBER_FORMAT, in module FCVAL
 FCSYMBOLS.NUMBER_BASE = $MOD$FCVALUES.$BASE+8 ; NUMBER_BASE, in module FCVALUES's variables
 FCSYMBOLS.ROOT = $MOD$FCSYMBOLS.$BASE	; ROOT, in module FCSYMBOLS's variables
 FCSYMBOLS.FUNCTIONS = $MOD$FCSYMBOLS.$BASE+4 ; FUNCTIONS, in module FCSYMBOLS's variables
-$MOD$FCSYMBOLS.2A7739DD == 0		; this module's stamp, which its users' objects refer to
-	.EXTRN	$MOD$FCMESSAGES.63F4C46F,$MOD$FCVALUES.EBF01E5B,$MOD$FCARRAYS.EE19C6D8,$MOD$FCTREE.EC32573A ; the stamps of the modules used
+$MOD$FCSYMBOLS.9A59E627 == 0		; this module's stamp, which its users' objects refer to
+	.EXTRN	$MOD$FCMESSAGES.25BE58B3,$MOD$FCVALUES.38BED767,$MOD$FCARRAYS.F65D1CE7,$MOD$FCTREE.DFE50A2B ; the stamps of the modules used
 
 ;    1  ! fcalc: the names a user defines, and the constants fcalc defines.
 ;    2  !

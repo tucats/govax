@@ -24,6 +24,13 @@
 ; which the statement goes on: the rest of its items are written, and
 ; FTN$IO_END reports or signals it at the end (VMS's).
 ;
+; A zero width (Fortran 95's 10.5.1.1: I0, B0, O0, Z0, and Iw.m's forms
+; such as I0.4) is the least width that holds the value, in a statement of a
+; unit compiled /F90 (the control block's F90 flag): I0 of -7 is "-7", B0 of
+; 10 "1010", I0.4 of 5 "0005". A field that would be no columns, I0.0 of 0,
+; is one blank, as gfortran's. Without the flag a zero width is VAX
+; FORTRAN's: no room, so FOR$_OUTCONERR. L0 is never allowed.
+;
 ; Input. A field is w characters from the position, but fewer if the
 ; record ends first, or if a comma comes first (8.6: the comma ends the
 ; field, and the next field starts after it; two commas in a row are an
@@ -58,6 +65,8 @@
 	$SSDEF
 
 ; The statement's context: FTN_STATEMENT's fields and FTN_FORMAT's.
+CTX_FLAGS	= 12			; word: the control block's flags
+FLAG_F90	= 16			;  a statement of a unit compiled /F90
 CTX_KIND	= 14			; byte: odd for a WRITE
 CTX_STATUS	= 16			; long: the statement's first error, or 0
 CTX_RECLEN	= 24			; long: the record's length
@@ -205,7 +214,9 @@ OUT_I:	JSB	INTEGER_TYPE
 	TSTL	R5
 	BEQL	40$
 	INCL	R4
-40$:	CMPL	R4,R9
+40$:	MOVL	R4,R0
+	JSB	ZERO_WIDTH		; I0: just those
+	CMPL	R4,R9
 	BLEQ	45$
 	BRW	STARS
 45$:	SUBL3	R4,R9,R0		; blanks, the sign, zeros, the digits
@@ -253,6 +264,7 @@ OUT_OZ:	MULL3	#8,16(AP),R7
 	BGEQ	24$
 	CLRL	R3
 24$:	ADDL3	R3,R4,R0
+	JSB	ZERO_WIDTH		; B0, O0, Z0: just those
 	CMPL	R0,R9
 	BLEQ	30$
 	BRW	STARS
@@ -304,6 +316,33 @@ OUT_L:	TSTL	R9
 	JSB	INTEGER_TYPE
 	MOVL	R0,R8
 	BRW	MISMATCH
+
+;
+; ZERO_WIDTH: with R0 the columns an I, B, O, or Z field needs, a width
+; given as 0 in a Fortran 90 statement becomes R0 (1 if R0 is 0: one blank).
+; A field that then won't fit in the record is written not at all, as a
+; field of a given width that won't fit (FTN$$EDIT_INT's start): FTN$$FMT_PUT
+; says so, and RET, here in a JSB subroutine, returns from FTN$$EDIT_INT
+; itself, since it goes by FP. Any other width is left alone. Uses R1.
+;
+ZERO_WIDTH:
+	TSTL	R9
+	BNEQ	90$
+	BBC	#0,OP_B_FLAGS(R10),90$	; F_W: no width given is a default one
+	BITW	#FLAG_F90,CTX_FLAGS(R11)
+	BEQL	90$
+	MOVL	R0,R9
+	BNEQ	10$
+	MOVL	#1,R9			; nothing to show: one blank
+10$:	ADDL3	CTX_POS(R11),R9,R1
+	CMPL	R1,CTX_RECMAX(R11)
+	BLEQ	90$
+	PUSHL	R9
+	CLRL	-(SP)
+	PUSHL	R11
+	CALLS	#3,FTN$$FMT_PUT		; FTN_FORMAT
+	RET
+90$:	RSB
 
 ;
 ; STARS: a field of w asterisks, and FOR$_OUTCONERR; the statement goes on.

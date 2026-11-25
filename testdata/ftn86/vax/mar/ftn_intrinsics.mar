@@ -20,6 +20,11 @@
 ; a byte, and IZEXT and JZEXT a word, the low part of any longer value,
 ; since the VAX keeps a value's low bytes first.
 ;
+; The MACRO and VAX conventions these lines rely on are explained once,
+; in FTN_VECTOR.MAR's "Reading these sources".
+;
+	$DSCDEF				; descriptors' fields
+
 	.PSECT	$FTN_CODE,EXE,NOWRT,PIC,SHR,LONG
 
 ;
@@ -326,5 +331,833 @@ BIT_TEST:
 	.ENTRY	FTN$NWORKERS,^M<>
 	MOVL	#1,R0
 	RET
+
+;
+; CALL FTN$DIVCH(result, x, y)
+;
+; X / Y for two COMPLEX*32 values, Fortran 90's COMPLEX(16), whose parts
+; are H_floating: the quotient at RESULT. It isn't an intrinsic function
+; but the operator, which the compiler calls as it calls OTS$DIVC for a
+; COMPLEX*8, since OTS$ has no H complex routine (docs/planning/PHASE-100
+; - Fortran 90 declarations and kinds.md, subtask 7). Each value is two
+; H_floating octawords, the real part first. With X = (a, b) and
+; Y = (c, d), the quotient is the manual's
+;
+;	((a*c + b*d) / (c*c + d*d), (b*c - a*d) / (c*c + d*d))
+;
+; computed an instruction at a time, each result rounded, which is what
+; the compiler's folding of a constant quotient does too
+; (vaxfloat.ComplexDivSteps). A Y of (0, 0) divides by zero, SS$_FLTDIV_F,
+; and a part too large overflows, SS$_FLTOVF_F; a part too small is 0.
+; Everything is read before anything is written, so RESULT may be X or Y.
+;
+	.ENTRY	FTN$DIVCH,^M<R2,R3,R4,R5,R6,R7,R8,R9>
+	MOVQ	8(AP),R8		; R8 -> X, (a, b); R9 -> Y, (c, d)
+	SUBL2	#32,SP			; two H_floating values, at 0(SP) and 16(SP)
+	MULH3	(R9),(R9),R0		; c*c
+	MULH3	16(R9),16(R9),R4	; d*d
+	ADDH3	R4,R0,(SP)		; the denominator, c*c + d*d
+	MULH3	(R8),(R9),R0		; a*c
+	MULH3	16(R8),16(R9),R4	; b*d
+	ADDH3	R4,R0,16(SP)		; the real part's numerator
+	MULH3	16(R8),(R9),R0		; b*c
+	MULH3	(R8),16(R9),R4		; a*d
+	SUBH2	R4,R0			; the imaginary part's, b*c - a*d
+	MOVL	4(AP),R8		; R8 -> RESULT
+	DIVH3	(SP),16(SP),(R8)	; the real part
+	DIVH3	(SP),R0,16(R8)		; the imaginary part
+	RET				; (RET puts SP back)
+
+;
+; COMPLEX(16)'s functions (docs/planning/PHASE-108 - Fortran 90 intrinsic
+; procedures.md, finding 6): ABS, SQRT, EXP, LOG, SIN, and COS of a
+; COMPLEX*32, and its powers, which MTHRTL has no routines for, it having no
+; H_floating complex routines and no OTS$ power of one. Each is composed
+; from MTHRTL's H_floating routines (MTH$HSQRT, MTH$HEXP, MTH$HLOG,
+; MTH$HSINCOS, MTH$HSINH, MTH$HCOSH, MTH$HATAN2), and the H_floating
+; instructions. Each value is two H_floating octawords, the real part
+; first; the result goes through the hidden first argument, as a REAL*16's
+; does, and may be the argument itself: everything is read before the
+; result is written. A condition is the MTHRTL routine's, or the
+; instruction's (an overflow is SS$_FLTOVF_F).
+;
+; An MTHRTL H_floating routine takes its result's address first, then its
+; arguments' (MTH$HSINCOS: the argument, then the sine's and the cosine's
+; places), and changes only R0 and R1.
+;
+MTH$_UNDEXP	= ^X168294		; undefined exponentiation, severity F
+
+;
+; CALL FTN$CHABS(result, z)
+;
+; ABS of a COMPLEX(16), its modulus, a REAL*16: with m the larger of the
+; parts' magnitudes and n the smaller, m * SQRT(1 + (n/m)**2), which
+; overflows only when the modulus does. (0, 0)'s is 0. A part's magnitude
+; is the part with its sign bit, bit 15 of its first word, clear.
+;
+	.ENTRY	FTN$CHABS,^M<R2,R3,R4,R5,R6,R7,R8,R9>
+	MOVL	8(AP),R8		; R8 -> Z
+	SUBL2	#32,SP			; m at 0(SP), the root at 16(SP)
+	MOVL	SP,R9			;  (an H_floating value in R4 is R4 to R7)
+	MOVH	(R8),R0			; |real part|
+	BICL2	#^X8000,R0
+	MOVH	16(R8),R4		; |imaginary part|
+	BICL2	#^X8000,R4
+	CMPH	R0,R4			; R0 the larger
+	BGEQ	10$
+	MOVH	R0,(R9)
+	MOVH	R4,R0
+	MOVH	(R9),R4
+10$:	TSTH	R0			; both 0?
+	BNEQ	20$
+	CLRO	@4(AP)
+	RET
+20$:	MOVH	R0,(R9)			; m
+	DIVH2	R0,R4			; n/m
+	MULH2	R4,R4
+	ADDH3	#1.0,R4,16(R9)		; 1 + (n/m)**2
+	PUSHAB	16(R9)
+	PUSHAB	16(R9)
+	CALLS	#2,G^MTH$HSQRT		; its root, in place
+	MULH3	(R9),16(R9),@4(AP)
+	RET
+
+;
+; CALL FTN$CHSQRT(result, z)
+;
+; SQRT of a COMPLEX(16), the root whose real part isn't negative (the
+; standard's 13.13.98). With z = (a, b) and t = SQRT(|a|/2 + ABS(z)/2):
+; (t, b/(2t)) when a isn't negative, else (|b|/(2t), t with b's sign).
+; (0, 0)'s is (0, 0). Halving each part before adding keeps the sum in
+; range.
+;
+	.ENTRY	FTN$CHSQRT,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10>
+	MOVL	8(AP),R8		; R8 -> Z
+	MOVL	4(AP),R10		; R10 -> RESULT
+	SUBL2	#32,SP			; ABS(z), then t, at 0(SP); 2t at 16(SP)
+	MOVL	SP,R9
+	TSTH	(R8)
+	BNEQ	10$
+	TSTH	16(R8)
+	BNEQ	10$
+	CLRO	(R10)			; (0, 0)
+	CLRO	16(R10)
+	RET
+10$:	PUSHL	R8
+	PUSHL	R9
+	CALLS	#2,FTN$CHABS		; ABS(z)
+	MOVH	(R8),R0			; |a|
+	BICL2	#^X8000,R0
+	MULH2	#0.5,R0
+	MULH3	#0.5,(R9),R4
+	ADDH3	R4,R0,(R9)
+	PUSHL	R9
+	PUSHL	R9
+	CALLS	#2,G^MTH$HSQRT		; t, in place
+	ADDH3	(R9),(R9),16(R9)	; 2t
+	TSTH	(R8)
+	BLSS	20$
+	DIVH3	16(R9),16(R8),R0	; a not negative: b/(2t)
+	MOVH	(R9),(R10)		;  and t
+	MOVH	R0,16(R10)
+	RET
+20$:	MOVH	16(R8),R0		; a negative: |b|/(2t)
+	BICL2	#^X8000,R0
+	DIVH2	16(R9),R0
+	MOVH	(R9),R4			;  and t with b's sign
+	TSTH	16(R8)
+	BGEQ	30$
+	MNEGH	R4,R4
+30$:	MOVH	R0,(R10)
+	MOVH	R4,16(R10)
+	RET
+
+;
+; CALL FTN$CHEXP(result, z)
+;
+; EXP of a COMPLEX(16) (a, b): EXP(a) * (COS(b), SIN(b)).
+;
+	.ENTRY	FTN$CHEXP,^M<R2,R3,R4,R5,R6,R7,R8>
+	MOVL	8(AP),R8		; R8 -> Z
+	SUBL2	#48,SP			; EXP(a), SIN(b), COS(b)
+	MOVL	SP,R6
+	PUSHL	R8
+	PUSHL	R6
+	CALLS	#2,G^MTH$HEXP
+	PUSHAB	32(R6)
+	PUSHAB	16(R6)
+	PUSHAB	16(R8)
+	CALLS	#3,G^MTH$HSINCOS
+	MOVL	4(AP),R7
+	MULH3	(R6),32(R6),(R7)
+	MULH3	(R6),16(R6),16(R7)
+	RET
+
+;
+; CALL FTN$CHLOG(result, z)
+;
+; LOG of a COMPLEX(16) (a, b), the principal value: (LOG(ABS(z)),
+; ATAN2(b, a)), the imaginary part from -pi to pi. (0, 0) has none, and is
+; MTH$HLOG's MTH$_LOGZERNEG.
+;
+	.ENTRY	FTN$CHLOG,^M<R2,R3,R4,R5,R6,R7,R8>
+	MOVL	8(AP),R8		; R8 -> Z
+	SUBL2	#48,SP			; ABS(z), its logarithm, the angle
+	MOVL	SP,R6
+	PUSHL	R8
+	PUSHL	R6
+	CALLS	#2,FTN$CHABS
+	PUSHL	R6
+	PUSHAB	16(R6)
+	CALLS	#2,G^MTH$HLOG
+	PUSHL	R8			; X, the real part
+	PUSHAB	16(R8)			; Y, the imaginary part
+	PUSHAB	32(R6)
+	CALLS	#3,G^MTH$HATAN2
+	MOVL	4(AP),R7
+	MOVO	16(R6),(R7)
+	MOVO	32(R6),16(R7)
+	RET
+
+;
+; CALL FTN$CHSIN(result, z)
+; CALL FTN$CHCOS(result, z)
+;
+; SIN of a COMPLEX(16) (a, b), (SIN(a) * COSH(b), COS(a) * SINH(b)), and
+; COS, (COS(a) * COSH(b), -SIN(a) * SINH(b)), from TRIGPARTS's four values.
+;
+	.ENTRY	FTN$CHSIN,^M<R2,R3,R4,R5,R6,R7,R8>
+	BSBB	TRIGPARTS
+	MULH3	(R6),48(R6),(R7)
+	MULH3	16(R6),32(R6),16(R7)
+	RET
+
+	.ENTRY	FTN$CHCOS,^M<R2,R3,R4,R5,R6,R7,R8>
+	BSBB	TRIGPARTS
+	MULH3	16(R6),48(R6),(R7)
+	MULH3	(R6),32(R6),R0
+	MNEGH	R0,16(R7)
+	RET
+
+;
+; TRIGPARTS reads Z, the second argument, and leaves at R6 SIN(a), COS(a),
+; SINH(b), and COSH(b), an octaword each, in 64 bytes it takes from the
+; stack (the routine's RET gives them back), and R7 -> RESULT.
+;
+TRIGPARTS:
+	MOVL	(SP)+,R7		; the return address, while the stack grows
+	SUBL2	#64,SP
+	MOVL	SP,R6
+	PUSHL	R7
+	MOVL	8(AP),R8		; R8 -> Z
+	PUSHAB	16(R6)
+	PUSHAB	(R6)
+	PUSHL	R8
+	CALLS	#3,G^MTH$HSINCOS
+	PUSHAB	16(R8)
+	PUSHAB	32(R6)
+	CALLS	#2,G^MTH$HSINH
+	PUSHAB	16(R8)
+	PUSHAB	48(R6)
+	CALLS	#2,G^MTH$HCOSH
+	MOVL	4(AP),R7
+	RSB
+
+;
+; CALL FTN$CHPOWJ(result, x, n)
+;
+; X ** N for a COMPLEX(16) X and an INTEGER*4 N, as OTS$POWCJ computes a
+; COMPLEX*8's (vaxfloat.PowerBySquaring's order): the product of X's
+; squares X**(2**i) for each bit i of |N|, from the lowest, the result
+; multiplied by each in turn and X squared only while bits are left; for a
+; negative N each square's reciprocal, by FTN$DIVCH. A product is CMUL's,
+; the same instructions as the compiler's in-line product, which writes a
+; small constant power the same way, so either gives the same value. X**0
+; is (1, 0); (0, 0) to a power of 0 or less is MTH$_UNDEXP, as OTS$POWCJ's.
+;
+	.ENTRY	FTN$CHPOWJ,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVL	8(AP),R8		; R8 -> X
+	MOVL	@12(AP),R9		; N
+	MOVL	R9,R10			; |N|, unsigned: the bits left
+	BGEQ	5$
+	MNEGL	R10,R10
+5$:	SUBL2	#128,SP			; the square, the result, (1, 0), a reciprocal
+	MOVL	SP,R7
+	MOVO	(R8),(R7)		; the square starts as X
+	MOVO	16(R8),16(R7)
+	TSTL	R9
+	BGTR	8$
+	TSTH	(R7)			; (0, 0) to a power of 0 or less
+	BNEQ	8$
+	TSTH	16(R7)
+	BNEQ	8$
+	PUSHL	16(FP)			; the caller's PC
+	PUSHL	#1
+	PUSHL	#MTH$_UNDEXP
+	CALLS	#3,G^LIB$SIGNAL
+	MOVL	4(AP),R6		; a handler went on: (0, 0)
+	CLRO	(R6)
+	CLRO	16(R6)
+	RET
+8$:	MOVH	#1.0,64(R7)		; (1, 0)
+	CLRO	80(R7)
+	MOVO	64(R7),32(R7)		; the result starts as (1, 0)
+	CLRO	48(R7)
+10$:	TSTL	R10			; no bits left?
+	BEQL	90$
+	BLBC	R10,30$
+	MOVL	R7,R11			; this bit's factor: the square,
+	TSTL	R9
+	BGEQ	20$
+	MOVAB	96(R7),R11		;  or its reciprocal
+	PUSHL	R7
+	PUSHAB	64(R7)
+	PUSHL	R11
+	CALLS	#3,FTN$DIVCH
+20$:	MOVAB	32(R7),R6		; the result times the factor
+	BSBB	CMUL
+30$:	EXTZV	#1,#31,R10,R10		; the next bit
+	BEQL	90$
+	MOVL	R7,R6			; the square squared
+	MOVL	R7,R11
+	BSBB	CMUL
+	BRB	10$
+90$:	MOVL	4(AP),R6
+	MOVO	32(R7),(R6)
+	MOVO	48(R7),16(R6)
+	RET
+
+;
+; CALL FTN$CHPOW(result, x, y)
+;
+; X ** Y for COMPLEX(16) X and Y: EXP(Y * LOG(X)), the principal value. A
+; base of (0, 0) has no logarithm, whatever the exponent, and is
+; MTH$_LOGZERNEG, as OTS$POWCC's is.
+;
+	.ENTRY	FTN$CHPOW,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	SUBL2	#64,SP			; LOG(X), then Y * LOG(X)
+	MOVL	SP,R7
+	PUSHL	8(AP)
+	PUSHAB	32(R7)
+	CALLS	#2,FTN$CHLOG
+	MOVL	12(AP),R8		; Y, copied
+	MOVO	(R8),(R7)
+	MOVO	16(R8),16(R7)
+	MOVL	R7,R6			; times LOG(X)
+	MOVAB	32(R7),R11
+	BSBB	CMUL
+	PUSHL	R7
+	PUSHL	4(AP)
+	CALLS	#2,FTN$CHEXP
+	RET
+
+;
+; CMUL multiplies the COMPLEX(16) value at R6 by the one at R11, in place,
+; which may be the same: with (a, b) at R6 and (c, d) at R11, (ac - bd,
+; ad + bc), each product, sum, and difference rounded as its instruction
+; rounds. It changes R0 to R3.
+;
+CMUL:	SUBL2	#32,SP
+	MULH3	(R6),(R11),R0		; ac
+	MULH3	16(R6),16(R11),(SP)	; bd
+	SUBH2	(SP),R0			; ac - bd
+	MULH3	(R6),16(R11),(SP)	; ad
+	MULH3	16(R6),(R11),16(SP)	; bc
+	ADDH3	16(SP),(SP),16(R6)	; ad + bc
+	MOVH	R0,(R6)
+	ADDL2	#32,SP
+	RSB
+;
+; Fortran 90's character functions (docs/planning/PHASE-108 - Fortran 90
+; intrinsic procedures.md, finding 3): those the compiler doesn't write in
+; line. ADJUSTL, ADJUSTR, and REPEAT make a CHARACTER value, into the place
+; the first argument's descriptor describes: a temporary of the caller's of
+; the value's length, or, for a REPEAT whose length the compiler didn't
+; know, an empty dynamic string (class D) that FTN$REPEAT gives storage
+; to. SCAN, VERIFY, and INDEX searching back return a position, counted from
+; 1, or 0 for none. BACK is a LOGICAL by reference, its low bit the truth.
+;
+FOR$_BADREPEAT	= ^X18898C		; FOR number 305, severity F
+
+;
+; CALL FTN$ADJUSTL(result, string)
+;
+; ADJUSTL: STRING with its leading blanks moved to its end. SKPC passes
+; over the blanks, leaving in R0 the bytes after them and in R1 their
+; address; MOVC5 moves those to RESULT and fills the rest with blanks.
+;
+	.ENTRY	FTN$ADJUSTL,^M<R2,R3,R4,R5>
+	MOVL	8(AP),R2		; STRING's descriptor
+	SKPC	#^A/ /,(R2),@4(R2)	; past the leading blanks
+	MOVL	4(AP),R2		; RESULT's descriptor
+	MOVC5	R0,(R1),#^A/ /,(R2),@4(R2)
+	RET
+
+;
+; CALL FTN$ADJUSTR(result, string)
+;
+; ADJUSTR: STRING with its trailing blanks moved to its start. TRAILING
+; counts the characters before the trailing blanks; RESULT is blanks as
+; many as there were, then those characters.
+;
+	.ENTRY	FTN$ADJUSTR,^M<R2,R3,R4,R5,R6>
+	MOVL	8(AP),R6		; STRING's descriptor
+	MOVZWL	(R6),R0
+	MOVL	4(R6),R1
+	BSBB	TRAILING		; R0: the characters to keep
+	MOVL	R0,R6			;  kept a while
+	MOVL	4(AP),R2		; RESULT's descriptor
+	MOVZWL	(R2),R4
+	SUBL2	R6,R4			; the blanks
+	MOVC5	#0,(R2),#^A/ /,R4,@4(R2) ; the blanks; R3 -> the byte after them
+	MOVL	R3,R4
+	MOVL	8(AP),R2
+	MOVC3	R6,@4(R2),(R4)		; the characters
+	RET
+
+;
+; TRAILING is LEN_TRIM: the length R0 of the text at R1 less its trailing
+; blanks, in R0, from the end back.
+;
+TRAILING:
+10$:	TSTL	R0			; nothing left?
+	BEQL	20$
+	CMPB	-1(R1)[R0],#^A/ /	; the last character a blank?
+	BNEQ	20$
+	DECL	R0
+	BRB	10$
+20$:	RSB
+
+;
+; CALL FTN$REPEAT(result, string, ncopies)
+;
+; REPEAT: NCOPIES (an INTEGER*4) copies of STRING, one after another. An
+; NCOPIES less than 0, or a value longer than a descriptor's word can say,
+; 65,535 characters, is govax's BADREPEAT (FOR number 305). A dynamic
+; RESULT is given its storage, by LIB$SGET1_DD, once the length is known;
+; any other is as long as the value.
+;
+	.ENTRY	FTN$REPEAT,^M<R2,R3,R4,R5,R6,R7,R8,R9>
+	MOVL	@12(AP),R7		; NCOPIES
+	BLSS	BAD_REPEAT
+	MOVL	8(AP),R2		; STRING's descriptor
+	MOVZWL	(R2),R8			; its length
+	EMUL	R7,R8,#0,R4		; the value's length, in R4:R5
+	TSTL	R5
+	BNEQ	BAD_REPEAT
+	CMPL	R4,#65535
+	BGTRU	BAD_REPEAT
+	MOVL	4(AP),R6		; RESULT's descriptor
+	CMPB	DSC$B_CLASS(R6),#DSC$K_CLASS_D
+	BNEQ	10$
+	PUSHL	R4			; a dynamic string: room for the value
+	PUSHL	R6
+	PUSHAW	4(SP)			;  (the length, a word, by reference)
+	CALLS	#2,G^LIB$SGET1_DD
+	ADDL2	#4,SP
+	BLBS	R0,10$
+	PUSHL	R0			; no room
+	CALLS	#1,G^LIB$STOP
+10$:	MOVL	DSC$A_POINTER(R6),R9	; where the next copy goes
+	MOVL	8(AP),R2
+	MOVL	DSC$A_POINTER(R2),R2	; STRING's text
+	MOVL	R2,R6
+20$:	TSTL	R7			; another copy?
+	BEQL	30$
+	MOVC3	R8,(R6),(R9)		; R3 -> the byte after it
+	MOVL	R3,R9
+	DECL	R7
+	BRB	20$
+30$:	RET
+BAD_REPEAT:
+	PUSHL	#FOR$_BADREPEAT
+	CALLS	#1,G^LIB$STOP
+	RET
+
+;
+; position = FTN$SCAN(string, set, back)
+; position = FTN$VERIFY(string, set, back)
+;
+; SCAN: where in STRING a character of SET first is, or with BACK last.
+; VERIFY: where a character not in SET first (or last) is. A table of 256
+; bytes on the stack, one per character, is 1 for SET's characters and 0
+; for the rest; SCANC finds the first byte whose entry is 1, SPANC the
+; first whose isn't, and from the back a loop looks at each in turn. The
+; two share SEARCH, told which by R9: 1 for SCAN, 0 for VERIFY.
+;
+	.ENTRY	FTN$SCAN,^M<R2,R3,R4,R5,R6,R7,R8,R9>
+	MOVL	#1,R9
+	BRB	SEARCH
+
+	.ENTRY	FTN$VERIFY,^M<R2,R3,R4,R5,R6,R7,R8,R9>
+	CLRL	R9
+SEARCH:	SUBL2	#256,SP			; the table
+	MOVC5	#0,(SP),#0,#256,(SP)	; all 0
+	MOVL	8(AP),R2		; SET's descriptor
+	MOVZWL	(R2),R7
+	MOVL	DSC$A_POINTER(R2),R8
+10$:	TSTL	R7			; each of SET's characters
+	BEQL	20$
+	MOVZBL	(R8)+,R0
+	MOVB	#1,(SP)[R0]		;  is 1 in the table
+	DECL	R7
+	BRB	10$
+20$:	MOVL	4(AP),R2		; STRING's descriptor
+	MOVZWL	(R2),R6			; its length
+	MOVL	DSC$A_POINTER(R2),R7	; its text
+	BLBS	@12(AP),50$		; BACK?
+	TSTL	R9
+	BEQL	30$
+	SCANC	R6,(R7),(SP),#1		; SCAN: the first in SET
+	BRB	40$
+30$:	SPANC	R6,(R7),(SP),#1		; VERIFY: the first not in it
+40$:	TSTL	R0			; R0: the bytes from it on, 0 if none
+	BEQL	70$
+	SUBL3	R0,R6,R0		; the bytes before it,
+	INCL	R0			;  and 1, its position
+	RET				; (RET puts SP back)
+50$:	TSTL	R6			; from the back: position R6
+	BEQL	70$
+	MOVZBL	-1(R7)[R6],R0
+	MOVZBL	(SP)[R0],R0		; in SET?
+	CMPL	R0,R9			; SCAN wants 1, VERIFY 0
+	BEQL	60$
+	DECL	R6
+	BRB	50$
+60$:	MOVL	R6,R0
+	RET
+70$:	CLRL	R0			; none
+	RET
+
+;
+; position = FTN$INDEX_BACK(string, substring, back)
+;
+; INDEX with BACK (Fortran 90's 13.13.46): where SUBSTRING last starts in
+; STRING, or, if BACK is false, first (FTN$INDEX); 0 if nowhere. An empty
+; SUBSTRING is at LEN(STRING)+1. From the back, CMPC3 compares SUBSTRING
+; with each place it fits, the last first.
+;
+	.ENTRY	FTN$INDEX_BACK,^M<R2,R3,R6,R7,R8,R9>
+	BLBS	@12(AP),10$		; BACK?
+	MOVQ	4(AP),-(SP)		; no: FTN$INDEX(string, substring)
+	CALLS	#2,FTN$INDEX
+	RET
+10$:	MOVL	4(AP),R2		; STRING's descriptor
+	MOVZWL	(R2),R6
+	MOVL	DSC$A_POINTER(R2),R8
+	MOVL	8(AP),R2		; SUBSTRING's
+	MOVZWL	(R2),R7
+	MOVL	DSC$A_POINTER(R2),R9
+	SUBL2	R7,R6			; the last place it fits,
+	INCL	R6			;  counted from 1
+20$:	TSTL	R6			; none left?
+	BLEQ	30$
+	CMPC3	R7,-1(R8)[R6],(R9)
+	BEQL	40$
+	DECL	R6
+	BRB	20$
+30$:	CLRL	R6
+40$:	MOVL	R6,R0
+	RET
+
+;
+; Fortran 90's numeric model (13.7.1 and 13.13; docs/planning/PHASE-108 -
+; Fortran 90 intrinsic procedures.md, finding 7): SCALE, SET_EXPONENT,
+; SPACING, RRSPACING, and NEAREST, a routine for each REAL format, F, D, G,
+; and H. Each VAX format is the model exactly: a nonzero value is 0.1f *
+; 2**e, its hidden bit the model's first digit, kept as a sign bit (bit 15
+; of the first word), an exponent field (e plus a bias), and the fraction's
+; other bits, the first word's low bits then each word after it, most
+; significant first:
+;
+;	F	bits 7 to 14, bias 128,   24 digits, 1 longword
+;	D	bits 7 to 14, bias 128,   56 digits, 2 longwords
+;	G	bits 4 to 14, bias 1024,  53 digits, 2 longwords
+;	H	bits 0 to 14, bias 16384, 113 digits, 4 longwords
+;
+; An exponent field of 0 is the value 0 (with the sign set, a reserved
+; operand). So each function is a change to the fields, done here on the
+; value's bits as integers, never by a floating instruction (which would
+; fault on a reserved operand) but where an overflow is wanted.
+;
+; X, I, and S are by reference. An F, D, or G value comes back in R0 (and
+; R1); an H value goes through a hidden first argument, the address of the
+; result's place, so its X is the second argument. Each entry points R11
+; at its format's parameters and goes to the function's code, which runs
+; in the entry's own frame and ends with RET.
+;
+; A result past the format's largest exponent is made a real overflow: the
+; value with the largest exponent, X's sign, doubled by MULx2, so that the
+; program's handlers see SS$_FLTOVF_F as from any instruction. One below the
+; least exponent is 0, as the VAX's underflow is with PSL<FU> clear.
+;
+; value = FTN$SCALE_F(x, i), and _D, _G; CALL FTN$SCALE_H(result, x, i)
+; value = FTN$SET_EXPONENT_F(x, i), and _D, _G; CALL FTN$SET_EXPONENT_H(...)
+;
+; SCALE (13.13.94), X * 2**I: X with I added to its exponent field.
+; SET_EXPONENT (13.13.99), FRACTION(X) * 2**I: X with the field the bias
+; plus I. Both are X itself for an X of 0. I is an INTEGER*4.
+;
+	.ENTRY	FTN$SCALE_F,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVAB	FORMAT_F,R11
+	BRW	SCALE
+	.ENTRY	FTN$SCALE_D,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVAB	FORMAT_D,R11
+	BRW	SCALE
+	.ENTRY	FTN$SCALE_G,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVAB	FORMAT_G,R11
+	BRW	SCALE
+	.ENTRY	FTN$SCALE_H,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVAB	FORMAT_H,R11
+	BRW	SCALE
+	.ENTRY	FTN$SET_EXPONENT_F,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVAB	FORMAT_F,R11
+	BRW	SET_EXPONENT
+	.ENTRY	FTN$SET_EXPONENT_D,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVAB	FORMAT_D,R11
+	BRW	SET_EXPONENT
+	.ENTRY	FTN$SET_EXPONENT_G,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVAB	FORMAT_G,R11
+	BRW	SET_EXPONENT
+	.ENTRY	FTN$SET_EXPONENT_H,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVAB	FORMAT_H,R11
+	BRW	SET_EXPONENT
+;
+; value = FTN$SPACING_F(x), and _D, _G; CALL FTN$SPACING_H(result, x)
+;
+; SPACING (13.13.103), 2**(e - p), one unit in the last place of X's
+; fraction: the field less p - 1, the fraction 0.1, the sign clear; TINY
+; (the field 1) for 0 or where that is below the range.
+;
+	.ENTRY	FTN$SPACING_F,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVAB	FORMAT_F,R11
+	BRW	SPACING
+	.ENTRY	FTN$SPACING_D,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVAB	FORMAT_D,R11
+	BRW	SPACING
+	.ENTRY	FTN$SPACING_G,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVAB	FORMAT_G,R11
+	BRW	SPACING
+	.ENTRY	FTN$SPACING_H,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVAB	FORMAT_H,R11
+	BRW	SPACING
+;
+; value = FTN$RRSPACING_F(x), and _D, _G; CALL FTN$RRSPACING_H(result, x)
+;
+; RRSPACING (13.13.89), |X * 2**-e| * 2**p, X's fraction's bits as a whole
+; number: X with the field the bias plus p and the sign clear; 0 for 0.
+;
+	.ENTRY	FTN$RRSPACING_F,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVAB	FORMAT_F,R11
+	BRW	RRSPACING
+	.ENTRY	FTN$RRSPACING_D,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVAB	FORMAT_D,R11
+	BRW	RRSPACING
+	.ENTRY	FTN$RRSPACING_G,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVAB	FORMAT_G,R11
+	BRW	RRSPACING
+	.ENTRY	FTN$RRSPACING_H,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVAB	FORMAT_H,R11
+	BRW	RRSPACING
+;
+; value = FTN$NEAREST_F(x, s), and _D, _G; CALL FTN$NEAREST_H(result, x, s)
+;
+; NEAREST (13.13.74), the value next to X in the direction of S's sign
+; (S of any REAL kind: bit 15 of its first word is its sign in every
+; format; an S of 0 is positive). X's bits, its sign apart, are a whole
+; number, the most significant word first, which grows by 1 (away from 0)
+; when X's and S's signs agree, else shrinks by 1. The next from 0 is
+; +-TINY; past HUGE is an overflow; toward 0 from +-TINY is 0.
+;
+	.ENTRY	FTN$NEAREST_F,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVAB	FORMAT_F,R11
+	BRW	NEAREST
+	.ENTRY	FTN$NEAREST_D,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVAB	FORMAT_D,R11
+	BRW	NEAREST
+	.ENTRY	FTN$NEAREST_G,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVAB	FORMAT_G,R11
+	BRW	NEAREST
+	.ENTRY	FTN$NEAREST_H,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVAB	FORMAT_H,R11
+	BRW	NEAREST
+;
+; Each format's parameters, as SETUP loads them: the exponent field's
+; position and size, the bias, the largest field, the digits, and the
+; longwords.
+;
+	.PSECT	$FTN_PDATA,NOEXE,NOWRT,PIC,SHR,LONG
+FORMAT_F:
+	.LONG	7,8,128,255,24,1
+FORMAT_D:
+	.LONG	7,8,128,255,56,2
+FORMAT_G:
+	.LONG	4,11,1024,2047,53,2
+FORMAT_H:
+	.LONG	0,15,16384,32767,113,4
+
+	.PSECT	$FTN_CODE,EXE,NOWRT,PIC,SHR,LONG
+;
+; SETUP loads the parameters at R11 (R2 the field's position, R3 its size,
+; R4 the bias, R5 the largest field, R6 the digits, R7 the longwords),
+; points R8 at X and R9 at the second argument, and copies X's longwords to
+; the 16 bytes at R10, the rest clear. It changes R0 and R1.
+;
+SETUP:	MOVQ	(R11),R2
+	MOVQ	8(R11),R4
+	MOVQ	16(R11),R6
+	MOVQ	4(AP),R8		; X, and I or S
+	CMPL	R7,#4			; H: past the hidden argument
+	BNEQ	10$
+	MOVQ	8(AP),R8
+10$:	CLRO	(R10)
+	CLRL	R1
+20$:	MOVL	(R8)[R1],(R10)[R1]
+	AOBLSS	R7,R1,20$
+	RSB
+
+;
+; FINISH returns the value at R10: in R0 and R1, or for H through the
+; hidden argument.
+;
+FINISH:	CMPL	R7,#4
+	BEQL	10$
+	MOVQ	(R10),R0
+	RET
+10$:	MOVO	(R10),@4(AP)
+	RET
+
+SET_EXPONENT:
+	SUBL2	#16,SP			; the value's place
+	MOVL	SP,R10
+	BSBW	SETUP
+	EXTZV	R2,R3,(R10),R0		; X's exponent field: 0 stays 0
+	BNEQ	5$
+	BRW	FINISH
+5$:
+	MOVL	R4,R0			; from the bias
+	BRB	NEW_FIELD
+
+SCALE:	SUBL2	#16,SP
+	MOVL	SP,R10
+	BSBW	SETUP
+	EXTZV	R2,R3,(R10),R0		; from X's field; 0 stays 0
+	BNEQ	5$
+	BRW	FINISH
+5$:
+NEW_FIELD:
+	MOVL	(R9),R1			; I, kept within +-65536, past any
+	CMPL	R1,#65536		;  field's reach, so the sum can't
+	BLEQ	10$			;  overflow
+	MOVL	#65536,R1
+10$:	CMPL	R1,#-65536
+	BGEQ	20$
+	MOVL	#-65536,R1
+20$:	ADDL2	R1,R0			; the new field
+	BGTR	30$
+	CLRO	(R10)			; below the range: 0
+	BRW	FINISH
+30$:	CMPL	R0,R5
+	BGTR	40$
+	INSV	R0,R2,R3,(R10)
+	BRW	FINISH
+40$:	CLRL	R11			; past it: an overflow, of X's sign
+	BBC	#15,(R10),50$
+	INCL	R11
+50$:	BSBW	TOO_LARGE
+	BRW	FINISH
+
+SPACING:
+	SUBL2	#16,SP
+	MOVL	SP,R10
+	BSBW	SETUP
+	EXTZV	R2,R3,(R10),R0		; the field
+	SUBL2	R6,R0			; less p - 1
+	INCL	R0
+	CMPL	R0,#1			; at least TINY's
+	BGEQ	10$
+	MOVL	#1,R0
+10$:	CLRO	(R10)
+	INSV	R0,R2,R3,(R10)
+	BRW	FINISH
+
+RRSPACING:
+	SUBL2	#16,SP
+	MOVL	SP,R10
+	BSBW	SETUP
+	EXTZV	R2,R3,(R10),R0
+	BNEQ	10$
+	CLRO	(R10)			; 0 for 0
+	BRW	FINISH
+10$:	ADDL3	R4,R6,R0		; the bias plus p
+	INSV	R0,R2,R3,(R10)
+	BICW2	#^X8000,(R10)		; the sign clear
+	BRW	FINISH
+
+NEAREST:
+	SUBL2	#16,SP
+	MOVL	SP,R10
+	BSBW	SETUP
+	EXTZV	#15,#1,(R10),R11	; X's sign
+	EXTZV	R2,R3,(R10),R0
+	BNEQ	10$
+	CLRO	(R10)			; from 0: TINY, of S's sign
+	MOVL	#1,R0
+	INSV	R0,R2,R3,(R10)
+	BBC	#15,(R9),5$
+	BISW2	#^X8000,(R10)
+5$:	BRW	FINISH
+10$:	BICW2	#^X8000,(R10)		; X's magnitude
+	EXTZV	#15,#1,(R9),R1		; S's sign
+	ASHL	#1,R7,R0		; the words
+	CMPL	R1,R11
+	BNEQ	30$
+20$:	DECL	R0			; the same: one more, the last word
+	INCW	(R10)[R0]		;  first, carrying up
+	BCC	40$
+	TSTL	R0
+	BGTR	20$
+	BRB	40$
+30$:	DECL	R0			; different: one less, borrowing up
+	DECW	(R10)[R0]
+	BCC	40$
+	TSTL	R0
+	BGTR	30$
+40$:	BBC	#15,(R10),50$		; past HUGE, into the sign bit:
+	BSBB	TOO_LARGE		;  an overflow
+	BRW	FINISH
+50$:	EXTZV	R2,R3,(R10),R0		; below TINY: 0
+	BNEQ	60$
+	CLRO	(R10)
+	BRW	FINISH
+60$:	BLBC	R11,70$			; X's sign again
+	BISW2	#^X8000,(R10)
+70$:	BRW	FINISH
+
+;
+; TOO_LARGE makes a floating overflow of the sign in R11's low bit: the
+; value at R10 made the largest exponent with a fraction of 0.1, then
+; doubled in its own format. If a handler goes on, the value is what the
+; instruction left. It changes R0.
+;
+TOO_LARGE:
+	CLRO	(R10)
+	INSV	R5,R2,R3,(R10)
+	BLBC	R11,10$
+	BISW2	#^X8000,(R10)
+10$:	CMPL	R7,#1
+	BNEQ	20$
+	MULF2	#2.0,(R10)
+	RSB
+20$:	CMPL	R7,#4
+	BNEQ	30$
+	MULH2	#2.0,(R10)
+	RSB
+30$:	CMPL	R3,#8
+	BNEQ	40$
+	MULD2	#2.0,(R10)
+	RSB
+40$:	MULG2	#2.0,(R10)
+	RSB
 
 	.END

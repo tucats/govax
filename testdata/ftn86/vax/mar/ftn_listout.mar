@@ -17,6 +17,7 @@
 ; storage order. The formats are the manual's Table 7-1:
 ;
 ;	BYTE, LOGICAL*1	(DSC$K_DTYPE_BU)	I5		"   42"
+;	INTEGER*1	(DSC$K_DTYPE_B)		I5		"   42"
 ;	LOGICAL*2	(DSC$K_DTYPE_WU)	L2		" T" or " F"
 ;	LOGICAL*4	(DSC$K_DTYPE_LU)	L2		" T" or " F"
 ;	INTEGER*2	(DSC$K_DTYPE_W)		I7		"     42"
@@ -29,6 +30,8 @@
 ;	COMPLEX*16	(DSC$K_DTYPE_DC)	'(',1PG23.16E2,',',1PG23.16E2,')'
 ;	COMPLEX*16	(DSC$K_DTYPE_GC)	'(',1PG23.15E3,',',1PG23.15E3,')'
 ;						with /G_FLOATING
+;	COMPLEX*32	(DSC$K_DTYPE_HC)	'(',1PG42.33E4,',',1PG42.33E4,')'
+;						Fortran 90's COMPLEX(16)
 ;	CHARACTER	(DSC$K_DTYPE_T)		An		the text itself
 ;
 ; A complex value is written "with no embedded spaces" (7.3.1.2): each
@@ -36,7 +39,11 @@
 ; before it, so (1.0,2.0) is " (1.000000,2.000000)". Its field is put as
 ; any other value's, never split across records, though the manual allows
 ; a split after the comma (govax's choice, unconfirmed: no case of VMS's
-; run needed one).
+; run needed one). A COMPLEX*32's field, up to 86 bytes, is longer than a
+; record of 81, and is written as a record of its own, longer than the
+; rest (VMS's FORTRAN had no COMPLEX*32; govax's choice, which a READ of
+; the record takes back whole), but in an internal file, where it is split
+; after its comma.
 ;
 ; The records are as VMS's FORTRAN run-time library lays them out (the
 ; probe, testdata/for80, round 1). A record is at most 81 bytes long, 80
@@ -53,6 +60,18 @@
 ; record, so a statement writes at least one: with no items at all, a
 ; record of no bytes. A record that RMS can't write is the statement's
 ; error, FOR$_ERRDURWRI, and what is left of the statement writes nothing.
+;
+; A unit opened with Fortran 90's DELIM= (FTN_UNITS's UB_DELIM) of APOSTROPHE
+; or QUOTE has its character values delimited (the standard's 10.8.2): a
+; blank, the delimiter, the text with each delimiter in it doubled, and the
+; delimiter again, so that a READ * takes the value back; the blank and the
+; next value's separate them. One that doesn't fit what is left of the record
+; begins the next, and one longer than a record fills as many as it needs,
+; each record after the first beginning with its continuation, not a blank
+; (the standard's rule, so the constant reads back whole; at a terminal the
+; carriage control takes that first character), a doubled delimiter never
+; split between two. Without DELIM=, with DELIM='NONE', and on an internal
+; file, the text is as above.
 ;
 ; G editing (8.3.6.4, Table 8-2), Gw.dEe, writes a value whose magnitude,
 ; rounded to d significant digits, is from 0.1 up to 10**d in F form, in
@@ -73,10 +92,13 @@
 ; and the other types' are the same with their own widths and digits:
 ; 0.1D0 is "  0.1000000000000000    " as a REAL*8 in D_floating.
 ;
-; The digits come from LIBRTL's OTS$$CVT_F_T_R8 (and its D, G, and H
-; forms), the routines VMS's own FORTRAN run-time library uses, which writes a value's decimal digits,
-; rounded to as many significant digits as asked, into its caller's
-; frame (internal/librtl/otscvtfor.go has its interface).
+; The digits come from LIBRTL's OTS$$CVT_F_T_R8 (and its D, G, and H forms),
+; the routines VMS's own FORTRAN run-time library uses, which writes a value's
+; decimal digits, rounded to as many significant digits as asked, into its
+; caller's frame (internal/librtl/otscvtfor.go has its interface).
+;
+; The MACRO and VAX conventions these lines rely on are explained once,
+; in FTN_VECTOR.MAR's "Reading these sources".
 ;
 	$DSCDEF				; descriptors' fields and codes
 	$FORDEF				; FORRTL's condition values
@@ -98,6 +120,10 @@ CTX_RECP	= CTX_RECORD+RECORD_SIZE+160 ; long: the record's address (the context'
 CTX_INTERNAL	= 15			; byte: nonzero for an internal file (FTN_INTERNAL)
 CTX_NM_CAPTURE	= CTX_RECP+24		; long: FTN_NAMELIST's: where a field goes
 CTX_NM_CAPLEN	= CTX_RECP+28		;  instead of the record, and its length
+
+; The unit's block's DELIM= (FTN_UNITS's UB_DELIM): 0 not given, 1 APOSTROPHE,
+; 2 QUOTE, 3 NONE. CTX_STREAM is a unit's block.
+UB_DELIM	= 620+40
 
 	.PSECT	$FTN_CODE,EXE,NOWRT,PIC,SHR,LONG
 
@@ -281,7 +307,7 @@ PUT_TEXT:
 	SUBL2	R2,R7
 	PUSHL	R2			; MOVC3 changes R2; keep the count
 	MOVC3	R2,(R6),(R3)
-	ADDL2	(SP)+,R6		; past the text put
+	ADDL2	(SP)+,R6		; past the text put (the count, popped)
 	TSTL	R7
 	BLEQ	90$			; that was the end of it
 	PUSHL	R8
@@ -289,6 +315,79 @@ PUT_TEXT:
 	TSTL	CTX_STATUS(R8)
 	BEQL	10$
 90$:	RET
+
+;
+; PUT_DELIMITED(context, address, length, delimiter): puts a character value
+; delimited, as the introduction says. R8 is the context, R6 and R7 the text
+; not yet put, and R5 the delimiter.
+;
+PUT_DELIMITED:
+	.WORD	^M<R2,R3,R4,R5,R6,R7,R8>
+	MOVL	4(AP),R8
+	MOVL	8(AP),R6
+	MOVL	12(AP),R7
+	MOVL	16(AP),R5
+	ADDL3	#3,R7,R4		; its length: the blank, the delimiters,
+	CLRL	R2			;  the text, and a second of each
+10$:	CMPL	R2,R7			;  delimiter in it
+	BGEQ	20$
+	CMPB	(R6)[R2],R5
+	BNEQ	15$
+	INCL	R4
+15$:	INCL	R2
+	BRB	10$
+20$:	ADDL2	CTX_RECLEN(R8),R4
+	CMPL	R4,CTX_RECMAX(R8)
+	BLEQ	30$			; it fits
+	CMPL	CTX_RECLEN(R8),#1
+	BLEQ	30$			; nothing in the record yet
+	PUSHL	R8
+	CALLS	#1,PUT_RECORD		; a new record for it
+30$:	MOVZBL	#^A/ /,R1
+	JSB	DELIMITED_BYTE
+	MOVL	R5,R1
+	JSB	DELIMITED_BYTE
+40$:	DECL	R7			; each byte of the text
+	BLSS	60$
+	MOVZBL	(R6)+,R1
+	CMPB	R1,R5
+	BNEQ	50$
+	ADDL3	#2,CTX_RECLEN(R8),R0	; a doubled delimiter: both on one record
+	CMPL	R0,CTX_RECMAX(R8)
+	BLEQ	45$
+	PUSHL	R8
+	CALLS	#1,PUT_RECORD
+45$:	MOVL	R5,R1
+	JSB	DELIMITED_BYTE
+	MOVL	R5,R1
+50$:	JSB	DELIMITED_BYTE
+	BRB	40$
+60$:	MOVL	R5,R1
+	JSB	DELIMITED_BYTE
+	RET
+
+;
+; DELIMITED_BYTE, a subroutine of PUT_DELIMITED (JSB, RSB): the byte in R1 at
+; the record's end, after writing the record first if it is full; a statement
+; that has failed returns from PUT_DELIMITED. Changes R0 and R1.
+;
+DELIMITED_BYTE:
+	TSTL	CTX_STATUS(R8)
+	BEQL	10$
+	RET				; PUT_DELIMITED's RET: no more
+10$:	CMPL	CTX_RECLEN(R8),CTX_RECMAX(R8)
+	BLSS	20$
+	PUSHL	R1			; (CALLS changes R0 and R1)
+	PUSHL	R8
+	CALLS	#1,PUT_RECORD		; the record is full: the constant goes
+	MOVL	(SP)+,R1		;  on in the next, with no blank before
+	TSTL	CTX_STATUS(R8)
+	BEQL	20$
+	RET
+20$:	ADDL3	CTX_RECP(R8),CTX_RECLEN(R8),R0
+	MOVB	R1,(R0)
+	INCL	CTX_RECLEN(R8)
+	RSB
 
 ;
 ; PUT_VALUE(type, address, length, context): puts one value, of data
@@ -315,8 +414,10 @@ FMT_D		= -140			;  its significant digits, d,
 FMT_E		= -144			;  its exponent's digits, e,
 FMT_KIND	= -148			;  and which OTS$$CVT_x_T_R8: 0 F,
 					;  1 D, 2 G, 3 H
-CTEXT		= -200			; a complex value's text, 52 bytes
-CTEXT_LEN	= -204			;  and its length so far
+CTEXT		= -236			; a complex value's text, 88 bytes: a
+					;  COMPLEX*32's " (", two parts of up
+					;  to 41, "," and ")"
+CTEXT_LEN	= -240			;  and its length so far
 ;
 ; The digit buffer, last in the frame. VMS's routine writes whole groups of nine
 ; digits, not stopping at the size it's given, which FORRTL makes the significant
@@ -329,7 +430,7 @@ DIGITS_SPARE	= 28
 DIGITS		= CTEXT_LEN-DIGITS_SPARE-DIGITS_LEN
 FRAME_SIZE	= -DIGITS
 
-PUT_VALUE:
+PUT_VALUE:				; two names for one place: the module's,
 FTN$$LIST_VALUE::			; FTN_NAMELIST's way in: the field alone,
 					;  given CTX_NM_CAPTURE (not for text)
 	.WORD	^M<R2,R3,R4,R5,R6,R7,R8,R9,R10>
@@ -344,12 +445,15 @@ FTN$$LIST_VALUE::			; FTN_NAMELIST's way in: the field alone,
 2$:	CMPB	4(AP),#DSC$K_DTYPE_GC
 	BNEQ	3$
 	BRW	COMPLEX_G
-3$:	CASEB	4(AP),#DSC$K_DTYPE_BU,#<DSC$K_DTYPE_T-DSC$K_DTYPE_BU>
+3$:	CMPB	4(AP),#DSC$K_DTYPE_HC
+	BNEQ	4$
+	BRW	COMPLEX_H
+4$:	CASEB	4(AP),#DSC$K_DTYPE_BU,#<DSC$K_DTYPE_T-DSC$K_DTYPE_BU>
 10$:	.WORD	BYTE_I5-10$		; 2: BU
 	.WORD	LOGICAL-10$		; 3: WU
 	.WORD	LOGICAL-10$		; 4: LU
 	.WORD	BAD_TYPE-10$		; 5
-	.WORD	BAD_TYPE-10$		; 6
+	.WORD	BYTE_I5-10$		; 6: B, Fortran 90's INTEGER(1)
 	.WORD	WORD_I7-10$		; 7: W
 	.WORD	LONG_I12-10$		; 8: L
 	.WORD	BAD_TYPE-10$		; 9
@@ -393,7 +497,9 @@ WORD_I7:
 LONG_I12:
 	MOVL	#4,R7
 	MOVL	#12,R8
-INTEGER:
+INTEGER:				; FIELD's descriptor: the length (R8) in
+					;  the low word, the type and class in the
+					;  bytes above, made in one BISL3
 	BISL3	R8,#<DSC$K_CLASS_S@24>!<DSC$K_DTYPE_T@16>,FIELD_DESC(FP)
 	MOVAB	FIELD(FP),FIELD_DESC+DSC$A_POINTER(FP)
 	PUSHL	R7
@@ -408,13 +514,30 @@ INTEGER:
 	BRW	PUT_THE_FIELD
 
 ;
-; A character value: the text itself.
+; A character value: the text itself, or delimited by the unit's DELIM=.
 ;
 TEXT:
+	MOVL	16(AP),R0		; the context
+	TSTB	CTX_INTERNAL(R0)
+	BNEQ	10$			; an internal file's never are
+	MOVL	CTX_STREAM(R0),R1
+	BEQL	10$
+	MOVZBL	#^A/'/,R2
+	CMPB	UB_DELIM(R1),#1
+	BEQL	20$
+	MOVZBL	#^A/"/,R2
+	CMPB	UB_DELIM(R1),#2
+	BEQL	20$
+10$:	PUSHL	12(AP)
+	PUSHL	R6
+	PUSHL	R0
+	CALLS	#3,PUT_TEXT
+	RET
+20$:	PUSHL	R2			; the delimiter
 	PUSHL	12(AP)
 	PUSHL	R6
-	PUSHL	16(AP)			; the context
-	CALLS	#3,PUT_TEXT
+	PUSHL	R0
+	CALLS	#4,PUT_DELIMITED
 	RET
 
 ;
@@ -469,8 +592,14 @@ COMPLEX_G:
 	MOVL	#15,FMT_D(FP)
 	MOVL	#3,FMT_E(FP)
 	MOVL	#2,FMT_KIND(FP)
+	BRB	COMPLEX
+COMPLEX_H:
+	MOVL	#42,FMT_W(FP)		; 1PG42.33E4
+	MOVL	#33,FMT_D(FP)
+	MOVL	#4,FMT_E(FP)
+	MOVL	#3,FMT_KIND(FP)
 COMPLEX:
-	MOVW	#^A/ (/,CTEXT(FP)
+	MOVW	#^A/ (/,CTEXT(FP)	; both characters in one word
 	MOVL	#2,CTEXT_LEN(FP)
 	BSBW	PART			; the real part
 	MOVL	CTEXT_LEN(FP),R0
@@ -519,7 +648,8 @@ COMPLEX:
 ;
 PART:	BSBW	FORMAT_REAL
 	SKPC	#^A/ /,FMT_W(FP),FIELD(FP) ; R0: the bytes from the first
-	MOVQ	R0,R2			;  that isn't a blank, R1: its address
+	MOVQ	R0,R2			;  that isn't a blank, R1: its address;
+					;  MOVQ copies the pair to R2 and R3
 	LOCC	#^A/ /,R2,(R3)		; R0: the bytes from the blank after
 	SUBL3	R0,R2,R0		; the characters' length
 	MOVL	CTEXT_LEN(FP),R1

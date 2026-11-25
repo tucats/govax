@@ -24,21 +24,28 @@
 ;
 ; repeated until a $ or an &, whatever follows it, ends the statement and the
 ; rest of its record is lost. Commas and blanks may separate assignments. A
-; name is letters, digits, _, and $, the first a letter, in either case; a
-; name's subscripts must follow it directly, but blanks may stand anywhere else
-; but in a number. Subscripts and substring bounds are integer constants. What
-; can be wrong with one (out of bounds, too few, a substring of an INTEGER) is
-; FOR$_INVREFVAR, as a name not in the group is, and so is something in the
-; parentheses that couldn't start a number: a number followed by anything but
-; ",", ":", or ")" is FOR$_SYNERRNAM, the condition for all other bad syntax.
+; name is letters, digits, _, and $, the first a letter, in either case, or in
+; Fortran 90 such names joined by %, a component's (P%X, PTS(2)%X); a part's
+; subscripts must follow it directly, but blanks may stand anywhere else but in
+; a number. Subscripts and substring bounds are integer constants, and in a
+; Fortran 90 statement a subscript may be a section, [lo]:[hi][:stride]. What
+; can be wrong with one (out of bounds, too few, a stride of 0, a substring of
+; an INTEGER) is FOR$_INVREFVAR, as a name not in the group is, and so is
+; something in the parentheses that couldn't start a number: a number followed
+; by anything but ",", ":", or ")" is FOR$_SYNERRNAM, the condition for all
+; other bad syntax.
 ;
-; The values fill the element named and those after it in storage, or a
-; variable alone, one element's worth; one more is FOR$_TOOMANVAL, which a
-; null counts toward, though those stored stay stored. As in list-directed input
-; a comma right after a value belongs to it, and any other comma is a null,
-; which leaves its element as it was: "A=5,,7" sets A(1) and A(3). r*c is r of a
-; value, and r*, or r* before a separator, r nulls. A substring of an array
-; element applies to each element after it too.
+; A name of one element (every subscript of every part given, none a section)
+; takes values for it and the elements after it in its array, VMS's way; a
+; variable alone, one element's worth; any other name, its elements in array
+; element order (DESIGNATOR). One more is FOR$_TOOMANVAL, which a null counts
+; toward, though those stored stay stored. As in list-directed input a comma
+; right after a value belongs to it, and any other comma is a null, which leaves
+; its element as it was: "A=5,,7" sets A(1) and A(3). r*c is r of a value, and
+; r*, or r* before a separator, r nulls. A substring applies to each element.
+; A Fortran 90 object of a derived type named whole, P = 1.0, 2.0, or an array
+; of them, PTS = ..., takes values for each element's components in order, each
+; component's elements before the next component's (NEXT_PART).
 ;
 ; A value is a number, a logical word, a character constant, or a complex
 ; constant. Each is converted to the element's type afresh:
@@ -65,6 +72,17 @@
 ; record. At a terminal it also lists the group's names, or for =? the group as
 ; a WRITE would write it; and so does either in column 2 during the search.
 ;
+; A FORTRAN 90 STATEMENT (the control block's F90 flag, FTN_STATEMENT's) reads
+; the standard's forms (10.9.1) as well: a record has no carriage control, so
+; reading starts in column 1, and the group starts at its first byte that isn't
+; a blank or a tab, & or $ and the group's name ("&GRP" as other compilers
+; write it, " &GRP" as this module does); a slash ends the statement, as a $ or
+; an & does, wherever a name or a value could start or a value end; a
+; character value may be between quotation marks, "" one of them; and a !
+; outside a character value starts a comment, to the record's end (Fortran
+; 95's 10.9.1.3), wherever blanks may stand, or ending a number or the
+; group's name (FTN_LISTIN's FTN$$LI_SKIP passes over it).
+;
 ; OUTPUT. A record holds 81 bytes, its carriage control and 80 of text:
 ;
 ;	 $GRP
@@ -74,7 +92,9 @@
 ;	 $END
 ;
 ; " NAME", blanks to the next multiple of 8 past the name's length, and "=" start
-; each entity on a new record. Its values follow in list-directed output's
+; each entity on a new record (an object's header, which has no values, isn't
+; written; an array of a derived type's component, PTS%X, has every element's,
+; in array element order, ENTITY_VALUES). Its values follow in list-directed output's
 ; fields, all of which begin with a blank (FTN_LISTOUT's PUT_VALUE makes them),
 ; with a comma after each but the last of the last entity. Elements equal byte
 ; for byte are written once, " r*" and the field without its leading blanks. How
@@ -89,9 +109,23 @@
 ;	a text's bytes	fill the record, and go on after a blank on the next;
 ;			an apostrophe in the text is doubled.
 ;
+; A Fortran 90 statement writes the standard's forms (10.9.2): " &GRP" and
+; " /" in place of " $GRP" and " $END", and its character values undelimited
+; unless the unit's DELIM= says APOSTROPHE or QUOTE (the author's answer 2 in
+; PHASE-109): " HELLO", its apostrophes single, a repeated one " 2*HELLO", the
+; commas kept as the HP Fortran manual's example keeps them. A delimited value
+; continued on the next record goes on in its first column, not after a blank,
+; and a doubled delimiter is never split (10.9.2.1, so the constant reads back
+; whole). A statement without the flag writes VMS's, with quotation marks for
+; DELIM='QUOTE' and no delimiters for DELIM='NONE' (only a unit opened so
+; says it: UB_DELIM's 0 is DELIM= not given).
+;
 ; Unconfirmed, no case of the probe settling it: which record position a syntax
 ; error names, after a substring's parentheses; a doubled apostrophe split
 ; across records; a repeat value that isn't a number, text, or T or F word.
+;
+; The MACRO and VAX conventions these lines rely on are explained once,
+; in FTN_VECTOR.MAR's "Reading these sources".
 ;
 	$DSCDEF				; descriptors' fields and codes
 	$FORDEF				; FORRTL's condition values
@@ -124,6 +158,13 @@ CTX_NM_SHIFT	= CTX_LI_COLUMN		; the same long, which a WRITE doesn't
 					;  need: 1 to write each record after a
 					;  blank (FTN$$NML_WRITE's fourth argument)
 
+CTX_FLAGS	= 12			; word: the control block's flags
+FLAG_F90	= 16			; a statement of a unit compiled /F90
+
+; The unit's block's DELIM= (FTN_UNITS's UB_DELIM): 0 not given, 1 APOSTROPHE,
+; 2 QUOTE, 3 NONE. CTX_STREAM is a unit's block.
+UB_DELIM	= 620+40
+
 V_WORD		= 1			; the forms of a value (FTN_LISTIN's)
 V_TEXT		= 2
 V_COMPLEX	= 3
@@ -138,11 +179,70 @@ RECORD_MAX	= 81			; an output record's length, at most
 WORD		= -64			; a name read, in capitals, 63 bytes at most
 NAME		= -68			; long: the current entity's name
 COUNT		= -72			; long: how many of a value (r*c)
-SUBS		= -104			; 8 longwords: the subscripts read
-MISSING		= -108			; long: a bit for each that wasn't given
-ITEMS		= -112			; long: how many there were
-COLON		= -116			; long: 1 if a colon separated them
-FRAME_SIZE	= 116
+ITEMS		= -76			; long: how many subscripts the parentheses had
+FIELDN		= -80			; long: which of a subscript's three numbers
+					;  is being read: 0 the first, 1 after a
+					;  colon, 2 after a second (a stride)
+SUB_LO		= -112			; 8 longs: each subscript's first number,
+SUB_HI		= -144			; 8 longs:  its second,
+SUB_ST		= -176			; 8 longs:  and its third
+SUB_FL		= -184			; 8 bytes: each one's flags, SF_...
+PREV_RANK	= -188			; long: the rank of the name read so far,
+					;  but for its last part
+PART_RANK	= -192			; long: the rank of the name with it
+PART_DESC	= -196			; long: the descriptor its bounds are in
+PART_ENTRY	= -200			; long: its entity's place in the block
+START		= -204			; long: where the name began in the record
+W_DIMS		= -208			; long: the walk's dimensions,
+W_K		= -212			; long: the element it is at,
+W_N		= -216			; long: how many it has,
+W_BASE		= -220			; long: and where its first is
+W_EXT		= -280			; 15 longs: each dimension's extent, the
+W_STR		= -340			; 15 longs:  slowest first, and its stride
+DEPTH		= -344			; long: the levels of objects being filled
+LEVELS		= -632			; 8 levels, LV_SIZE bytes each
+WLEN		= -636			; long: the name's length in WORD
+PEND		= -640			; long: 1 if the part read had subscripts
+OFFSET		= -644			; long: the bytes the subscripts fixed
+OWN		= -648			; long: the last part's own rank
+LASTP		= -652			; long: 1 for the name's last part
+KIDX		= -656			; long: a dimension being looked at
+LIN		= -660			; long: an element's number in its array
+MULT		= -664			; long: and the elements before its dimension
+STEP		= -668			; long: a section's stride, in elements
+SS_GIVEN	= -672			; long: 1 if a substring was given,
+SS_FIRST	= -676			; long:  its first byte's offset,
+SS_LEN		= -680			; long:  and its length
+OE_N		= -684			; OWN_ELEMENTS' own: the dimensions,
+OE_K		= -688			;  the one it is at,
+OE_COUNT	= -692			;  the elements so far,
+OE_STRIDE	= -696			;  the first dimension's stride,
+OE_DESC		= -700			;  and the descriptor
+NP_RANK		= -704			; long: NEXT_PART's: a header's rank
+FRAME_SIZE	= 704
+
+W_MAX		= 15			; the walk's dimensions, at most
+LV_MAX		= 8			; the levels, at most
+
+; A subscript's flags (SUB_FL): which of its numbers were given, and its colons.
+SF_LO		= 0
+SF_HI		= 1
+SF_ST		= 2
+SF_COLON	= 3
+SF_COLON2	= 4
+
+; A level: an object of a derived type being filled, element by element, its
+; parts in turn (NEXT_PART).
+LV_HDR		= 0			; long: its header's place in the block
+LV_CUR		= 4			; long: its next part's place
+LV_END		= 8			; long: the place after its parts
+LV_COUNT	= 12			; long: its elements
+LV_IDX		= 16			; long: the element being filled
+LV_BASE		= 20			; long: the bytes its first element is moved
+LV_STRIDE	= 24			; long: from one element to the next
+LV_ACC		= 28			; long: the bytes this element is moved
+LV_RANK		= 32			; long: its header's rank
+LV_SIZE		= 36
 
 ;
 ; FTN$$NML_READ(context, block)
@@ -157,16 +257,17 @@ FRAME_SIZE	= 116
 	MOVL	4(AP),R6
 	MOVL	8(AP),R7
 	CLRL	CTX_LI_KIND(R6)
-	MOVL	#1,CTX_LI_COLUMN(R6)	; column 1 is carriage control
-	BSBW	FIND_GROUP
+	MOVL	#1,CTX_LI_COLUMN(R6)	; column 1 is carriage control,
+	BITW	#FLAG_F90,CTX_FLAGS(R6)	;  but in a Fortran 90 statement
+	BEQL	5$
+	CLRL	CTX_LI_COLUMN(R6)
+5$:	BSBW	FIND_GROUP
 ASSIGNMENT:
 	JSB	FTN$$LI_SKIP		; FTN_LISTIN
 	BLBS	R0,10$
 	RET				; no more records
-10$:	CMPB	R1,#^A/$/
-	BEQL	80$
-	CMPB	R1,#^A/&/
-	BEQL	80$
+10$:	BSBW	IS_END
+	BLBS	R0,80$
 	BSBW	QUESTION
 	BLBS	R0,ASSIGNMENT
 	MOVL	CTX_POS(R6),R0
@@ -174,14 +275,8 @@ ASSIGNMENT:
 	BSBW	IS_LETTER
 	BLBS	R0,20$
 	BRW	SYNTAX_HERE
-20$:	BSBW	FIND_ENTITY
-	MOVL	CTX_POS(R6),R0
-	CMPL	R0,CTX_RECLEN(R6)
-	BGEQ	30$
-	CMPB	@CTX_RECP(R6)[R0],#^A/(/
-	BNEQ	30$
-	BSBW	REFERENCE
-30$:	JSB	FTN$$LI_SKIP
+20$:	BSBW	DESIGNATOR
+	JSB	FTN$$LI_SKIP
 	BLBS	R0,40$
 	RET
 40$:	CMPB	R1,#^A/=/
@@ -194,7 +289,7 @@ ASSIGNMENT:
 
 ;
 ; FIND_GROUP: reads records until one starts the group, leaving the position
-; after its name.
+; after its name. R8, which nothing holds yet, is where the name would start.
 ;
 FIND_GROUP:
 10$:	PUSHL	R6
@@ -202,26 +297,39 @@ FIND_GROUP:
 	TSTL	CTX_STATUS(R6)
 	BEQL	20$
 	RET				; the end of the file, or a failure
-20$:	CMPL	CTX_RECLEN(R6),#2
-	BLSS	10$
-	MOVL	CTX_RECP(R6),R2		; the record
-	MOVZBL	1(R2),R1		; its second column
+20$:	MOVL	CTX_RECP(R6),R2		; the record
+	MOVL	#1,R8			; its second column,
+	BITW	#FLAG_F90,CTX_FLAGS(R6)	;  or in a Fortran 90 statement
+	BEQL	25$
+	CLRL	R8			;  its first that isn't a blank or a tab
+22$:	CMPL	R8,CTX_RECLEN(R6)
+	BGEQ	10$			; none: the next record
+	CMPB	(R2)[R8],#^A/ /
+	BEQL	23$
+	CMPB	(R2)[R8],#9
+	BNEQ	25$
+23$:	INCL	R8
+	BRB	22$
+25$:	CMPL	R8,CTX_RECLEN(R6)
+	BGEQ	10$
+	MOVZBL	(R2)[R8],R1
 	CMPB	R1,#^A/$/
 	BEQL	30$
 	CMPB	R1,#^A/&/
 	BEQL	30$
-	MOVL	#1,CTX_POS(R6)		; a question, in column 2
+	MOVL	R8,CTX_POS(R6)		; a question, there
 	BSBW	QUESTION
 	BRB	10$
-30$:	MOVL	NB_NAME(R7),R3		; the group's name
-	MOVZBL	(R3)+,R4
-	ADDL3	#2,R4,R5		; where the name in the record ends
+30$:	INCL	R8			; the name's first place
+	MOVL	NB_NAME(R7),R3		; the group's name, a counted string: its
+	MOVZBL	(R3)+,R4		;  length, a byte, then its text
+	ADDL3	R8,R4,R5		; where the name in the record ends
 	CMPL	R5,CTX_RECLEN(R6)
 	BGTR	10$			; too short to hold it
 	CLRL	R0
 40$:	CMPL	R0,R4
 	BGEQ	50$
-	ADDL3	#2,R0,R1
+	ADDL3	R8,R0,R1
 	MOVZBL	(R2)[R1],R1
 	BSBW	UPPER
 	CMPB	R1,(R3)[R0]
@@ -234,7 +342,11 @@ FIND_GROUP:
 	BEQL	70$
 	CMPB	(R2)[R5],#9		; a tab
 	BEQL	70$
-	BRW	10$
+	CMPB	(R2)[R5],#^A/!/		; a Fortran 90 statement's comment
+	BNEQ	60$
+	BITW	#FLAG_F90,CTX_FLAGS(R6)
+	BNEQ	70$
+60$:	BRW	10$
 70$:	MOVL	R5,CTX_POS(R6)
 	RSB
 
@@ -278,9 +390,26 @@ QUESTION:
 	RSB
 
 ;
+; IS_END: R0's low bit is set if the byte in R1 ends the statement: a $ or an
+; &, or in a Fortran 90 statement a slash. Changes R0 alone.
+;
+IS_END:	MOVL	#1,R0
+	CMPB	R1,#^A/$/
+	BEQL	90$
+	CMPB	R1,#^A/&/
+	BEQL	90$
+	CMPB	R1,#^A./.
+	BNEQ	80$
+	BITW	#FLAG_F90,CTX_FLAGS(R6)
+	BNEQ	90$
+80$:	CLRL	R0
+90$:	RSB
+
+;
 ; UPPER: the byte in R1, a capital if it was a small letter. IS_LETTER: R0's
-; low bit is set if the byte in R1 is a letter. IS_NAME_CHAR: or a digit, _, or $.
-; IS_DIGIT: or a digit alone. None changes R1 but UPPER.
+; low bit is set if the byte in R1 is a letter. IS_NAME_CHAR: or a digit, _, $,
+; or % (a component's name after its object's, P%X). IS_DIGIT: or a digit
+; alone. None changes R1 but UPPER.
 ;
 UPPER:	CMPB	R1,#^A/a/
 	BLSSU	10$
@@ -319,6 +448,8 @@ IS_NAME_CHAR:
 	CMPB	R1,#^A/_/
 	BEQL	90$
 	CMPB	R1,#^A/$/
+	BEQL	90$
+	CMPB	R1,#^A/%/
 	BEQL	90$
 	CLRL	R0
 90$:	RSB
@@ -359,157 +490,607 @@ EQUALS_NEXT:
 	RSB
 
 ;
-; FIND_ENTITY: reads the name at the position, and makes it the current entity:
-; R8 its descriptor, and R9, R10, and R11 the whole of it. A name not in the
-; group is FOR$_INVREFVAR, as it was typed.
+; DESIGNATOR: reads the name at the position, with its subscripts and substring,
+; and makes what it names the current item: R8 its entity's descriptor, R9 the
+; first element's address, R10 how many elements are left, and R11 an element's
+; length; or for an object of a derived type, the first of its components.
 ;
-FIND_ENTITY:
-	MOVL	CTX_POS(R6),R2
-	MOVL	R2,R3			; its start
-	BSBB	WORD_END
-	SUBL3	R3,R2,R4		; its length
+; A name is parts joined by %, each a word that may have subscripts directly
+; after it: PTS(2)%X. The name up to each part's end is an entity in the block:
+; a variable or array, or an object's header (P) or component (P%X). A part's
+; own dimensions are the ones its entity has past the name before it: an array
+; of a derived type's entities, P%X, are every element's X, a class NCA
+; descriptor whose dimensions are X's own, then P's (the compiler's
+; namelistDescriptor), and a header's are in its shape. Subscripts fix a
+; dimension's element; in a Fortran 90 statement a section, lo:hi:stride, walks
+; it; a part without them walks all of its own. What isn't fixed is the walk,
+; its dimensions the slowest first, whose elements the values go to in turn
+; (ADDRESS). A name of one element, every subscript fixed, is VMS's: it and the
+; elements after it in its last part's array (PTS(2)%V(2) and V(3) after it;
+; but VS%V(1) is a section, every element's V(1)). Then a CHARACTER item may have a
+; substring, which applies to each element.
+;
+DESIGNATOR:
+	MOVL	CTX_POS(R6),START(FP)
+	CLRL	WLEN(FP)
+	CLRL	PREV_RANK(FP)
+	CLRL	W_DIMS(FP)
+	CLRL	OFFSET(FP)
+	CLRL	DEPTH(FP)
+	CLRL	SS_GIVEN(FP)
+10$:	MOVL	CTX_POS(R6),R2		; a part's name
+	MOVL	R2,R3
+	BSBW	PART_END
+	SUBL3	R3,R2,R4
+	BNEQ	12$
+	BRW	UNKNOWN
+12$:	ADDL3	WLEN(FP),R4,R0
+	CMPL	R0,#63
+	BLEQ	14$
 	MOVL	R2,CTX_POS(R6)
-	CMPL	R4,#63
-	BGTR	NOT_IN_GROUP		; longer than any name
-	CLRL	R0
-10$:	CMPL	R0,R4
-	BGEQ	20$
+	BRW	UNKNOWN			; longer than any name
+14$:	CLRL	R0
+15$:	CMPL	R0,R4
+	BGEQ	18$
 	ADDL3	R0,R3,R1
 	MOVZBL	@CTX_RECP(R6)[R1],R1
 	BSBW	UPPER
-	MOVB	R1,WORD(FP)[R0]
+	ADDL3	WLEN(FP),R0,R5
+	MOVB	R1,WORD(FP)[R5]
 	INCL	R0
+	BRB	15$
+18$:	ADDL2	R4,WLEN(FP)
+	MOVL	R2,CTX_POS(R6)
+	BSBW	LOOKUP
+	BLBS	R0,20$
+	BRW	UNKNOWN
+20$:	MOVL	R2,PART_ENTRY(FP)
+	MOVL	(R2),NAME(FP)
+	MOVL	4(R2),R1
+	BSBW	RANK_OF
+	MOVL	R0,PART_RANK(FP)
+	MOVL	R1,PART_DESC(FP)
+	CLRL	PEND(FP)
+	BSBW	PEEK
+	CMPB	R1,#^A/(/
+	BNEQ	30$
+	BSBW	SUBSCRIPTS
+	MOVL	#1,PEND(FP)
+30$:	BSBW	PEEK
+	CMPL	CTX_POS(R6),CTX_RECLEN(R6)
+	BGEQ	40$
+	CMPB	R1,#^A/%/
+	BNEQ	40$
+	CLRL	LASTP(FP)		; another part follows
+	BSBW	CLOSE_PART
+	CMPL	WLEN(FP),#63
+	BLSS	32$
+	BRW	UNKNOWN
+32$:	MOVL	WLEN(FP),R0
+	MOVB	#^A/%/,WORD(FP)[R0]
+	INCL	WLEN(FP)
+	INCL	CTX_POS(R6)
+	BRW	10$
+40$:	MOVL	#1,LASTP(FP)		; the last part
+	BSBW	CLOSE_PART
+	TSTL	PEND(FP)
+	BEQL	60$
+	TSTL	OWN(FP)
+	BNEQ	50$
+	BSBW	SUBSTRING		; a whole variable's substring
+	BRB	60$
+50$:	JSB	FTN$$LI_SKIP		; a substring may follow, with blanks
+	BLBS	R0,52$			;  before it
+	RET
+52$:	CMPB	R1,#^A/(/
+	BNEQ	60$
+	BSBW	SUBSCRIPTS
+	BBS	#SF_COLON,SUB_FL(FP),55$
+	BRW	SYNTAX_HERE
+55$:	BSBW	SUBSTRING
+60$:	BRW	FINISH
+
+;
+; UNKNOWN: a name not in the group, FOR$_INVREFVAR as it was typed, from where
+; it began to the end of the word at the position.
+;
+UNKNOWN:
+	MOVL	CTX_POS(R6),R2
+	BSBW	WORD_END
+	MOVL	START(FP),R3
+	SUBL3	R3,R2,R4
+	BRW	NOT_IN_GROUP
+
+;
+; PART_END: R2 becomes the place in the record after the name characters that
+; start at R2, a % among them ending it. Changes R0 and R1.
+;
+PART_END:
+10$:	CMPL	R2,CTX_RECLEN(R6)
+	BGEQ	90$
+	MOVZBL	@CTX_RECP(R6)[R2],R1
+	CMPB	R1,#^A/%/
+	BEQL	90$
+	BSBW	IS_NAME_CHAR
+	BLBC	R0,90$
+	INCL	R2
 	BRB	10$
-20$:	MOVL	NB_COUNT(R7),R5
+90$:	RSB
+
+;
+; LOOKUP: R2 becomes the place in the block of the entity named WORD, its
+; length WLEN(FP), and R0's low bit is set; clear if there is none. Changes R0
+; to R5.
+;
+LOOKUP:	MOVL	WLEN(FP),R4
+	MOVL	NB_COUNT(R7),R5
 	MOVAB	NB_ENTITIES(R7),R2
-30$:	DECL	R5
-	BLSS	NOT_IN_GROUP
+10$:	DECL	R5
+	BLSS	80$
 	MOVL	(R2),R1			; a name in the block, counted
 	CMPB	(R1),R4
 	BNEQ	40$
-	MOVQ	R2,-(SP)		; CMPC3 changes R0 to R3
+	PUSHL	R2			; CMPC3 changes R0 to R3
 	CMPC3	R4,1(R1),WORD(FP)
 	BEQL	45$
-	MOVQ	(SP)+,R2		; (which changes the condition codes)
+	MOVL	(SP)+,R2		; (which changes the condition codes)
 40$:	ADDL2	#8,R2
-	BRB	30$
-45$:	MOVQ	(SP)+,R2
-50$:	MOVL	(R2),NAME(FP)
-	MOVL	4(R2),R8
-	MOVL	DSC$A_POINTER(R8),R9
-	MOVZWL	DSC$W_LENGTH(R8),R11
-	MOVL	#1,R10
-	CMPB	DSC$B_CLASS(R8),#DSC$K_CLASS_A
-	BNEQ	90$
-	DIVL3	R11,DSC$L_ARSIZE(R8),R10
-90$:	RSB
-NOT_IN_GROUP:
-	MOVW	R4,CTX_NM_DESC(R6)	; the descriptor of the text in the record
-	MOVW	#^X010E,CTX_NM_DESC+2(R6)
-	ADDL3	CTX_RECP(R6),R3,CTX_NM_DESC+4(R6)
-	BRW	INVALID_TEXT
+	BRB	10$
+45$:	MOVL	(SP)+,R2
+	MOVL	#1,R0
+	RSB
+80$:	CLRL	R0
+	RSB
 
 ;
-; REFERENCE: the subscripts and substring after the current entity's name, the
-; position at the "(". Makes R9, R10, and R11 the item they name.
+; RANK_OF: R1 is an entity's descriptor. R0 becomes its rank, and R1 the
+; descriptor its bounds are in: a header's shape (0 for a scalar object's), or
+; the descriptor itself.
 ;
-REFERENCE:
-	BSBW	PARENTHESES
-	TSTL	COLON(FP)
-	BEQL	10$
-	;
-	; A substring of a whole variable.
-	;
-	CMPB	DSC$B_CLASS(R8),#DSC$K_CLASS_A
-	BEQL	80$
-	BRW	SUBSTRING
-	;
-	; Subscripts.
-	;
-10$:	CMPB	DSC$B_CLASS(R8),#DSC$K_CLASS_A
-	BNEQ	80$
-	MOVZBL	DSC$B_DIMCT(R8),R0
-	CMPL	ITEMS(FP),R0
-	BNEQ	80$
-	TSTL	MISSING(FP)
-	BNEQ	80$
-	MOVZBL	DSC$B_DIMCT(R8),R2	; the dimensions
-	MOVAL	DSC$L_M1(R8),R3		; the multipliers,
-	MOVAL	(R3)[R2],R4		;  then each one's bounds
-	CLRL	R5			; the sum so far
-	;
-	; From the last dimension in: s(n), then s(n-1) + m(n-1)*that, ...
-	; Each subscript is checked against its bounds on the way.
-	;
-20$:	DECL	R2
-	BLSS	30$
-	MOVL	SUBS(FP)[R2],R0
-	ASHL	#3,R2,R1
-	ADDL2	R4,R1			; this dimension's bounds
-	CMPL	R0,(R1)
-	BLSS	80$
-	CMPL	R0,4(R1)
-	BGTR	80$
-	MULL2	(R3)[R2],R5
-	ADDL2	R0,R5
+RANK_OF:
+	CLRL	R0
+	TSTB	DSC$B_CLASS(R1)
+	BNEQ	10$
+	MOVL	DSC$A_POINTER(R1),R1	; a header's shape
+	BEQL	90$
 	BRB	20$
-30$:	MULL3	R11,R5,R0		; the element's address, from A0
-	ADDL3	DSC$A_A0(R8),R0,R9
-	SUBL3	DSC$A_POINTER(R8),R9,R0	; how far it is into the array
-	SUBL3	R0,DSC$L_ARSIZE(R8),R0
-	DIVL3	R11,R0,R10		; and the elements from it on
-	;
-	; A substring may follow, with blanks before it.
-	;
-	JSB	FTN$$LI_SKIP		; FTN_LISTIN
-	BLBS	R0,40$
-	RET
-40$:	CMPB	R1,#^A/(/
+10$:	CMPB	DSC$B_CLASS(R1),#DSC$K_CLASS_A
+	BEQL	20$
+	CMPB	DSC$B_CLASS(R1),#DSC$K_CLASS_NCA
 	BNEQ	90$
-	BSBW	PARENTHESES
-	TSTL	COLON(FP)
-	BNEQ	SUBSTRING
-	BRW	SYNTAX_HERE
-80$:	BRW	INVALID_ENTITY
+20$:	MOVZBL	DSC$B_DIMCT(R1),R0
 90$:	RSB
 
 ;
-; SUBSTRING: the bounds just read, of the current item, its bytes R9 and R11.
+; DIM_INFO: dimension R2 (from 0) of the class A or NCA descriptor R1: R3 its
+; lower bound, R4 its upper, and R5 its stride in bytes, which a class A
+; descriptor gives as multipliers: its elements' length times the extents
+; before it. Changes R0.
+;
+DIM_INFO:
+	MOVZBL	DSC$B_DIMCT(R1),R0
+	MOVAL	DSC$L_M1(R1)[R0],R5	; the bounds, after a longword per dimension
+	MOVQ	(R5)[R2],R3
+	CMPB	DSC$B_CLASS(R1),#DSC$K_CLASS_NCA
+	BNEQ	10$
+	MOVL	DSC$L_M1(R1)[R2],R5
+	RSB
+10$:	MOVZWL	DSC$W_LENGTH(R1),R5
+	CLRL	R0
+20$:	CMPL	R0,R2
+	BGEQ	30$
+	MULL2	DSC$L_M1(R1)[R0],R5
+	INCL	R0
+	BRB	20$
+30$:	RSB
+
+;
+; ADD_DIM: adds a dimension to the walk, R0 elements R1 bytes apart. More than
+; the walk holds is FOR$_INVREFVAR. Changes R2.
+;
+ADD_DIM:
+	MOVL	W_DIMS(FP),R2
+	CMPL	R2,#W_MAX
+	BLSS	10$
+	BRW	INVALID_ENTITY
+10$:	MOVL	R0,W_EXT(FP)[R2]
+	MOVL	R1,W_STR(FP)[R2]
+	INCL	W_DIMS(FP)
+	RSB
+
+;
+; ADDRESS: R0, the walk's element number R0 from 0, becomes how many bytes it is
+; from the walk's first: the number taken apart by the extents, the fastest
+; dimension's first. Changes R1 to R4.
+;
+ADDRESS:
+	MOVL	R0,R1
+	CLRL	R0
+	MOVL	W_DIMS(FP),R2
+10$:	DECL	R2
+	BLSS	90$
+	MOVL	W_EXT(FP)[R2],R3
+	DIVL3	R3,R1,R4		; the number of the slower dimensions
+	MULL2	R4,R3
+	SUBL3	R3,R1,R3		; this dimension's subscript, from 0
+	MOVL	R4,R1
+	MULL2	W_STR(FP)[R2],R3
+	ADDL2	R3,R0
+	BRB	10$
+90$:	RSB
+
+;
+; CLOSE_PART: the part just read is done with: its own dimensions, by its
+; subscripts if it had them (PEND), go into OFFSET and the walk. LASTP says it
+; is the name's last part. Parentheses after a part with no dimensions of its
+; own are its substring, if it is the last, which DESIGNATOR reads.
+;
+CLOSE_PART:
+	SUBL3	PREV_RANK(FP),PART_RANK(FP),OWN(FP)
+	MOVL	PART_RANK(FP),PREV_RANK(FP)
+	TSTL	PEND(FP)
+	BNEQ	20$
+	MOVL	OWN(FP),KIDX(FP)	; no subscripts: every element
+10$:	DECL	KIDX(FP)
+	BLSS	15$
+	MOVL	PART_DESC(FP),R1
+	MOVL	KIDX(FP),R2
+	BSBW	DIM_INFO
+	SUBL3	R3,R4,R0
+	INCL	R0
+	BGEQ	12$
+	CLRL	R0
+12$:	MOVL	R5,R1
+	BSBW	ADD_DIM
+	BRB	10$
+15$:	RSB
+19$:	BRW	INVALID_ENTITY
+20$:	TSTL	OWN(FP)
+	BNEQ	30$
+	BLBC	LASTP(FP),19$
+	RSB				; a substring
+30$:	CMPL	ITEMS(FP),OWN(FP)
+	BNEQ	19$
+	CLRL	R0			; a colon anywhere is a section, which
+32$:	CMPL	R0,ITEMS(FP)		;  only a Fortran 90 statement has
+	BGEQ	40$
+	BBC	#SF_COLON,SUB_FL(FP)[R0],34$
+	BITW	#FLAG_F90,CTX_FLAGS(R6)
+	BEQL	19$
+	BRW	60$
+34$:	INCL	R0
+	BRB	32$
+40$:	BLBC	LASTP(FP),45$
+	TSTL	W_DIMS(FP)		; the rest of the name all fixed too
+	BEQL	50$
+45$:	BRW	60$
+	;
+	; The last part's element, the name naming one element: it and the rest
+	; of its array, VMS's way. Its number in the array, the extents before
+	; each dimension times its subscript, says how many are left.
+	;
+50$:	CLRL	LIN(FP)
+	MOVL	#1,MULT(FP)
+	CLRL	KIDX(FP)
+52$:	CMPL	KIDX(FP),OWN(FP)
+	BGEQ	58$
+	MOVL	PART_DESC(FP),R1
+	MOVL	KIDX(FP),R2
+	BSBW	DIM_INFO
+	MOVL	KIDX(FP),R0
+	BBC	#SF_LO,SUB_FL(FP)[R0],19$
+	MOVL	SUB_LO(FP)[R0],R0
+	CMPL	R0,R3
+	BLSS	19$
+	CMPL	R0,R4
+	BGTR	19$
+	SUBL2	R3,R0
+	MULL3	R0,R5,R1
+	ADDL2	R1,OFFSET(FP)
+	MULL2	MULT(FP),R0
+	ADDL2	R0,LIN(FP)
+	SUBL3	R3,R4,R0
+	INCL	R0
+	MULL2	R0,MULT(FP)
+	INCL	KIDX(FP)
+	BRB	52$
+58$:	MOVL	PART_DESC(FP),R1
+	CLRL	R2
+	BSBW	DIM_INFO
+	SUBL3	LIN(FP),MULT(FP),R0
+	MOVL	R5,R1
+	BRW	ADD_DIM
+59$:	BRW	INVALID_ENTITY
+	;
+	; Each subscript, the slowest first: an element fixed, or a section walked.
+	;
+60$:	MOVL	OWN(FP),KIDX(FP)
+62$:	DECL	KIDX(FP)
+	BGEQ	63$
+	RSB
+63$:	MOVL	PART_DESC(FP),R1
+	MOVL	KIDX(FP),R2
+	BSBW	DIM_INFO		; R3, R4, and R5 its bounds and stride
+	MOVL	KIDX(FP),R2
+	BBS	#SF_COLON,SUB_FL(FP)[R2],70$
+	BBC	#SF_LO,SUB_FL(FP)[R2],59$
+	MOVL	SUB_LO(FP)[R2],R0
+	CMPL	R0,R3
+	BLSS	59$
+	CMPL	R0,R4
+	BGTR	59$
+	SUBL2	R3,R0
+	MULL2	R5,R0
+	ADDL2	R0,OFFSET(FP)
+	BRW	62$
+70$:	MOVL	R3,R0			; the first, the lower bound if not given
+	BBC	#SF_LO,SUB_FL(FP)[R2],71$
+	MOVL	SUB_LO(FP)[R2],R0
+71$:	MOVL	R4,R1			; the last, the upper bound if not given
+	BBC	#SF_HI,SUB_FL(FP)[R2],72$
+	MOVL	SUB_HI(FP)[R2],R1
+72$:	MOVL	#1,STEP(FP)		; the stride, 1 if not given
+	BBC	#SF_ST,SUB_FL(FP)[R2],73$
+	MOVL	SUB_ST(FP)[R2],STEP(FP)
+	BEQL	99$
+73$:	SUBL3	R0,R1,R2		; how many: (last - first + stride) / stride
+	ADDL2	STEP(FP),R2
+	DIVL2	STEP(FP),R2
+	BGTR	74$
+	CLRL	R0			; none
+	CLRL	R1
+	BSBW	ADD_DIM
+	BRW	62$
+74$:	CMPL	R0,R3			; the first and the last element taken
+	BLSS	99$		;  within the bounds
+	CMPL	R0,R4
+	BGTR	99$
+	SUBL3	#1,R2,R1
+	MULL2	STEP(FP),R1
+	ADDL2	R0,R1
+	CMPL	R1,R3
+	BLSS	99$
+	CMPL	R1,R4
+	BGTR	99$
+	SUBL2	R3,R0
+	MULL2	R5,R0
+	ADDL2	R0,OFFSET(FP)
+	MULL3	STEP(FP),R5,R1
+	MOVL	R2,R0
+	BSBW	ADD_DIM
+	BRW	62$
+99$:	BRW	INVALID_ENTITY
+
+;
+; SUBSTRING: the parentheses just read are a substring of the current entity, a
+; CHARACTER item's: SS_FIRST and SS_LEN.
 ;
 SUBSTRING:
-	CMPB	DSC$B_DTYPE(R8),#DSC$K_DTYPE_T
+	MOVL	PART_ENTRY(FP),R0
+	MOVL	4(R0),R2
+	CMPB	DSC$B_DTYPE(R2),#DSC$K_DTYPE_T
 	BNEQ	80$
-	CMPL	ITEMS(FP),#2
+	CMPL	ITEMS(FP),#1
 	BNEQ	80$
+	BBC	#SF_COLON,SUB_FL(FP),80$
+	BBS	#SF_COLON2,SUB_FL(FP),80$
+	MOVZWL	DSC$W_LENGTH(R2),R3
 	MOVL	#1,R0			; the first, 1 if not given
-	BBS	#0,MISSING(FP),10$
-	MOVL	SUBS(FP),R0
-10$:	MOVL	R11,R1			; the last, the end if not given
-	BBS	#1,MISSING(FP),20$
-	MOVL	SUBS+4(FP),R1
+	BBC	#SF_LO,SUB_FL(FP),10$
+	MOVL	SUB_LO(FP),R0
+10$:	MOVL	R3,R1			; the last, the end if not given
+	BBC	#SF_HI,SUB_FL(FP),20$
+	MOVL	SUB_HI(FP),R1
 20$:	CMPL	R0,#1
 	BLSS	80$
-	CMPL	R1,R11
+	CMPL	R1,R3
 	BGTR	80$
 	CMPL	R0,R1
 	BGTR	80$
-	SUBL3	R0,R1,R11
-	INCL	R11
-	DECL	R0
-	ADDL2	R0,R9
+	SUBL3	R0,R1,SS_LEN(FP)
+	INCL	SS_LEN(FP)
+	SUBL3	#1,R0,SS_FIRST(FP)
+	MOVL	#1,SS_GIVEN(FP)
 	RSB
 80$:	BRW	INVALID_ENTITY
 
 ;
-; PARENTHESES: reads "(" and what's in it, to the ")", into SUBS, MISSING,
-; ITEMS, and COLON, where blanks and records' ends may stand anywhere around
-; the numbers. Past eight numbers none is kept, as no reference can be right.
+; FINISH: the name read is the current item: a variable, array, or component, by
+; the walk; or an object, whose first level is the walk's elements.
 ;
-PARENTHESES:
+FINISH:	MOVL	PART_ENTRY(FP),R2
+	MOVL	4(R2),R8
+	MOVL	(R2),NAME(FP)
+	MOVL	#1,R0			; the walk's elements
+	CLRL	R1
+10$:	CMPL	R1,W_DIMS(FP)
+	BGEQ	20$
+	MULL2	W_EXT(FP)[R1],R0
+	INCL	R1
+	BRB	10$
+20$:	MOVL	R0,W_N(FP)
+	CLRL	W_K(FP)
+	TSTB	DSC$B_CLASS(R8)
+	BNEQ	40$
+	MOVAB	LEVELS(FP),R5		; an object: its parts, an element at a time
+	MOVL	R2,LV_HDR(R5)
+	MOVZWL	DSC$W_LENGTH(R8),R0
+	MOVAQ	8(R2)[R0],R0
+	MOVL	R0,LV_CUR(R5)		; its parts done with, so that NEXT_PART
+	MOVL	R0,LV_END(R5)		;  starts the first element
+	MOVL	W_N(FP),LV_COUNT(R5)
+	MNEGL	#1,LV_IDX(R5)
+	MOVL	OFFSET(FP),LV_BASE(R5)
+	CLRL	LV_STRIDE(R5)
+	MOVL	PART_RANK(FP),LV_RANK(R5)
+	MOVL	#1,DEPTH(FP)
+	CLRL	R10
+	BRW	NEXT_PART
+40$:	ADDL3	DSC$A_POINTER(R8),OFFSET(FP),W_BASE(FP)
+	MOVZWL	DSC$W_LENGTH(R8),R11
+	BLBC	SS_GIVEN(FP),50$
+	ADDL2	SS_FIRST(FP),W_BASE(FP)
+	MOVL	SS_LEN(FP),R11
+50$:	MOVL	W_N(FP),R10
+	BEQL	60$
+	CLRL	R0
+	BSBW	ADDRESS
+	ADDL3	R0,W_BASE(FP),R9
+60$:	RSB
+NOT_IN_GROUP:
+	MOVW	R4,CTX_NM_DESC(R6)	; the descriptor of the text in the record
+	MOVW	#^X010E,CTX_NM_DESC+2(R6) ; type T (14), class S (1), one word
+	ADDL3	CTX_RECP(R6),R3,CTX_NM_DESC+4(R6)
+	BRW	INVALID_TEXT
+
+;
+; NEXT_PART: if an object's elements are left, makes the next element of an
+; entity that isn't a header the current item, as DESIGNATOR does, and sets R0's
+; low bit; else clears it. Changes R0 to R5.
+;
+; Each level is an object being filled: its elements in turn, and in each its
+; parts, one after another. A part that is a header (an object of its own, or
+; an array of them) is a level of its own, its elements those of its own
+; dimensions (its rank past its parent's), next to each other; a part that
+; isn't is its own elements in the element its level is at. The first level's
+; elements are the walk's.
+;
+NEXT_PART:
+10$:	MOVL	DEPTH(FP),R0
+	BNEQ	15$
+	RSB				; none left: R0 is 0
+15$:	DECL	R0
+	MULL2	#LV_SIZE,R0
+	MOVAB	LEVELS(FP)[R0],R5
+	CMPL	LV_CUR(R5),LV_END(R5)
+	BLSSU	20$
+	BRW	50$
+20$:	MOVL	LV_CUR(R5),R2		; the part
+	MOVL	4(R2),R3
+	TSTB	DSC$B_CLASS(R3)
+	BNEQ	30$
+	MOVZWL	DSC$W_LENGTH(R3),R0	; a header: past its own parts
+	MOVAQ	8(R2)[R0],LV_CUR(R5)
+	MOVL	R3,R1
+	BSBW	RANK_OF
+	MOVL	R0,NP_RANK(FP)
+	SUBL2	LV_RANK(R5),R0
+	BSBW	OWN_ELEMENTS
+	TSTL	R0
+	BNEQ	22$
+	BRW	10$			; none
+22$:	CMPL	DEPTH(FP),#LV_MAX
+	BLSS	24$
+	BRW	10$
+24$:
+	MULL3	#LV_SIZE,DEPTH(FP),R4
+	MOVAB	LEVELS(FP)[R4],R4	; the next level
+	MOVL	R2,LV_HDR(R4)
+	ADDL3	#8,R2,LV_CUR(R4)
+	MOVL	LV_CUR(R5),LV_END(R4)
+	MOVL	R0,LV_COUNT(R4)
+	CLRL	LV_IDX(R4)
+	MOVL	LV_ACC(R5),LV_BASE(R4)
+	MOVL	LV_ACC(R5),LV_ACC(R4)
+	MOVL	R1,LV_STRIDE(R4)
+	MOVL	NP_RANK(FP),LV_RANK(R4)
+	INCL	DEPTH(FP)
+	BRW	10$
+30$:	ADDL3	#8,R2,LV_CUR(R5)	; a component's elements
+	MOVL	R3,R1
+	BSBW	RANK_OF
+	SUBL2	LV_RANK(R5),R0
+	BSBW	OWN_ELEMENTS
+	TSTL	R0
+	BNEQ	35$
+	BRW	10$
+35$:	MOVL	R0,R10
+	MOVL	R3,R8
+	MOVL	(R2),NAME(FP)
+	ADDL3	DSC$A_POINTER(R3),LV_ACC(R5),R9
+	MOVZWL	DSC$W_LENGTH(R3),R11
+	MOVL	#1,R0
+	RSB
+50$:	INCL	LV_IDX(R5)		; this level's parts done: its next element
+	CMPL	LV_IDX(R5),LV_COUNT(R5)
+	BLSS	60$
+	DECL	DEPTH(FP)
+	BRW	10$
+60$:	ADDL3	#8,LV_HDR(R5),LV_CUR(R5)
+	MOVAB	LEVELS(FP),R0
+	CMPL	R5,R0
+	BNEQ	70$
+	MOVL	LV_IDX(R5),R0		; the first level's, by the walk
+	BSBW	ADDRESS
+	ADDL3	R0,LV_BASE(R5),LV_ACC(R5)
+	BRW	10$
+70$:	MULL3	LV_IDX(R5),LV_STRIDE(R5),R0
+	ADDL3	R0,LV_BASE(R5),LV_ACC(R5)
+	BRW	10$
+
+;
+; OWN_ELEMENTS: R0, how many of the class A or NCA descriptor R1's dimensions
+; are an entity's own (its first), becomes the elements they have, and R1 the
+; first one's stride. Keeps R2 to R5.
+;
+OWN_ELEMENTS:
+	PUSHR	#^M<R2,R3,R4,R5>
+	MOVL	R0,OE_N(FP)
+	MOVL	R1,OE_DESC(FP)
+	MOVL	#1,OE_COUNT(FP)
+	CLRL	OE_STRIDE(FP)
+	CLRL	OE_K(FP)
+10$:	CMPL	OE_K(FP),OE_N(FP)
+	BGEQ	90$
+	MOVL	OE_DESC(FP),R1
+	MOVL	OE_K(FP),R2
+	BSBW	DIM_INFO
+	SUBL3	R3,R4,R0
+	INCL	R0
+	BGEQ	15$
+	CLRL	R0
+15$:	MULL2	R0,OE_COUNT(FP)
+	TSTL	OE_K(FP)
+	BNEQ	20$
+	MOVL	R5,OE_STRIDE(FP)
+20$:	INCL	OE_K(FP)
+	BRB	10$
+90$:	MOVL	OE_COUNT(FP),R0
+	MOVL	OE_STRIDE(FP),R1
+	POPR	#^M<R2,R3,R4,R5>
+	RSB
+
+;
+; ADVANCE: the current item's next element. In an object (DEPTH) a component's
+; elements are next to each other; otherwise the walk says where.
+;
+ADVANCE:
+	DECL	R10
+	TSTL	DEPTH(FP)
+	BEQL	10$
+	MOVZWL	DSC$W_LENGTH(R8),R0
+	ADDL2	R0,R9
+	RSB
+10$:	INCL	W_K(FP)
+	TSTL	R10
+	BLEQ	90$
+	MOVL	W_K(FP),R0
+	BSBW	ADDRESS
+	ADDL3	R0,W_BASE(FP),R9
+90$:	RSB
+
+;
+; SUBSCRIPTS: reads "(" and what's in it, to the ")", into SUB_LO, SUB_HI,
+; SUB_ST, SUB_FL, and ITEMS, where blanks and records' ends may stand anywhere
+; around the numbers. A subscript is a number, or in a Fortran 90 statement a
+; section, [lo]:[hi][:stride]; VMS's allows one colon, in the first, for a
+; substring. Past eight subscripts none is kept, as no reference can be right.
+;
+SUBSCRIPTS:
 	INCL	CTX_POS(R6)
-	CLRL	MISSING(FP)
 	CLRL	ITEMS(FP)
-	CLRL	COLON(FP)
+	CLRL	FIELDN(FP)
+	CLRQ	SUB_FL(FP)
 10$:	JSB	FTN$$LI_SKIP		; FTN_LISTIN
 	BLBS	R0,20$
 	RET
@@ -519,11 +1100,7 @@ PARENTHESES:
 	BEQL	25$
 	CMPB	R1,#^A/)/
 	BNEQ	30$
-25$:	MOVL	ITEMS(FP),R0		; nothing here
-	CMPL	R0,#8
-	BGEQ	50$
-	BBSS	R0,MISSING(FP),50$
-	BRB	50$
+25$:	BRW	50$
 	;
 	; A number: a sign, then digits, which keep to the largest longword
 	; rather than overflow, so that the bounds refuse it.
@@ -553,36 +1130,58 @@ PARENTHESES:
 	BLBS	R0,40$
 	BLBC	R2,46$
 	MNEGL	R3,R3
-46$:	CMPL	ITEMS(FP),#8
-	BGEQ	47$
-	MOVL	ITEMS(FP),R0
-	MOVL	R3,SUBS(FP)[R0]
-47$:	JSB	FTN$$LI_SKIP
+46$:	MOVL	ITEMS(FP),R0		; kept, by which number it is
+	CMPL	R0,#8
+	BGEQ	48$
+	MOVL	FIELDN(FP),R2
+	BBSS	R2,SUB_FL(FP)[R0],47$	; SF_LO, SF_HI, or SF_ST (it branches
+47$:	CASEL	R2,#0,#2		;  either way)
+45$:	.WORD	475$-45$,476$-45$,477$-45$
+475$:	MOVL	R3,SUB_LO(FP)[R0]
+	BRB	48$
+476$:	MOVL	R3,SUB_HI(FP)[R0]
+	BRB	48$
+477$:	MOVL	R3,SUB_ST(FP)[R0]
+48$:	JSB	FTN$$LI_SKIP
 	BLBS	R0,50$
 	RET
 	;
 	; What follows it.
 	;
-50$:	INCL	ITEMS(FP)
-	CMPB	R1,#^A/)/
+50$:	CMPB	R1,#^A/)/
 	BEQL	80$
 	CMPB	R1,#^A/,/
 	BNEQ	60$
-	TSTL	COLON(FP)		; a comma and a colon together
-	BEQL	70$
+	BITW	#FLAG_F90,CTX_FLAGS(R6)	; VMS's: no comma after a colon
+	BNEQ	55$
+	BBC	#SF_COLON,SUB_FL(FP),55$
 	BRW	SYNTAX_HERE
+55$:	INCL	ITEMS(FP)
+	CLRL	FIELDN(FP)
+	INCL	CTX_POS(R6)
+	BRW	10$
 60$:	CMPB	R1,#^A/:/
 	BEQL	65$
 	BRW	SYNTAX_HERE
-65$:	TSTL	COLON(FP)		; a second colon, or one after a comma
+65$:	BITW	#FLAG_F90,CTX_FLAGS(R6)
+	BNEQ	70$
+	TSTL	ITEMS(FP)		; VMS's: one colon, in the first
 	BNEQ	67$
-	CMPL	ITEMS(FP),#1
-	BEQL	68$
+	TSTL	FIELDN(FP)
+	BEQL	72$
 67$:	BRW	SYNTAX_HERE
-68$:	MOVL	#1,COLON(FP)
-70$:	INCL	CTX_POS(R6)
+70$:	CMPL	FIELDN(FP),#2		; a third colon
+	BGEQ	67$
+72$:	MOVL	ITEMS(FP),R0
+	CMPL	R0,#8
+	BGEQ	74$
+	ADDL3	#SF_COLON,FIELDN(FP),R2
+	BBSS	R2,SUB_FL(FP)[R0],74$
+74$:	INCL	FIELDN(FP)
+	INCL	CTX_POS(R6)
 	BRW	10$
-80$:	INCL	CTX_POS(R6)
+80$:	INCL	ITEMS(FP)
+	INCL	CTX_POS(R6)
 	RSB
 
 ;
@@ -607,10 +1206,8 @@ NEXT_VALUE:
 	JSB	FTN$$LI_SKIP		; FTN_LISTIN
 	BLBS	R0,10$
 	RET
-10$:	CMPB	R1,#^A/$/
-	BEQL	20$
-	CMPB	R1,#^A/&/
-	BNEQ	30$
+10$:	BSBW	IS_END
+	BLBC	R0,30$
 20$:	RSB
 30$:	PUSHL	R1
 	BSBW	QUESTION
@@ -673,10 +1270,8 @@ VALUE_AFTER_COUNT:
 	BEQL	65$
 	CMPB	R1,#^A/,/
 	BEQL	65$
-	CMPB	R1,#^A/$/
-	BEQL	65$
-	CMPB	R1,#^A/&/
-	BNEQ	67$
+	BSBW	IS_END
+	BLBC	R0,67$
 65$:	BSBW	NULLS
 	MOVB	#1,CTX_LI_AFTER(R6)
 	BRW	NEXT_VALUE
@@ -702,8 +1297,12 @@ VALUE_AFTER_COUNT:
 ;
 BY_FIRST_BYTE:
 	CMPB	R1,#^A/'/
+	BEQL	71$
+	CMPB	R1,#^A/"/		; a Fortran 90 statement's quotation mark
 	BNEQ	75$
-	JSB	FTN$$LI_TEXT		; FTN_LISTIN
+	BITW	#FLAG_F90,CTX_FLAGS(R6)
+	BEQL	75$
+71$:	JSB	FTN$$LI_TEXT		; FTN_LISTIN
 	TSTL	CTX_STATUS(R6)
 	BEQL	72$
 	RET
@@ -768,12 +1367,14 @@ BY_FIRST_BYTE:
 	BEQL	94$
 	CMPB	R1,#^A/,/
 	BEQL	94$
-	CMPB	R1,#^A/$/
-	BEQL	94$
-	CMPB	R1,#^A/&/
-	BEQL	94$
 	CMPB	R1,#^A/)/
 	BEQL	94$
+	CMPB	R1,#^A/!/		; a Fortran 90 statement's comment
+	BNEQ	93$
+	BITW	#FLAG_F90,CTX_FLAGS(R6)
+	BNEQ	94$
+93$:	BSBW	IS_END
+	BLBS	R0,94$
 	BRW	BAD_TOKEN
 94$:	MOVB	#V_WORD,CTX_LI_KIND(R6)
 	MOVL	CTX_POS(R6),R2
@@ -849,13 +1450,18 @@ PUT_VALUE:
 	BEQL	10$
 	CMPB	DSC$B_DTYPE(R8),#DSC$K_DTYPE_GC
 	BEQL	10$
+	CMPB	DSC$B_DTYPE(R8),#DSC$K_DTYPE_HC
+	BEQL	10$
 	CMPB	DSC$B_DTYPE(R8),#DSC$K_DTYPE_T
 	BEQL	10$
 	MOVL	CTX_LI_PART(R6),CTX_LI_LENGTH(R6)
 	MOVB	#V_WORD,CTX_LI_KIND(R6)
 10$:	TSTL	R10
 	BNEQ	20$
-	BRW	TOO_MANY
+	BSBW	NEXT_PART		; an object's next entity
+	BLBC	R0,15$
+	BRW	PUT_VALUE
+15$:	BRW	TOO_MANY
 20$:	PUSHL	R11			; the length,
 	PUSHL	R9			;  the address,
 	MOVZBL	DSC$B_DTYPE(R8),-(SP)	;  the type,
@@ -864,9 +1470,7 @@ PUT_VALUE:
 	TSTL	CTX_STATUS(R6)
 	BEQL	30$
 	RET
-30$:	MOVZWL	DSC$W_LENGTH(R8),R0
-	ADDL2	R0,R9			; the next element
-	DECL	R10
+30$:	BSBW	ADVANCE			; the next element
 	SOBGTR	COUNT(FP),10$
 	MOVB	#1,CTX_LI_AFTER(R6)
 	BRW	NEXT_VALUE
@@ -876,10 +1480,10 @@ PUT_VALUE:
 ;
 NULLS:	TSTL	R10
 	BNEQ	10$
+	BSBW	NEXT_PART		; an object's next entity
+	BLBS	R0,NULLS
 	BRW	TOO_MANY
-10$:	MOVZWL	DSC$W_LENGTH(R8),R0
-	ADDL2	R0,R9
-	DECL	R10
+10$:	BSBW	ADVANCE
 	SOBGTR	COUNT(FP),NULLS
 	RSB
 
@@ -1050,9 +1654,15 @@ INVALID_TEXT:
 TYPE		= -4			; long: the data type
 LENGTH		= -8			; long: an element's length
 RUN		= -12			; long: how many elements are equal
-FIELD		= -112			; 100 bytes: a piece being made, a field
-					;  from FTN_LISTOUT at FIELD+16
-FRAME2_SIZE	= 112
+FIELD		= -132			; 120 bytes: a piece being made, a field
+					;  from FTN_LISTOUT at FIELD+16 (up to
+					;  86 bytes, a COMPLEX*32's)
+DELIMCH		= -136			; long: text's delimiter, or 0 for none
+CONTBLANK	= -140			; long: 1 if text continued on the next
+					;  record goes on after a blank
+DESCW		= -144			; long: the entity's descriptor
+KW		= -148			; long: its element being written, from 0
+FRAME2_SIZE	= 148
 
 	.ENTRY	FTN$$NML_WRITE,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
 	SUBL2	#FRAME2_SIZE,SP
@@ -1061,10 +1671,14 @@ FRAME2_SIZE	= 112
 	CLRL	CTX_RECLEN(R6)
 	CLRL	CTX_NM_SHIFT(R6)
 	CMPB	(AP),#4
-	BLSS	5$
+	BLSS	1$
 	MOVL	16(AP),CTX_NM_SHIFT(R6)
-5$:	MOVW	#^A/ $/,FIELD(FP)	; " $GRP" (MOVC3 changes R0 to R5)
-	MOVL	NB_NAME(R7),R0
+1$:	BSBW	TEXT_FORM
+	MOVW	#^A/ $/,FIELD(FP)	; " $GRP" (MOVC3 changes R0 to R5),
+	BITW	#FLAG_F90,CTX_FLAGS(R6)	;  or a Fortran 90 statement's " &GRP"
+	BEQL	5$
+	MOVW	#^A/ &/,FIELD(FP)
+5$:	MOVL	NB_NAME(R7),R0
 	MOVZBL	(R0)+,R2
 	PUSHL	R2
 	MOVC3	R2,(R0),FIELD+2(FP)
@@ -1075,7 +1689,10 @@ FRAME2_SIZE	= 112
 	MOVAB	NB_ENTITIES(R7),R8
 	MOVL	NB_COUNT(R7),R9
 	BEQL	80$
-10$:	BSBW	ENTITY_NAME
+10$:	MOVL	4(R8),R0
+	TSTB	DSC$B_CLASS(R0)
+	BEQL	30$			; an object's header: its entities follow
+	BSBW	ENTITY_NAME
 	TSTL	12(AP)
 	BEQL	20$
 	BSBW	ENTITY_VALUES
@@ -1083,15 +1700,52 @@ FRAME2_SIZE	= 112
 	BLEQ	20$
 	BSBW	COMMA
 20$:	BSBW	FLUSH
-	ADDL2	#8,R8
+30$:	ADDL2	#8,R8
 	SOBGTR	R9,10$
-80$:	MOVL	#^A/ $EN/,FIELD(FP)	; " $END"
-	MOVB	#^A/D/,FIELD+4(FP)
+80$:	MOVL	#^A/ $EN/,FIELD(FP)	; " $END": 4 characters in a longword,
+	MOVB	#^A/D/,FIELD+4(FP)	;  and the fifth
 	MOVL	#5,R0
-	MOVAB	FIELD(FP),R1
+	BITW	#FLAG_F90,CTX_FLAGS(R6)	; a Fortran 90 statement's " /"
+	BEQL	85$
+	MOVW	#^A. /.,FIELD(FP)
+	MOVL	#2,R0
+85$:	MOVAB	FIELD(FP),R1
 	BSBW	PIECE
 	BSBW	FLUSH
 	RET
+
+;
+; TEXT_FORM: DELIMCH(FP) and CONTBLANK(FP) by the statement and the unit's
+; DELIM=, as the introduction says.
+;
+TEXT_FORM:
+	CLRL	DELIMCH(FP)
+	MOVL	#1,CONTBLANK(FP)
+	MOVL	CTX_STREAM(R6),R0
+	MOVZBL	UB_DELIM(R0),R1
+	BITW	#FLAG_F90,CTX_FLAGS(R6)
+	BEQL	20$
+	CMPL	R1,#1			; Fortran 90's: none but by DELIM=
+	BEQL	40$
+	CMPL	R1,#2
+	BEQL	50$
+	RSB
+20$:	CMPL	R1,#2			; VMS's: apostrophes but for DELIM=
+	BEQL	30$
+	CMPL	R1,#3
+	BNEQ	30$
+	RSB
+30$:	MOVZBL	#^A/'/,DELIMCH(FP)
+	BRB	60$
+40$:	MOVZBL	#^A/'/,DELIMCH(FP)
+	BRB	55$
+50$:	MOVZBL	#^A/"/,DELIMCH(FP)
+55$:	CLRL	CONTBLANK(FP)		; a Fortran 90 constant goes straight on
+	RSB
+60$:	CMPL	R1,#2
+	BNEQ	70$
+	MOVZBL	#^A/"/,DELIMCH(FP)
+70$:	RSB
 
 ;
 ; ENTITY_NAME: a record's " NAME", blanks, and "=": or for the names alone, all
@@ -1108,6 +1762,7 @@ ENTITY_NAME:
 	TSTL	12(AP)
 	BEQL	90$
 	BICL2	#7,R2			; the next multiple of 8 past the name's
+					;  (the low 3 bits cleared, then 8 added)
 	ADDL2	#9,R2			;  length, plus 1: the place of the =
 	PUSHL	R2
 	SUBL3	CTX_RECLEN(R6),R2,R0	; the blanks before it
@@ -1120,41 +1775,96 @@ ENTITY_NAME:
 90$:	RSB
 
 ;
-; ENTITY_VALUES: the values of the entity at R8.
+; ENTITY_VALUES: the values of the entity at R8, its elements in order: R10 the
+; one being written, and R11 how many are left. Those of a class NCA descriptor
+; (an array of a derived type's component, PTS%X) are where ELEMENT_AT says.
 ;
 ENTITY_VALUES:
 	MOVL	4(R8),R3		; its descriptor
+	MOVL	R3,DESCW(FP)
 	MOVZBL	DSC$B_DTYPE(R3),TYPE(FP)
 	MOVZWL	DSC$W_LENGTH(R3),LENGTH(FP)
-	MOVL	DSC$A_POINTER(R3),R10
 	MOVL	#1,R11
 	CMPB	DSC$B_CLASS(R3),#DSC$K_CLASS_A
-	BNEQ	10$
+	BNEQ	5$
 	DIVL3	LENGTH(FP),DSC$L_ARSIZE(R3),R11
-10$:	MOVL	#1,RUN(FP)		; how many are equal to this one
-	ADDL3	LENGTH(FP),R10,R2	; the next one
+	BRB	8$
+5$:	CMPB	DSC$B_CLASS(R3),#DSC$K_CLASS_NCA
+	BNEQ	8$
+	MOVZBL	DSC$B_DIMCT(R3),R0	; the extents' product
+	MOVAL	DSC$L_M1(R3)[R0],R1	; the bounds
+6$:	DECL	R0
+	BLSS	8$
+	MOVAQ	(R1)[R0],R2
+	SUBL3	(R2),4(R2),R2
+	INCL	R2
+	BGEQ	7$
+	CLRL	R2
+7$:	MULL2	R2,R11
+	BRB	6$
+8$:	CLRL	KW(FP)
+	TSTL	R11
+	BLEQ	90$
+10$:	MOVL	KW(FP),R0
+	BSBW	ELEMENT_AT
+	MOVL	R0,R10
+	MOVL	#1,RUN(FP)		; how many are equal to this one
 20$:	CMPL	RUN(FP),R11
 	BGEQ	30$
-	PUSHL	R2			; CMPC3 changes R0 to R3
-	CMPC3	LENGTH(FP),(R10),(R2)
-	BNEQ	25$
-	MOVL	(SP)+,R2		; (which changes the condition codes)
+	ADDL3	KW(FP),RUN(FP),R0	; the next one
+	BSBW	ELEMENT_AT
+	CMPC3	LENGTH(FP),(R10),(R0)	; (which changes R0 to R3)
+	BNEQ	30$
 	INCL	RUN(FP)
-	ADDL2	LENGTH(FP),R2
 	BRB	20$
-25$:	MOVL	(SP)+,R2
 30$:	CMPL	TYPE(FP),#DSC$K_DTYPE_T
 	BNEQ	40$
 	BSBW	TEXT_VALUE
 	BRB	50$
 40$:	BSBW	FIELD_VALUE
-50$:	MULL3	LENGTH(FP),RUN(FP),R0
-	ADDL2	R0,R10
+50$:	ADDL2	RUN(FP),KW(FP)
 	SUBL2	RUN(FP),R11
 	BLEQ	90$
 	BSBW	COMMA
 	BRB	10$
 90$:	RSB
+
+;
+; ELEMENT_AT: R0, an element's number from 0, becomes its address: past the
+; first by its number times the length, or for a class NCA descriptor by the
+; number taken apart by the extents, the first dimension's first, each
+; subscript times its stride. Changes R1 to R4.
+;
+ELEMENT_AT:
+	MOVL	DESCW(FP),R1
+	CMPB	DSC$B_CLASS(R1),#DSC$K_CLASS_NCA
+	BEQL	10$
+	MULL2	LENGTH(FP),R0
+	ADDL2	DSC$A_POINTER(R1),R0
+	RSB
+10$:	PUSHL	R5
+	MOVL	R0,R2			; the number
+	MOVL	DSC$A_POINTER(R1),R0
+	MOVZBL	DSC$B_DIMCT(R1),R4
+	MOVAL	DSC$L_M1(R1)[R4],R5	; the bounds
+	CLRL	R3			; the dimension
+20$:	CMPL	R3,R4
+	BGEQ	90$
+	PUSHL	R4
+	MOVAQ	(R5)[R3],R4
+	SUBL3	(R4),4(R4),R4
+	INCL	R4			; its extent
+	DIVL3	R4,R2,-(SP)		; the number of the slower dimensions
+	MULL2	(SP),R4
+	SUBL2	R4,R2			; this one's subscript, from 0
+	MULL2	DSC$L_M1(R1)[R3],R2	;  times its stride
+	ADDL2	R2,R0
+	MOVL	(SP)+,R2
+	MOVL	(SP)+,R4
+	INCL	R3
+	BRB	20$
+90$:	MOVL	(SP)+,R5
+	RSB
 
 ;
 ; FIELD_VALUE: the value at R10 in its list-directed field (FTN_LISTOUT, which
@@ -1198,37 +1908,51 @@ FIELD_VALUE:
 
 ;
 ; TEXT_VALUE: the value at R10 as a character constant: " '" or " r*'" as a
-; field, then its bytes wherever they fall.
+; field (without the delimiter if DELIMCH(FP) says none), then its bytes
+; wherever they fall, each delimiter in them twice, and the delimiter again.
 ;
 TEXT_VALUE:
 	CMPL	RUN(FP),#1
 	BGTR	10$
-	MOVW	#^A/ '/,FIELD(FP)
-	MOVL	#2,R0
-	BRB	20$
+	MOVB	#^A/ /,FIELD(FP)
+	MOVL	#1,R0
+	BRB	15$
 10$:	BSBW	COUNT_TEXT
-	MOVAB	FIELD(FP),R1
-	MOVB	#^A/'/,(R1)[R3]
-	ADDL3	#1,R3,R0
+	MOVL	R3,R0
+15$:	TSTL	DELIMCH(FP)
+	BEQL	20$
+	MOVB	DELIMCH(FP),FIELD(FP)[R0]
+	INCL	R0
 20$:	MOVAB	FIELD(FP),R1
 	BSBW	PIECE
-	CLRL	R2			; each byte, an apostrophe twice
+	CLRL	R2			; each byte, a delimiter twice
 30$:	CMPL	R2,LENGTH(FP)
 	BGEQ	50$
 	MOVZBL	(R10)[R2],R1
-	CMPB	R1,#^A/'/
+	TSTL	DELIMCH(FP)
+	BEQL	40$
+	CMPB	R1,DELIMCH(FP)
 	BNEQ	40$
-	BSBB	ONE_BYTE
-	MOVZBL	#^A/'/,R1
+	TSTL	CONTBLANK(FP)		; a Fortran 90 statement keeps the two
+	BNEQ	35$			;  on one record
+	CMPL	CTX_RECLEN(R6),#RECORD_MAX-2
+	BLEQ	35$
+	PUSHL	R1
+	BSBW	FLUSH
+	MOVL	(SP)+,R1
+35$:	BSBB	ONE_BYTE
+	MOVZBL	DELIMCH(FP),R1
 40$:	BSBB	ONE_BYTE
 	INCL	R2
 	BRB	30$
-50$:	MOVZBL	#^A/'/,R1
+50$:	MOVL	DELIMCH(FP),R1
+	BEQL	60$
 	BRB	ONE_BYTE
+60$:	RSB
 
 ;
-; ONE_BYTE: adds the byte in R1 to the record, or if it is full to the next, after
-; a blank. Keeps R2.
+; ONE_BYTE: adds the byte in R1 to the record, or if it is full to the next,
+; after a blank if CONTBLANK(FP) says so. Keeps R2.
 ;
 ONE_BYTE:
 	MOVL	CTX_RECLEN(R6),R0
@@ -1236,18 +1960,27 @@ ONE_BYTE:
 	BLSS	10$
 	PUSHL	R1
 	BSBW	FLUSH
+	CLRL	R0
+	TSTL	CONTBLANK(FP)
+	BEQL	5$
 	MOVB	#^A/ /,CTX_RECORD(R6)
 	MOVL	#1,CTX_RECLEN(R6)
 	MOVL	#1,R0
-	MOVL	(SP)+,R1
+5$:	MOVL	(SP)+,R1
 10$:	MOVB	R1,CTX_RECORD(R6)[R0]
 	INCL	CTX_RECLEN(R6)
 	RSB
 
 ;
-; COMMA: a comma, which is a byte like any other.
+; COMMA: a comma: at the record's end, or if it is full the next's, after a
+; blank.
 ;
-COMMA:	MOVZBL	#^A/,/,R1
+COMMA:	CMPL	CTX_RECLEN(R6),#RECORD_MAX
+	BLSS	10$
+	BSBW	FLUSH
+	MOVB	#^A/ /,CTX_RECORD(R6)
+	MOVL	#1,CTX_RECLEN(R6)
+10$:	MOVZBL	#^A/,/,R1
 	BRB	ONE_BYTE
 
 ;
@@ -1292,7 +2025,7 @@ COUNT_TEXT:
 	MOVB	#^A/ /,FIELD(FP)
 	MOVL	RUN(FP),R0		; the digits, the last first, on the stack
 	CLRL	R3
-10$:	CLRL	R1
+10$:	CLRL	R1			; R0 and R1 the quadword dividend
 	EDIV	#10,R0,R0,R1
 	ADDL2	#^A/0/,R1
 	PUSHL	R1

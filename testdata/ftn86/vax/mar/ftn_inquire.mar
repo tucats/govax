@@ -14,6 +14,16 @@
 ;	14 FILE, 26 DEFAULTFILE, a descriptor's address next (mechanism 7)
 ;	30 to 48, an answer: where to store it next, a byte, word, or longword by
 ;	  mechanism 10, 3, or 5, or a text's descriptor by mechanism 4
+;	53 to 59, Fortran 90's answers, govax's codes (docs/planning/PHASE-109 -
+;	  Fortran 90 IO.md, finding 7): POSITION, ACTION, READ, WRITE,
+;	  READWRITE, DELIM, PAD, texts
+;
+; Fortran 90's answers are the HP Fortran manual's (12.5): with no connection,
+; ACTION, DELIM, and POSITION are UNDEFINED, READ, WRITE, and READWRITE
+; UNKNOWN, and PAD YES; DELIM is UNDEFINED for an unformatted unit, and
+; POSITION for a direct or keyed one. POSITION is where the OPEN put the file,
+; or REWIND after a REWIND statement: ASIS, unless the OPEN said otherwise
+; (or ACCESS='APPEND').
 ;
 ; VMS's INQUIRE never fails: a unit that can't exist or a name that can't be one
 ; is an answer, and the status is always success. So this statement, alone among
@@ -35,6 +45,9 @@
 ;			Otherwise it is opened to look at, read and shared, and
 ;			closed: the file's own attributes, nothing of a connection.
 ;
+; The MACRO and VAX conventions these lines rely on are explained once,
+; in FTN_VECTOR.MAR's "Reading these sources".
+;
 	$FABDEF
 	$NAMDEF
 	$RABDEF
@@ -50,6 +63,11 @@ UB_SCRATCH	= 41
 UB_SEGMENTED	= 42
 UB_NEXTREC	= 44
 UB_FAB		= 76
+UB_ASV		= 620
+UB_ACTION	= UB_ASV+39
+UB_DELIM	= UB_ASV+40
+UB_PAD		= UB_ASV+41
+UB_POSITION	= UB_ASV+42
 UB_RAB		= UB_FAB+FAB$C_BLN
 UB_NAM		= UB_RAB+RAB$C_BLN
 UB_XAB		= UB_NAM+NAM$C_BLN
@@ -63,7 +81,7 @@ CODE_FILE	= 14
 CODE_DEFAULT	= 26
 CODE_NAME	= 34
 Q_FIRST		= 30
-Q_LAST		= 48
+Q_LAST		= 59
 
 MECHANISM_WORD	= 3
 MECHANISM_TEXT	= 4
@@ -98,6 +116,13 @@ A_TYPE		= ANSWERS+<<45-Q_FIRST>*4>
 A_KEYED		= ANSWERS+<<46-Q_FIRST>*4>
 A_CC		= ANSWERS+<<47-Q_FIRST>*4>
 A_CONVERT	= ANSWERS+<<48-Q_FIRST>*4>
+A_POSITION	= ANSWERS+<<53-Q_FIRST>*4>
+A_ACTION	= ANSWERS+<<54-Q_FIRST>*4>
+A_READ		= ANSWERS+<<55-Q_FIRST>*4>
+A_WRITE		= ANSWERS+<<56-Q_FIRST>*4>
+A_READWRITE	= ANSWERS+<<57-Q_FIRST>*4>
+A_DELIM		= ANSWERS+<<58-Q_FIRST>*4>
+A_PAD		= ANSWERS+<<59-Q_FIRST>*4>
 NAME_LENGTH	= ANSWERS-4
 GIVEN		= NAME_LENGTH-8		; the name as written: length, address
 F_FAB		= GIVEN-FAB$C_BLN
@@ -135,6 +160,15 @@ T_FORTRAN:	.ASCIC	/FORTRAN/
 T_LIST:		.ASCIC	/LIST/
 T_NONE:		.ASCIC	/NONE/
 T_NATIVE:	.ASCIC	/NATIVE/
+T_UNDEFINED:	.ASCIC	/UNDEFINED/
+T_READ:		.ASCIC	/READ/
+T_WRITE:	.ASCIC	/WRITE/
+T_READWRITE:	.ASCIC	/READWRITE/
+T_ASIS:		.ASCIC	/ASIS/
+T_REWIND:	.ASCIC	/REWIND/
+T_APPEND:	.ASCIC	/APPEND/
+T_APOSTROPHE:	.ASCIC	/APOSTROPHE/
+T_QUOTE:	.ASCIC	/QUOTE/
 DAT_NAME:	.ASCII	/.DAT/
 DAT_LEN		= .-DAT_NAME
 
@@ -144,8 +178,8 @@ DAT_LEN		= .-DAT_NAME
 ; FTN$INQUIRE(control block, keyword, value, ...)
 ;
 	.ENTRY	FTN$INQUIRE,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
-	MOVAB	F_WORK(SP),SP
-	MOVC5	#0,(SP),#0,#-F_WORK,F_WORK(FP)
+	MOVAB	F_WORK(SP),SP		; room for the frame (F_WORK is its
+	MOVC5	#0,(SP),#0,#-F_WORK,F_WORK(FP) ;  bottom), all zeros
 	MOVAB	T_UNKNOWN,R0		; each text UNKNOWN until it's known
 	MOVL	R0,A_ACCESS(FP)
 	MOVL	R0,A_SEQUENTIAL(FP)
@@ -159,12 +193,20 @@ DAT_LEN		= .-DAT_NAME
 	MOVL	R0,A_KEYED(FP)
 	MOVL	R0,A_CC(FP)
 	MOVL	R0,A_CONVERT(FP)
+	MOVL	R0,A_READ(FP)
+	MOVL	R0,A_WRITE(FP)
+	MOVL	R0,A_READWRITE(FP)
+	MOVAB	T_UNDEFINED,R0		; Fortran 90's, with no connection
+	MOVL	R0,A_POSITION(FP)
+	MOVL	R0,A_ACTION(FP)
+	MOVL	R0,A_DELIM(FP)
+	MOVAB	T_YES,A_PAD(FP)
 	;
 	; What it asks about. R9 says if a unit was given, R10 is the unit, and
 	; R6 and R7 the name's and default name's descriptors.
 	;
-	CLRQ	R6
-	CLRQ	R9
+	CLRQ	R6			; R6 and R7 0 (a quadword: the pair)
+	CLRQ	R9			; R9 and R10 0
 	MOVL	#2,R8			; the first keyword's argument
 10$:	MOVZBL	(AP),R0
 	CMPL	R8,R0
@@ -208,7 +250,8 @@ DAT_LEN		= .-DAT_NAME
 	BSBW	OF_UNIT
 
 ;
-; Each answer asked for goes where its keyword says, by its mechanism.
+; Each answer asked for goes where its keyword says, by its mechanism. A
+; logical answer is -1 for .TRUE. (every bit set) and 0 for .FALSE.
 ;
 STORE:	MOVL	#2,R8
 10$:	MOVZBL	(AP),R0
@@ -223,8 +266,8 @@ STORE:	MOVL	#2,R8
 	BLSS	10$
 	CMPL	R2,#Q_LAST
 	BGTR	10$
-	MOVAL	ANSWERS(FP),R4
-	MOVL	-<Q_FIRST*4>(R4)[R2],R1
+	MOVAL	ANSWERS(FP),R4		; the answer to code R2: the table starts
+	MOVL	-<Q_FIRST*4>(R4)[R2],R1	;  at Q_FIRST, which the offset takes off
 	CMPL	R3,#MECHANISM_TEXT
 	BEQL	40$
 	CMPL	R3,#MECHANISM_LONG
@@ -246,7 +289,7 @@ STORE:	MOVL	#2,R8
 	BNEQ	50$
 	MOVL	NAME_LENGTH(FP),R0
 	BRB	60$
-50$:	MOVZBL	(R1)+,R0
+50$:	MOVZBL	(R1)+,R0		; a counted string: its length, then text
 60$:	MOVZWL	(R6),R4
 	MOVL	4(R6),R5
 	MOVC5	R0,(R1),#^A/ /,R4,(R5)
@@ -428,6 +471,40 @@ OF_UNIT:
 	MOVAB	UB_RSA(R11),A_NAME(FP)
 	MOVL	UB_NEXTREC(R11),A_NEXTREC(FP)
 	;
+	; Fortran 90's: what it may do, its padding, and where the OPEN put it.
+	;
+	MOVAB	T_YES,R0
+	MOVAB	T_NO,R1
+	MOVL	R0,A_READ(FP)
+	MOVL	R0,A_WRITE(FP)
+	MOVL	R1,A_READWRITE(FP)
+	CMPB	UB_ACTION(R11),#1
+	BNEQ	11$
+	MOVAB	T_READ,A_ACTION(FP)
+	MOVL	R1,A_WRITE(FP)
+	BRB	13$
+11$:	CMPB	UB_ACTION(R11),#2
+	BNEQ	12$
+	MOVAB	T_WRITE,A_ACTION(FP)
+	MOVL	R1,A_READ(FP)
+	BRB	13$
+12$:	MOVAB	T_READWRITE,A_ACTION(FP)
+	MOVL	R0,A_READWRITE(FP)
+13$:	CMPB	UB_PAD(R11),#2
+	BNEQ	14$
+	MOVL	R1,A_PAD(FP)
+14$:	CMPB	UB_ACCESS(R11),#1	; none for direct or keyed access
+	BEQL	19$
+	CMPB	UB_ACCESS(R11),#4
+	BEQL	19$
+	MOVAB	T_ASIS,A_POSITION(FP)
+	CMPB	UB_POSITION(R11),#2
+	BNEQ	15$
+	MOVAB	T_REWIND,A_POSITION(FP)
+15$:	CMPB	UB_POSITION(R11),#3
+	BNEQ	19$
+	MOVAB	T_APPEND,A_POSITION(FP)
+19$:	;
 	; The access: APPEND is sequential, once it has found the end.
 	;
 	MOVAB	T_SEQUENTIAL,A_ACCESS(FP)
@@ -449,11 +526,18 @@ OF_UNIT:
 	BNEQ	50$
 	MOVAB	T_FORMATTED,A_FORM(FP)
 	MOVL	UB_SIZE(R11),A_RECL(FP)
-	MOVAB	T_ZERO,A_BLANK(FP)
-	CMPB	UB_BLANK(R11),#1
-	BEQL	40$
+	MOVAB	T_ZERO,A_BLANK(FP)	; ZERO, said or by default (VAX's answer:
+	CMPB	UB_BLANK(R11),#2	;  INQUIRE has no F90 flag)
+	BNEQ	40$
 	MOVAB	T_NULL,A_BLANK(FP)
-40$:	RSB
+40$:	MOVAB	T_NONE,A_DELIM(FP)	; how list-directed and namelist output
+	CMPB	UB_DELIM(R11),#1	;  delimit text
+	BNEQ	42$
+	MOVAB	T_APOSTROPHE,A_DELIM(FP)
+42$:	CMPB	UB_DELIM(R11),#2
+	BNEQ	44$
+	MOVAB	T_QUOTE,A_DELIM(FP)
+44$:	RSB
 50$:	MOVAB	T_UNFORMATTED,A_FORM(FP)
 	MOVAB	T_NATIVE,A_CONVERT(FP)
 	MOVL	UB_SIZE(R11),R0

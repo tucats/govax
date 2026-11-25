@@ -2,7 +2,7 @@
 	.IDENT	/01/
 ; TBT$ FORTRAN: a traceback's line numbers are the FORTRAN lines below
 ;
-; Compiled by GOVAX FORTRAN V0.0-0 on 22-NOV-2026 14:13:06.46
+; Compiled by GOVAX FORTRAN V0.0-0 on 24-NOV-2026 14:22:47.29
 ; from DUA5:[FCALC]FCLEXER.F90;1
 ; by the command FORTRAN/G_FLOATING FCLEXER
 ; Optimized by /OPTIMIZE's passes: do limits, one character, forward, unreachable, dead code, deferred indexes, loop invariants,
@@ -31,8 +31,8 @@ $MOD$FCMESSAGES.$BASE:
 ;
 FCLEXER.INDENT = $MOD$FCMESSAGES.$BASE+8 ; INDENT, in module FCMESSAGES's variables
 FCLEXER.LOG_UNIT = $MOD$FCMESSAGES.$BASE+12 ; LOG_UNIT, in module FCMESSAGES's variables
-$MOD$FCLEXER.3BEEEE6E == 0		; this module's stamp, which its users' objects refer to
-	.EXTRN	$MOD$FCMESSAGES.63F4C46F ; the stamps of the modules used
+$MOD$FCLEXER.26ACCCC1 == 0		; this module's stamp, which its users' objects refer to
+	.EXTRN	$MOD$FCMESSAGES.25BE58B3 ; the stamps of the modules used
 
 ;    1  ! fcalc: the lexer, which turns a line into tokens.
 ;    2  !
