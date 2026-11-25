@@ -741,7 +741,7 @@ A.8.1 is not planned.
       and F90R's round 4 (done 2026-11-25).
     - 14b. Round 2's answers, after the author's run (2026-11-25), in parts: 14b1, DCL's file
       parameters, MACRO's registers in data, FOR81M, and FOR81W (done 2026-11-25); 14b2, LINK's
-      NONPICREF and the DST's blocks; 14b3, RMS's extension size and HEADERFULL (ods2).
+      NONPICREF and the DST's blocks (done 2026-11-25); 14b3, RMS's extension size and HEADERFULL (ods2).
     - 14c. The documents: MANUAL.md, FORTRAN-INTERNALS.md, HELP, PLAN.md, "Where things stand".
 
 Each subtask may begin with a survey of its own, as earlier phases' did.
@@ -1749,4 +1749,21 @@ Each subtask may begin with a survey of its own, as earlier phases' did.
     Applications guide's sequential extension, the smaller of twice the multiblock count and 256,
     at least the volume's: 2 blocks here, all or nothing, which explains both rounds' last free
     block); HDRFULL (HEADERFULL when the index file's map area fills, no extension header).
+- **2026-11-25, subtask 14b2 (done):** LINK made VMS 7.1's in round 2's LNK113L and LNK113D.
+  - *NONPICREF*: in a shareable image, a relocatable address stored by other than `.ADDRESS` (or a
+    displacement) is LINK-W-NONPICREF, naming the psect, offset, module, and file (pass 2's
+    `nonPICReference`, `machine.where`), after one LINK-I-BASDUERRS, both the module's messages. The
+    image is then based where it was linked (`baseImage`, `linker.nonPIC`): VMS's LNK113L kept its
+    sections' addresses and the map's `-R`s, unmarked ISD$V_BASED, but cleared PICIMG, made its
+    universal symbols absolute, and had no fixups of its own addresses (`.ADDRESS` or DST), no
+    relocatable reference synopsis (`module.ownRelocations` taken back), and still a fixup section
+    holding its own protection change (`hasFixupSection`). Pass 2's bytes are the same either way.
+    `TestErr113BLink` links VMS's object and holds the image byte for byte and the map line for line
+    to VMS's; MANUAL.md's LINK section.
+  - *The DST's blocks* (`withDSTFixups`): the traceback records' blocks, then
+    `ceil((fixup bytes + dstFixupSlack) / 512)`, the slack 255, unconfirmed in 21 to 294, which
+    every VMS image in testdata fits; 13g's rule (both parts' bytes together, rounded up, plus a
+    block) gave LNK113D08 to 15 a block too many. `TestErr113BDSTBlocks` links the sweep; FTNRTL's and
+    fcalc's images are unchanged. Round 3 is to sweep fixup records from about 730 to 1,010 bytes
+    to settle the slack.
 

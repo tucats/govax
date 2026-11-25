@@ -1,10 +1,13 @@
 package console
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/tucats/govax/internal/vmsimage"
 )
 
 // Phase 113's probe round 2 (docs/planning/PHASE-113 - Fortran errata.md,
@@ -143,3 +146,82 @@ var err113BDifferences = map[string][]err113Difference{
 	}},
 }
 
+
+// TestErr113BLink links round 2's LNK113L from VMS's own object
+// (testdata/err113/vax/round2) and holds the image and map to VMS's: a
+// shareable image's .LONG of its own address is LINK-W-NONPICREF, and the
+// image is based where it was linked (LINK-I-BASDUERRS), with no fixups of
+// its own addresses.
+func TestErr113BLink(t *testing.T) {
+	d, _, buf := shareFindConsole(t, false)
+	dir, err := filepath.Abs(filepath.Join("..", "..", "testdata", "err113"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	vax := filepath.Join(dir, "vax", "round2")
+
+	shareFindRun(t, d, "CREATE/DIRECTORY DUA1:[ERR113]")
+	shareFindRun(t, d, "SET DEFAULT DUA1:[ERR113]")
+	shareFindRun(t, d, `COPY/BINARY "`+filepath.Join(vax, "lnk113l.obj")+`"/HOST LNK113L.OBJ`)
+	shareFindRun(t, d, `COPY "`+filepath.Join(dir, "lnk113l.opt")+`"/HOST LNK113L.OPT`)
+
+	buf.Reset()
+	_ = d.Dispatch("LINK/SHAREABLE/MAP=LNK113L/FULL LNK113L,LNK113L/OPTIONS")
+
+	if said := buf.String(); !strings.HasPrefix(said, "%LINK-I-BASDUERRS, basing image due to errors in relocatable references\n") ||
+		strings.Count(said, "%LINK-W-NONPICREF, failure to use .ADDRESS for relocatable data \n") != 3 {
+		t.Errorf("LINK said:\n%s", said)
+	}
+
+	out := t.TempDir()
+	shareFindRun(t, d, `COPY/BINARY LNK113L.EXE "`+filepath.Join(out, "lnk113l.exe")+`"/HOST`)
+	shareFindRun(t, d, `COPY LNK113L.MAP "`+filepath.Join(out, "lnk113l.map")+`"/HOST`)
+
+	link68CompareImage(t, "lnk113l", link68ReadBytes(t, filepath.Join(vax, "lnk113l.exe")), link68ReadBytes(t, filepath.Join(out, "lnk113l.exe")))
+
+	link68CompareLines(t, "lnk113l.map", link68MaskText(link68Read(t, filepath.Join(out, "lnk113l.map")), "lnk113l.map", "lnk113l"),
+		link68MaskText(link68Read(t, filepath.Join(vax, "lnk113l.map")), "lnk113l.map", "lnk113l"), link68TextDifferences)
+}
+
+// TestErr113BDSTBlocks links round 2's LNK113D sweep (testdata/err113/gen.go)
+// with govax's MACRO and LINK and holds each image's debug symbol table to
+// VMS's size in blocks: its traceback records' block, then one for fixup
+// records of 110 bytes, though the two total 505 to 520 (link's
+// withDSTFixups).
+func TestErr113BDSTBlocks(t *testing.T) {
+	d, _, _ := shareFindConsole(t, false)
+	dir, err := filepath.Abs(filepath.Join("..", "..", "testdata", "err113"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	out := t.TempDir()
+
+	shareFindRun(t, d, "CREATE/DIRECTORY DUA1:[ERR113]")
+	shareFindRun(t, d, "SET DEFAULT DUA1:[ERR113]")
+
+	for i := range 16 {
+		name := fmt.Sprintf("lnk113d%02d", i)
+		upper := strings.ToUpper(name)
+
+		shareFindRun(t, d, `COPY "`+filepath.Join(dir, name+".mar")+`"/HOST `+upper+".MAR")
+		shareFindRun(t, d, "MACRO/NOLIST "+upper)
+		shareFindRun(t, d, "LINK/NOMAP/SHAREABLE "+upper)
+		shareFindRun(t, d, "COPY/BINARY "+upper+`.EXE "`+filepath.Join(out, name+".exe")+`"/HOST`)
+
+		got, err := vmsimage.ReadImage(link68ReadBytes(t, filepath.Join(out, name+".exe")))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		want, err := vmsimage.ReadImage(link68ReadBytes(t, filepath.Join(dir, "vax", "round2", name+".exe")))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if got.DSTBlockCount() != want.DSTBlockCount() {
+			t.Errorf("%s: a DST of %d blocks, VMS's %d", upper, got.DSTBlockCount(), want.DSTBlockCount())
+		}
+	}
+}

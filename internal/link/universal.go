@@ -126,7 +126,7 @@ func (l *linker) universalSymbols() []*global {
 // with its final value. In a shareable image's, each is universal, and
 // one in the image's sections is relocatable, an offset in the image,
 // unless its cluster has a base of its own: a based image's symbols are
-// all absolute (SHR3's).
+// all absolute (SHR3's), as are one's based for a NONPICREF (LNK113L's).
 func (l *linker) gstEntry(g *global) *obj.Symbol {
 	s := &obj.Symbol{Type: obj.GSDSymbol, Flags: obj.SymDEF, Value: g.value, Name: g.name}
 
@@ -134,7 +134,7 @@ func (l *linker) gstEntry(g *global) *obj.Symbol {
 		s.Flags |= obj.SymUNI
 		s.Value = g.universalValue()
 
-		if c := g.contrib; c != nil && (c.psect.cluster == nil || !c.psect.cluster.based) {
+		if c := g.contrib; c != nil && !l.nonPIC && (c.psect.cluster == nil || !c.psect.cluster.based) {
 			s.Flags |= obj.SymREL
 		}
 	}

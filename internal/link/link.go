@@ -275,6 +275,10 @@ func Link(inputs []Input, opts Options) (*Image, error) {
 		}
 	}
 
+	if l.nonPIC {
+		l.baseImage()
+	}
+
 	return l.image()
 }
 
@@ -318,6 +322,9 @@ type linker struct {
 	// which the fixup section's change-protection list makes read-only
 	// again once they're fixed up.
 	readOnlyFixups []*section
+	// nonPIC says a module stored an address in the shareable image by other
+	// than .ADDRESS (NONPICREF), so the image is based (baseImage).
+	nonPIC bool
 	// dstFixups are the offsets in a shareable image's debug symbol table
 	// of the longwords that hold its addresses (shareable.go).
 	dstFixups []dstFixup
@@ -402,6 +409,10 @@ type module struct {
 	// addresses. A full map's module relocatable reference synopsis lists
 	// it (mapfile.go).
 	relocations int
+	// ownRelocations are those of relocations that are the shareable image's
+	// own addresses (.ADDRESS longwords and its debug symbol table's), which
+	// basing the image (baseImage) takes back.
+	ownRelocations int
 }
 
 // psect is one program section of the image, which modules contribute to.

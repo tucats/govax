@@ -3605,7 +3605,9 @@ lines, as VMS's MACRO shows them. A register name as a data item
 (`.LONG R1`, `.WORD R5`) is an error, as in VMS's MACRO: `DIRSYNX` for a
 directive's first item, which stores a zero and ends the directive,
 `DATALSTSYN` for a later one, which stores a zero in its place, and
-`ADRLSTSYNX` for an `.ADDRESS` item, which stores nothing.
+`ADRLSTSYNX` for an `.ADDRESS` item, which stores nothing. A register after
+an operator ends its item there (`.LONG 4+R1` stores 4), and is then the next
+item, with the same messages.
 
 ### Example 1: Hello, world, explained
 
@@ -4371,6 +4373,13 @@ A symbol nothing defines is a warning: it's 0, each reference to it is
 reported, and the image is still written. A routine in a shareable image
 is reached with a general-mode operand (`CALLS #1, G^LIB$PUT_OUTPUT`) or
 an `.ADDRESS`; the image activator connects it at run time.
+
+In a shareable image, an address of the image's own stored by anything but
+`.ADDRESS` (`.LONG LABEL`) can't be fixed up where the image is put, so, as
+VMS's LINK does, each is `%LINK-W-NONPICREF`, after one
+`%LINK-I-BASDUERRS, basing image due to errors in relocatable references`:
+the image is then linked to run only where it was linked, not position
+independent, with no fixups of its own addresses.
 
 ### The map
 

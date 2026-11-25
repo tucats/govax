@@ -69,9 +69,10 @@ func (l *linker) copyOnReference(s *section) bool {
 // hasFixupSection says the image has a fixup section: an executable
 // always does, and a shareable image when it refers to another shareable
 // image or has a .ADDRESS to fix up (SHR3, based, with neither, had
-// none).
+// none), or was based for a NONPICREF, whose fixup section VMS 7.1's LINK
+// kept, its own protection change alone (LNK113L).
 func (l *linker) hasFixupSection() bool {
-	return !l.opts.Shareable || len(l.shared) > 0 || l.addressFixups > 0 || len(l.selfAddresses) > 0
+	return !l.opts.Shareable || len(l.shared) > 0 || l.addressFixups > 0 || len(l.selfAddresses) > 0 || l.nonPIC
 }
 
 // fixupSectionFlags are the fixup section's ISD flags: a writable copy
@@ -106,6 +107,27 @@ func (l *linker) referSelf(addr, target uint32) bool {
 	l.selfAddresses = append(l.selfAddresses, addr)
 
 	return true
+}
+
+// baseImage makes a shareable image with a NONPICREF based where it was
+// linked, as real LINK does (BASDUERRS): VMS 7.1's LNK113L
+// (testdata/err113's round 2) kept its sections' addresses, unmarked
+// ISD$V_BASED, but cleared PICIMG, made its universal symbols absolute, and
+// had no fixups for its own addresses, neither .ADDRESS longwords nor its
+// debug symbol table's, so no module relocatable reference synopsis in its
+// map, which still marked the sections relocatable. Pass 2 stored the same
+// bytes either way; only the lists of what to fix up change, and l.nonPIC
+// makes based (PICIMG) and gstEntry (absolute symbols) say so.
+func (l *linker) baseImage() {
+	for _, s := range l.readOnlyFixups {
+		s.fixedUp = false
+	}
+
+	for _, m := range l.modules {
+		m.relocations -= m.ownRelocations
+	}
+
+	l.readOnlyFixups, l.selfAddresses, l.dstFixups = nil, nil, nil
 }
 
 // sectionAt returns the image section that holds addr, or nil.
@@ -162,15 +184,16 @@ type dstFixup struct {
 // withDSTFixups returns dst with a shareable image's fixup records after
 // it, from the next block, or dst itself if it needs none.
 //
-// The table then has the blocks VMS's LINK gives it, which may be one more
-// than its records use: as many as its records' bytes fill, with the fixup
-// records' counted as if they followed the rest directly, and one more, room
-// for their start on a block of its own. Every image VMS 7.1 linked for the
-// probes fits that rule (testdata/ftn86's and testdata/f90r's FTNRTLs, whose
-// fixup records run past a block, and every smaller shareable image), but
-// whether VMS rounds the sum up and adds one, or rounds it down and adds two,
-// which differ only when the sum is a multiple of 512, is unconfirmed: govax
-// rounds up (docs/planning/PHASE-113 - Fortran errata.md, subtask 13g).
+// The table then has the blocks VMS's LINK gives it: the blocks the records
+// before the fixup records fill, then as many as the fixup records' bytes
+// and dstFixupSlack more fill. Every image VMS 7.1 linked for the probes fits
+// that, for any slack from 21 to 294 bytes: testdata/ftn86's and
+// testdata/f90r's FTNRTLs (fixup records of 718 and 730 bytes in 2 blocks,
+// 1,004 and 1,022 in 3), testdata/err113's round 2 sweep (LNK113D, 110 bytes
+// in 1 block after traceback records of 395 to 410 bytes, though the two
+// total 505 to 520), and every smaller shareable image. Subtask 13g's rule,
+// both parts' bytes together, was wrong there. The slack itself is
+// unconfirmed (docs/planning/PHASE-113 - Fortran errata.md, subtask 14b2).
 func (l *linker) withDSTFixups(dst []byte) []byte {
 	if !l.opts.Shareable || len(l.dstFixups) == 0 {
 		return dst
@@ -223,11 +246,16 @@ func (l *linker) withDSTFixups(dst []byte) []byte {
 		dst = append(dst, rec...)
 	}
 
-	// Both parts' records' bytes, and the blocks VMS's LINK reserves for them.
-	records += len(dst) - int(pageUp(uint32(records)))
-	if reserved := int(pageUp(uint32(records))) + blockSize; len(dst) < reserved {
+	// The blocks VMS's LINK reserves for the fixup records.
+	start := int(pageUp(uint32(records)))
+	if reserved := start + int(pageUp(uint32(len(dst)-start+dstFixupSlack))); len(dst) < reserved {
 		dst = append(dst, make([]byte, reserved-len(dst))...)
 	}
 
 	return dst
 }
+
+// dstFixupSlack is the bytes VMS's LINK reserves for a shareable image's DST
+// fixup records beyond their own (withDSTFixups): a record's greatest
+// length, a choice in the range VMS's images allow (21 to 294).
+const dstFixupSlack = 255

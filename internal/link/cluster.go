@@ -657,9 +657,13 @@ func (c *cluster) start() uint32 {
 	return c.base
 }
 
-// based says some cluster has a base of its own, so the image isn't
-// position independent.
+// based says some cluster has a base of its own, or the image was based
+// for a NONPICREF (baseImage), so the image isn't position independent.
 func (l *linker) based() bool {
+	if l.nonPIC {
+		return true
+	}
+
 	for _, c := range l.clusters {
 		if c.based || c.shared.Based {
 			return true

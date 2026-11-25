@@ -412,18 +412,35 @@ func (x *machine) command(c obj.Command) error {
 // undefinedReference reports a reference to an undefined symbol, whose
 // value is 0, at the operand being stored (real LINK's USEUNDEF).
 func (x *machine) undefinedReference(g *global) {
-	where := fmt.Sprintf("address %%X%08X", x.loc)
+	x.m.messages = append(x.m.messages, Message{'W', "USEUNDEF", fmt.Sprintf(
+		"undefined symbol %s referenced\n\tin %s\n\tin module %s file %s", g.name, x.where(), x.m.name, x.m.input.File)})
+}
 
+// where names the location being stored at as real LINK's messages do: its
+// psect and the offset in it, or its address.
+func (x *machine) where() string {
 	for _, p := range x.l.order {
 		if p.flags&obj.PsectREL != 0 && x.loc >= p.base && x.loc < p.base+p.length {
-			where = fmt.Sprintf("psect %s offset %%X%08X", p.name, x.loc-p.base)
-
-			break
+			return fmt.Sprintf("psect %s offset %%X%08X", p.name, x.loc-p.base)
 		}
 	}
 
-	x.m.messages = append(x.m.messages, Message{'W', "USEUNDEF", fmt.Sprintf(
-		"undefined symbol %s referenced\n\tin %s\n\tin module %s file %s", g.name, where, x.m.name, x.m.input.File)})
+	return fmt.Sprintf("address %%X%08X", x.loc)
+}
+
+// nonPICReference reports an address in the shareable image stored by
+// other than .ADDRESS (a .LONG of a label), which the image activator
+// can't fix up: real LINK's NONPICREF, and the first time, BASDUERRS, its
+// note that the image is then based where it was linked (baseImage;
+// testdata/err113's round 2, LNK113L, VMS 7.1).
+func (x *machine) nonPICReference() {
+	if !x.l.nonPIC {
+		x.l.nonPIC = true
+		x.m.messages = append(x.m.messages, Message{'I', "BASDUERRS", "basing image due to errors in relocatable references"})
+	}
+
+	x.m.messages = append(x.m.messages, Message{'W', "NONPICREF", fmt.Sprintf(
+		"failure to use .ADDRESS for relocatable data \n\tin %s\n\tin module %s file %s", x.where(), x.m.name, x.m.input.File)})
 }
 
 // binary runs an arithmetic command. The difference of two addresses in
@@ -475,9 +492,13 @@ func (x *machine) store(st store) error {
 	case a.rel && x.debug && x.l.opts.Shareable && st.size == 4 && !x.l.basedAt(a.v):
 		x.l.dstFixups = append(x.l.dstFixups, dstFixup{offset: x.loc, address: a.v})
 		x.m.relocations++
+		x.m.ownRelocations++
+	case a.rel && !st.address && !st.disp && !x.debug && x.l.opts.Shareable && !x.l.basedAt(a.v):
+		x.nonPICReference()
 	case a.rel && st.address && !x.debug && x.l.opts.Shareable:
 		if x.l.referSelf(x.loc, a.v) {
 			x.m.relocations++
+			x.m.ownRelocations++
 		}
 	}
 
