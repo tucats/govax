@@ -75,8 +75,10 @@ var fcalcToolMessages = map[string]map[string][]string{
 	// FCPLATFORM is where fcalc keeps what only VMS has: LIB$GETDVI (Phase
 	// 111's subtask 11), LIB$GET_FOREIGN, and LBR$OUTPUT_HELP (subtask 12),
 	// whose names have a $, each called with a null argument (its channel,
-	// its prompt, its width and library: one message a statement).
-	"F90": {"FCPLATFORM": {"EXTENSION", "EXTENSION", "EXTENSION", "EXTENSION", "EXTENSION", "EXTENSION"}},
+	// its prompt, its width and library: one message a statement), and
+	// OPEN_TEXT's CARRIAGECONTROL='LIST', so a SAVE or LOG file is plain
+	// lines.
+	"F90": {"FCPLATFORM": {"EXTENSION", "EXTENSION", "EXTENSION", "EXTENSION", "EXTENSION", "EXTENSION", "EXTENSION"}},
 
 	// HOSTHIDDEN: each internal procedure declares the locals it uses (K, E,
 	// H, V, WIDTH, STATUS) so as not to change its host's; the warning is for

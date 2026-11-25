@@ -38,4 +38,14 @@ contains
 
     show_help = .false.
   end function show_help
+  ! OPEN_TEXT opens NAME on UNIT to write text (a SAVE or a LOG): gfortran's
+  ! files have no carriage control to choose.
+  subroutine open_text(unit, name, status, position, ios)
+    integer, intent(in) :: unit
+    character(len=*), intent(in) :: name, status, position
+    integer, intent(out) :: ios
+
+    open (unit=unit, file=name, status=status, action='WRITE', &
+      position=position, iostat=ios)
+  end subroutine open_text
 end module fcplatform

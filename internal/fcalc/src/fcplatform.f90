@@ -101,4 +101,20 @@ contains
     status = lbr$output_help(writer, , request, , no_flags)
     show_help = btest(status, 0)
   end function show_help
+  ! OPEN_TEXT opens NAME on UNIT to write text: a file of fcalc's own, a
+  ! SAVE or a LOG, for a person to read and edit as well as for fcalc to
+  ! read back. STATUS is OPEN's STATUS= and POSITION its POSITION=, and IOS
+  ! is IOSTAT='s answer. VMS's FORTRAN gives a formatted sequential file
+  ! FORTRAN carriage control by default: each record's first character is
+  ! taken as a printer's control, not text, so TYPE would show every line
+  ! without it. CARRIAGECONTROL='LIST', a VAX FORTRAN keyword, makes the
+  ! file an ordinary one of lines, every character text.
+  subroutine open_text(unit, name, status, position, ios)
+    integer, intent(in) :: unit
+    character(len=*), intent(in) :: name, status, position
+    integer, intent(out) :: ios
+
+    open (unit=unit, file=name, status=status, action='WRITE', &
+      position=position, carriagecontrol='LIST', iostat=ios)
+  end subroutine open_text
 end module fcplatform
