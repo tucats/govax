@@ -1,6 +1,7 @@
 package dclcmd
 
 import (
+	"strconv"
 	"strings"
 	"time"
 
@@ -108,6 +109,14 @@ func (c *Context) EditSum(req EditSumRequest) error {
 
 	r := sumslp.Apply(input, updates)
 
+	// The warnings are the listing's lines; with no listing they go to
+	// SYS$OUTPUT (the probe's terminal session, Y08).
+	if !on(req.Listing) {
+		for _, m := range r.Messages() {
+			c.Printf("%s\n", m)
+		}
+	}
+
 	if !(req.Output.Given && req.Output.Negated) {
 		if err := c.sumOutput(req.Output.Text, parsed, r.Output); err != nil {
 			return err
@@ -177,6 +186,14 @@ func (c *Context) sumUpdates(specs []string, in rms.ParsedName) ([]sumslp.Update
 			update.Records = append(update.Records, r.Data)
 		}
 
+		// A record past SUMSLP's buffer is RMS's RTB, and the file's edits
+		// are none of them applied; the run goes on (B30, W256).
+		if long := longRecord(update.Records); long > 0 {
+			c.Printf("%%SUM-E-READERR, %s\n%s\n", sumReadText(u.Name), rtbLine(long))
+
+			continue
+		}
+
 		updates = append(updates, update)
 	}
 
@@ -222,6 +239,29 @@ func (c *Context) sumWildcard(spec, dna string) error {
 		Status: wld | stsInhibitMsg,
 		Text:   "SUM-E-OPENIN, " + sumOpenText(name) + "\n" + ConditionLine(wld),
 	}
+}
+
+// longRecord is the length of the first record past sumslp.MaxRecord, or 0.
+func longRecord(records [][]byte) int {
+	for _, r := range records {
+		if len(r) > sumslp.MaxRecord {
+			return len(r)
+		}
+	}
+
+	return 0
+}
+
+// rtbLine is RMS's RTB as READERR's second line:
+//
+//	-RMS-W-RTB, 300 byte record too large for user's buffer
+func rtbLine(n int) string {
+	return strings.Replace(ConditionLine(vmsdef.Symbols["RMS$_RTB"]), "!UL", strconv.Itoa(n), 1)
+}
+
+// sumReadText is READERR's text for a file's name.
+func sumReadText(name string) string {
+	return strings.Replace(vmsdef.SUMMessages["READERR"], "!AS", name, 1)
 }
 
 // sumOpenText is OPENIN's text for a file's name.

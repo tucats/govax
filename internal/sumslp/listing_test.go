@@ -38,11 +38,14 @@ func probeFiles(t *testing.T) map[string][][]byte {
 		case name != "" && strings.HasPrefix(line, "|"):
 			files[name] = append(files[name], unescape(line[1:]))
 		case name != "" && strings.HasPrefix(line, "=lines "):
-			f := strings.Fields(line)
-			n, _ := strconv.Atoi(f[2])
+			// The prefix may have blanks ("=lines listing record 1200").
+			rule := strings.TrimPrefix(line, "=lines ")
+			cut := strings.LastIndexByte(rule, ' ')
+			prefix := rule[:cut]
+			n, _ := strconv.Atoi(rule[cut+1:])
 
 			for i := 1; i <= n; i++ {
-				files[name] = append(files[name], fmt.Appendf(nil, "%s %d", f[1], i))
+				files[name] = append(files[name], fmt.Appendf(nil, "%s %d", prefix, i))
 			}
 		}
 	}

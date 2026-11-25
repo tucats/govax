@@ -503,13 +503,17 @@ Each is one commit, with tests, stopping for review.
    plain EDIT), HELP EDIT's `/SUM` topic in VMS's shape, the messages and
    statuses in `vmsdef`, the names (input, updates, output, listing),
    the errors; held to the probe's COMMAND section.
-4. **The engine, one update file**: `internal/sumslp`'s `Parse` and
-   `Apply`, every edit
+4. **The engine, one update file** (done 2026-11-25): `internal/sumslp`'s
+   `Parse` and `Apply`, every edit
    command and its errors; held to the BASICS and ORDER sections, and the
-   round trip over Phase 116's pairs and VMS's 62 scripts.
+   round trip over Phase 116's pairs and VMS's 62 scripts. (The one pass
+   that fits one file's cases fits several files' too: MERGE and CLASH2,
+   the trail, and the listing's pages already match, below.)
 5. **Merging**: several update files, their order and conflicts; held
-   to MERGE.
-6. **Audit trail and listing**: held to AUDIT and LISTING.
+   to MERGE. (Held since subtask 4, engine and command; what is left is
+   the unconfirmed cases: a range that runs out with several files.)
+6. **Audit trail and listing**: held to AUDIT and LISTING. (The engine's
+   part held since subtask 4; left: `/HEADER`'s VFC output, U11 to U14.)
 7. **Files and the round trip on VMS**: record formats, every byte, long
    records; held to FORMATS and ROUNDTRIP.
 8. **MACRO/UPDATE**: the grammar's positional qualifier, `.UPD`'s
@@ -669,3 +673,41 @@ The author's answers to the plan's four questions:
   having run in the input's directory; a day before the 10th in the
   heading shown with a blank. `/HEADER` is accepted and does nothing until
   subtask 6. Subtask 4 is next.
+- **2026-11-25 — subtask 4 done: the engine.** `internal/sumslp`'s
+  `parse.go` reads an update file into `Edit`s (each command's locators,
+  modulo 65,536 and signed; "."; the trail; a bad command SLPSYNERR, a
+  numbered but unwritten line of the edit before it; PRMEOF; EDOUTSEQ; an
+  insert with no text no edit), and `sumslp.go`'s `Apply` is the one pass:
+  every file's edits sorted by locator1, the higher precedence first among
+  equals; an insert written after its line, at the current place once the
+  pass is past it, lost past the end; a range's lines deleted as it opens
+  and its text, then the inserts it held, written when it closes; a range
+  starting in the open one dropped, discarding every insert that one holds
+  (G14R showed it is all of them, even those sorted after the dropped
+  range); a range the input ends in closing there and the input read again,
+  numbered on, once; EDITSCLSH a message per group of edits that meet,
+  before the group's first line; the "-n" marks and ".n" runs; the trail
+  the file's last. `doc.go` has each rule and the cases that showed it, and
+  the choices no case settled ("." after a replace is its locator2; a range
+  starting two past the end is lost; EDOUTSEQ of a dropped or held edit
+  listed when the pass reaches it; PRMEOF unnumbered; a range open at the
+  second end closes there), for DEVIATIONS.md at the close-out.
+  `probe_test.go` replays the probe's single EDIT/SUM cases on the engine,
+  output and listing byte for byte: BASICS, SYNTAX, ORDER, NUMBERS, and
+  PASTEND (`TestProbeOneFile`), and, as the same pass already fits them,
+  MERGE and CLASH2 (`TestProbeMerged`) and AUDIT, LISTING, and PAGES
+  (`TestProbeTrailsAndPages`), all of them VMS's. `roundtrip_test.go`
+  applies every script VMS's DIFFERENCES/SLP wrote in both probes to its
+  master (`TestVMSScriptsRoundTrip`, R14's records holding line feeds left
+  to the next test) and `diff.SLP`'s scripts for the same pairs and 3,000
+  seeded random ones (`TestGovaxScriptsRoundTrip`): each gives its revision,
+  with no message. The command: an update record past 255 bytes is
+  `%SUM-E-READERR` with RMS's RTB and the file's edits skipped (B30), and
+  with no listing the warnings go to SYS$OUTPUT. `internal/console`'s
+  `TestSum117CommandOracle` now compares every COMMAND case's records
+  (`sum117Later` is empty), and `TestSum117EditsOracle` and
+  `TestSum117MergeOracle` hold the five one-file sections and MERGE and
+  CLASH2, run by EDIT/SUM, to VMS's logs and files. Found on the way: the
+  tests' reading of cases.txt's `=lines` rule took a one-word prefix
+  (L03's and L04's "listing record"), fixed in both readers. Subtask 5
+  is next; with its sections already held, it is small.

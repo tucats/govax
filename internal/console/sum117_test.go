@@ -86,11 +86,14 @@ func readSum117Cases(t *testing.T) ([]*sum117File, []*sum117Case) {
 		case strings.HasPrefix(line, "|"):
 			file.Records = append(file.Records, dif116Unescape(line[1:]))
 		case strings.HasPrefix(line, "=lines "):
-			f := strings.Fields(line)
-			n, _ := strconv.Atoi(f[2])
+			// The prefix may have blanks ("=lines listing record 1200").
+			rule := strings.TrimPrefix(line, "=lines ")
+			cut := strings.LastIndexByte(rule, ' ')
+			prefix := rule[:cut]
+			n, _ := strconv.Atoi(rule[cut+1:])
 
 			for i := 1; i <= n; i++ {
-				file.Records = append(file.Records, fmt.Sprintf("%s %d", f[1], i))
+				file.Records = append(file.Records, fmt.Sprintf("%s %d", prefix, i))
 			}
 		case strings.HasPrefix(line, "case "):
 			f := strings.Fields(line)
@@ -391,19 +394,6 @@ func sum117Mask(lines []string) []string {
 // which files there are, and their logs.
 var sum117Later = map[string]string{}
 
-// sum117Edited are the COMMAND cases whose update files edit the input: the
-// edits are subtask 4's.
-var sum117Edited = []string{
-	"C01", "C02", "C04", "C06", "C07", "C08", "C09", "C10", "C11", "C12", "C13", "C14",
-	"C15", "C16", "C19", "C22", "C24", "C29", "C30", "C31",
-}
-
-func init() {
-	for _, id := range sum117Edited {
-		sum117Later[id] = "the edits are subtask 4's"
-	}
-}
-
 // sum117NotCompared are the cases' parts an oracle test can't hold to VMS's,
 // and why: "log" for the log, "files" for the files.
 var sum117NotCompared = map[string]map[string]string{
@@ -513,4 +503,22 @@ func TestSum117CommandOracle(t *testing.T) {
 	t.Parallel()
 
 	holdSum117(t, "COMMAND")
+}
+
+// TestSum117EditsOracle holds one update file's edits, run by EDIT/SUM, to
+// VMS's (subtask 4): every edit command and its errors, their order, locators
+// past 32,767, ranges past the input's end; the outputs, the listings, and
+// the logs (the BASICS, SYNTAX, ORDER, NUMBERS, and PASTEND sections).
+func TestSum117EditsOracle(t *testing.T) {
+	t.Parallel()
+
+	holdSum117(t, "BASICS", "SYNTAX", "ORDER", "NUMBERS", "PASTEND")
+}
+
+// TestSum117MergeOracle holds several update files' edits to VMS's (the
+// MERGE and CLASH2 sections).
+func TestSum117MergeOracle(t *testing.T) {
+	t.Parallel()
+
+	holdSum117(t, "MERGE", "CLASH2")
 }
