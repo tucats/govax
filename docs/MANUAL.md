@@ -1945,6 +1945,71 @@ DUMP [/BLOCKS[=(START:n,END:n,COUNT:n)] | /RECORD[=(...)]] file-spec
 Shows a volume file in hexadecimal and ASCII, a block or a record at a
 time, as VMS's DUMP does.
 
+#### DIFFERENCES
+
+```text
+DIFFERENCES [qualifiers] input1-filespec [input2-filespec[/CHANGE_BAR[=(c,[NO]NUMBER)]]]
+```
+
+Compares two files record by record and lists the records that differ, as VMS
+7.1's DIFFERENCES does: the same sections, listings, counts, messages, and
+statuses, held to a probe of 859 cases run on VMS (`testdata/dif116`). The
+second file's missing parts are the first's, but for the version; with no second
+file, the first is compared with its next lower version (`%DIF-F-NOLOWVER` when
+there is none). Neither may have wildcards. Either may be a host file or a
+volume file, of any record format: records are compared, not formats.
+
+```text
+VAX> DIFFERENCES "foo.txt" "foo.tst"
+************
+File foo.txt
+    3   line 3
+******
+File foo.tst
+    3   extra cat
+    4   extra dog
+    5   line 3
+************
+
+Number of difference sections found: 1
+Number of difference records found: 2
+
+DIFFERENCES /IGNORE=()/MERGED=1-
+    foo.txt-
+    foo.tst
+```
+
+A difference section ends where the files agree again for `/MATCH=n` records in
+a row (3); `/WINDOW=n` limits how far the search for that place goes, and
+`/MAXIMUM_DIFFERENCES=n` stops after n difference records. The default listing
+is `/MERGED[=n]`, each section's records and n matching ones after them; the
+others are `/SEPARATED[=(MASTER,REVISION)]`, `/PARALLEL[=n]` (side by side),
+`/CHANGE_BAR` after a file (the whole file, changed records marked), and
+`/MODE=(ASCII,HEXADECIMAL,OCTAL)` (hexadecimal and octal dumps of the records),
+in any combination; `/SLP` instead writes an edit script for VMS's SLP editor
+that turns the first file into the second:
+
+```text
+VAX> DIFFERENCES/SLP/OUTPUT=SYS$OUTPUT "foo.txt" "foo.tst"
+-    2
+extra cat
+extra dog
+/
+```
+
+`/IGNORE=(BLANK_LINES, CASE, COMMENTS, FORM_FEEDS, HEADER[=n], SPACING,
+TRAILING_SPACES)` leaves things out of the comparison, and `EDITED`, `EXACT`, or
+`PRETTY` says how the listing shows the records; `/COMMENT_DELIMITER` names the
+comment characters, or takes the file type's (`!` for `.COM`, `;` for `.MAR`,
+column 1's C and D for `.FOR`, and so on; `.F90`'s `!` is govax's own).
+
+The listing goes to SYS$OUTPUT, or with `/OUTPUT[=file]` to a file (`name.DIF`
+by default); at a terminal it is the terminal's width whatever `/WIDTH` says,
+elsewhere `/WIDTH` or 132. `$STATUS` is `%X006C8009` when the files are the
+same, `%X006C8013` when they differ, and `%X006C8018` (`%DIF-W-MAXDIF`) when
+`/MAXIMUM_DIFFERENCES` stopped the comparison. VMS's paging qualifiers, `/PAGE`
+and its companions, are left out. HELP DIFFERENCES has every qualifier.
+
 #### CONVERT
 
 ```text
@@ -3561,7 +3626,7 @@ behaves as VMS's in the cases they cover. The differences to know about:
 - Commands that aren't VMS's: the machine commands of section 6.10, `PRINT`,
   `TIME`, and `F$CONFIG`.
 - Commands VMS has that govax doesn't include `PRINT` (VMS's,
-  for print queues), `RUN/DETACH`, `SET FILE` (but for `/PROTECTION` and `/OWNER_UIC`), `SORT`, `DIFFERENCES`, `SEARCH`, `ANALYZE/DISK`, and
+  for print queues), `RUN/DETACH`, `SET FILE` (but for `/PROTECTION` and `/OWNER_UIC`), `SORT`, `SEARCH`, `ANALYZE/DISK`, and
   the compilers.
 - `F$MODE()` is `INTERACTIVE` or, in a batch job, `BATCH`; there is no
   network mode.

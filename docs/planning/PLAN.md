@@ -165,7 +165,7 @@ questions, and a progress log extended as that phase is worked.
 | 113 | [PHASE-113 - Fortran errata](PHASE-113%20-%20Fortran%20errata.md) | The errata of both Fortran programs and their tools: the survey's whole to-do list (Part A, done 2026-11-22) and what the author chose done (Part B), with a VMS probe round — planned 2026-11-22; done 2026-11-25 |
 | 114 | [PHASE-114 - FORTRAN CONVERT](PHASE-114%20-%20FORTRAN%20CONVERT.md) | OPEN's `CONVERT=` other than NATIVE in FTNRTL, held to VMS's FORRTL — planned 2026-11-22 |
 | 115 | [PHASE-115 - Fortran 90 NOTIMPLs](PHASE-115%20-%20Fortran%2090%20NOTIMPLs.md) | The compiler's remaining NOTIMPLs, compiled or refused with a reason — planned 2026-11-23 |
-| 116 | [PHASE-116 - DIFFERENCES](PHASE-116%20-%20DIFFERENCES.md) | DCL's DIFFERENCES: VMS's matching rule, listing forms, and statuses, held to a VMS 7.1 probe — planned 2026-11-25 |
+| 116 | [PHASE-116 - DIFFERENCES](PHASE-116%20-%20DIFFERENCES.md) | DCL's DIFFERENCES: VMS's matching rule, listing forms, and statuses, held to a VMS 7.1 probe — planned 2026-11-25; done 2026-11-25 |
 
 Phase 13 was split out of Phase 10 once that phase's own investigation found that
 `console_run.c`'s `RUN` command (real `.exe` image activation: ICB/ISD/IHD/IHI struct
@@ -1284,3 +1284,26 @@ and the part the author chose done, each with a test.
 MANUAL.md, HELP, and FORTRAN-INTERNALS.md's section 38 (what a second look found) describe it; the
 phase doc's "Where things stand" lists what it left: `CONVERT=` (Phase 114), the compiler's other
 NOTIMPLs (Phase 115), and the questions for a next VMS round.
+
+## DIFFERENCES (Phase 116)
+
+Phase 116 (planned and done 2026-11-25, the plan accepted by the author the same day) is VMS's
+DIFFERENCES command, made to print what VMS 7.1 prints for the same files.
+
+- **The probe**: `testdata/dif116`, 859 cases on 659 files in two rounds on VMS 7.1, with 270
+  generated pairs for the matching rule and a terminal session at 80 and 132 columns; 796 listings
+  came back.
+- **The engine**: `internal/diff`, a leaf package: the matching rule fitted to VMS's listings (a
+  square search from the first records that differ, the larger side minimized; `/WINDOW` a square
+  of that depth moved on a record at a time), what `/IGNORE` leaves out, and every form (merged,
+  separated, parallel, change bars, hexadecimal and octal dumps, `/SLP`), the counts, and the closing
+  echo with VMS's line breaking. `TestProbeListings` holds 696 listings in milliseconds.
+- **The command**: `internal/dclcmd/differences.go`: the names (the second's defaults, the next
+  lower version), the messages and statuses (facility 108, `vmsdef/difmessages.go`), the output file,
+  the terminal's width, and a user-mode SYS$OUTPUT; DCL gained IVQLOC and MAXPARM as VMS's.
+  `internal/console/dif116_test.go`'s oracles hold every section to VMS's run but two cases that
+  show each volume's own directory records.
+
+MANUAL.md's 6.1 and HELP DIFFERENCES describe it; DEVIATIONS.md lists what stays a choice (the
+paging qualifiers, left out by the author's choice, and what no case settled); the phase doc's
+"Where things stand" lists what it left.

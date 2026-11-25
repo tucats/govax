@@ -1508,7 +1508,15 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   section 38; its "Where things stand" the follow-up list, and PLAN.md
   summarizes it), and **Phase 114 is `CONVERT=`** (`PHASE-114 - FORTRAN
   CONVERT.md`), and **Phase 115 the compiler's remaining NOTIMPLs** (`PHASE-115 -
-  Fortran 90 NOTIMPLs.md`, split from Phase 113 at its survey's refresh, 2026-11-23); real FORTRAN debugger records are not planned. An item an old
+  Fortran 90 NOTIMPLs.md`, split from Phase 113 at its survey's refresh, 2026-11-23); real FORTRAN debugger records are not planned.
+  Phase 116 (planned and done 2026-11-25; its "Where things stand" is the
+  follow-up list, and PLAN.md summarizes it) is DCL's DIFFERENCES, held to
+  `testdata/dif116`'s two rounds on VMS 7.1: the engine `internal/diff`
+  (below), the command `internal/dclcmd/differences.go` (names, the next
+  lower version, the output file, the terminal's width, a user-mode
+  SYS$OUTPUT), the DIF messages and statuses (facility 108,
+  `vmsdef/difmessages.go`), and DCL's IVQLOC and MAXPARM as VMS's; the
+  paging qualifiers left out by the author's choice. An item an old
   phase doc or DEVIATIONS.md still lists that a later phase did is marked
   where it was written, "*(Resolved in Phase N.)*" (the author's direction).
   Read the relevant phase doc
@@ -1824,6 +1832,12 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   corpus runs, and `modules/` by `TestFortran90Modules`; `testdata/fortran/
   gfortran/compare.py`'s `PROGRAMS90` builds them with `gfortran -std=f95` as a
   witness.
+- `testdata/dif116/` — Phase 116's probe of DIFFERENCES (README.md): `gen.go` writes
+  `cases.txt` (every input file's records and all 859 cases, in sections LAYOUT to
+  GENERATED; the one record the tests read), `dif116.com` and round 2's `dif116b.com`,
+  `dif116t.com` (the terminal, by hand), and the exchange and copy-out scripts; `vax/` is
+  VMS 7.1's logs, `terminal.log`, and 796 listings in `out/`. `internal/diff`'s
+  `TestProbeListings` and `internal/console`'s `dif116_test.go` oracles hold govax to them.
 - `testdata/f95/` — Phase 112's survey probes (README.md): a program per group of Fortran
   95's additions, each with `name.gfortran`, gfortran `-std=f95`'s output; survey material,
   not a corpus.
@@ -3071,6 +3085,13 @@ expect adjustment as phases land):
   decompression; `search.go` `Find` (`Match`: RMS's ROP KGE, KGT, and REV), `First`, `Following`, `Walk`, and `Record` by RFA (an `Entry`
   is a key and an RFA, no bucket, so a split can't lose it); `dump.go` a text form that shows nothing past a free offset, for comparing
   files. Its tests read `testdata/idx88/vax`'s save set, ANALYZE's reports, and the run's log. `write.go` is `Create` (a `Spec`, its flags the descriptor's) and `Put`, through `WritableBlocks` (`Extend` says what the volume gave), `compress.go` both compressions, as VMS's to the byte (`CheckCompression`). `split.go` is what a full bucket does (data, SIDR, and index splits, RRVs, continuations, new roots; `PutLoad` is ROP LOA), and `check.go` `Check`, which walks a whole file for what no operation may leave; `growth_test.go` holds random loads to a model with it. `change.go` is `Update` (in place, its RFA kept, or by a split), `Delete` (closing up; a bucket's last record a deleted stub with its key; a moved record's RRV taken out; `fast` is ROP FDL, leaving the alternates' pointers), and `DropPointer` (RMS's taking out such a pointer when a search finds it); `change_test.go` replays the probe's changing cases and runs random changes against the model. `ExtendArea` is `$EXTEND`'s (the extent to come, which `allocate` takes next), and `PrologBlocks` the prolog's size. `load.go` is a fast load (CONVERT's): `StartLoad`, `Add`, `FinishPrimary`, `FinishAlternate`, building each key's tree from records in its order, the prolog held back until each key ends.
+- `internal/diff` — DIFFERENCES' engine (Phase 116; `doc.go` has the rules and the
+  cases that showed them): a leaf package. `Ignore.Prepare` (`ignore.go`) turns a file's records
+  into what `/IGNORE` leaves to compare; `Compare` (`compare.go`) finds the sections by
+  the rule fitted to VMS 7.1's listings (`resync`, `square`); the forms are functions of
+  a `Result` (`listing.go`'s `Merged`, `forms.go`'s `Separated`, `Parallel`,
+  `ChangeBars`, and `List`, their order; `radix.go`'s dumps; `slp.go`); `echo.go` is
+  the closing echo's line breaking. Knows nothing of RMS or DCL.
 - `internal/fdl` — the File Definition Language (Phase 88, subtask 10b; `doc.go` has VMS's rules): a leaf package. `Parse` turns an FDL file's text into a `Definition` of `Section`s and the `Message`s VMS's parser gives, from `table.go`'s table of every primary and secondary. `rms/fdlcreate.go`'s `Session.CreateFDL` makes a file from a `Definition`.
 - `internal/anl` — VMS's ANALYZE utility (Phase 38): `AnalyzeObject` turns an
   object file's records into report `Line`s exactly as VMS 7.3's ANALYZE/OBJECT

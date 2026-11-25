@@ -2124,6 +2124,8 @@ nothing is changed until a program needs it. `TestLink82Oracle` lists the case.
   TYPE being an image. govax's TYPE, and its other built-in utilities, write to DCL's own
   SYS$OUTPUT whatever the user-mode name says; an image run by RUN does follow it. Found by
   Phase 113's probe round rehearsal (`testdata/err113`), which no longer depends on it.
+  Phase 116's DIFFERENCES is the first built-in utility to follow it (`differences.userOutput`,
+  testdata/dif116's O09); the others still don't.
 - **Status**: open.
 
 ### [Phase 113] STR$RECIP with a precision limit of zero, and STR$ROUND to negative places
@@ -2163,3 +2165,47 @@ nothing is changed until a program needs it. `TestLink82Oracle` lists the case.
   column 1, which in free form would cut statements beginning with those letters. By the author's
   direction (Phase 116, subtask 7).
 - **Status**: by choice.
+
+### [Phase 116] DIFFERENCES beside VMS 7.1's
+
+- **Where**: `internal/diff`, `internal/dclcmd/differences.go`, `internal/vmsdef/difmessages.go`;
+  `docs/planning/PHASE-116 - DIFFERENCES.md`, A.4 and the progress log.
+- **What**: every listing, message, and status of `testdata/dif116`'s 859 cases and the terminal
+  session is VMS 7.1's on govax, but for N29 (two directory files, whose records are each volume's
+  own) and O20 (DIRECTORY/FULL's file IDs and times). What the probe didn't settle, and what govax
+  leaves out:
+  - **The paging qualifiers** (Decision 1, the author's choice): VMS 7.1 takes `/PAGE` and, with
+    `/PAGE=SAVE`, `/SEARCH`, `/EXACT`, `/HIGHLIGHT`, and `/WRAP`; govax's grammar has none of them,
+    so each is `%DCL-W-IVQUAL`.
+  - **The matching rule is fitted**, not known (Decision 3): `internal/diff`'s `doc.go` says how, and
+    it fits all 696 listings `TestProbeListings` holds; a pair of files unlike any the probe made may
+    still find a place where VMS's search differs. `/SLP`'s `/MAXIMUM_DIFFERENCES` counting both files'
+    records of a section was fitted to one case (L03).
+  - **Settled by choice, no case showing**: a file's `/CHANGE_BAR=NUMBER` or `NONUMBER` beside the
+    verb's `/[NO]NUMBER` (the file's wins); change bars on identical files (nothing listed); the two
+    separated listings counting as one when `/MAXIMUM_DIFFERENCES` stops (only the first form listed);
+    `/PARALLEL` with `/MODE` (the other forms in the radixes given only); a dump's longwords a line at
+    widths other than 80 and 132, and an octal offset past 0; `/IGNORE=PRETTY`'s place in the echo
+    beside TRAILING_SPACES and HEADER, and EXACT with PRETTY (the later in the echo's order wins); a
+    form feed alone inside a page header (kept, not counted, as the manual says); CASE folding only
+    ASCII's letters, not DEC's multinational ones; the first file's type choosing the default comment
+    characters; `/COMMENT_DELIMITER=LEFT` and `RIGHT` as `[` and `]`; at a terminal named by
+    `/OUTPUT`, the width with no `/WIDTH` (132) and a name or type given after the device (shown as
+    given).
+  - **NOWILD's and BADVALUE's condition values** (`%X106C112C`, `%X106C1114`) are reckoned from the
+    shared messages' numbers under facility 108: the probe's first round printed no real status for
+    them.
+  - **Lines wider than the terminal**: `/OUTPUT=TT:` with `/WIDTH=132` at an 80-column terminal writes
+    132-column lines, which VMS's terminal wrapped; govax's host terminal shows them as the host's
+    window does.
+- **Status**: kept; the oracles are `internal/console/dif116_test.go`'s and `internal/diff`'s
+  `TestProbeListings`.
+
+### [Phase 116] F$FAO's !XL of a string
+
+- **Where**: DCL's F$FAO (`internal/dclshell`); `testdata/dif116`'s round 1 status lines.
+- **What**: DIF116.COM printed `F$FAO("!XL",$STATUS)`. `$STATUS` is a string symbol, and VMS's F$FAO
+  passed the string by descriptor, so `!XL` printed its address (round 1's log); govax's F$FAO
+  converted the string to its value and printed the status. The probe's second round wrote the
+  string itself.
+- **Status**: open; a procedure that depends on VMS's answer is unlikely.

@@ -2,8 +2,8 @@
 
 **Status:** planned 2026-11-25 (subtask 1, the survey and this plan);
 the plan reviewed and accepted by the author the same day, with the
-answers recorded in "The review". This document is the development plan; as
-the work goes on it becomes the implementation record: the progress log,
+answers recorded in "The review"; done 2026-11-25. This document was the
+development plan and is now the implementation record: the progress log,
 and at the end "Where things stand".
 
 ## Goal
@@ -320,7 +320,7 @@ Each is one commit, with tests, stopping for review.
    `/COMMENT_DELIMITER` and the defaults by file type.
 8. **The terminal and the rest** (done 2026-11-25): the terminal's width, records that
    aren't text.
-9. **The close-out**: MANUAL.md (section 6's file commands), HELP,
+9. **The close-out** (done 2026-11-25): MANUAL.md (section 6's file commands), HELP,
    VAX-VMS-INTERNALS.md if a mechanism changed, DEVIATIONS.md (what
    stays unconfirmed), PLAN.md, CLAUDE.md.
 
@@ -664,3 +664,43 @@ The author's answers to the plan's three questions:
     the close-out's DEVIATIONS.md).
   - HELP DIFFERENCES says both: `/WIDTH`'s topic the terminal's rule, the
     Description that the files' record formats don't matter.
+- **2026-11-25 — subtask 9 done: the close-out.** MANUAL.md's 6.1 has
+  DIFFERENCES (an example run on govax, the forms, the ignoring, the
+  output and width, the statuses), and DIFFERENCES is gone from section
+  7's list of VMS commands govax lacks. HELP DIFFERENCES needed nothing:
+  each subtask kept it current, its Restrictions the paging qualifiers.
+  DEVIATIONS.md has "DIFFERENCES beside VMS 7.1's" (the paging
+  qualifiers, the fitted rule, every choice no case settled, NOWILD's and
+  BADVALUE's reckoned values, lines past the terminal's width) and
+  "F$FAO's !XL of a string" (round 1's status lines), and Phase 113's
+  entry on a user-mode SYS$OUTPUT notes that DIFFERENCES follows it.
+  VAX-VMS-INTERNALS.md is unchanged: no mechanism it describes changed (a
+  utility in Go, and DCL's IVQLOC and MAXPARM, which it doesn't cover).
+  PLAN.md and CLAUDE.md summarize the phase.
+
+## Where things stand
+
+DIFFERENCES is VMS 7.1's on every case of `testdata/dif116` but N29 and O20
+(each volume's own directory records and file IDs): the merged, separated,
+parallel, change bar, hexadecimal, and octal listings, `/SLP`'s script,
+`/IGNORE` and `/COMMENT_DELIMITER`, `/MATCH`, `/WINDOW`, and
+`/MAXIMUM_DIFFERENCES`, the names, messages, and statuses, at the terminal
+and in a file. The engine is `internal/diff`, a leaf package whose
+`TestProbeListings` holds 696 of VMS's listings in milliseconds; the command
+is `internal/dclcmd/differences.go`; the oracles are
+`internal/console/dif116_test.go`'s.
+
+Left for later:
+
+- **The paging qualifiers** (`/PAGE`, `/SEARCH`, `/EXACT`, `/HIGHLIGHT`,
+  `/WRAP`), which VMS 7.1 has; left out by the author's choice (Decision 1).
+  TYPE/PAGE's `dclcmd/page.go` would be their start.
+- **What no case settled**, each a choice in the code marked unconfirmed and
+  listed in DEVIATIONS.md: questions for a next VMS round, with the matching
+  rule's pairs unlike any the probe made, `/SLP`'s count under
+  `/MAXIMUM_DIFFERENCES` (one case), and NOWILD's and BADVALUE's values.
+- **A user-mode SYS$OUTPUT** for govax's other built-in utilities, which
+  DIFFERENCES alone follows (DEVIATIONS.md, Phase 113's entry).
+
+(SHOW TIME, which subtask 2 found govax lacking, has since been added on
+its own, commit 06b5c80b.)
