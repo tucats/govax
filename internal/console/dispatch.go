@@ -1,9 +1,10 @@
 package console
 
 import (
-	"github.com/tucats/govax/internal/anl"
 	"strconv"
 	"strings"
+
+	"github.com/tucats/govax/internal/anl"
 
 	"github.com/tucats/govax/internal/dcl"
 	"github.com/tucats/govax/internal/dclcmd"
@@ -401,8 +402,9 @@ func (d *Dispatcher) bindGrammar() {
 	// EDIT runs an editor on the host on a copy of a file, and SET EDITOR
 	// and SHOW EDITOR say which (internal/dclcmd/edit.go).
 	g.Bind("EDIT", func(id int64, r *dcl.Result) error {
-		return d.Console.cmd().Edit(r.String("SPEC"), r.Present("HOST"))
+		return d.Console.cmd().Edit(r.String("SPEC"), r.Present("HOST"), r.Present("READONLY"))
 	})
+
 	// EDIT/SUM (and govax's EDIT/SLP) is SUMSLP, a batch editor
 	// (docs/planning/PHASE-117 - SUMSLP.md; internal/dclcmd/sumslp.go).
 	g.Bind("EDIT_SUM", func(id int64, r *dcl.Result) error {
