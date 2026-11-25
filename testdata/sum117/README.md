@@ -178,3 +178,11 @@ doc's A.4. Two things about the run itself:
 
    This copies the log to `vax/sum117b.log` and every output again
    (round 1's unchanged).
+
+## Round 2 (2026-11-25)
+
+The author ran it; it finished (`vax/sum117b.log`). `EDIT/SLP` (V02, V03)
+ran an image BACKTRANS that the VAX doesn't have, so its
+`%DCL-W-ACTIMAGE` messages showed at the console as well as in the log.
+D01 looked for its update file in `[SUM117.SCR]` (the input's directory),
+a slip that didn't touch its question. The answers are the phase doc's A.5.

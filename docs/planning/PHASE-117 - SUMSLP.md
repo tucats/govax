@@ -373,6 +373,75 @@ bytes, source records of 255 to 32,767), PAGES (messages and a long
 insert at a page's end, a long name in the heading), SLPVERB (what
 EDIT/SLP is), and DATES (which date the heading shows).
 
+### A.5 Round 2's answers (2026-11-25)
+
+Round 2 ran whole (`vax/sum117b.log`, its outputs in `vax/out/` beside
+round 1's). Messages that go to the terminal rather than the log
+(`%DCL-W-ACTIMAGE`) showed at the console too.
+
+1. **EDIT/SLP is a different utility on VMS 7.1** (SLPVERB): `EDIT/SLP
+   S10.SRC` runs an image BACKTRANS, not installed on the VAX
+   (`%DCL-W-ACTIMAGE, error activating image BACKTRANS` /
+   `-CLI-E-IMAGEFNF, image file not found
+   SIMVAX$DUA0:[SYS0.SYSCOMMON.][SYSEXE]BACKTRANS.EXE;`, status
+   `%X100388B2`, V02, V03); its syntax has `/OUTPUT` but not `/UPDATE`
+   (round 1's C23) and no `/SUM` (V04); HELP EDIT has no `/SLP` (V01).
+   `EDIT/SU` is EDIT/SUM (V05); `EDIT/S` is `%DCL-W-ABKEYW` (V06).
+2. **G14's lost insert** (CLASH2): while a delete or replace of m to n
+   is open, the text of inserts after lines in m to n is held, and
+   written after the range's own text when the range ends (K03, K05,
+   K07, G05); a second range starting inside the open one is dropped
+   (A.4.3), and **dropping it discards the held inserts**, whatever their
+   precedence or place in the sort (KACB, KBAC, KBCA, KCAB, K04, K06,
+   K09, K09R, K10), but not the open range's own text (G06). K01's and
+   K08's delete with a replace inside write only the delete.
+3. **Locators past 32,767** (NUMBERS): a locator is read as a 16-bit
+   word, its value modulo 65,536, signed: 65,536 is 0 (N04), 65,537 is 1
+   (N05), 65,541 and 131,077 are 5 (N06, N08), and 32,768 to 65,535 are
+   negative (N01 to N03, N07, Y05's 99,999). Six digits are fine (N13).
+   A negative locator is out of sequence (EDOUTSEQ even as the file's
+   first command); a negative insert goes after line 1 (N01, N09, N14),
+   a negative range deletes nothing and inserts before line 1 (N10), and
+   a range whose second locator is below its first is a syntax error
+   (N12's 5,32768, O04).
+4. **Past the end** (PASTEND): an insert after a line beyond the input's
+   last is lost, silently (E08, E09's second, E11's second, E12, E15). If
+   the input ends while a range is open, the range ends there and its
+   text is written, and the input is read **again from its start**,
+   numbered on (E01 to E07, E13, Y13, Y14); the lines read again are
+   never deleted by the range that ran out, but a later edit reaches them
+   by their new numbers (E10's 5,5 replaced the second reading's line 2).
+   The input is read again once: the second end ends the run (E01). The
+   deleted lines' count of a range that ran out is shown only by the next
+   range to end normally (E10's `-3` on line 6, for 2, 3, and 5; none in
+   E05). An empty input with `-1,1` writes the text (E14).
+5. **Record lengths** (LENGTHS): records of up to 255 bytes, in an update
+   file or the input (W255, X00255); 256 or more is `%SUM-E-READERR,
+   error reading DUA1:[SUM117.IN]X00256.SRC;1` / `-RMS-W-RTB, 256 byte
+   record too large for user's buffer`, and the run **stops there**: the
+   output and listing have what came before, and the status is still
+   success (W256 to W513, X00256 to X32767). (RMS gave 16,385 and 32,768
+   bytes for X16384's and X32767's records: their Stream_LF records as
+   VMS counted them.) A listing line is cut at 255 bytes (W255's 279-byte
+   line).
+6. **Pages** (PAGES): message lines count toward a page's 57 (P01's
+   clash message ended page 1); inserted runs and deletions cross pages
+   with nothing more (P02, P03). Heading line 1 is 130 bytes: a form feed,
+   60 blanks, the run's date and time, 4 blanks, `VAX-11 SUMSLP V01.00`,
+   16 blanks, `Page`, the number right-aligned in 5. Line 2 is 129 bytes:
+   60 blanks, the input's date and time, 4 blanks, the input's full name
+   blank-padded or cut to 45 characters (P04).
+7. **Dates** (DATES): line 2's date is the input's **creation** date, not
+   its revision date (D01: created 14:52:06, revised 14:52:09, the
+   heading 14:52:06). (D01's update file was looked for in `[SUM117.SCR]`,
+   the input's directory, a slip in the case; the date question didn't
+   need it.)
+
+What stays unconfirmed: U03's audit trail (a `-,,/text/` marking an
+insert made before it); how a range that runs out of input interacts
+with several update files; a second reading's own end in the middle of a
+range.
+
 ## Part B — decisions (proposed; adjusted by A.4)
 
 1. **VMS 7.1 is the reference**, as for every probe since Phase 55.
@@ -389,8 +458,9 @@ EDIT/SLP is), and DATES (which date the heading shows).
    `/SLP`) to an `edit_sum` syntax with its own parameter and qualifiers:
    `/UPDATE` the file's alone (IVQLOC on the verb), `/LISTING`,
    `/OUTPUT`, and `/HEADER` either's (A.4.1), so its messages are DCL's.
-   EDIT/SLP is govax's own (VMS 7.1 refuses it, A.4.1; the review's
-   answer 1), in DEVIATIONS.md.
+   EDIT/SLP is govax's own synonym (on VMS 7.1 it runs another utility,
+   BACKTRANS, which isn't there, A.5.1; the review's answer 1), in
+   DEVIATIONS.md; `EDIT/S` stays ambiguous, as VMS's.
 4. **The rules are fitted to VMS's output**, never written from VMS's
    code (clean room): each rule written in `doc.go` with the cases that
    showed it; what no case settles is a choice marked unconfirmed and
@@ -404,10 +474,11 @@ EDIT/SLP is), and DATES (which date the heading shows).
    texts the probe showed; `$STATUS` is RMS's status with the inhibit bit
    (A.4.1), so the SUM messages' numbers never show and are govax's
    choice, unconfirmed.
-8. **What VMS does with bad input is followed where round 2 makes a rule
-   of it** (a range past the end reading the input again, a locator past
-   32,767, a syntax error's dropped line); what stays unclear is
-   govax's choice, unconfirmed, in DEVIATIONS.md. SUMSLP's reading each
+8. **What VMS does with odd input is followed** where the probe makes a
+   rule of it (A.4, A.5: the held inserts a dropped range discards, a
+   range past the end reading the input again, locators modulo 65,536, a
+   syntax error's numbered but unwritten line, the 255-byte records);
+   what stays unclear is govax's choice, unconfirmed, in DEVIATIONS.md. SUMSLP's reading each
    update file twice is not copied: govax reads a terminal's update
    once (a deviation that only makes `/UPDATE=SYS$COMMAND` work).
 7. **MACRO/UPDATE is in this phase** (the review's answer 2): a
@@ -421,8 +492,8 @@ EDIT/SLP is), and DATES (which date the heading shows).
 Each is one commit, with tests, stopping for review.
 
 1. **The survey**: Part A, this plan.
-2. **The probe** (written 2026-11-25; round 1 run on VMS 7.1 the same
-   day, its answers A.4; round 2 written, waiting for the VAX):
+2. **The probe** (done 2026-11-25: two rounds on VMS 7.1, their answers
+   A.4 and A.5):
    the documentation CD searched for the SUMSLP manual (found, A.1);
    `testdata/sum117`, as in Part D, written, rehearsed on govax, and its
    exchange volume built; run on the VAX by the author (a short round 2
@@ -553,3 +624,11 @@ The author's answers to the plan's four questions:
   after round 1's cases, which don't change: `cases.txt` marks it with a
   `round 2` line), asks what A.4 left open; `exchange2.cmd` put its files
   on the exchange volume, and it was rehearsed on govax on a copy.
+- **2026-11-25 — subtask 2 done: round 2 on VMS.** The author ran
+  `sum117b.com`; `copyout2.cmd` brought back `vax/sum117b.log` and the
+  outputs. Its answers are A.5: EDIT/SLP is VMS 7.1's BACKTRANS, not
+  installed; the held inserts a dropped range discards (G14); locators
+  modulo 65,536, signed; the input read again when a range runs past its
+  end; 255-byte records; message lines on the page; the heading's widths
+  and the input's creation date. Decisions 3 and 8 adjusted. Subtask 3
+  is next.

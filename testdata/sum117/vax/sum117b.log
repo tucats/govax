@@ -1,0 +1,1379 @@
+$ WRITE SYS$OUTPUT "######## ENVIRONMENT"
+######## ENVIRONMENT
+$ WRITE SYS$OUTPUT F$GETSYI("VERSION"), " ", F$GETSYI("HW_NAME"), " ", F$GETSYI("NODENAME")
+V7.1     VAX 8600 SIMVAX
+$ WRITE SYS$OUTPUT F$TIME()
+25-NOV-2026 14:52:05.43
+$ TOP = F$PARSE("[000000]",,,"DEVICE")
+$ DEFINE SUM$TOP DUA1:
+%DCL-I-SUPERSEDE, previous value of SUM$TOP has been superseded
+$ DEFINE SUM$OUT SUM$TOP:[SUM117.OUT]
+%DCL-I-SUPERSEDE, previous value of SUM$OUT has been superseded
+$ DEFINE SUM$SCR SUM$TOP:[SUM117.SCR]
+%DCL-I-SUPERSEDE, previous value of SUM$SCR has been superseded
+$ DELETE SUM$TOP:[SUM117.SCR]*.*;*/NOLOG
+%DELETE-W-SEARCHFAIL, error searching for DUA1:[SUM117.SCR]*.*;*
+-RMS-E-FNF, file not found
+$ SET DEFAULT SUM$TOP:[SUM117.IN]
+$ SHOW DEFAULT
+  SUM$TOP:[SUM117.IN]
+$ !
+$ WRITE SYS$OUTPUT "######## CLASH2"
+######## CLASH2
+$ WRITE SYS$OUTPUT "#### CASE KACB: G14's files in the order G14A,G14C,G14B"
+#### CASE KACB: G14's files in the order G14A,G14C,G14B
+$ EDIT/SUM/OUTPUT=SUM$OUT:KACB.OUT/LISTING=SUM$OUT:KACB.LIS S10.SRC/UPDATE=(G14A,G14C,G14B)
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE KBAC: G14's files in the order G14B,G14A,G14C"
+#### CASE KBAC: G14's files in the order G14B,G14A,G14C
+$ EDIT/SUM/OUTPUT=SUM$OUT:KBAC.OUT/LISTING=SUM$OUT:KBAC.LIS S10.SRC/UPDATE=(G14B,G14A,G14C)
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE KBCA: G14's files in the order G14B,G14C,G14A"
+#### CASE KBCA: G14's files in the order G14B,G14C,G14A
+$ EDIT/SUM/OUTPUT=SUM$OUT:KBCA.OUT/LISTING=SUM$OUT:KBCA.LIS S10.SRC/UPDATE=(G14B,G14C,G14A)
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE KCAB: G14's files in the order G14C,G14A,G14B"
+#### CASE KCAB: G14's files in the order G14C,G14A,G14B
+$ EDIT/SUM/OUTPUT=SUM$OUT:KCAB.OUT/LISTING=SUM$OUT:KCAB.LIS S10.SRC/UPDATE=(G14C,G14A,G14B)
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE K01: a replace of 5 and a delete of 4 to 6"
+#### CASE K01: a replace of 5 and a delete of 4 to 6
+$ EDIT/SUM/OUTPUT=SUM$OUT:K01.OUT/LISTING=SUM$OUT:K01.LIS S10.SRC/UPDATE=(G14A,G14B)
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE K01R: a delete of 4 to 6 and a replace of 5"
+#### CASE K01R: a delete of 4 to 6 and a replace of 5
+$ EDIT/SUM/OUTPUT=SUM$OUT:K01R.OUT/LISTING=SUM$OUT:K01R.LIS S10.SRC/UPDATE=(G14B,G14A)
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE K02: a replace of 5 and an insert after 5 (G04 again)"
+#### CASE K02: a replace of 5 and an insert after 5 (G04 again)
+$ EDIT/SUM/OUTPUT=SUM$OUT:K02.OUT/LISTING=SUM$OUT:K02.LIS S10.SRC/UPDATE=(G14A,G14C)
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE K03: a replace of 4 to 6 and an insert after 5"
+#### CASE K03: a replace of 4 to 6 and an insert after 5
+$ EDIT/SUM/OUTPUT=SUM$OUT:K03.OUT/LISTING=SUM$OUT:K03.LIS S10.SRC/UPDATE=(K03A,K03B)
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE K03R: the same, the other order"
+#### CASE K03R: the same, the other order
+$ EDIT/SUM/OUTPUT=SUM$OUT:K03R.OUT/LISTING=SUM$OUT:K03R.LIS S10.SRC/UPDATE=(K03B,K03A)
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE K04: a delete of 4 to 6, a replace of 5, an insert after 6"
+#### CASE K04: a delete of 4 to 6, a replace of 5, an insert after 6
+$ EDIT/SUM/OUTPUT=SUM$OUT:K04.OUT/LISTING=SUM$OUT:K04.LIS S10.SRC/UPDATE=(G14B,K04B,K04C)
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE K05: a delete of 3 to 7 and inserts after 5 and 4"
+#### CASE K05: a delete of 3 to 7 and inserts after 5 and 4
+$ EDIT/SUM/OUTPUT=SUM$OUT:K05.OUT/LISTING=SUM$OUT:K05.LIS S10.SRC/UPDATE=(K05A,K05B,K05C)
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE K06: G14's three edits in one file"
+#### CASE K06: G14's three edits in one file
+$ EDIT/SUM/OUTPUT=SUM$OUT:K06.OUT/LISTING=SUM$OUT:K06.LIS S10.SRC/UPDATE=K06
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE K07: a delete and an insert inside it, in one file"
+#### CASE K07: a delete and an insert inside it, in one file
+$ EDIT/SUM/OUTPUT=SUM$OUT:K07.OUT/LISTING=SUM$OUT:K07.LIS S10.SRC/UPDATE=K07
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE K08: a delete and a replace inside it, in one file"
+#### CASE K08: a delete and a replace inside it, in one file
+$ EDIT/SUM/OUTPUT=SUM$OUT:K08.OUT/LISTING=SUM$OUT:K08.LIS S10.SRC/UPDATE=K08
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE K09: a delete of 4 to 6, a delete of 5, an insert after 5"
+#### CASE K09: a delete of 4 to 6, a delete of 5, an insert after 5
+$ EDIT/SUM/OUTPUT=SUM$OUT:K09.OUT/LISTING=SUM$OUT:K09.LIS S10.SRC/UPDATE=(K09A,K09B,K09C)
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE K09R: the same, the other order"
+#### CASE K09R: the same, the other order
+$ EDIT/SUM/OUTPUT=SUM$OUT:K09R.OUT/LISTING=SUM$OUT:K09R.LIS S10.SRC/UPDATE=(K09C,K09B,K09A)
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE K10: a delete of 4 to 6, a replace of its last line, an insert after 5"
+#### CASE K10: a delete of 4 to 6, a replace of its last line, an insert after 5
+$ EDIT/SUM/OUTPUT=SUM$OUT:K10.OUT/LISTING=SUM$OUT:K10.LIS S10.SRC/UPDATE=(G14B,K10B,G14C)
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ !
+$ WRITE SYS$OUTPUT "######## NUMBERS"
+######## NUMBERS
+$ WRITE SYS$OUTPUT "#### CASE N01: 32768"
+#### CASE N01: 32768
+$ EDIT/SUM/OUTPUT=SUM$OUT:N01.OUT/LISTING=SUM$OUT:N01.LIS S10.SRC/UPDATE=N01
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE N02: 40000"
+#### CASE N02: 40000
+$ EDIT/SUM/OUTPUT=SUM$OUT:N02.OUT/LISTING=SUM$OUT:N02.LIS S10.SRC/UPDATE=N02
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE N03: 65535"
+#### CASE N03: 65535
+$ EDIT/SUM/OUTPUT=SUM$OUT:N03.OUT/LISTING=SUM$OUT:N03.LIS S10.SRC/UPDATE=N03
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE N04: 65536"
+#### CASE N04: 65536
+$ EDIT/SUM/OUTPUT=SUM$OUT:N04.OUT/LISTING=SUM$OUT:N04.LIS S10.SRC/UPDATE=N04
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE N05: 65537"
+#### CASE N05: 65537
+$ EDIT/SUM/OUTPUT=SUM$OUT:N05.OUT/LISTING=SUM$OUT:N05.LIS S10.SRC/UPDATE=N05
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE N06: 65541 (5 more than 65536)"
+#### CASE N06: 65541 (5 more than 65536)
+$ EDIT/SUM/OUTPUT=SUM$OUT:N06.OUT/LISTING=SUM$OUT:N06.LIS S10.SRC/UPDATE=N06
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE N07: 100000"
+#### CASE N07: 100000
+$ EDIT/SUM/OUTPUT=SUM$OUT:N07.OUT/LISTING=SUM$OUT:N07.LIS S10.SRC/UPDATE=N07
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE N08: 131077 (5 more than twice 65536)"
+#### CASE N08: 131077 (5 more than twice 65536)
+$ EDIT/SUM/OUTPUT=SUM$OUT:N08.OUT/LISTING=SUM$OUT:N08.LIS S10.SRC/UPDATE=N08
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE N09: 99999 after an insert after 3"
+#### CASE N09: 99999 after an insert after 3
+$ EDIT/SUM/OUTPUT=SUM$OUT:N09.OUT/LISTING=SUM$OUT:N09.LIS S10.SRC/UPDATE=N09
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE N10: a range of 99999 to 99999"
+#### CASE N10: a range of 99999 to 99999
+$ EDIT/SUM/OUTPUT=SUM$OUT:N10.OUT/LISTING=SUM$OUT:N10.LIS S10.SRC/UPDATE=N10
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE N11: a range of 5 to 65541"
+#### CASE N11: a range of 5 to 65541
+$ EDIT/SUM/OUTPUT=SUM$OUT:N11.OUT/LISTING=SUM$OUT:N11.LIS S10.SRC/UPDATE=N11
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE N12: a range of 5 to 32768"
+#### CASE N12: a range of 5 to 32768
+$ EDIT/SUM/OUTPUT=SUM$OUT:N12.OUT/LISTING=SUM$OUT:N12.LIS S10.SRC/UPDATE=N12
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE N13: six digits that are 5"
+#### CASE N13: six digits that are 5
+$ EDIT/SUM/OUTPUT=SUM$OUT:N13.OUT/LISTING=SUM$OUT:N13.LIS S10.SRC/UPDATE=N13
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE N14: 99999 as the second of two inserts"
+#### CASE N14: 99999 as the second of two inserts
+$ EDIT/SUM/OUTPUT=SUM$OUT:N14.OUT/LISTING=SUM$OUT:N14.LIS S10.SRC/UPDATE=N14
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ !
+$ WRITE SYS$OUTPUT "######## PASTEND"
+######## PASTEND
+$ WRITE SYS$OUTPUT "#### CASE E01: a replace of line 11 alone"
+#### CASE E01: a replace of line 11 alone
+$ EDIT/SUM/OUTPUT=SUM$OUT:E01.OUT/LISTING=SUM$OUT:E01.LIS S10.SRC/UPDATE=E01
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE E02: a replace of 10 to 11"
+#### CASE E02: a replace of 10 to 11
+$ EDIT/SUM/OUTPUT=SUM$OUT:E02.OUT/LISTING=SUM$OUT:E02.LIS S10.SRC/UPDATE=E02
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE E03: a replace of 10 to 12"
+#### CASE E03: a replace of 10 to 12
+$ EDIT/SUM/OUTPUT=SUM$OUT:E03.OUT/LISTING=SUM$OUT:E03.LIS S10.SRC/UPDATE=E03
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE E04: a delete of 11 to 12, no text"
+#### CASE E04: a delete of 11 to 12, no text
+$ EDIT/SUM/OUTPUT=SUM$OUT:E04.OUT/LISTING=SUM$OUT:E04.LIS S10.SRC/UPDATE=E04
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE E05: a replace of 2 to 5 on three lines"
+#### CASE E05: a replace of 2 to 5 on three lines
+$ EDIT/SUM/OUTPUT=SUM$OUT:E05.OUT/LISTING=SUM$OUT:E05.LIS S03.SRC/UPDATE=E05
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE E06: a replace of 2 to 9 on three lines"
+#### CASE E06: a replace of 2 to 9 on three lines
+$ EDIT/SUM/OUTPUT=SUM$OUT:E06.OUT/LISTING=SUM$OUT:E06.LIS S03.SRC/UPDATE=E06
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE E07: a replace of 4 to 4 on three lines"
+#### CASE E07: a replace of 4 to 4 on three lines
+$ EDIT/SUM/OUTPUT=SUM$OUT:E07.OUT/LISTING=SUM$OUT:E07.LIS S03.SRC/UPDATE=E07
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE E08: an insert after 4 on three lines"
+#### CASE E08: an insert after 4 on three lines
+$ EDIT/SUM/OUTPUT=SUM$OUT:E08.OUT/LISTING=SUM$OUT:E08.LIS S03.SRC/UPDATE=E08
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE E09: a replace past the end, then an insert after it"
+#### CASE E09: a replace past the end, then an insert after it
+$ EDIT/SUM/OUTPUT=SUM$OUT:E09.OUT/LISTING=SUM$OUT:E09.LIS S03.SRC/UPDATE=E09
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE E10: a replace past the end, then a replace of the reread"
+#### CASE E10: a replace past the end, then a replace of the reread
+$ EDIT/SUM/OUTPUT=SUM$OUT:E10.OUT/LISTING=SUM$OUT:E10.LIS S03.SRC/UPDATE=E10
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE E11: an insert after 10, then after 11"
+#### CASE E11: an insert after 10, then after 11
+$ EDIT/SUM/OUTPUT=SUM$OUT:E11.OUT/LISTING=SUM$OUT:E11.LIS S10.SRC/UPDATE=E11
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE E12: the last line deleted, then an insert after 11"
+#### CASE E12: the last line deleted, then an insert after 11
+$ EDIT/SUM/OUTPUT=SUM$OUT:E12.OUT/LISTING=SUM$OUT:E12.LIS S10.SRC/UPDATE=E12
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE E13: a replace of 1 to 4 on three lines"
+#### CASE E13: a replace of 1 to 4 on three lines
+$ EDIT/SUM/OUTPUT=SUM$OUT:E13.OUT/LISTING=SUM$OUT:E13.LIS S03.SRC/UPDATE=E13
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE E14: an empty input, a replace of 1 to 1"
+#### CASE E14: an empty input, a replace of 1 to 1
+$ EDIT/SUM/OUTPUT=SUM$OUT:E14.OUT/LISTING=SUM$OUT:E14.LIS EMPTY.SRC/UPDATE=E14
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE E15: an empty input, an insert after 1"
+#### CASE E15: an empty input, an insert after 1
+$ EDIT/SUM/OUTPUT=SUM$OUT:E15.OUT/LISTING=SUM$OUT:E15.LIS EMPTY.SRC/UPDATE=E15
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ !
+$ WRITE SYS$OUTPUT "######## LENGTHS"
+######## LENGTHS
+$ WRITE SYS$OUTPUT "#### CASE W132: an update record of 132 bytes"
+#### CASE W132: an update record of 132 bytes
+$ EDIT/SUM/OUTPUT=SUM$OUT:W132.OUT/LISTING=SUM$OUT:W132.LIS S10.SRC/UPDATE=W132
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE W133: an update record of 133 bytes"
+#### CASE W133: an update record of 133 bytes
+$ EDIT/SUM/OUTPUT=SUM$OUT:W133.OUT/LISTING=SUM$OUT:W133.LIS S10.SRC/UPDATE=W133
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE W255: an update record of 255 bytes"
+#### CASE W255: an update record of 255 bytes
+$ EDIT/SUM/OUTPUT=SUM$OUT:W255.OUT/LISTING=SUM$OUT:W255.LIS S10.SRC/UPDATE=W255
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE W256: an update record of 256 bytes"
+#### CASE W256: an update record of 256 bytes
+$ EDIT/SUM/OUTPUT=SUM$OUT:W256.OUT/LISTING=SUM$OUT:W256.LIS S10.SRC/UPDATE=W256
+%SUM-E-READERR, error reading DUA1:[SUM117.IN]W256.UPD;1
+-RMS-W-RTB, 256 byte record too large for user's buffer
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE W257: an update record of 257 bytes"
+#### CASE W257: an update record of 257 bytes
+$ EDIT/SUM/OUTPUT=SUM$OUT:W257.OUT/LISTING=SUM$OUT:W257.LIS S10.SRC/UPDATE=W257
+%SUM-E-READERR, error reading DUA1:[SUM117.IN]W257.UPD;1
+-RMS-W-RTB, 257 byte record too large for user's buffer
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE W511: an update record of 511 bytes"
+#### CASE W511: an update record of 511 bytes
+$ EDIT/SUM/OUTPUT=SUM$OUT:W511.OUT/LISTING=SUM$OUT:W511.LIS S10.SRC/UPDATE=W511
+%SUM-E-READERR, error reading DUA1:[SUM117.IN]W511.UPD;1
+-RMS-W-RTB, 511 byte record too large for user's buffer
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE W512: an update record of 512 bytes"
+#### CASE W512: an update record of 512 bytes
+$ EDIT/SUM/OUTPUT=SUM$OUT:W512.OUT/LISTING=SUM$OUT:W512.LIS S10.SRC/UPDATE=W512
+%SUM-E-READERR, error reading DUA1:[SUM117.IN]W512.UPD;1
+-RMS-W-RTB, 512 byte record too large for user's buffer
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE W513: an update record of 513 bytes"
+#### CASE W513: an update record of 513 bytes
+$ EDIT/SUM/OUTPUT=SUM$OUT:W513.OUT/LISTING=SUM$OUT:W513.LIS S10.SRC/UPDATE=W513
+%SUM-E-READERR, error reading DUA1:[SUM117.IN]W513.UPD;1
+-RMS-W-RTB, 513 byte record too large for user's buffer
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE X00255: a source record of 255 bytes"
+#### CASE X00255: a source record of 255 bytes
+$ EDIT/SUM/OUTPUT=SUM$OUT:X00255.OUT/LISTING=SUM$OUT:X00255.LIS X00255.SRC/UPDATE=B05
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE X00256: a source record of 256 bytes"
+#### CASE X00256: a source record of 256 bytes
+$ EDIT/SUM/OUTPUT=SUM$OUT:X00256.OUT/LISTING=SUM$OUT:X00256.LIS X00256.SRC/UPDATE=B05
+%SUM-E-READERR, error reading DUA1:[SUM117.IN]X00256.SRC;1
+-RMS-W-RTB, 256 byte record too large for user's buffer
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X100181A8 %RMS-W-RTB, !UL byte record too large for user's buffer
+$ WRITE SYS$OUTPUT "#### CASE X00257: a source record of 257 bytes"
+#### CASE X00257: a source record of 257 bytes
+$ EDIT/SUM/OUTPUT=SUM$OUT:X00257.OUT/LISTING=SUM$OUT:X00257.LIS X00257.SRC/UPDATE=B05
+%SUM-E-READERR, error reading DUA1:[SUM117.IN]X00257.SRC;1
+-RMS-W-RTB, 257 byte record too large for user's buffer
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X100181A8 %RMS-W-RTB, !UL byte record too large for user's buffer
+$ WRITE SYS$OUTPUT "#### CASE X00512: a source record of 512 bytes"
+#### CASE X00512: a source record of 512 bytes
+$ EDIT/SUM/OUTPUT=SUM$OUT:X00512.OUT/LISTING=SUM$OUT:X00512.LIS X00512.SRC/UPDATE=B05
+%SUM-E-READERR, error reading DUA1:[SUM117.IN]X00512.SRC;1
+-RMS-W-RTB, 512 byte record too large for user's buffer
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X100181A8 %RMS-W-RTB, !UL byte record too large for user's buffer
+$ WRITE SYS$OUTPUT "#### CASE X00513: a source record of 513 bytes"
+#### CASE X00513: a source record of 513 bytes
+$ EDIT/SUM/OUTPUT=SUM$OUT:X00513.OUT/LISTING=SUM$OUT:X00513.LIS X00513.SRC/UPDATE=B05
+%SUM-E-READERR, error reading DUA1:[SUM117.IN]X00513.SRC;1
+-RMS-W-RTB, 513 byte record too large for user's buffer
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X100181A8 %RMS-W-RTB, !UL byte record too large for user's buffer
+$ WRITE SYS$OUTPUT "#### CASE X01024: a source record of 1024 bytes"
+#### CASE X01024: a source record of 1024 bytes
+$ EDIT/SUM/OUTPUT=SUM$OUT:X01024.OUT/LISTING=SUM$OUT:X01024.LIS X01024.SRC/UPDATE=B05
+%SUM-E-READERR, error reading DUA1:[SUM117.IN]X01024.SRC;1
+-RMS-W-RTB, 1024 byte record too large for user's buffer
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X100181A8 %RMS-W-RTB, !UL byte record too large for user's buffer
+$ WRITE SYS$OUTPUT "#### CASE X02048: a source record of 2048 bytes"
+#### CASE X02048: a source record of 2048 bytes
+$ EDIT/SUM/OUTPUT=SUM$OUT:X02048.OUT/LISTING=SUM$OUT:X02048.LIS X02048.SRC/UPDATE=B05
+%SUM-E-READERR, error reading DUA1:[SUM117.IN]X02048.SRC;1
+-RMS-W-RTB, 2048 byte record too large for user's buffer
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X100181A8 %RMS-W-RTB, !UL byte record too large for user's buffer
+$ WRITE SYS$OUTPUT "#### CASE X04096: a source record of 4096 bytes"
+#### CASE X04096: a source record of 4096 bytes
+$ EDIT/SUM/OUTPUT=SUM$OUT:X04096.OUT/LISTING=SUM$OUT:X04096.LIS X04096.SRC/UPDATE=B05
+%SUM-E-READERR, error reading DUA1:[SUM117.IN]X04096.SRC;1
+-RMS-W-RTB, 4096 byte record too large for user's buffer
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X100181A8 %RMS-W-RTB, !UL byte record too large for user's buffer
+$ WRITE SYS$OUTPUT "#### CASE X08192: a source record of 8192 bytes"
+#### CASE X08192: a source record of 8192 bytes
+$ EDIT/SUM/OUTPUT=SUM$OUT:X08192.OUT/LISTING=SUM$OUT:X08192.LIS X08192.SRC/UPDATE=B05
+%SUM-E-READERR, error reading DUA1:[SUM117.IN]X08192.SRC;1
+-RMS-W-RTB, 8192 byte record too large for user's buffer
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X100181A8 %RMS-W-RTB, !UL byte record too large for user's buffer
+$ WRITE SYS$OUTPUT "#### CASE X16384: a source record of 16384 bytes"
+#### CASE X16384: a source record of 16384 bytes
+$ EDIT/SUM/OUTPUT=SUM$OUT:X16384.OUT/LISTING=SUM$OUT:X16384.LIS X16384.SRC/UPDATE=B05
+%SUM-E-READERR, error reading DUA1:[SUM117.IN]X16384.SRC;1
+-RMS-W-RTB, 16385 byte record too large for user's buffer
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X100181A8 %RMS-W-RTB, !UL byte record too large for user's buffer
+$ WRITE SYS$OUTPUT "#### CASE X32767: a source record of 32767 bytes"
+#### CASE X32767: a source record of 32767 bytes
+$ EDIT/SUM/OUTPUT=SUM$OUT:X32767.OUT/LISTING=SUM$OUT:X32767.LIS X32767.SRC/UPDATE=B05
+%SUM-E-READERR, error reading DUA1:[SUM117.IN]X32767.SRC;1
+-RMS-W-RTB, 32768 byte record too large for user's buffer
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X100181A8 %RMS-W-RTB, !UL byte record too large for user's buffer
+$ !
+$ WRITE SYS$OUTPUT "######## PAGES"
+######## PAGES
+$ WRITE SYS$OUTPUT "#### CASE P01: messages at the end of page 1"
+#### CASE P01: messages at the end of page 1
+$ EDIT/SUM/OUTPUT=SUM$OUT:P01.OUT/LISTING=SUM$OUT:P01.LIS P120.SRC/UPDATE=(P01A,P01B)
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE P02: 70 records inserted across a page"
+#### CASE P02: 70 records inserted across a page
+$ EDIT/SUM/OUTPUT=SUM$OUT:P02.OUT/LISTING=SUM$OUT:P02.LIS P120.SRC/UPDATE=P02
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE P03: a deletion across a page break"
+#### CASE P03: a deletion across a page break
+$ EDIT/SUM/OUTPUT=SUM$OUT:P03.OUT/LISTING=SUM$OUT:P03.LIS P120.SRC/UPDATE=P03
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE P04: a long name in the heading"
+#### CASE P04: a long name in the heading
+$ EDIT/SUM/OUTPUT=SUM$OUT:P04.OUT/LISTING=SUM$OUT:P04.LIS -
+[SUM117.IN.A_LONG_DIRECTORY_NAME_OF_THIRTY_NINE_CH]LONG_FILE_NAME_OF_THIRTY_NINE_CHARACTER.LONG_TYPE_OF_THIRTY_NINE_CHARACTERS_XYZ-
+/UPDATE=[SUM117.IN]C01
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ !
+$ WRITE SYS$OUTPUT "######## SLPVERB"
+######## SLPVERB
+$ WRITE SYS$OUTPUT "#### CASE V01: HELP EDIT /SLP"
+#### CASE V01: HELP EDIT /SLP
+$ HELP/NOPROMPT EDIT /SLP
+
+EDIT
+  Sorry, no documentation on EDIT /SLP
+
+
+  Additional information available:
+
+  /ACL       /EDT       /FDL       /SUM       /TECO      /TPU
+
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X00000001 %SYSTEM-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE V02: EDIT/SLP with no other qualifier, its input empty"
+#### CASE V02: EDIT/SLP with no other qualifier, its input empty
+$ COPY S10.SRC SUM$SCR:
+$ SET DEFAULT SUM$SCR:
+$ EDIT/SLP S10.SRC
+%DCL-W-ACTIMAGE, error activating image BACKTRANS
+-CLI-E-IMAGEFNF, image file not found SIMVAX$DUA0:[SYS0.SYSCOMMON.][SYSEXE]BACKTRANS.EXE;
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X100388B2 %CLI-E-IMAGEFNF, image file not found !AS
+$ DIRECTORY/SIZE SUM$SCR:
+
+Directory DUA1:[SUM117.SCR]
+
+S10.SRC;1                  1
+
+Total of 1 file, 1 block.
+$ SET DEFAULT SUM$TOP:[SUM117.IN]
+$ DELETE SUM$SCR:*.*;*/NOLOG
+$ WRITE SYS$OUTPUT "#### CASE V03: EDIT/SLP/OUTPUT"
+#### CASE V03: EDIT/SLP/OUTPUT
+$ COPY S10.SRC SUM$SCR:
+$ SET DEFAULT SUM$SCR:
+$ EDIT/SLP/OUTPUT=SUM$OUT:V03.OUT S10.SRC
+%DCL-W-ACTIMAGE, error activating image BACKTRANS
+-CLI-E-IMAGEFNF, image file not found SIMVAX$DUA0:[SYS0.SYSCOMMON.][SYSEXE]BACKTRANS.EXE;
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X100388B2 %CLI-E-IMAGEFNF, image file not found !AS
+$ DIRECTORY/SIZE SUM$SCR:
+
+Directory DUA1:[SUM117.SCR]
+
+S10.SRC;1                  1
+
+Total of 1 file, 1 block.
+$ SET DEFAULT SUM$TOP:[SUM117.IN]
+$ DELETE SUM$SCR:*.*;*/NOLOG
+$ WRITE SYS$OUTPUT "#### CASE V04: EDIT/SLP/SUM"
+#### CASE V04: EDIT/SLP/SUM
+$ EDIT/SLP/SUM/OUTPUT=SUM$OUT:V04.OUT S10.SRC/UPDATE=C01
+%DCL-W-IVQUAL, unrecognized qualifier - check validity, spelling, and placement
+ \SUM\
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X00038240 %CLI-W-IVQUAL, unrecognized qualifier - check validity, spelling, and placement
+$ WRITE SYS$OUTPUT "#### CASE V05: EDIT/SU, an abbreviation"
+#### CASE V05: EDIT/SU, an abbreviation
+$ EDIT/SU/OUTPUT=SUM$OUT:V05.OUT S10.SRC/UPDATE=C01
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ WRITE SYS$OUTPUT "#### CASE V06: EDIT/S, an abbreviation"
+#### CASE V06: EDIT/S, an abbreviation
+$ EDIT/S/OUTPUT=SUM$OUT:V06.OUT S10.SRC/UPDATE=C01
+%DCL-W-ABKEYW, ambiguous qualifier or keyword - supply more characters
+ \S\
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X00038010 %CLI-W-ABKEYW, ambiguous qualifier or keyword - supply more characters
+$ !
+$ WRITE SYS$OUTPUT "######## DATES"
+######## DATES
+$ WRITE SYS$OUTPUT "#### CASE D01: the listing's dates for an input revised after its creation"
+#### CASE D01: the listing's dates for an input revised after its creation
+$ COPY S10.SRC SUM$SCR:D01.SRC
+$ WAIT 00:00:03
+$ OPEN/APPEND D01F SUM$SCR:D01.SRC
+$ WRITE D01F "appended"
+$ CLOSE D01F
+$ DIRECTORY/FULL SUM$SCR:D01.SRC
+
+Directory DUA1:[SUM117.SCR]
+
+D01.SRC;1                     File ID:  (1295,1,0)            
+Size:            1/3          Owner:    [SYSTEM]
+Created:   25-NOV-2026 14:52:06.91
+Revised:   25-NOV-2026 14:52:09.91 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 3, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Stream_LF, maximum 0 bytes, longest 8 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+Total of 1 file, 1/3 blocks.
+$ EDIT/SUM/OUTPUT=SUM$OUT:D01.OUT/LISTING=SUM$OUT:D01.LIS SUM$SCR:D01.SRC/UPDATE=C01
+%SUM-I-OPENIN, error opening DUA1:[SUM117.SCR]C01.UPD; as input
+-RMS-E-FNF, file not found
+$ S = $STATUS
+$ WRITE SYS$OUTPUT "STATUS ", S, " ", F$MESSAGE(S)
+STATUS %X10010001 %RMS-S-NORMAL, normal successful completion
+$ DELETE SUM$SCR:*.*;*/NOLOG
+$ !
+$ WRITE SYS$OUTPUT "######## THE OUTPUTS"
+######## THE OUTPUTS
+$ DIRECTORY/SIZE/DATE SUM$OUT:
+
+Directory DUA1:[SUM117.OUT]
+
+B01.LIS;1                  2  25-NOV-2026 14:37:47.41
+B01.OUT;1                  1  25-NOV-2026 14:37:47.41
+B02.LIS;1                  2  25-NOV-2026 14:37:47.42
+B02.OUT;1                  1  25-NOV-2026 14:37:47.42
+B03.LIS;1                  2  25-NOV-2026 14:37:47.43
+B03.OUT;1                  1  25-NOV-2026 14:37:47.43
+B04.LIS;1                  1  25-NOV-2026 14:37:47.44
+B04.OUT;1                  1  25-NOV-2026 14:37:47.44
+B05.LIS;1                  2  25-NOV-2026 14:37:47.46
+B05.OUT;1                  1  25-NOV-2026 14:37:47.46
+B06.LIS;1                  2  25-NOV-2026 14:37:47.47
+B06.OUT;1                  1  25-NOV-2026 14:37:47.47
+B07.LIS;1                  2  25-NOV-2026 14:37:47.48
+B07.OUT;1                  1  25-NOV-2026 14:37:47.48
+B08.LIS;1                  2  25-NOV-2026 14:37:47.49
+B08.OUT;1                  1  25-NOV-2026 14:37:47.49
+B09.LIS;1                  2  25-NOV-2026 14:37:47.51
+B09.OUT;1                  1  25-NOV-2026 14:37:47.51
+B10.LIS;1                  2  25-NOV-2026 14:37:47.52
+B10.OUT;1                  1  25-NOV-2026 14:37:47.52
+B11.LIS;1                  1  25-NOV-2026 14:37:47.53
+B11.OUT;1                  1  25-NOV-2026 14:37:47.53
+B12.LIS;1                  2  25-NOV-2026 14:37:47.54
+B12.OUT;1                  1  25-NOV-2026 14:37:47.54
+B13.LIS;1                  0  25-NOV-2026 14:37:47.56
+B13.OUT;1                  0  25-NOV-2026 14:37:47.55
+B14.LIS;1                  2  25-NOV-2026 14:37:47.57
+B14.OUT;1                  1  25-NOV-2026 14:37:47.57
+B15.LIS;1                  2  25-NOV-2026 14:37:47.58
+B15.OUT;1                  1  25-NOV-2026 14:37:47.58
+B16.LIS;1                  2  25-NOV-2026 14:37:47.59
+B16.OUT;1                  1  25-NOV-2026 14:37:47.59
+B17.LIS;1                  2  25-NOV-2026 14:37:47.60
+B17.OUT;1                  1  25-NOV-2026 14:37:47.60
+B18.LIS;1                  2  25-NOV-2026 14:37:47.62
+B18.OUT;1                  1  25-NOV-2026 14:37:47.61
+B19.LIS;1                  2  25-NOV-2026 14:37:47.63
+B19.OUT;1                  1  25-NOV-2026 14:37:47.63
+B20.LIS;1                  2  25-NOV-2026 14:37:47.64
+B20.OUT;1                  1  25-NOV-2026 14:37:47.64
+B21.LIS;1                  2  25-NOV-2026 14:37:47.65
+B21.OUT;1                  1  25-NOV-2026 14:37:47.65
+B22.LIS;1                  2  25-NOV-2026 14:37:47.67
+B22.OUT;1                  1  25-NOV-2026 14:37:47.67
+B23.LIS;1                  2  25-NOV-2026 14:37:47.68
+B23.OUT;1                  1  25-NOV-2026 14:37:47.68
+B24.LIS;1                  2  25-NOV-2026 14:37:47.69
+B24.OUT;1                  1  25-NOV-2026 14:37:47.69
+B25.LIS;1                  2  25-NOV-2026 14:37:47.71
+B25.OUT;1                  1  25-NOV-2026 14:37:47.70
+B26.LIS;1                  2  25-NOV-2026 14:37:47.72
+B26.OUT;1                  1  25-NOV-2026 14:37:47.72
+B27.LIS;1                  2  25-NOV-2026 14:37:47.73
+B27.OUT;1                  1  25-NOV-2026 14:37:47.73
+B28.LIS;1                  2  25-NOV-2026 14:37:47.74
+B28.OUT;1                  1  25-NOV-2026 14:37:47.74
+B29.LIS;1                  2  25-NOV-2026 14:37:47.76
+B29.OUT;1                  1  25-NOV-2026 14:37:47.76
+B30.LIS;1                  2  25-NOV-2026 14:37:47.77
+B30.OUT;1                  1  25-NOV-2026 14:37:47.77
+B31.LIS;1                  2  25-NOV-2026 14:37:47.78
+B31.OUT;1                  1  25-NOV-2026 14:37:47.78
+B32.LIS;1                  2  25-NOV-2026 14:37:47.79
+B32.OUT;1                  1  25-NOV-2026 14:37:47.79
+B33.LIS;1                  2  25-NOV-2026 14:37:47.81
+B33.OUT;1                  1  25-NOV-2026 14:37:47.81
+B34.LIS;1                  2  25-NOV-2026 14:37:47.82
+B34.OUT;1                  1  25-NOV-2026 14:37:47.82
+B35.LIS;1                  2  25-NOV-2026 14:37:47.83
+B35.OUT;1                  1  25-NOV-2026 14:37:47.83
+B36.LIS;1                  2  25-NOV-2026 14:37:47.85
+B36.OUT;1                  1  25-NOV-2026 14:37:47.85
+B37.LIS;1                  2  25-NOV-2026 14:37:47.86
+B37.OUT;1                  1  25-NOV-2026 14:37:47.86
+B38.LIS;1                  2  25-NOV-2026 14:37:47.87
+B38.OUT;1                  1  25-NOV-2026 14:37:47.87
+B39.LIS;1                  2  25-NOV-2026 14:37:47.88
+B39.OUT;1                  1  25-NOV-2026 14:37:47.88
+B40.LIS;1                  2  25-NOV-2026 14:37:47.90
+B40.OUT;1                  1  25-NOV-2026 14:37:47.90
+B41.LIS;1                  2  25-NOV-2026 14:37:47.91
+B41.OUT;1                  1  25-NOV-2026 14:37:47.91
+C01.LIS;1                  2  25-NOV-2026 14:37:46.80
+C01.OUT;1                  1  25-NOV-2026 14:37:46.80
+C02.LIS;1                  2  25-NOV-2026 14:37:46.82
+C02.OUT;1                  1  25-NOV-2026 14:37:46.82
+C03.LIS;1                  2  25-NOV-2026 14:37:46.83
+C03.OUT;1                  1  25-NOV-2026 14:37:46.83
+C04.LIS;1                  2  25-NOV-2026 14:37:46.84
+C04.OUT;1                  1  25-NOV-2026 14:37:46.84
+C06.LIS;1                  2  25-NOV-2026 14:37:46.85
+C06.OUT;1                  1  25-NOV-2026 14:37:46.85
+C07.LIS;1                  2  25-NOV-2026 14:37:46.87
+C07.OUT;1                  1  25-NOV-2026 14:37:46.87
+C08.K1;2                   1  25-NOV-2026 14:37:46.91
+C09.K1;1                   2  25-NOV-2026 14:37:46.96
+C09.K2;2                   1  25-NOV-2026 14:37:46.97
+C10.K1;2                   1  25-NOV-2026 14:37:47.02
+C11.K1;1                   2  25-NOV-2026 14:37:47.06
+C12.K1;1                   1  25-NOV-2026 14:37:47.12
+C12.K2;1                   2  25-NOV-2026 14:37:47.12
+C13.K1;2                   1  25-NOV-2026 14:37:47.17
+C14.K1;2                   1  25-NOV-2026 14:37:47.22
+C15.LIS;1                  2  25-NOV-2026 14:37:47.23
+C15.OUT;1                  1  25-NOV-2026 14:37:47.23
+C16.LIS;1                  2  25-NOV-2026 14:37:47.25
+C16.OUT;1                  1  25-NOV-2026 14:37:47.25
+C18.LIS;1                  2  25-NOV-2026 14:37:47.27
+C18.OUT;1                  1  25-NOV-2026 14:37:47.27
+C19.LIS;1                  2  25-NOV-2026 14:37:47.28
+C19.OUT;1                  1  25-NOV-2026 14:37:47.28
+C22.LIS;1                  2  25-NOV-2026 14:37:47.30
+C22.OUT;1                  1  25-NOV-2026 14:37:47.30
+C24.OUT;1                  1  25-NOV-2026 14:37:47.32
+C28.OUT;1                 18  25-NOV-2026 14:37:47.33
+C29.LIS;1                  2  25-NOV-2026 14:37:47.34
+C29.OUT;1                  1  25-NOV-2026 14:37:47.34
+C30.LIS;1                  2  25-NOV-2026 14:37:47.36
+C30.OUT;1                  1  25-NOV-2026 14:37:47.35
+C31.OUT;2                  1  25-NOV-2026 14:37:47.39
+D01.LIS;1                  2  25-NOV-2026 14:52:09.92
+D01.OUT;1                  1  25-NOV-2026 14:52:09.92
+E01.LIS;1                  3  25-NOV-2026 14:52:05.92
+E01.OUT;1                  1  25-NOV-2026 14:52:05.92
+E02.LIS;1                  3  25-NOV-2026 14:52:05.93
+E02.OUT;1                  1  25-NOV-2026 14:52:05.93
+E03.LIS;1                  3  25-NOV-2026 14:52:05.95
+E03.OUT;1                  1  25-NOV-2026 14:52:05.95
+E04.LIS;1                  3  25-NOV-2026 14:52:05.96
+E04.OUT;1                  1  25-NOV-2026 14:52:05.96
+E05.LIS;1                  1  25-NOV-2026 14:52:05.97
+E05.OUT;1                  1  25-NOV-2026 14:52:05.97
+E06.LIS;1                  1  25-NOV-2026 14:52:05.99
+E06.OUT;1                  1  25-NOV-2026 14:52:05.98
+E07.LIS;1                  2  25-NOV-2026 14:52:06.00
+E07.OUT;1                  1  25-NOV-2026 14:52:06.00
+E08.LIS;1                  1  25-NOV-2026 14:52:06.02
+E08.OUT;1                  1  25-NOV-2026 14:52:06.02
+E09.LIS;1                  1  25-NOV-2026 14:52:06.03
+E09.OUT;1                  1  25-NOV-2026 14:52:06.03
+E10.LIS;1                  1  25-NOV-2026 14:52:06.04
+E10.OUT;1                  1  25-NOV-2026 14:52:06.04
+E11.LIS;1                  2  25-NOV-2026 14:52:06.05
+E11.OUT;1                  1  25-NOV-2026 14:52:06.05
+E12.LIS;1                  2  25-NOV-2026 14:52:06.07
+E12.OUT;1                  1  25-NOV-2026 14:52:06.07
+E13.LIS;1                  1  25-NOV-2026 14:52:06.09
+E13.OUT;1                  1  25-NOV-2026 14:52:06.08
+E14.LIS;1                  1  25-NOV-2026 14:52:06.10
+E14.OUT;1                  1  25-NOV-2026 14:52:06.10
+E15.LIS;1                  0  25-NOV-2026 14:52:06.11
+E15.OUT;1                  0  25-NOV-2026 14:52:06.11
+F01.LIS;1                  1  25-NOV-2026 14:37:50.39
+F01.OUT;1                  1  25-NOV-2026 14:37:50.39
+F02.LIS;1                  1  25-NOV-2026 14:37:50.43
+F02.OUT;1                  1  25-NOV-2026 14:37:50.43
+F03.LIS;1                  2  25-NOV-2026 14:37:50.47
+F03.OUT;1                  1  25-NOV-2026 14:37:50.47
+F04.LIS;1                  1  25-NOV-2026 14:37:50.50
+F04.OUT;1                  1  25-NOV-2026 14:37:50.50
+F05.LIS;1                  2  25-NOV-2026 14:37:50.54
+F05.OUT;1                  1  25-NOV-2026 14:37:50.54
+F06.LIS;1                  2  25-NOV-2026 14:37:50.57
+F06.OUT;1                  1  25-NOV-2026 14:37:50.57
+F07.LIS;1                  2  25-NOV-2026 14:37:50.58
+F07.OUT;1                  1  25-NOV-2026 14:37:50.58
+F08.LIS;1                  2  25-NOV-2026 14:37:50.58
+F08.OUT;1                  1  25-NOV-2026 14:37:50.58
+F09.LIS;1                  1  25-NOV-2026 14:37:50.60
+F09.OUT;1                  1  25-NOV-2026 14:37:50.60
+G01.LIS;1                  2  25-NOV-2026 14:37:48.39
+G01.OUT;1                  1  25-NOV-2026 14:37:48.39
+G02.LIS;1                  2  25-NOV-2026 14:37:48.41
+G02.OUT;1                  1  25-NOV-2026 14:37:48.41
+G02R.LIS;1                 2  25-NOV-2026 14:37:48.42
+G02R.OUT;1                 1  25-NOV-2026 14:37:48.42
+G03.LIS;1                  2  25-NOV-2026 14:37:48.44
+G03.OUT;1                  1  25-NOV-2026 14:37:48.44
+G03R.LIS;1                 2  25-NOV-2026 14:37:48.46
+G03R.OUT;1                 1  25-NOV-2026 14:37:48.46
+G04.LIS;1                  2  25-NOV-2026 14:37:48.47
+G04.OUT;1                  1  25-NOV-2026 14:37:48.47
+G04R.LIS;1                 2  25-NOV-2026 14:37:48.49
+G04R.OUT;1                 1  25-NOV-2026 14:37:48.49
+G05.LIS;1                  2  25-NOV-2026 14:37:48.51
+G05.OUT;1                  1  25-NOV-2026 14:37:48.51
+G05R.LIS;1                 2  25-NOV-2026 14:37:48.52
+G05R.OUT;1                 1  25-NOV-2026 14:37:48.52
+G06.LIS;1                  2  25-NOV-2026 14:37:48.54
+G06.OUT;1                  1  25-NOV-2026 14:37:48.54
+G06R.LIS;1                 2  25-NOV-2026 14:37:48.56
+G06R.OUT;1                 1  25-NOV-2026 14:37:48.56
+G07.LIS;1                  2  25-NOV-2026 14:37:48.58
+G07.OUT;1                  1  25-NOV-2026 14:37:48.57
+G07R.LIS;1                 2  25-NOV-2026 14:37:48.59
+G07R.OUT;1                 1  25-NOV-2026 14:37:48.59
+G08.LIS;1                  2  25-NOV-2026 14:37:48.61
+G08.OUT;1                  1  25-NOV-2026 14:37:48.61
+G08R.LIS;1                 2  25-NOV-2026 14:37:48.62
+G08R.OUT;1                 1  25-NOV-2026 14:37:48.62
+G09.LIS;1                  2  25-NOV-2026 14:37:48.64
+G09.OUT;1                  1  25-NOV-2026 14:37:48.64
+G09R.LIS;1                 2  25-NOV-2026 14:37:48.66
+G09R.OUT;1                 1  25-NOV-2026 14:37:48.66
+G10.LIS;1                  2  25-NOV-2026 14:37:48.67
+G10.OUT;1                  1  25-NOV-2026 14:37:48.67
+G10R.LIS;1                 2  25-NOV-2026 14:37:48.69
+G10R.OUT;1                 1  25-NOV-2026 14:37:48.69
+G11.LIS;1                  2  25-NOV-2026 14:37:48.70
+G11.OUT;1                  1  25-NOV-2026 14:37:48.70
+G11R.LIS;1                 2  25-NOV-2026 14:37:48.72
+G11R.OUT;1                 1  25-NOV-2026 14:37:48.72
+G12.LIS;1                  2  25-NOV-2026 14:37:48.74
+G12.OUT;1                  1  25-NOV-2026 14:37:48.74
+G12R.LIS;1                 2  25-NOV-2026 14:37:48.75
+G12R.OUT;1                 1  25-NOV-2026 14:37:48.75
+G13.LIS;1                  2  25-NOV-2026 14:37:48.77
+G13.OUT;1                  1  25-NOV-2026 14:37:48.77
+G13R.LIS;1                 2  25-NOV-2026 14:37:48.79
+G13R.OUT;1                 1  25-NOV-2026 14:37:48.79
+G14.LIS;1                  2  25-NOV-2026 14:37:48.81
+G14.OUT;1                  1  25-NOV-2026 14:37:48.81
+G14R.LIS;1                 2  25-NOV-2026 14:37:48.83
+G14R.OUT;1                 1  25-NOV-2026 14:37:48.83
+G15.LIS;1                  2  25-NOV-2026 14:37:48.85
+G15.OUT;1                  1  25-NOV-2026 14:37:48.85
+G15R.LIS;1                 2  25-NOV-2026 14:37:48.87
+G15R.OUT;1                 1  25-NOV-2026 14:37:48.87
+G16.LIS;1                  2  25-NOV-2026 14:37:48.89
+G16.OUT;1                  1  25-NOV-2026 14:37:48.89
+G17.LIS;1                  2  25-NOV-2026 14:37:48.91
+G17.OUT;1                  1  25-NOV-2026 14:37:48.91
+G17R.LIS;1                 2  25-NOV-2026 14:37:48.92
+G17R.OUT;1                 1  25-NOV-2026 14:37:48.92
+G18.LIS;1                  2  25-NOV-2026 14:37:48.94
+G18.OUT;1                  1  25-NOV-2026 14:37:48.94
+G18R.LIS;1                 2  25-NOV-2026 14:37:48.95
+G18R.OUT;1                 1  25-NOV-2026 14:37:48.95
+K01.LIS;1                  2  25-NOV-2026 14:52:05.51
+K01.OUT;1                  1  25-NOV-2026 14:52:05.51
+K01R.LIS;1                 2  25-NOV-2026 14:52:05.53
+K01R.OUT;1                 1  25-NOV-2026 14:52:05.53
+K02.LIS;1                  2  25-NOV-2026 14:52:05.55
+K02.OUT;1                  1  25-NOV-2026 14:52:05.54
+K03.LIS;1                  2  25-NOV-2026 14:52:05.56
+K03.OUT;1                  1  25-NOV-2026 14:52:05.56
+K03R.LIS;1                 2  25-NOV-2026 14:52:05.58
+K03R.OUT;1                 1  25-NOV-2026 14:52:05.58
+K04.LIS;1                  2  25-NOV-2026 14:52:05.60
+K04.OUT;1                  1  25-NOV-2026 14:52:05.60
+K05.LIS;1                  2  25-NOV-2026 14:52:05.62
+K05.OUT;1                  1  25-NOV-2026 14:52:05.61
+K06.LIS;1                  2  25-NOV-2026 14:52:05.64
+K06.OUT;1                  1  25-NOV-2026 14:52:05.63
+K07.LIS;1                  2  25-NOV-2026 14:52:05.65
+K07.OUT;1                  1  25-NOV-2026 14:52:05.65
+K08.LIS;1                  2  25-NOV-2026 14:52:05.66
+K08.OUT;1                  1  25-NOV-2026 14:52:05.66
+K09.LIS;1                  2  25-NOV-2026 14:52:05.68
+K09.OUT;1                  1  25-NOV-2026 14:52:05.68
+K09R.LIS;1                 2  25-NOV-2026 14:52:05.70
+K09R.OUT;1                 1  25-NOV-2026 14:52:05.70
+K10.LIS;1                  2  25-NOV-2026 14:52:05.72
+K10.OUT;1                  1  25-NOV-2026 14:52:05.72
+KACB.LIS;1                 2  25-NOV-2026 14:52:05.44
+KACB.OUT;1                 1  25-NOV-2026 14:52:05.44
+KBAC.LIS;1                 2  25-NOV-2026 14:52:05.46
+KBAC.OUT;1                 1  25-NOV-2026 14:52:05.46
+KBCA.LIS;1                 2  25-NOV-2026 14:52:05.48
+KBCA.OUT;1                 1  25-NOV-2026 14:52:05.47
+KCAB.LIS;1                 2  25-NOV-2026 14:52:05.49
+KCAB.OUT;1                 1  25-NOV-2026 14:52:05.49
+L01.LIS;1                  3  25-NOV-2026 14:37:49.21
+L01.OUT;1                  2  25-NOV-2026 14:37:49.21
+L02.LIS;1                  0  25-NOV-2026 14:37:49.22
+L02.OUT;1                  0  25-NOV-2026 14:37:49.22
+L03.LIS;1                116  25-NOV-2026 14:37:49.23
+L03.OUT;1                 48  25-NOV-2026 14:37:49.23
+L04.LIS;1               1091  25-NOV-2026 14:37:49.27
+L04.OUT;1                418  25-NOV-2026 14:37:49.27
+L05.LIS;1                  3  25-NOV-2026 14:37:49.52
+L05.OUT;1                  1  25-NOV-2026 14:37:49.52
+L06.LIS;1                  1  25-NOV-2026 14:37:49.53
+L06.OUT;1                  1  25-NOV-2026 14:37:49.53
+L07.LIS;1                  1  25-NOV-2026 14:37:49.54
+L07.OUT;1                  1  25-NOV-2026 14:37:49.54
+L08.LIS;1                  0  25-NOV-2026 14:37:49.55
+L08.OUT;1                  0  25-NOV-2026 14:37:49.55
+L09.OUT;1                857  25-NOV-2026 14:37:49.56
+L10.OUT;1                857  25-NOV-2026 14:37:49.97
+M01.LIS;1                  8  25-NOV-2026 14:37:53.84
+M01.OBJ;1                  1  25-NOV-2026 14:37:53.84
+M02.LIS;1                  8  25-NOV-2026 14:37:53.88
+M02.OBJ;1                  1  25-NOV-2026 14:37:53.87
+M03.LIS;1                  8  25-NOV-2026 14:37:53.91
+M03.OBJ;1                  1  25-NOV-2026 14:37:53.91
+M04A.LIS;1                 9  25-NOV-2026 14:37:53.95
+M04A.OBJ;1                 1  25-NOV-2026 14:37:53.95
+M04B.LIS;1                 8  25-NOV-2026 14:37:53.97
+M04B.OBJ;1                 1  25-NOV-2026 14:37:53.97
+M05.LIS;1                  9  25-NOV-2026 14:37:54.01
+M05.OBJ;1                  1  25-NOV-2026 14:37:54.00
+M06.LIS;1                  9  25-NOV-2026 14:37:54.04
+M06.OBJ;1                  1  25-NOV-2026 14:37:54.04
+M07.LIS;1                  7  25-NOV-2026 14:37:54.08
+M07.OBJ;1                  1  25-NOV-2026 14:37:54.08
+M08.LIS;1                  8  25-NOV-2026 14:37:54.12
+M08.OBJ;1                  1  25-NOV-2026 14:37:54.11
+M09.OBJ;1                  1  25-NOV-2026 14:37:54.15
+M10.LIS;1                  9  25-NOV-2026 14:37:54.18
+M10.OBJ;1                  1  25-NOV-2026 14:37:54.18
+M12.LIS;1                  9  25-NOV-2026 14:37:54.22
+M12.OBJ;1                  1  25-NOV-2026 14:37:54.22
+M13.LIS;1                  9  25-NOV-2026 14:37:54.26
+M13.OBJ;1                  1  25-NOV-2026 14:37:54.25
+M14.LIS;1                  8  25-NOV-2026 14:37:54.30
+M14.OBJ;1                  1  25-NOV-2026 14:37:54.29
+M15.LIS;1                  8  25-NOV-2026 14:37:54.33
+M15.OBJ;1                  1  25-NOV-2026 14:37:54.33
+M16.LIS;1                  8  25-NOV-2026 14:37:54.37
+M16.OBJ;1                  1  25-NOV-2026 14:37:54.37
+N01.LIS;1                  2  25-NOV-2026 14:52:05.73
+N01.OUT;1                  1  25-NOV-2026 14:52:05.73
+N02.LIS;1                  2  25-NOV-2026 14:52:05.75
+N02.OUT;1                  1  25-NOV-2026 14:52:05.75
+N03.LIS;1                  2  25-NOV-2026 14:52:05.76
+N03.OUT;1                  1  25-NOV-2026 14:52:05.76
+N04.LIS;1                  2  25-NOV-2026 14:52:05.78
+N04.OUT;1                  1  25-NOV-2026 14:52:05.77
+N05.LIS;1                  2  25-NOV-2026 14:52:05.79
+N05.OUT;1                  1  25-NOV-2026 14:52:05.79
+N06.LIS;1                  2  25-NOV-2026 14:52:05.80
+N06.OUT;1                  1  25-NOV-2026 14:52:05.80
+N07.LIS;1                  2  25-NOV-2026 14:52:05.81
+N07.OUT;1                  1  25-NOV-2026 14:52:05.81
+N08.LIS;1                  2  25-NOV-2026 14:52:05.83
+N08.OUT;1                  1  25-NOV-2026 14:52:05.83
+N09.LIS;1                  2  25-NOV-2026 14:52:05.84
+N09.OUT;1                  1  25-NOV-2026 14:52:05.84
+N10.LIS;1                  2  25-NOV-2026 14:52:05.85
+N10.OUT;1                  1  25-NOV-2026 14:52:05.85
+N11.LIS;1                  2  25-NOV-2026 14:52:05.87
+N11.OUT;1                  1  25-NOV-2026 14:52:05.87
+N12.LIS;1                  2  25-NOV-2026 14:52:05.88
+N12.OUT;1                  1  25-NOV-2026 14:52:05.88
+N13.LIS;1                  2  25-NOV-2026 14:52:05.89
+N13.OUT;1                  1  25-NOV-2026 14:52:05.89
+N14.LIS;1                  2  25-NOV-2026 14:52:05.91
+N14.OUT;1                  1  25-NOV-2026 14:52:05.91
+O01.LIS;1                  2  25-NOV-2026 14:37:48.23
+O01.OUT;1                  1  25-NOV-2026 14:37:48.23
+O02.LIS;1                  2  25-NOV-2026 14:37:48.24
+O02.OUT;1                  1  25-NOV-2026 14:37:48.24
+O03.LIS;1                  2  25-NOV-2026 14:37:48.26
+O03.OUT;1                  1  25-NOV-2026 14:37:48.25
+O04.LIS;1                  2  25-NOV-2026 14:37:48.27
+O04.OUT;1                  1  25-NOV-2026 14:37:48.27
+O05.LIS;1                  2  25-NOV-2026 14:37:48.28
+O05.OUT;1                  1  25-NOV-2026 14:37:48.28
+O06.LIS;1                  2  25-NOV-2026 14:37:48.30
+O06.OUT;1                  1  25-NOV-2026 14:37:48.29
+O07.LIS;1                  2  25-NOV-2026 14:37:48.31
+O07.OUT;1                  1  25-NOV-2026 14:37:48.31
+O08.LIS;1                  2  25-NOV-2026 14:37:48.32
+O08.OUT;1                  1  25-NOV-2026 14:37:48.32
+O09.LIS;1                  2  25-NOV-2026 14:37:48.34
+O09.OUT;1                  1  25-NOV-2026 14:37:48.34
+O10.LIS;1                  2  25-NOV-2026 14:37:48.35
+O10.OUT;1                  1  25-NOV-2026 14:37:48.35
+O11.LIS;1                  2  25-NOV-2026 14:37:48.36
+O11.OUT;1                  1  25-NOV-2026 14:37:48.36
+O12.LIS;1                  2  25-NOV-2026 14:37:48.38
+O12.OUT;1                  1  25-NOV-2026 14:37:48.38
+P01.LIS;1                 12  25-NOV-2026 14:52:06.40
+P01.OUT;1                  4  25-NOV-2026 14:52:06.40
+P02.LIS;1                 18  25-NOV-2026 14:52:06.42
+P02.OUT;1                  7  25-NOV-2026 14:52:06.42
+P03.LIS;1                 10  25-NOV-2026 14:52:06.44
+P03.OUT;1                  4  25-NOV-2026 14:52:06.44
+P04.LIS;1                  2  25-NOV-2026 14:52:06.45
+P04.OUT;1                  1  25-NOV-2026 14:52:06.45
+R01.DIF;1                  1  25-NOV-2026 14:37:50.61
+R01.OUT;1                  1  25-NOV-2026 14:37:50.61
+R02.DIF;1                  1  25-NOV-2026 14:37:50.62
+R02.OUT;1                  1  25-NOV-2026 14:37:50.63
+R03.DIF;1                  1  25-NOV-2026 14:37:50.64
+R03.OUT;1                  1  25-NOV-2026 14:37:50.64
+R04.DIF;1                  1  25-NOV-2026 14:37:50.65
+R04.OUT;1                  1  25-NOV-2026 14:37:50.66
+R05.DIF;1                  1  25-NOV-2026 14:37:50.67
+R05.OUT;1                  1  25-NOV-2026 14:37:50.67
+R06.DIF;1                  1  25-NOV-2026 14:37:50.68
+R06.OUT;1                  1  25-NOV-2026 14:37:50.69
+R07.DIF;1                  1  25-NOV-2026 14:37:50.70
+R07.OUT;1                  0  25-NOV-2026 14:37:50.70
+R08.DIF;1                  1  25-NOV-2026 14:37:50.71
+R08.OUT;1                  0  25-NOV-2026 14:37:50.71
+R09.DIF;1                  1  25-NOV-2026 14:37:50.72
+R09.OUT;1                  1  25-NOV-2026 14:37:50.73
+R10.DIF;1                  1  25-NOV-2026 14:37:50.74
+R10.OUT;1                  1  25-NOV-2026 14:37:50.74
+R11.DIF;1                  1  25-NOV-2026 14:37:50.75
+R11.OUT;1                  1  25-NOV-2026 14:37:50.76
+R12.DIF;1                  1  25-NOV-2026 14:37:50.76
+R12.OUT;1                  1  25-NOV-2026 14:37:50.77
+R13.DIF;1                  1  25-NOV-2026 14:37:50.78
+R13.OUT;1                  1  25-NOV-2026 14:37:50.78
+R14.DIF;1                  1  25-NOV-2026 14:37:50.79
+R14.OUT;1                  1  25-NOV-2026 14:37:50.80
+R15.DIF;1                  1  25-NOV-2026 14:37:50.81
+R15.OUT;1                  1  25-NOV-2026 14:37:50.82
+R16.DIF;1                  1  25-NOV-2026 14:37:50.84
+R16.OUT;1                  1  25-NOV-2026 14:37:50.84
+T001.DIF;1                 1  25-NOV-2026 14:37:50.86
+T001.OUT;1                 1  25-NOV-2026 14:37:50.87
+T002.DIF;1                 1  25-NOV-2026 14:37:50.88
+T002.OUT;1                 1  25-NOV-2026 14:37:50.89
+T003.DIF;1                 1  25-NOV-2026 14:37:50.91
+T003.OUT;1                 0  25-NOV-2026 14:37:50.92
+T004.DIF;1                 1  25-NOV-2026 14:37:50.93
+T004.OUT;1                 1  25-NOV-2026 14:37:50.94
+T005.DIF;1                 1  25-NOV-2026 14:37:50.96
+T005.OUT;1                 1  25-NOV-2026 14:37:50.97
+T006.DIF;1                 1  25-NOV-2026 14:37:50.98
+T006.OUT;1                 1  25-NOV-2026 14:37:50.99
+T007.DIF;1                 1  25-NOV-2026 14:37:51.01
+T007.OUT;1                 1  25-NOV-2026 14:37:51.02
+T008.DIF;1                 1  25-NOV-2026 14:37:51.03
+T008.OUT;1                 0  25-NOV-2026 14:37:51.04
+T009.DIF;1                 1  25-NOV-2026 14:37:51.05
+T009.OUT;1                 1  25-NOV-2026 14:37:51.06
+T010.DIF;1                 1  25-NOV-2026 14:37:51.08
+T010.OUT;1                 1  25-NOV-2026 14:37:51.09
+T011.DIF;1                 1  25-NOV-2026 14:37:51.10
+T011.OUT;1                 1  25-NOV-2026 14:37:51.11
+T012.DIF;1                 1  25-NOV-2026 14:37:51.13
+T012.OUT;1                 1  25-NOV-2026 14:37:51.14
+T013.DIF;1                 1  25-NOV-2026 14:37:51.15
+T013.OUT;1                 1  25-NOV-2026 14:37:51.16
+T014.DIF;1                 1  25-NOV-2026 14:37:51.18
+T014.OUT;1                 1  25-NOV-2026 14:37:51.19
+T015.DIF;1                 1  25-NOV-2026 14:37:51.20
+T015.OUT;1                 1  25-NOV-2026 14:37:51.21
+T016.DIF;1                 1  25-NOV-2026 14:37:51.23
+T016.OUT;1                 1  25-NOV-2026 14:37:51.23
+T017.DIF;1                 1  25-NOV-2026 14:37:51.25
+T017.OUT;1                 1  25-NOV-2026 14:37:51.26
+T018.DIF;1                 1  25-NOV-2026 14:37:51.28
+T018.OUT;1                 1  25-NOV-2026 14:37:51.28
+T019.DIF;1                 1  25-NOV-2026 14:37:51.30
+T019.OUT;1                 1  25-NOV-2026 14:37:51.31
+T020.DIF;1                 1  25-NOV-2026 14:37:51.32
+T020.OUT;1                 1  25-NOV-2026 14:37:51.33
+T021.DIF;1                 1  25-NOV-2026 14:37:51.35
+T021.OUT;1                 1  25-NOV-2026 14:37:51.36
+T022.DIF;1                 1  25-NOV-2026 14:37:51.37
+T022.OUT;1                 1  25-NOV-2026 14:37:51.38
+T023.DIF;1                 1  25-NOV-2026 14:37:51.39
+T023.OUT;1                 1  25-NOV-2026 14:37:51.40
+T024.DIF;1                 1  25-NOV-2026 14:37:51.42
+T024.OUT;1                 1  25-NOV-2026 14:37:51.43
+T025.DIF;1                 1  25-NOV-2026 14:37:51.44
+T025.OUT;1                 1  25-NOV-2026 14:37:51.45
+T026.DIF;1                 1  25-NOV-2026 14:37:51.47
+T026.OUT;1                 1  25-NOV-2026 14:37:51.48
+T027.DIF;1                 1  25-NOV-2026 14:37:51.49
+T027.OUT;1                 1  25-NOV-2026 14:37:51.50
+T028.DIF;1                 1  25-NOV-2026 14:37:51.52
+T028.OUT;1                 1  25-NOV-2026 14:37:51.53
+T029.DIF;1                 1  25-NOV-2026 14:37:51.54
+T029.OUT;1                 1  25-NOV-2026 14:37:51.55
+T030.DIF;1                 1  25-NOV-2026 14:37:51.57
+T030.OUT;1                 1  25-NOV-2026 14:37:51.57
+T031.DIF;1                 1  25-NOV-2026 14:37:51.59
+T031.OUT;1                 1  25-NOV-2026 14:37:51.60
+T032.DIF;1                 1  25-NOV-2026 14:37:51.62
+T032.OUT;1                 1  25-NOV-2026 14:37:51.62
+T033.DIF;1                 1  25-NOV-2026 14:37:51.64
+T033.OUT;1                 1  25-NOV-2026 14:37:51.65
+T034.DIF;1                 1  25-NOV-2026 14:37:51.66
+T034.OUT;1                 1  25-NOV-2026 14:37:51.67
+T035.DIF;1                 1  25-NOV-2026 14:37:51.69
+T035.OUT;1                 1  25-NOV-2026 14:37:51.70
+T036.DIF;1                 1  25-NOV-2026 14:37:51.71
+T036.OUT;1                 1  25-NOV-2026 14:37:51.72
+T037.DIF;1                 1  25-NOV-2026 14:37:51.74
+T037.OUT;1                 1  25-NOV-2026 14:37:51.74
+T038.DIF;1                 1  25-NOV-2026 14:37:51.76
+T038.OUT;1                 1  25-NOV-2026 14:37:51.77
+T039.DIF;1                 1  25-NOV-2026 14:37:51.79
+T039.OUT;1                 1  25-NOV-2026 14:37:51.79
+T040.DIF;1                 1  25-NOV-2026 14:37:51.81
+T040.OUT;1                 1  25-NOV-2026 14:37:51.82
+T041.DIF;1                 1  25-NOV-2026 14:37:51.83
+T041.OUT;1                 1  25-NOV-2026 14:37:51.84
+T042.DIF;1                 1  25-NOV-2026 14:37:51.86
+T042.OUT;1                 1  25-NOV-2026 14:37:51.87
+T043.DIF;1                 1  25-NOV-2026 14:37:51.88
+T043.OUT;1                 1  25-NOV-2026 14:37:51.89
+T044.DIF;1                 1  25-NOV-2026 14:37:51.91
+T044.OUT;1                 1  25-NOV-2026 14:37:51.92
+T045.DIF;1                 1  25-NOV-2026 14:37:51.93
+T045.OUT;1                 1  25-NOV-2026 14:37:51.94
+T046.DIF;1                 1  25-NOV-2026 14:37:51.96
+T046.OUT;1                 1  25-NOV-2026 14:37:51.97
+T047.DIF;1                 1  25-NOV-2026 14:37:51.98
+T047.OUT;1                 1  25-NOV-2026 14:37:51.99
+T048.DIF;1                 1  25-NOV-2026 14:37:52.00
+T048.OUT;1                 1  25-NOV-2026 14:37:52.01
+T049.DIF;1                 1  25-NOV-2026 14:37:52.03
+T049.OUT;1                 1  25-NOV-2026 14:37:52.04
+T050.DIF;1                 1  25-NOV-2026 14:37:52.05
+T050.OUT;1                 1  25-NOV-2026 14:37:52.06
+T051.DIF;1                 1  25-NOV-2026 14:37:52.08
+T051.OUT;1                 1  25-NOV-2026 14:37:52.09
+T052.DIF;1                 1  25-NOV-2026 14:37:52.11
+T052.OUT;1                 1  25-NOV-2026 14:37:52.11
+T053.DIF;1                 1  25-NOV-2026 14:37:52.13
+T053.OUT;1                 1  25-NOV-2026 14:37:52.14
+T054.DIF;1                 1  25-NOV-2026 14:37:52.15
+T054.OUT;1                 1  25-NOV-2026 14:37:52.16
+T055.DIF;1                 1  25-NOV-2026 14:37:52.18
+T055.OUT;1                 1  25-NOV-2026 14:37:52.19
+T056.DIF;1                 1  25-NOV-2026 14:37:52.20
+T056.OUT;1                 1  25-NOV-2026 14:37:52.21
+T057.DIF;1                 1  25-NOV-2026 14:37:52.23
+T057.OUT;1                 1  25-NOV-2026 14:37:52.23
+T058.DIF;1                 1  25-NOV-2026 14:37:52.25
+T058.OUT;1                 1  25-NOV-2026 14:37:52.26
+T059.DIF;1                 1  25-NOV-2026 14:37:52.28
+T059.OUT;1                 1  25-NOV-2026 14:37:52.28
+T060.DIF;1                 1  25-NOV-2026 14:37:52.30
+T060.OUT;1                 1  25-NOV-2026 14:37:52.31
+T061.DIF;1                 1  25-NOV-2026 14:37:52.33
+T061.OUT;1                 1  25-NOV-2026 14:37:52.33
+T062.DIF;1                 1  25-NOV-2026 14:37:52.35
+T062.OUT;1                 1  25-NOV-2026 14:37:52.36
+T063.DIF;1                 1  25-NOV-2026 14:37:52.38
+T063.OUT;1                 1  25-NOV-2026 14:37:52.39
+T064.DIF;1                 1  25-NOV-2026 14:37:52.40
+T064.OUT;1                 1  25-NOV-2026 14:37:52.41
+T065.DIF;1                 1  25-NOV-2026 14:37:52.43
+T065.OUT;1                 1  25-NOV-2026 14:37:52.43
+T066.DIF;1                 1  25-NOV-2026 14:37:52.45
+T066.OUT;1                 1  25-NOV-2026 14:37:52.46
+T067.DIF;1                 1  25-NOV-2026 14:37:52.47
+T067.OUT;1                 1  25-NOV-2026 14:37:52.48
+T068.DIF;1                 1  25-NOV-2026 14:37:52.50
+T068.OUT;1                 1  25-NOV-2026 14:37:52.51
+T069.DIF;1                 1  25-NOV-2026 14:37:52.52
+T069.OUT;1                 1  25-NOV-2026 14:37:52.53
+T070.DIF;1                 1  25-NOV-2026 14:37:52.55
+T070.OUT;1                 1  25-NOV-2026 14:37:52.56
+T071.DIF;1                 1  25-NOV-2026 14:37:52.57
+T071.OUT;1                 1  25-NOV-2026 14:37:52.58
+T072.DIF;1                 1  25-NOV-2026 14:37:52.60
+T072.OUT;1                 1  25-NOV-2026 14:37:52.60
+T073.DIF;1                 1  25-NOV-2026 14:37:52.62
+T073.OUT;1                 1  25-NOV-2026 14:37:52.63
+T074.DIF;1                 1  25-NOV-2026 14:37:52.64
+T074.OUT;1                 1  25-NOV-2026 14:37:52.65
+T075.DIF;1                 1  25-NOV-2026 14:37:52.67
+T075.OUT;1                 1  25-NOV-2026 14:37:52.68
+T076.DIF;1                 1  25-NOV-2026 14:37:52.69
+T076.OUT;1                 1  25-NOV-2026 14:37:52.70
+T077.DIF;1                 1  25-NOV-2026 14:37:52.72
+T077.OUT;1                 1  25-NOV-2026 14:37:52.73
+T078.DIF;1                 1  25-NOV-2026 14:37:52.74
+T078.OUT;1                 1  25-NOV-2026 14:37:52.75
+T079.DIF;1                 1  25-NOV-2026 14:37:52.77
+T079.OUT;1                 1  25-NOV-2026 14:37:52.77
+T080.DIF;1                 1  25-NOV-2026 14:37:52.79
+T080.OUT;1                 1  25-NOV-2026 14:37:52.80
+T081.DIF;1                 1  25-NOV-2026 14:37:52.82
+T081.OUT;1                 1  25-NOV-2026 14:37:52.82
+T082.DIF;1                 1  25-NOV-2026 14:37:52.84
+T082.OUT;1                 1  25-NOV-2026 14:37:52.85
+T083.DIF;1                 1  25-NOV-2026 14:37:52.86
+T083.OUT;1                 1  25-NOV-2026 14:37:52.87
+T084.DIF;1                 1  25-NOV-2026 14:37:52.89
+T084.OUT;1                 1  25-NOV-2026 14:37:52.90
+T085.DIF;1                 1  25-NOV-2026 14:37:52.91
+T085.OUT;1                 1  25-NOV-2026 14:37:52.92
+T086.DIF;1                 1  25-NOV-2026 14:37:52.94
+T086.OUT;1                 1  25-NOV-2026 14:37:52.95
+T087.DIF;1                 1  25-NOV-2026 14:37:52.96
+T087.OUT;1                 1  25-NOV-2026 14:37:52.97
+T088.DIF;1                 1  25-NOV-2026 14:37:52.99
+T088.OUT;1                 1  25-NOV-2026 14:37:53.00
+T089.DIF;1                 1  25-NOV-2026 14:37:53.01
+T089.OUT;1                 1  25-NOV-2026 14:37:53.02
+T090.DIF;1                 1  25-NOV-2026 14:37:53.04
+T090.OUT;1                 1  25-NOV-2026 14:37:53.04
+T091.DIF;1                 1  25-NOV-2026 14:37:53.06
+T091.OUT;1                 1  25-NOV-2026 14:37:53.07
+T092.DIF;1                 1  25-NOV-2026 14:37:53.08
+T092.OUT;1                 1  25-NOV-2026 14:37:53.09
+T093.DIF;1                 1  25-NOV-2026 14:37:53.11
+T093.OUT;1                 1  25-NOV-2026 14:37:53.12
+T094.DIF;1                 1  25-NOV-2026 14:37:53.13
+T094.OUT;1                 1  25-NOV-2026 14:37:53.14
+T095.DIF;1                 1  25-NOV-2026 14:37:53.16
+T095.OUT;1                 1  25-NOV-2026 14:37:53.17
+T096.DIF;1                 1  25-NOV-2026 14:37:53.18
+T096.OUT;1                 1  25-NOV-2026 14:37:53.19
+T097.DIF;1                 1  25-NOV-2026 14:37:53.21
+T097.OUT;1                 1  25-NOV-2026 14:37:53.21
+T098.DIF;1                 1  25-NOV-2026 14:37:53.23
+T098.OUT;1                 1  25-NOV-2026 14:37:53.24
+T099.DIF;1                 1  25-NOV-2026 14:37:53.26
+T099.OUT;1                 1  25-NOV-2026 14:37:53.26
+T100.DIF;1                 1  25-NOV-2026 14:37:53.28
+T100.OUT;1                 1  25-NOV-2026 14:37:53.29
+T101.DIF;1                 1  25-NOV-2026 14:37:53.30
+T101.OUT;1                 1  25-NOV-2026 14:37:53.31
+T102.DIF;1                 1  25-NOV-2026 14:37:53.33
+T102.OUT;1                 1  25-NOV-2026 14:37:53.34
+T103.DIF;1                 1  25-NOV-2026 14:37:53.36
+T103.OUT;1                 1  25-NOV-2026 14:37:53.36
+T104.DIF;1                 1  25-NOV-2026 14:37:53.38
+T104.OUT;1                 1  25-NOV-2026 14:37:53.39
+T105.DIF;1                 1  25-NOV-2026 14:37:53.41
+T105.OUT;1                 1  25-NOV-2026 14:37:53.42
+T106.DIF;1                 1  25-NOV-2026 14:37:53.43
+T106.OUT;1                 1  25-NOV-2026 14:37:53.44
+T107.DIF;1                 1  25-NOV-2026 14:37:53.46
+T107.OUT;1                 1  25-NOV-2026 14:37:53.47
+T108.DIF;1                 1  25-NOV-2026 14:37:53.49
+T108.OUT;1                 1  25-NOV-2026 14:37:53.50
+T109.DIF;1                 1  25-NOV-2026 14:37:53.51
+T109.OUT;1                 1  25-NOV-2026 14:37:53.52
+T110.DIF;1                 1  25-NOV-2026 14:37:53.54
+T110.OUT;1                 1  25-NOV-2026 14:37:53.55
+T111.DIF;1                 1  25-NOV-2026 14:37:53.57
+T111.OUT;1                 1  25-NOV-2026 14:37:53.58
+T112.DIF;1                 1  25-NOV-2026 14:37:53.59
+T112.OUT;1                 1  25-NOV-2026 14:37:53.60
+T113.DIF;1                 1  25-NOV-2026 14:37:53.62
+T113.OUT;1                 1  25-NOV-2026 14:37:53.63
+T114.DIF;1                 1  25-NOV-2026 14:37:53.64
+T114.OUT;1                 1  25-NOV-2026 14:37:53.65
+T115.DIF;1                 1  25-NOV-2026 14:37:53.67
+T115.OUT;1                 1  25-NOV-2026 14:37:53.68
+T116.DIF;1                 1  25-NOV-2026 14:37:53.70
+T116.OUT;1                 1  25-NOV-2026 14:37:53.70
+T117.DIF;1                 1  25-NOV-2026 14:37:53.72
+T117.OUT;1                 1  25-NOV-2026 14:37:53.73
+T118.DIF;1                 1  25-NOV-2026 14:37:53.75
+T118.OUT;1                 1  25-NOV-2026 14:37:53.76
+T119.DIF;1                 1  25-NOV-2026 14:37:53.77
+T119.OUT;1                 1  25-NOV-2026 14:37:53.78
+T120.DIF;1                 1  25-NOV-2026 14:37:53.80
+T120.OUT;1                 1  25-NOV-2026 14:37:53.81
+U01.LIS;1                  2  25-NOV-2026 14:37:48.97
+U01.OUT;1                  1  25-NOV-2026 14:37:48.97
+U02.LIS;1                  2  25-NOV-2026 14:37:48.98
+U02.OUT;1                  1  25-NOV-2026 14:37:48.98
+U03.LIS;1                  2  25-NOV-2026 14:37:49.00
+U03.OUT;1                  1  25-NOV-2026 14:37:49.00
+U04.LIS;1                  3  25-NOV-2026 14:37:49.01
+U04.OUT;1                  2  25-NOV-2026 14:37:49.01
+U05.LIS;1                  1  25-NOV-2026 14:37:49.02
+U05.OUT;1                  1  25-NOV-2026 14:37:49.02
+U06.LIS;1                  2  25-NOV-2026 14:37:49.04
+U06.OUT;1                  1  25-NOV-2026 14:37:49.04
+U07.LIS;1                  2  25-NOV-2026 14:37:49.05
+U07.OUT;1                  1  25-NOV-2026 14:37:49.05
+U08.LIS;1                  2  25-NOV-2026 14:37:49.06
+U08.OUT;1                  1  25-NOV-2026 14:37:49.06
+U09.LIS;1                  2  25-NOV-2026 14:37:49.07
+U09.OUT;1                  1  25-NOV-2026 14:37:49.07
+U10.LIS;1                  2  25-NOV-2026 14:37:49.09
+U10.OUT;1                  1  25-NOV-2026 14:37:49.09
+U11.LIS;1                  2  25-NOV-2026 14:37:49.10
+U11.OUT;1                  1  25-NOV-2026 14:37:49.10
+U12.LIS;1                  2  25-NOV-2026 14:37:49.14
+U12.OUT;1                  1  25-NOV-2026 14:37:49.14
+U13.LIS;1                  2  25-NOV-2026 14:37:49.16
+U13.OUT;1                  1  25-NOV-2026 14:37:49.16
+U14.LIS;1                  2  25-NOV-2026 14:37:49.18
+U14.OUT;1                  1  25-NOV-2026 14:37:49.18
+V05.OUT;1                  1  25-NOV-2026 14:52:06.90
+W132.LIS;1                 2  25-NOV-2026 14:52:06.12
+W132.OUT;1                 1  25-NOV-2026 14:52:06.12
+W133.LIS;1                 2  25-NOV-2026 14:52:06.14
+W133.OUT;1                 1  25-NOV-2026 14:52:06.13
+W255.LIS;1                 2  25-NOV-2026 14:52:06.15
+W255.OUT;1                 1  25-NOV-2026 14:52:06.15
+W256.LIS;1                 2  25-NOV-2026 14:52:06.16
+W256.OUT;1                 1  25-NOV-2026 14:52:06.16
+W257.LIS;1                 2  25-NOV-2026 14:52:06.18
+W257.OUT;1                 1  25-NOV-2026 14:52:06.18
+W511.LIS;1                 2  25-NOV-2026 14:52:06.19
+W511.OUT;1                 1  25-NOV-2026 14:52:06.19
+W512.LIS;1                 2  25-NOV-2026 14:52:06.20
+W512.OUT;1                 1  25-NOV-2026 14:52:06.20
+W513.LIS;1                 2  25-NOV-2026 14:52:06.22
+W513.OUT;1                 1  25-NOV-2026 14:52:06.22
+X00255.LIS;1               2  25-NOV-2026 14:52:06.23
+X00255.OUT;1               1  25-NOV-2026 14:52:06.23
+X00256.LIS;1               1  25-NOV-2026 14:52:06.25
+X00256.OUT;1               1  25-NOV-2026 14:52:06.25
+X00257.LIS;1               1  25-NOV-2026 14:52:06.26
+X00257.OUT;1               1  25-NOV-2026 14:52:06.26
+X00512.LIS;1               1  25-NOV-2026 14:52:06.28
+X00512.OUT;1               1  25-NOV-2026 14:52:06.28
+X00513.LIS;1               1  25-NOV-2026 14:52:06.29
+X00513.OUT;1               1  25-NOV-2026 14:52:06.29
+X01024.LIS;1               1  25-NOV-2026 14:52:06.31
+X01024.OUT;1               1  25-NOV-2026 14:52:06.30
+X02048.LIS;1               1  25-NOV-2026 14:52:06.32
+X02048.OUT;1               1  25-NOV-2026 14:52:06.32
+X04096.LIS;1               1  25-NOV-2026 14:52:06.33
+X04096.OUT;1               1  25-NOV-2026 14:52:06.33
+X08192.LIS;1               1  25-NOV-2026 14:52:06.35
+X08192.OUT;1               1  25-NOV-2026 14:52:06.35
+X16384.LIS;1               1  25-NOV-2026 14:52:06.37
+X16384.OUT;1               1  25-NOV-2026 14:52:06.36
+X32767.LIS;1               1  25-NOV-2026 14:52:06.38
+X32767.OUT;1               1  25-NOV-2026 14:52:06.38
+Y01.LIS;1                  2  25-NOV-2026 14:37:47.92
+Y01.OUT;1                  1  25-NOV-2026 14:37:47.92
+Y02.LIS;1                  2  25-NOV-2026 14:37:47.94
+Y02.OUT;1                  1  25-NOV-2026 14:37:47.93
+Y03.LIS;1                  2  25-NOV-2026 14:37:47.95
+Y03.OUT;1                  1  25-NOV-2026 14:37:47.95
+Y04.LIS;1                  2  25-NOV-2026 14:37:47.96
+Y04.OUT;1                  1  25-NOV-2026 14:37:47.96
+Y05.LIS;1                  2  25-NOV-2026 14:37:47.97
+Y05.OUT;1                  1  25-NOV-2026 14:37:47.97
+Y06.LIS;1                  2  25-NOV-2026 14:37:47.99
+Y06.OUT;1                  1  25-NOV-2026 14:37:47.98
+Y07.LIS;1                  2  25-NOV-2026 14:37:48.00
+Y07.OUT;1                  1  25-NOV-2026 14:37:48.00
+Y08.LIS;1                  2  25-NOV-2026 14:37:48.01
+Y08.OUT;1                  1  25-NOV-2026 14:37:48.01
+Y09.LIS;1                  2  25-NOV-2026 14:37:48.02
+Y09.OUT;1                  1  25-NOV-2026 14:37:48.02
+Y10.LIS;1                  2  25-NOV-2026 14:37:48.04
+Y10.OUT;1                  1  25-NOV-2026 14:37:48.04
+Y11.LIS;1                  2  25-NOV-2026 14:37:48.05
+Y11.OUT;1                  1  25-NOV-2026 14:37:48.05
+Y12.LIS;1                  2  25-NOV-2026 14:37:48.06
+Y12.OUT;1                  1  25-NOV-2026 14:37:48.06
+Y13.LIS;1                  3  25-NOV-2026 14:37:48.08
+Y13.OUT;1                  1  25-NOV-2026 14:37:48.08
+Y14.LIS;1                  2  25-NOV-2026 14:37:48.09
+Y14.OUT;1                  1  25-NOV-2026 14:37:48.09
+Y15.LIS;1                  2  25-NOV-2026 14:37:48.10
+Y15.OUT;1                  1  25-NOV-2026 14:37:48.10
+Y16.LIS;1                  2  25-NOV-2026 14:37:48.11
+Y16.OUT;1                  1  25-NOV-2026 14:37:48.11
+Y17.LIS;1                  2  25-NOV-2026 14:37:48.13
+Y17.OUT;1                  1  25-NOV-2026 14:37:48.13
+Y18.LIS;1                  2  25-NOV-2026 14:37:48.14
+Y18.OUT;1                  1  25-NOV-2026 14:37:48.14
+Y19.LIS;1                  2  25-NOV-2026 14:37:48.15
+Y19.OUT;1                  1  25-NOV-2026 14:37:48.15
+Y20.LIS;1                  2  25-NOV-2026 14:37:48.17
+Y20.OUT;1                  1  25-NOV-2026 14:37:48.16
+Y21.LIS;1                  2  25-NOV-2026 14:37:48.18
+Y21.OUT;1                  1  25-NOV-2026 14:37:48.18
+Y22.LIS;1                  2  25-NOV-2026 14:37:48.19
+Y22.OUT;1                  1  25-NOV-2026 14:37:48.19
+Y23.LIS;1                  2  25-NOV-2026 14:37:48.20
+Y23.OUT;1                  1  25-NOV-2026 14:37:48.20
+Y24.LIS;1                  2  25-NOV-2026 14:37:48.22
+Y24.OUT;1                  1  25-NOV-2026 14:37:48.22
+
+Total of 768 files, 4516 blocks.
+$ SET DEFAULT SUM$TOP:[SUM117]
+$ WRITE SYS$OUTPUT "SUM117B FINISHED"
+SUM117B FINISHED
+$ SET NOVERIFY
