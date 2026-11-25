@@ -32,6 +32,15 @@ var for81KFTNRTLDifferences = map[string]string{
 func runFor81K(t *testing.T, onFORRTL bool) string {
 	t.Helper()
 
+	return runFor81Program(t, "FOR81K", onFORRTL)
+}
+
+// runFor81Program builds and runs one of round 3b's programs (FOR81K, or
+// round 2's FOR81M) in [FOR81K] on a fresh volume, as runFor81K says, and
+// returns its output.
+func runFor81Program(t *testing.T, program string, onFORRTL bool) string {
+	t.Helper()
+
 	var disk, file string
 	if onFORRTL {
 		disk, file = findFORRTL(t)
@@ -59,12 +68,12 @@ func runFor81K(t *testing.T, onFORRTL bool) string {
 
 	dispatch(`COPY "` + host + `"/HOST FOR81.OPT`)
 
-	sources := map[string]string{"FOR81K": dir, "FOR81W": dir}
-	links := []string{"FOR81K,FOR81/OPTIONS", "FOR81W,FOR81/OPTIONS"}
+	sources := map[string]string{program: dir, "FOR81W": dir}
+	links := []string{program + ",FOR81/OPTIONS", "FOR81W,FOR81/OPTIONS"}
 
 	if !onFORRTL {
-		sources = map[string]string{"FOR81K": dir, "FOR81GF": dir, "FOR88F": for88Dir}
-		links = []string{"FOR81K,FOR81GF,FOR88F"}
+		sources = map[string]string{program: dir, "FOR81GF": dir, "FOR88F": for88Dir}
+		links = []string{program + ",FOR81GF,FOR88F"}
 	}
 
 	for name, from := range sources {
@@ -87,7 +96,7 @@ func runFor81K(t *testing.T, onFORRTL bool) string {
 		}
 	}
 
-	return dispatch("RUN FOR81K")
+	return dispatch("RUN " + program)
 }
 
 // checkFor81K checks a run's output and holds it to VMS's run but for
@@ -116,3 +125,28 @@ func checkFor81K(t *testing.T, out string, differences map[string]string) {
 func TestFor81KProcedure(t *testing.T) { checkFor81K(t, runFor81K(t, true), for81KDifferences) }
 
 func TestFor81KOnFTNRTL(t *testing.T) { checkFor81K(t, runFor81K(t, false), for81KFTNRTLDifferences) }
+
+// FOR81M (Phase 113's probe round 2, testdata/err113's README) asks the
+// associated variable after FIND, then DELETE by number. Until VMS's run,
+// vax/for81m-vax.txt, comes back, TestFor81MOnFTNRTL holds FTNRTL to VMS's
+// FORRTL over govax (this is FORRTL's own logic, not RMS's), or skips
+// without FORRTL.EXE on a local volume.
+func TestFor81MOnFTNRTL(t *testing.T) {
+	ftnrtl := runFor81Program(t, "FOR81M", false)
+	if !strings.Contains(ftnrtl, "##### the end of the cases") {
+		t.Fatalf("the program stopped before its end; its last lines:\n%s", lastLines(ftnrtl, 30))
+	}
+
+	if path := os.Getenv("FOR81M_WRITE"); path != "" {
+		if err := os.WriteFile(path, []byte(ftnrtl), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	want, err := os.ReadFile(filepath.Join("..", "..", "testdata", "for81", "vax", "for81m-vax.txt"))
+	if err != nil {
+		want = []byte(runFor81Program(t, "FOR81M", true))
+	}
+
+	compareFor81G(t, for88Cases(ftnrtl), string(want), map[string]string{}, 9)
+}

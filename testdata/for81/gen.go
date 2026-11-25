@@ -108,6 +108,32 @@ func (p *prog) text(s string) string {
 	return l
 }
 
+// longText is a label for a descriptor of s, a text longer than a .ASCID
+// fits on a MACRO line, its characters in .ASCII pieces.
+func (p *prog) longText(s string) string {
+	if l, ok := p.texts[s]; ok {
+		return l
+	}
+
+	l := fmt.Sprintf("T%d", len(p.texts))
+	p.texts[s] = l
+	fmt.Fprintf(&p.data, "%s:\t.WORD\t%d\n\t.BYTE\t14,1\n\t.ADDRESS %s_T\n%s_T:\n", l, len(s), l, l)
+
+	for rest := s; rest != ""; {
+		n := min(len(rest), 60)
+		fmt.Fprintf(&p.data, "\t.ASCII\t~%s~\n", rest[:n])
+		rest = rest[n:]
+	}
+
+	return l
+}
+
+// say writes a line of text to SYS$OUTPUT from the case's code.
+func (p *prog) say(s string) {
+	p.emit("PUSHAB\t%s", p.longText(s))
+	p.emit("CALLS\t#1,G^LIB$PUT_OUTPUT")
+}
+
 func (p *prog) emit(format string, a ...any) {
 	fmt.Fprintf(p.body, "\t"+format+"\n", a...)
 }
@@ -3995,6 +4021,7 @@ func main() {
 	t := term3()
 	k := round3b()
 	w := term3b()
+	m := round3c()
 
 	files := map[string]string{
 		"for81.mar":     f.write("Phase 81's probe of FORRTL's file statements", forrtlCode),
@@ -4008,6 +4035,7 @@ func main() {
 		"for81k.mar":    k.write2("Round 3b of Phase 81's probe, round 3's follow-up", forrtlCode+round3Code+round3bCode),
 		"for81w.mar":    w.write2("Round 3b at a terminal, by hand", forrtlCode+round3Code+round3bCode),
 		"for81k.com":    comK,
+		"for81m.mar":    m.write2("Phase 113's probe round 2: the associated variable after FIND", forrtlCode+round3Code+round3bCode),
 		"for81l.com":    "$ SET NOVERIFY\n$ RUN FOR81K\n$ EXIT $STATUS\n",
 		"exchangek.cmd": exchangeK,
 		"copyoutk.cmd":  copyoutK,
@@ -4107,6 +4135,71 @@ DISMOUNT DUA2
 		f.n, r.n, c.n, d.n, g.n, k.n)
 }
 
+// avCase is a case of the associated variable (asv, -1 before each
+// statement) and NEXTREC: name, a relative file of eight records, opened
+// direct with ASSOCIATEVARIABLE, then each of ops ("R n" READ, "D n"
+// DELETE, "F n" FIND, "W n" WRITE), the variable and NEXTREC after each.
+func (p *prog) avCase(name, title string, ops []string) {
+	p.kase(title, func() {
+		p.emit("MOVL\t#-1,ASVL")
+		p.open(10, file(p, name), imm(kOrg, 2), imm(kForm, 1), imm(kAccess, 1), imm(kStatus, 1),
+			ref(kAssocVar, mLongRef, "ASVL"))
+		p.asvNext()
+		for _, op := range ops {
+			var r int
+			fmt.Sscanf(op[2:], "%d", &r)
+			p.emit("MOVL\t#-1,ASVL")
+			switch op[0] {
+			case 'R':
+				p.rdDO(10, r, 8)
+			case 'D':
+				p.call("FOR$DELETE_D", true, "#10", fmt.Sprintf("#%d", r))
+			case 'F':
+				p.call("FOR$FIND", true, "#10", fmt.Sprintf("#%d", r))
+			case 'W':
+				p.wrDO(10, r, "NEW")
+			}
+			p.asvNext()
+		}
+		p.closeU(10)
+	})
+}
+
+// round3c is FOR81M, Phase 113's probe round 2 (testdata/err113's README):
+// the associated variable after FIND and then DELETE by number. Round 3b
+// showed FIND r setting it to r, and DELETE r making it r+1, or r+2 when it
+// was r+1 already; whether a FIND's r counts as "r+1 already" for a DELETE
+// of r-1, what a DELETE of r itself gives after FIND r, and whether it is the
+// variable's value or the record last read that decides, it didn't ask.
+func round3c() *prog {
+	p := newProg("FOR81M")
+
+	p.section("setup")
+
+	p.kase("make the relative files, eight records each, record n's text RECn", func() {
+		for _, name := range []string{"FD1", "FD2", "FD3", "FD4", "FD5", "FD6", "FD7", "FD8"} {
+			p.open(10, file(p, name+".DAT"), imm(kOrg, 2), imm(kForm, 1), imm(kRecl, 8), imm(kAccess, 1), imm(kStatus, 2))
+			for r := 1; r <= 8; r++ {
+				p.wrDO(10, r, fmt.Sprintf("REC%d", r))
+			}
+			p.closeU(10)
+		}
+	})
+
+	p.section("A: the associated variable (asv) and NEXTREC (nr) after FIND, then DELETE by number")
+
+	p.avCase("FD1.DAT", "FIND 3, then DELETE 2", []string{"F 3", "D 2"})
+	p.avCase("FD2.DAT", "FIND 3, then DELETE 3", []string{"F 3", "D 3"})
+	p.avCase("FD3.DAT", "FIND 3, then DELETE 4", []string{"F 3", "D 4"})
+	p.avCase("FD4.DAT", "READ 2, FIND 5, then DELETE 5", []string{"R 2", "F 5", "D 5"})
+	p.avCase("FD5.DAT", "FIND 3, then READ 3", []string{"F 3", "R 3"})
+	p.avCase("FD6.DAT", "WRITE 3, then DELETE 3", []string{"W 3", "D 3"})
+	p.avCase("FD7.DAT", "READ 3, FIND 5, then DELETE 3", []string{"R 3", "F 5", "D 3"})
+	p.avCase("FD8.DAT", "READ 3, READ 4, then DELETE 3", []string{"R 3", "R 4", "D 3"})
+
+	return p
+}
+
 // round3b is round 3's follow-up, FOR81K (docs/planning/PHASE-113 - Fortran
 // errata.md, subtask 13e's "Left, unconfirmed"): what round 3 left open, each
 // section one question.
@@ -4173,30 +4266,7 @@ func round3b() *prog {
 		{"WRITE 3, then DELETE 1, then READ 2", []string{"W 3", "D 1", "R 2"}},
 	}
 	for i, c := range avCases {
-		name := fmt.Sprintf("AV%d.DAT", i+1)
-		p.kase(c.title, func() {
-			p.emit("MOVL\t#-1,ASVL")
-			p.open(10, file(p, name), imm(kOrg, 2), imm(kForm, 1), imm(kAccess, 1), imm(kStatus, 1),
-				ref(kAssocVar, mLongRef, "ASVL"))
-			p.asvNext()
-			for _, op := range c.ops {
-				var r int
-				fmt.Sscanf(op[2:], "%d", &r)
-				p.emit("MOVL\t#-1,ASVL")
-				switch op[0] {
-				case 'R':
-					p.rdDO(10, r, 8)
-				case 'D':
-					p.call("FOR$DELETE_D", true, "#10", fmt.Sprintf("#%d", r))
-				case 'F':
-					p.call("FOR$FIND", true, "#10", fmt.Sprintf("#%d", r))
-				case 'W':
-					p.wrDO(10, r, "NEW")
-				}
-				p.asvNext()
-			}
-			p.closeU(10)
-		})
+		p.avCase(fmt.Sprintf("AV%d.DAT", i+1), c.title, c.ops)
 	}
 
 	p.section("B: OTS$ conversions into fields of no columns: R0, then 12 bytes from 4 before the field, bars before the call")
@@ -4422,12 +4492,21 @@ func (p *prog) cvt(routine string, v, n, digits int) {
 func term3b() *prog {
 	p := newProg("FOR81W")
 
-	p.kase("type exactly 133 characters, then Return (READ unit 5, (Q,A))", func() { p.rdQ(5, 300) })
+	// Each long line is printed before its READ, so it can be pasted exactly.
+	ruler := strings.Repeat("1234567890", 14)
+
+	p.kase("paste the line below, exactly 133 characters, then Return (READ unit 5, (Q,A))", func() {
+		p.say(ruler[:133])
+		p.rdQ(5, 300)
+	})
 	p.kase("type a short line (READ unit 5, (Q,A))", func() {
 		p.rdQ(5, 300)
 		p.errs()
 	})
-	p.kase("type exactly 132 characters, then Return (READ unit 5, (Q,A))", func() { p.rdQ(5, 300) })
+	p.kase("paste the line below, exactly 132 characters, then Return (READ unit 5, (Q,A))", func() {
+		p.say(ruler[:132])
+		p.rdQ(5, 300)
+	})
 	p.kase("type a short line (READ unit 5, (Q,A))", func() {
 		p.rdQ(5, 300)
 		p.errs()

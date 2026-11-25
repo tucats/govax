@@ -1,0 +1,3 @@
+! LNK113L's universal routine
+UNIVERSAL=ROUTINE
+GSMATCH=LEQUAL,1,0

@@ -728,6 +728,7 @@ func (d *Dispatcher) bindGrammar() {
 			Stream:  r.Present("STREAM"),
 			CRLF:    r.Present("CRLF"),
 
+			Contiguous: r.Present("CONTIGUOUS") && !r.Negated("CONTIGUOUS"),
 			Protection: strings.Join(r.List("PROTECTION"), ","),
 			Records: rms.HostRecords{
 				Format:          r.String("RECORD_FORMAT"),

@@ -1758,6 +1758,7 @@ knows the file's type.
 COPY source[/HOST] destination[/HOST]
     /BINARY  /LOG  /QUIET  /VERBOSE  /TEST
     (to a volume only) /PROTECTION=(...)
+    (volume to volume only) /[NO]CONTIGUOUS
     (to the host only) /CRLF  /LF  /TIME  /STREAM  /DIRS  /IGNORE
     (from the host only) /RECORD_FORMAT=format  /RECORD_SIZE=n
                          /CARRIAGE_CONTROL=kind  /CONTROL_FIELD_SIZE=n
@@ -1771,7 +1772,9 @@ type given as nothing (`NOTYPE.`, `.;1`) is the null type. A wildcarded
 source copies every match. A copy never replaces an existing version:
 with no version in the destination, a copy between volume files has the
 source's version, or the next if one as high is there, as VMS's COPY
-does. A volume copy keeps the source's contiguity, and an indexed file
+does. A volume copy keeps the source's contiguity, and `/CONTIGUOUS` makes
+the output one run of blocks, marked contiguous, failing at its open as on a
+full volume when no free run is long enough. An indexed file
 whose prolog RMS can't read isn't copied (`%COPY-E-OPENIN`, with RMS's
 status). As VMS's COPY does, it says nothing of a file copied unless
 `/LOG` is given; `/VERBOSE` (govax's own) also shows each, and `/QUIET`

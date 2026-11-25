@@ -735,7 +735,12 @@ A.8.1 is not planned.
     - 13f. The debugger to the debugger round (`testdata/dbg113`'s sessions) (done 2026-11-25).
     - 13g. The FORTRAN rounds: `TestFTN86Oracle` on `testdata/ftn86`'s round 6 and
       `TestF90ROracle` on `testdata/f90r`'s round 3, their awaiting lists emptied (done 2026-11-25).
-14. The close-out.
+14. The close-out. In three parts (2026-11-25), since the author offered another VAX run:
+    - 14a. Round 2 of the probe round (`testdata/err113`'s README, "Round 2"): what 12 and 13 left
+      unconfirmed, written and rehearsed, with FOR81W's terminal lines again and FTN86's round 7
+      and F90R's round 4 (done 2026-11-25).
+    - 14b. Round 2's answers, after the author's run.
+    - 14c. The documents: MANUAL.md, FORTRAN-INTERNALS.md, HELP, PLAN.md, "Where things stand".
 
 Each subtask may begin with a survey of its own, as earlier phases' did.
 
@@ -1677,3 +1682,43 @@ Each subtask may begin with a survey of its own, as earlier phases' did.
   - `ftn86.com`'s copy-out now takes the FTNRTL sources VMS built (`vax/roundN/mar/`), which round 6's
     didn't.
   - Subtask 14, the close-out, is next.
+- **2026-11-25, subtask 14a (done):** round 2 of the probe round, written and rehearsed. The author
+  offered another VAX run, so the close-out is in three parts (the subtask list): this round, its
+  answers, and the documents.
+  - *What it asks* (`testdata/err113`'s README, "Round 2"; `ERR113B.COM` on a volume of its own,
+    `exchangeb.cmd`, with round 1's scratch disk): LNK113L, a shareable image's `.LONG` of its own
+    address (12a's found and left); LNK113D, sixteen shareable images whose DST records total 504
+    to 519 bytes on govax (`testdata/err113/gen.go`, a routine's name a character longer each time),
+    for 13g's rounding, the test to read the totals from VMS's own images; MAC113F, `4+R1`, `2*R3`,
+    and `<R5>` in data (13c); DCL2, a directory left open in the file parameters of eighteen other
+    commands (13c); FULL2, round 1's FULL with the free blocks counted, for the block VMS's REST.DAT
+    left (13c, 13d); HDRFULL, the index file past its header on a volume whose free space is all
+    single blocks (8-block files, every other deleted, 7-block files in the holes, then 1-block
+    files), A.9.1's question 13d left open. Its `[FOR81M]` is round 3c of `testdata/for81`
+    (`gen.go`'s `round3c`, `avCase`), and FOR81W again, which now prints each long line just
+    before its READ for pasting (`prog.say`, `longText`: a descriptor over `.ASCII` pieces, past a
+    MACRO line). FTN86's round 7 and F90R's round 4 run again beside it: round 6 predates 13e's
+    FTNRTL, and STRMATH is to be run as it is now.
+  - *FOR81M on FORRTL over govax* already answered part of 13e2's question, FORRTL's own logic:
+    DELETE (u'r) gives r+2 only when the unit's last direct statement was a READ of r; after FIND r
+    a DELETE of r-1 leaves r (FTNRTL gave r+1), and after a WRITE of r, a FIND, or a READ of another
+    record, r+1. FTNRTL's `ftn_record.mar` follows: a unit byte, `UB_LASTREAD` (UB_ASV+45), set by
+    a direct READ's `DIRECT_DONE` and cleared by `SET_NEXT`; `TestFor81MOnFTNRTL` holds FTNRTL to
+    FORRTL's run until VMS's is back. The built-in FTNRTL.EXE is remade.
+  - *COPY/CONTIGUOUS*: HDRFULL needs a 7-block file to stay in one 8-block hole, and VMS 7.1's COPY
+    has the qualifier (the DCL Dictionary), so govax's has it now (`rms.CopyOptions.Contiguous`,
+    `createBinaryFile`: no free run long enough is RMS$_FUL at the open, no file left; the output
+    marked FCH$V_CONTIG); `TestConsoleCopy_contiguous`, HELP COPY.
+  - *The rehearsal*, `TestErr113BProcedure` (`internal/console/err113b_test.go`), runs ERR113B.COM
+    with P3 `KEEP` (govax has no INITIALIZE of a device: a scratch volume made as `/HEADERS=16`
+    makes it, its files deleted between sections). It changed the procedure three times: VMS 7.1's
+    DCL can't WRITE a 512-byte string (the templates are 128-byte FIX records, their allocations by
+    FDL), a directory must be contiguous so each phase's is preallocated (`CREATE/DIRECTORY
+    /ALLOCATION`), and the templates are made on the scratch volume, whose cluster is a block (the
+    round's volume's is 3, which would have made the 7-block files fill the holes).
+  - *Found in govax*, for 14b: COPY on a volume whose directory can't grow, and a file on a volume
+    with no free header slot, are DCL-E-BADFILESPEC with ods2's words (`FindFreeSlot: no free header
+    slot found`), not VMS's conditions; govax's PRINT took `DCL[X.TXT`'s `DCL` for a symbol
+    (UNDEFSYM). `TestBatchLaterSectionsOracle` passed 40 runs alone; its flake shows only under the
+    whole suite's load.
+

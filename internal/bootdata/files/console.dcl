@@ -818,6 +818,9 @@ grammar console
                     /type=$protection
         qualifier   crlf/id=1264
         qualifier   lf/id=1265
+        ! /CONTIGUOUS (Phase 113's probe round 2): the output in one run of
+        ! blocks on a volume, or the copy fails at its open.
+        qualifier   contiguous/id=1272
         ! govax's (docs/PHASE-86; rms/copyformat.go): what a host file is to be
         ! on the volume, named as in FDL's RECORD section, since a host file
         ! can't say what records it holds.

@@ -24,9 +24,10 @@
 ;			record that isn't there FOR$_ATTACCNON. It takes the current
 ;			record away, and on a direct unit the next record is r+1, its
 ;			NEXTREC and associated variable's value (the LRM's 9.7), but
-;			r+2 if the next record was r+1 already, as after a READ of r
-;			(VMS's FORRTL, round 3's #14 and 3b's section A; after a FIND of
-;			r, whose next record is r, unconfirmed). A sequential-access
+;			r+2 if the unit's last direct statement was a READ of r
+;			(VMS's FORRTL: round 3's #14, 3b's section A, and
+;			testdata/err113's round 2, FOR81M: after a FIND, a WRITE,
+;			or a READ of another record, r+1). A sequential-access
 ;			unit is FOR$_OPEDEFREQ (round 3's #13).
 ;	UNLOCK		A $FREE of the records the unit holds; with none held
 ;			(RMS$_RNL), nothing. On a direct unit, the current record is
@@ -64,6 +65,7 @@ UB_ASV		= 620
 UB_KEY		= UB_ASV+8
 UB_MAXREC	= UB_ASV+12
 UB_CURRENT	= UB_ASV+36
+UB_LASTREAD	= UB_ASV+45
 CURRENT_UNLOCKED = 2			; UB_CURRENT's: a direct unit's, after UNLOCK
 UB_ACTION	= UB_ASV+39
 
@@ -176,9 +178,11 @@ RELATIVE:
 12$:	MOVB	R8,RAB$B_RAC(R6)
 	CMPB	UB_ACCESS(R7),#ACCESS_DIRECT
 	BNEQ	15$
-	ADDL3	#1,R2,R0		; the next record: r+1, or r+2 if that was
-	CMPL	R0,UB_NEXTREC(R7)	;  r+1 already, as after a READ of r (VMS's
-	BNEQ	13$			;  FORRTL: testdata/for81's #14, round 3b's A)
+	ADDL3	#1,R2,R0		; the next record: r+1, or r+2 after a READ
+	TSTB	UB_LASTREAD(R7)		;  of r (VMS's FORRTL: testdata/for81's
+	BEQL	13$			;  #14, round 3b's A, and FOR81M)
+	CMPL	R0,UB_NEXTREC(R7)
+	BNEQ	13$
 	INCL	R0
 13$:	PUSHL	R0
 	PUSHL	R7

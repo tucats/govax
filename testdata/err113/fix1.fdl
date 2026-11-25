@@ -1,0 +1,11 @@
+TITLE	"1 blocks of fixed 128-byte records (Phase 113's probe round 2)"
+
+FILE
+	ORGANIZATION		sequential
+	ALLOCATION		1
+	EXTENSION		0
+
+RECORD
+	CARRIAGE_CONTROL	none
+	FORMAT			fixed
+	SIZE			128

@@ -137,6 +137,12 @@ type CopyOptions struct {
 	// has no protection to give.
 	Protection string
 
+	// Contiguous is /CONTIGUOUS: a volume output must be one run of blocks,
+	// marked contiguous (FCH$V_CONTIG); with no run long enough the copy fails
+	// at its open, as one on a full volume does. Only from a volume file to a
+	// volume.
+	Contiguous bool
+
 	// Quiet suppresses the per-file "%COPY-S-COPIED" (or
 	// "...materialized as directory...") confirmation line /LOG or
 	// Verbose would print. Never read by this file -- see this type's
@@ -505,7 +511,7 @@ func (s *Session) copyVolumeToVolume(sourceText, destText string, opts CopyOptio
 			}
 		}
 
-		version, err = createBinaryFile(who, destVol, destDir, destBm, destIb, name, typ, version, src)
+		version, err = createBinaryFile(who, destVol, destDir, destBm, destIb, name, typ, version, src, opts.Contiguous)
 		if err != nil {
 			asked := dest
 			if destSpec.Version != "" && destSpec.Version != "*" {
@@ -1039,8 +1045,19 @@ func createTextFile(who creator, destVol *volume.Volume, destDir *volume.Directo
 // createTextFile, sharing its same "look the assigned version back up
 // via Directory.Lookup" convention. Functionally matches ods2's own
 // copyOneFileToVolume(binary: true).
-func createBinaryFile(who creator, destVol *volume.Volume, destDir *volume.Directory, destBm *volume.Bitmap, destIb *volume.IndexBitmap, name, typ string, version uint16, src *volume.File) (uint16, error) {
+func createBinaryFile(who creator, destVol *volume.Volume, destDir *volume.Directory, destBm *volume.Bitmap, destIb *volume.IndexBitmap, name, typ string, version uint16, src *volume.File, contig bool) (uint16, error) {
 	fullName := name + "." + typ
+	need := uint32((rawByteLength(src) + ondisk.BlockSize - 1) / ondisk.BlockSize)
+
+	// /CONTIGUOUS: the output's blocks must be one run, so with no free run
+	// that long there's no room for it (ods2's Extend takes the longest run
+	// first, so one long enough gives one extent).
+	if contig && need > 0 {
+		cluster := max(uint32(destVol.Devices[0].Home.ClusterSize), 1)
+		if (need+cluster-1)/cluster > destBm.LargestFreeRun() {
+			return 0, &DeviceFullError{Err: ErrNoContiguousSpace, Open: true}
+		}
+	}
 
 	dst, err := createVersion(who, destVol, destDir, fullName, version, copiedAttributes(src.Header.RecordAttributes), destBm, destIb)
 	if err != nil {
@@ -1050,7 +1067,7 @@ func createBinaryFile(who creator, destVol *volume.Volume, destDir *volume.Direc
 	// The output is given the input's blocks as it is made, as VMS's COPY
 	// makes it: on a volume without room for them the copy fails at its
 	// open, and no file is left (testdata/err113's FULL, VMS 7.1).
-	if need := uint32((rawByteLength(src) + ondisk.BlockSize - 1) / ondisk.BlockSize); need > dst.Blocks() {
+	if need > dst.Blocks() {
 		if err := volume.Extend(dst, destBm, destIb, need-dst.Blocks()); err != nil {
 			made, lookErr := createdVersion(destDir, fullName, version)
 			if lookErr == nil {
@@ -1069,8 +1086,14 @@ func createBinaryFile(who creator, destVol *volume.Volume, destDir *volume.Direc
 		return 0, fmt.Errorf("writing %s: %w", fullName, err)
 	}
 
-	// A copy asks for the contiguity its input has (testdata/vms88's S64 and S65).
-	if bits := src.Header.FileCharacteristics & (ondisk.FchContig | ondisk.FchContigB); bits != 0 && contiguous(dst.Extents) {
+	// A copy asks for the contiguity its input has (testdata/vms88's S64 and
+	// S65), and /CONTIGUOUS for FCH$V_CONTIG.
+	bits := src.Header.FileCharacteristics & (ondisk.FchContig | ondisk.FchContigB)
+	if contig {
+		bits = bits&^ondisk.FchContigB | ondisk.FchContig
+	}
+
+	if bits != 0 && contiguous(dst.Extents) {
 		if err := volume.UpdateHeader(dst, func(h *ondisk.FileHeader, _ *ondisk.Ident) {
 			h.FileCharacteristics |= bits
 		}); err != nil {

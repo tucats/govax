@@ -77,6 +77,16 @@
    FORTRAN, NONE, or for VFC records PRINT.  The default is
    CARRIAGE_RETURN for lines (PRINT for VFC) and NONE with /BINARY.
 
+/CONTIGUOUS
+
+      /CONTIGUOUS
+      /NOCONTIGUOUS (default)
+
+   Makes the output, a file on a volume copied from another, one run of
+   blocks, marked contiguous.  With no free run long enough the copy
+   fails as one on a full volume does, and no file is left.  Without it
+   the output is contiguous only if the input was and a run was free.
+
 /CONTROL_FIELD_SIZE
 
       /CONTROL_FIELD_SIZE=n

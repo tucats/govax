@@ -1,0 +1,20 @@
+	.TITLE	LNK113L	a shareable image's .LONG of its own address
+;
+; Phase 113's probe round 2 (testdata/err113's README): INI113S's first version had
+; .LONG SINIT in its LIB$INITIALIZE section, and govax's LINK kept the address as
+; linked, base 0, with no message. What does VMS's LINK say of a .LONG of one of
+; the image's own addresses, and what fixups does the image get? .ADDRESS beside
+; it is relocated; the image's fixup section and the map come back.
+;
+	.PSECT	$DATA, NOPIC,USR,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+LONGS:	.LONG	ROUTINE		; a .LONG of a code address
+	.LONG	LONGS		; of a data address
+	.LONG	ROUTINE+4	; an expression
+ADDRS:	.ADDRESS ROUTINE	; .ADDRESS, relocated
+	.ADDRESS LONGS
+
+	.PSECT	$CODE, NOPIC,USR,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+	.ENTRY	ROUTINE,^M<>
+	MOVL	#1,R0
+	RET
+	.END

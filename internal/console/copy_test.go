@@ -2,6 +2,7 @@ package console
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -660,5 +661,89 @@ func TestConsoleCopy_deviceFull(t *testing.T) {
 
 	if err := d.Dispatch("CREATE A.TXT"); !errors.As(err, &cond) || cond.Text != "CREATE-E-WRITEERR, error writing DUA0:[000000]A.TXT;1"+reasons {
 		t.Errorf("CREATE = %v, want WRITEERR over RMS$_FUL", err)
+	}
+}
+
+// TestConsoleCopy_contiguous: COPY/CONTIGUOUS (Phase 113's probe round 2) makes
+// its output one run of blocks, marked contiguous, and with no free run long
+// enough fails at its open as one on a full volume does, leaving no file, where
+// plain COPY makes the file in pieces.
+func TestConsoleCopy_contiguous(t *testing.T) {
+	d, c, buf := newCommandDispatcher(t)
+	mountFreshContainerSized(t, c, "DUA0", 400)
+
+	if err := c.cmd().SetDefault("DUA0:"); err != nil {
+		t.Fatalf("SetDefault: %v", err)
+	}
+
+	dir := t.TempDir()
+	eight, one := filepath.Join(dir, "eight.dat"), filepath.Join(dir, "one.dat")
+
+	if err := os.WriteFile(eight, make([]byte, 8*512), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := os.WriteFile(one, make([]byte, 512), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	run := func(line string) error {
+		buf.Reset()
+
+		return d.Dispatch(line)
+	}
+
+	if err := run(`COPY/BINARY "` + eight + `"/HOST EIGHT.DAT`); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := run("COPY/CONTIGUOUS EIGHT.DAT ONE.DAT"); err != nil {
+		t.Fatalf("COPY/CONTIGUOUS: %v", err)
+	}
+
+	if err := run("DIRECTORY/FULL ONE.DAT"); err != nil || !strings.Contains(buf.String(), "Contiguous") {
+		t.Errorf("ONE.DAT isn't marked contiguous (%v):\n%s", err, buf.String())
+	}
+
+	// Free space only in runs of one block: 40 one-block files, the rest of the
+	// volume filled by files halving in size (so few headers), then every other
+	// one-block file deleted.
+	for i := range 40 {
+		if err := run(fmt.Sprintf(`COPY/BINARY "%s"/HOST F%d.DAT`, one, i)); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	for size := 256; size > 0; size /= 2 {
+		filler := filepath.Join(dir, fmt.Sprintf("fill%d.dat", size))
+		if err := os.WriteFile(filler, make([]byte, size*512), 0o644); err != nil {
+			t.Fatal(err)
+		}
+
+		// New versions of the file until one doesn't fit.
+		for run(fmt.Sprintf(`COPY/BINARY "%s"/HOST FILL%d.DAT`, filler, size)) == nil {
+		}
+	}
+
+	for i := 0; i < 40; i += 2 {
+		if err := run(fmt.Sprintf("DELETE F%d.DAT;*", i)); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	var cond vmserrors.ConditionError
+
+	err := run("COPY/CONTIGUOUS EIGHT.DAT TWO.DAT")
+	if !errors.As(err, &cond) || !strings.HasPrefix(cond.Text, "COPY-E-OPENOUT, error opening DUA0:[000000]TWO.DAT;") ||
+		!strings.Contains(cond.Text, "-RMS-F-FUL,") {
+		t.Errorf("COPY/CONTIGUOUS with no run of 8 = %v, want OPENOUT over RMS$_FUL", err)
+	}
+
+	if err := run("DIRECTORY TWO.DAT"); err == nil {
+		t.Errorf("TWO.DAT was left:\n%s", buf.String())
+	}
+
+	if err := run("COPY EIGHT.DAT THREE.DAT"); err != nil {
+		t.Errorf("plain COPY in pieces: %v", err)
 	}
 }

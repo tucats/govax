@@ -1,0 +1,13 @@
+	.TITLE	MAC113F	a register name after an operator in data
+;
+; Phase 113's probe round 2 (testdata/err113's README): round 1's MAC113A found
+; VMS's MACRO refusing a register name that begins a data item (R1, R1+4). govax
+; takes 4+R1 as an expression with a symbol R1 (undefined). Is it?
+;
+	.PSECT	DATA, NOEXE,WRT,LONG
+A:	.LONG	4+R1
+B:	.LONG	1,4+R2
+C:	.WORD	2*R3
+D:	.ADDRESS 4+R4
+E:	.LONG	<R5>
+	.END

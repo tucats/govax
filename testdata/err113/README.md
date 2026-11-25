@@ -129,3 +129,91 @@ files; INDEXF.SYS 3,374 blocks in eleven extents, all in its one header).
 At the terminal, `TYPE NOCC.DAT` showed `ONE` at the start of a line and `TWO` after it on
 the same line; `AFTER` started a line of its own. In the log the three are one line,
 `ONETWOAFTER`.
+
+## Round 2
+
+`docs/planning/PHASE-113 - Fortran errata.md`'s subtask 14a: what round 1 and subtask 13 left
+unconfirmed, on a volume of its own (`exchangeb.cmd`, ERR113B) with round 1's scratch disk,
+which `ERR113B.COM` initializes again (twice). `gen.go` writes the LNK113D sweep; the rest is by
+hand.
+
+| Section | The question | Where it came from |
+| --- | --- | --- |
+| LNK113L | A shareable image's `.LONG` of one of its own addresses (`lnk113l.mar`): govax's LINK keeps the address as linked, base 0, with no message, and relocates `.ADDRESS`. What does VMS's LINK say, and what fixups does the image get? The image, object, and map come back | 12a's "found and left" |
+| LNK113D | Sixteen shareable images (`lnk113d00.mar` to `lnk113d15.mar`, by `gen.go`) whose debug symbol tables' records total 504 to 519 bytes on govax, one routine's name a character longer each time. VMS's LINK starts the fixup records on a block of their own and reserves the blocks both parts fill and one more: rounded up, or down and two more? Only a total of exactly 512 tells; the images come back, and the test reads the totals from VMS's own images | 13g |
+| MAC113F | A register name after an operator in data (`4+R1`, `2*R3`, `<R5>`): round 1 found VMS's MACRO refusing one that begins an item | 13c |
+| DCL2 | A directory left open (`DCL[X.TXT`) in the file parameters of DIRECTORY, TYPE, DELETE, RENAME, DUMP, CREATE, OPEN, PRINT, SUBMIT, CONVERT, MACRO, LINK, LIBRARY, ANALYZE, RUN, BACKUP, SET DEFAULT, and `@`: which are file specifications to DCL (CLI$_DIRECT before the command runs, as PURGE's and COPY's were)? | 13c |
+| FULL2 | Round 1's FULL with the free blocks counted: VMS's REST.DAT stopped with one block free. How big is it then, and is the block still free after CLOSE? | 13c, 13d |
+| HDRFULL | The index file past its header on a volume whose free space is all single blocks: 8-block files fill it (COPY/CONTIGUOUS), every other one goes, 7-block files take the holes (COPY/CONTIGUOUS), then 1-block files need headers the index file can get only a block at a time. Does VMS give INDEXF.SYS an extension header, or refuse (HEADERFULL), and when? Each phase's directory is made big enough first, since a directory must be contiguous | A.9.1, 13d |
+
+The volume's `[FOR81M]` is round 3c of `testdata/for81` (its `gen.go`'s `round3c`): FOR81M, the
+associated variable after FIND, WRITE, and READ of another record, then DELETE by number, and
+FOR81W again, the terminal lines of round 3b, which now prints each line to paste just before
+it reads it.
+
+Beside the volume, the session runs `testdata/ftn86`'s round 7 and `testdata/f90r`'s round 4
+again: subtask 13's FTNRTL (13e's and 14a's changes came after round 6), and STRMATH as it
+is now.
+
+### Running round 2
+
+1. Build the volumes, from the repository root. Rename the old `ftn86-exchange.dsk` and
+   `f90r-exchange.dsk` in `testdata/disks` first (their READMEs):
+
+       go build -o govax ./cmd/govax
+       ./govax --profile tbprobe --system-file none console < testdata/err113/exchangeb.cmd
+       ./govax console < testdata/ftn86/exchange.cmd
+       ./govax console < testdata/ftn86/exchanged.cmd
+       ./govax --profile tbprobe --system-file none console < testdata/f90r/exchange.cmd
+
+2. In simh, attach `testdata/disks/err113b-exchange.dsk` as DUA1 and round 1's scratch disk,
+   `testdata/disks/err113-scratch.dsk`, as DUA3 (`set rq3 rd51`). As SYSTEM:
+
+       $ MOUNT DUA1: ERR113B
+       $ SET DEFAULT DUA1:[000000]
+       $ @ERR113B/OUTPUT=ERR113B.LOG
+
+   HDRFULL makes some 5,000 files, likely the longest part on simh. If a section has to be
+   stopped, P2 starts at one (`@ERR113B/OUTPUT=ERR113B2.LOG "" HDRFULL`). Then the FORRTL part
+   and the terminal:
+
+       $ SET DEFAULT DUA1:[FOR81M]
+       $ @FOR81M/OUTPUT=FOR81M.LOG
+       $ RUN FOR81W
+       $ DISMOUNT DUA1:
+
+   FOR81W prints each long line before it reads it: copy that line and paste it as the
+   answer, then Return. After each long line, wait a moment: if the next case's short line
+   is read at once, with nothing typed, note it; that is the question. Paste the terminal's
+   text from `$ RUN FOR81W` to its end into `testdata/for81/vax/for81w.log` (the old one is
+   round 3b's, 121 and 119 characters; keep it as `for81w-round3b.log`).
+
+   Then FTN86 and F90R, each volume as DUA1 in turn (their READMEs):
+
+       $ MOUNT DUA1: FTN86
+       $ SET DEFAULT DUA1:[000000]
+       $ @FTN86/OUTPUT=FTN86.LOG
+       $ @FTN86D/OUTPUT=FTN86D.LOG
+       $ DISMOUNT DUA1:
+       $ MOUNT DUA1: F90R
+       $ SET DEFAULT DUA1:[000000]
+       $ @F90R/OUTPUT=F90R.LOG
+       $ DISMOUNT DUA1:
+
+3. Copy the results back:
+
+       mkdir -p testdata/err113/vax/round2
+       ./govax --profile tbprobe --system-file none console < testdata/err113/copyoutb.cmd
+       mkdir -p testdata/ftn86/vax/round7/mar
+       ./govax console < testdata/ftn86/copyout.cmd
+       ./govax console < testdata/ftn86/copyoutd.cmd
+       mkdir -p testdata/f90r/vax/round4/mar testdata/f90r/vax/round4/fcalc
+       ./govax --profile tbprobe --system-file none console < testdata/f90r/copyout.cmd
+
+   The scratch disk stays in `testdata/disks` as the VAX left it, HDRFULL's index file in it.
+
+`TestErr113BProcedure` (`internal/console/err113b_test.go`) rehearses ERR113B.COM on govax
+with P3 `KEEP` (govax has no INITIALIZE of a device, so the test mounts a scratch volume made
+as `/HEADERS=16` makes it and the procedure deletes its files between sections), and
+`TestFor81MOnFTNRTL` holds FTNRTL to FOR81M on VMS's FORRTL over govax until VMS's own run,
+`testdata/for81/vax/for81m-vax.txt`, is back.

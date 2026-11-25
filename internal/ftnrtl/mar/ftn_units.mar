@@ -171,6 +171,9 @@ UB_OPENREC	= UB_ASV+43		; byte: a record a nonadvancing statement left
 					;  open in the buffer: 0 none, 1 an output
 					;  record, 2 an input record
 UB_DOLLAR	= UB_ASV+44		; byte: 1 if a $ marked the open output record
+UB_LASTREAD	= UB_ASV+45		; byte: 1 if the unit's last direct statement
+					;  was a READ (DIRECT_DONE from a $GET), for
+					;  DELETE (u'r)'s next record (FTN_RECORD)
 UB_RECLEN	= UB_ASV+48		; long: the open record's length
 UB_RECPOS	= UB_ASV+52		; long: and the position the next statement
 					;  goes on from, its left tab limit
@@ -972,6 +975,7 @@ FRAME_ESA	= FRAME_NAM-<RSA_SIZE+1>
 	PUSHL	R1
 	BSBW	DIRECT_DONE
 	POPL	R1
+	MOVB	#1,UB_LASTREAD(R3)	; a READ's, for DELETE (u'r)
 	INCL	UB_RECORDS(R3)
 	MOVL	#SS$_NORMAL,R0
 	RET
@@ -1048,11 +1052,12 @@ DIRECT_DONE:
 
 ;
 ; SET_NEXT: R0 is the next direct record of the unit whose block is R6: its
-; NEXTREC, and its associated variable's value, a word or a longword. Changes
-; R1.
+; NEXTREC, and its associated variable's value, a word or a longword; the
+; statement is no READ, unless its caller says so after. Changes R1.
 ;
 SET_NEXT:
 	MOVL	R0,UB_NEXTREC(R6)
+	CLRB	UB_LASTREAD(R6)		; a READ sets it again after this
 	MOVL	UB_ASV(R6),R1
 	BEQL	20$
 	CMPL	UB_ASVSIZE(R6),#2
