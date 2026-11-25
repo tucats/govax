@@ -34,7 +34,10 @@
    stop agreeing, a difference section starts, and it ends where the
    files agree again for /MATCH records in a row (3 unless told
    otherwise), or where both files end.  Records that agree inside a
-   section, fewer than /MATCH of them, are part of it.
+   section, fewer than /MATCH of them, are part of it.  Where the files
+   could get back in step at more than one place, the section ends
+   where it leaves the fewest records on its larger side, taking more
+   of the first file's when the sides would be the same.
 
    Each section is listed, then the number of sections and of
    difference records (a section counts as many as its larger side
@@ -58,7 +61,8 @@
    blanks, and its text, cut at the listing's width.
 
    The status DIFFERENCES leaves is %X006C8009 (success) when the files
-   are the same, and %X006C8013 (informational) when they differ.
+   are the same, %X006C8013 (informational) when they differ, and
+   %X006C8018 (warning, MAXDIF) when /MAXIMUM_DIFFERENCES stopped it.
 
 2 Restrictions
 
@@ -109,7 +113,14 @@
 
    /MAXIMUM_DIFFERENCES=n
 
-   Stops comparing after n difference records.  0 is no limit.
+   Stops comparing at the section that brings the count of difference
+   records to n.  That section lists only as many records of each file
+   as the count had left, and no matching records after them; the
+   listing ends as usual, and then DIFFERENCES warns:
+
+     %DIF-W-MAXDIF, maximum number of difference records encountered - DIF aborted
+
+   0 is no limit.
 
 /MERGED
 
@@ -175,8 +186,11 @@
    /WINDOW=n
 
    How far past a difference, in records, to look for the files to be
-   in step again.  By default, to the ends of both files.  n must be
-   greater than 0.
+   in step again before moving on: with no place found within n
+   records of either file, DIFFERENCES looks again a record further on
+   in both, and so on.  By default the search goes to the ends of both
+   files.  A block of records moved further than n is listed as part of
+   a larger section.  n must be greater than 0.
 
 2 Examples
 

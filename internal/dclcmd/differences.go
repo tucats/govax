@@ -104,6 +104,13 @@ func (c *Context) Differences(req DifferencesRequest) error {
 		return err
 	}
 
+	// A comparison /MAXIMUM_DIFFERENCES stopped lists its last section with
+	// no matched records after it, and the echo says /MERGED=0 (testdata/
+	// dif116's L01_1 to L01_9, XG211).
+	if res.Stopped {
+		d.merged = 0
+	}
+
 	diff.Echo(l, d.echo(outName), []string{
 		master.Name + changeBarEcho(req.MasterBar, req.MasterBarList),
 		revision.Name + changeBarEcho(req.RevisionBar, req.RevisionBarList),
@@ -114,7 +121,14 @@ func (c *Context) Differences(req DifferencesRequest) error {
 	}
 
 	status := uint32(vmsdef.DIFIdentical)
-	if len(res.Sections) > 0 {
+
+	switch {
+	case res.Stopped:
+		// After the listing, even one written to SYS$OUTPUT (L04).
+		c.Printf("%%DIF-W-MAXDIF, %s\n", vmsdef.DifferencesMessages["MAXDIF"])
+
+		status = vmsdef.DIFMaxDif
+	case len(res.Sections) > 0:
 		status = vmsdef.DIFDifferent
 	}
 

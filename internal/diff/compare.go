@@ -10,12 +10,12 @@ type Options struct {
 	// the first pair of records that agree.
 	Match int32
 
-	// Window is /WINDOW: how far past a section's start, in either file,
-	// to look for the place the files are in step again; 0 is no limit.
+	// Window is /WINDOW: how deep a search for the place the files are in
+	// step again goes before it moves a record on (resync); 0 is no limit.
 	Window int
 
 	// MaxDifferences is /MAXIMUM_DIFFERENCES: the comparison stops once
-	// its sections hold this many records; 0 is no limit.
+	// its sections hold this many records (Result.Stopped); 0 is no limit.
 	MaxDifferences int
 }
 
@@ -79,14 +79,24 @@ func (c *comparison) run() Result {
 
 		p, q := c.resync(i, j)
 		s := Section{Master: Span{i, p}, Revision: Span{j, q}}
-		res.Sections = append(res.Sections, s)
-		res.Records += s.Records()
 
-		if c.opts.MaxDifferences > 0 && res.Records >= c.opts.MaxDifferences {
+		// The section that reaches /MAXIMUM_DIFFERENCES ends the comparison,
+		// and is cut: it lists only as many records of each file, from its
+		// start, as the limit had left, whether or not they are the section's
+		// (testdata/dif116's L01_1 to L01_9: the master's "entry 10" after
+		// an insertion).
+		if limit := c.opts.MaxDifferences; limit > 0 && res.Records+s.Records() >= limit {
+			rest := limit - res.Records
+			s = Section{Master: Span{i, min(i+rest, n)}, Revision: Span{j, min(j+rest, m)}}
+			res.Sections = append(res.Sections, s)
+			res.Records = limit
 			res.Stopped = true
 
 			break
 		}
+
+		res.Sections = append(res.Sections, s)
+		res.Records += s.Records()
 
 		i, j = p, q
 	}
@@ -94,33 +104,53 @@ func (c *comparison) run() Result {
 	return res
 }
 
-// resync finds where the files are in step again after records a[i] and b[j]
-// differ: the place (p, q), past i and j, that leaves the fewest records
-// before it, both files' together, and among those the one furthest into
-// the master. With none, the section runs to both files' ends.
+// resync finds where the files are in step again after records a[i] and
+// b[j] differ, by the rule fitted to VMS 7.1's listings (doc.go's "The
+// search"): a square of places around (i, j) growing a record at a time, at
+// depth d first (i+d, j), then (i, j+d), (i+d, j+1), (i+1, j+d), and so on
+// to (i+d, j+d); the first place where the files are in step ends the
+// section. Without /WINDOW the square grows until it covers both files' ends,
+// which are always in step. With /WINDOW=w it grows only to depth w; then
+// the search starts again a record further on in both files, at depth 0,
+// until the files end.
 func (c *comparison) resync(i, j int) (int, int) {
 	n, m := len(c.a), len(c.b)
+	w := c.opts.Window
 
-	for k := 1; k <= (n-i)+(m-j); k++ {
-		for dp := k; dp >= 0; dp-- {
-			dq := k - dp
-			p, q := i+dp, j+dq
+	for from := 1; ; from = 0 {
+		depth := max(n-i, m-j)
+		if w > 0 {
+			depth = w
+		}
 
-			if p > n || q > m {
-				continue
-			}
-
-			if c.opts.Window > 0 && (dp > c.opts.Window || dq > c.opts.Window) {
-				continue
-			}
-
-			if c.inStep(p, q) {
+		for d := from; d <= depth; d++ {
+			if p, q, ok := c.square(i, j, d); ok {
 				return p, q
+			}
+		}
+
+		if w == 0 || (i >= n && j >= m) {
+			return n, m
+		}
+
+		i, j = min(i+1, n), min(j+1, m)
+	}
+}
+
+// square looks for a place in step on the edge of the square of depth d
+// from (i, j), the master's side of each pair of places first.
+func (c *comparison) square(i, j, d int) (int, int, bool) {
+	n, m := len(c.a), len(c.b)
+
+	for t := 0; t <= d; t++ {
+		for _, at := range [2][2]int{{i + d, j + t}, {i + t, j + d}} {
+			if p, q := at[0], at[1]; p <= n && q <= m && c.inStep(p, q) {
+				return p, q, true
 			}
 		}
 	}
 
-	return n, m
+	return 0, 0, false
 }
 
 // inStep says whether the files are in step at (p, q): both end there, or

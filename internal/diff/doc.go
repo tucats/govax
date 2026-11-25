@@ -23,12 +23,50 @@
 //	line 4      line 4
 //
 // has one section: no master records, and the revision's "extra cat" and
-// "extra dog". "Nearest" is the place that leaves the fewest records in the
-// section, both files' together (Compare).
+// "extra dog".
 //
-// This is the DCL Dictionary's description; VMS 7.1's choices where records
-// repeat are what the probe's generated pairs show, and the rule is fitted to
-// them in the phase's subtask 4.
+// # The search
+//
+// That is the DCL Dictionary's description. Which place is "nearest", where
+// records repeat, the manual doesn't say; the rule here was fitted to VMS
+// 7.1's listings of the probe's 570 generated pairs (testdata/dif116's
+// GENERATED section, with /MATCH, /WINDOW, /MERGED, and
+// /MAXIMUM_DIFFERENCES), and fits every one, and every merged listing of
+// the LAYOUT, MATCHING, and LIMITS sections (TestProbeListings).
+//
+// From the first records that differ, a[i] and b[j], the search looks at the
+// places (p, q) on the edge of a square growing a record at a time: at depth
+// d, (i+d, j) and (i, j+d), then (i+d, j+1) and (i+1, j+d), and so on to
+// (i+d, j+d). Of each pair it tries the master's first. The first place
+// where /MATCH records agree, or both files end, ends the section. So the
+// search minimizes the larger of the two sides, not their sum, and between
+// sides of equal size prefers to take more of the master. In G017 with
+// /MATCH=1, after the master's record 3 and the revision's 4 agree,
+//
+//	master    revision
+//	delta     alpha        <- the section starts here
+//	bravo     charlie
+//	delta     bravo
+//	alpha     delta
+//
+// VMS ends the section at bravo (depth 2: one master record, two revision
+// records), not at alpha (depth 3: three master records, none of the
+// revision's), though both leave three records in the section; the first
+// rule, the fewest records in the section, chose alpha, and was wrong in four
+// of the 40 /MATCH=1 pairs.
+//
+// /WINDOW=w stops the square at depth w. With no place found, the search
+// starts again from (i+1, j+1), at depth 0, and so on until both files end.
+// So a changed block longer than the window still ends where it would have
+// (M03 at every /WINDOW), but a moved block, whose place in step lies
+// outside the window on one side, is swallowed into a larger section (H04 at
+// /WINDOW=2), and the section may end later than it would have without the
+// window (H08 at /WINDOW=2, which a search moving on by w records, the first
+// reading, got wrong).
+//
+// /MAXIMUM_DIFFERENCES=n stops at the section that brings the count to n or
+// more: that section lists only the records the count had left, of each file
+// from its start, with no matched records after it.
 //
 // # The listing
 //

@@ -423,6 +423,28 @@ var dif116Later = map[string]string{
 	"N36": "/PARALLEL's listing is subtask 5's",
 	"N62": "/PARALLEL's listing is subtask 5's",
 	"N64": "the other forms' listings are subtasks 5 and 6's",
+	"L02": "/PARALLEL's and /SEPARATED's listings are subtask 5's",
+	"L03": "/SLP's listing is subtask 6's",
+}
+
+// dif116LaterPrefixes are the generated pairs run again in another form, the
+// later subtasks' to hold: PGnnn /PARALLEL and EGnnn /SEPARATED (5), SGnnn
+// /SLP (6).
+var dif116LaterPrefixes = []string{"PG", "EG", "SG"}
+
+// dif116IsLater says a case's listing is a later subtask's.
+func dif116IsLater(id string) bool {
+	if _, later := dif116Later[id]; later {
+		return true
+	}
+
+	for _, p := range dif116LaterPrefixes {
+		if strings.HasPrefix(id, p) {
+			return true
+		}
+	}
+
+	return false
 }
 
 // dif116NotCompared are cases an oracle test leaves out.
@@ -481,7 +503,7 @@ func holdDif116(t *testing.T, sections ...string) {
 		}
 
 		gl, wl := dif116Status(g.Log, w.Log), w.Log
-		if _, later := dif116Later[cas.ID]; later {
+		if dif116IsLater(cas.ID) {
 			gl, wl = dif116Messages(gl), dif116Messages(wl)
 		}
 
@@ -499,7 +521,7 @@ func holdDif116(t *testing.T, sections ...string) {
 			continue
 		}
 
-		if _, later := dif116Later[cas.ID]; later {
+		if dif116IsLater(cas.ID) {
 			continue
 		}
 
@@ -517,4 +539,15 @@ func TestDif116NamesOracle(t *testing.T) {
 	t.Parallel()
 
 	holdDif116(t, "NAMES", "OUTPUT")
+}
+
+// TestDif116MergedOracle holds the comparison and the merged form to VMS's
+// (subtask 4): the layout, the matching rule with /MATCH and /WINDOW,
+// /MAXIMUM_DIFFERENCES, and the 570 generated pairs, each case's messages,
+// status, and listing, echo and all. (internal/diff's TestProbeListings holds
+// the listings without the command, faster.)
+func TestDif116MergedOracle(t *testing.T) {
+	t.Parallel()
+
+	holdDif116(t, "LAYOUT", "MATCHING", "LIMITS", "GENERATED")
 }

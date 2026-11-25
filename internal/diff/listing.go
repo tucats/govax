@@ -58,7 +58,11 @@ type Input struct {
 // records, then revision's, each side followed by after records that match
 // (/MERGED; a negative count is none, as VMS's /MERGED=-1 was).
 func Merged(l *Listing, master, revision Input, res Result, after int32) {
-	for _, s := range res.Sections {
+	for k, s := range res.Sections {
+		if res.Stopped && k == len(res.Sections)-1 {
+			after = 0
+		}
+
 		l.Cut(strings.Repeat("*", 12))
 		side(l, master, s.Master, after)
 		l.Cut(strings.Repeat("*", 6))

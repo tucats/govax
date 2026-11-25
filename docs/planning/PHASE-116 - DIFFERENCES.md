@@ -207,8 +207,10 @@ subtask needs are in the listings, which its oracle holds govax to.
    `/MERGED`'s n matched records after it; an insertion's master side
    (or a deletion's revision side) lists only those. Which records a
    section claims when records repeat (A23, the generated pairs) is not
-   the longest common subsequence's choice: subtask 4 fits the rule to
-   the 540 generated runs.
+   the longest common subsequence's choice: subtask 4 fitted the rule to
+   the generated runs (`internal/diff`'s `doc.go`, "The search": a
+   square search, the larger side minimized, the master's place first;
+   /WINDOW a square of that depth, moved on a record at a time).
 3. **Counting.** A section's count is its larger side's records, the
    matched ones inside it included (A16: 3); the total is their sum.
    `/MAXIMUM_DIFFERENCES` stops with `%DIF-W-MAXDIF, maximum number of
@@ -308,7 +310,7 @@ Each is one commit, with tests, stopping for review.
    shape, the messages and statuses in `vmsdef`, names (the second's
    defaults, the next lower version), the errors, identical files, the
    output file; held to the probe's NAMES section.
-4. **The engine and the merged form**: `internal/diff`'s matching,
+4. **The engine and the merged form** (done 2026-11-25): `internal/diff`'s matching,
    `/MATCH`, `/WINDOW`, `/MAXIMUM_DIFFERENCES`, the merged listing, the
    summary, and the closing echo; held to every generated pair.
 5. **The other forms**: `/SEPARATED`, `/PARALLEL`, `/CHANGE_BAR`,
@@ -466,3 +468,35 @@ The author's answers to the plan's three questions:
     sections show them: /MODE's order (HEXADECIMAL, OCTAL, ASCII, from N64's
     one case), /SEPARATED's and /CHANGE_BAR's NUMBER forms, and which
     characters LEFT and RIGHT name ("[" and "]" assumed).
+- **2026-11-25 — subtask 4 done: the engine and the merged form.** The
+  matching rule fitted to VMS's listings (`internal/diff/doc.go`'s "The
+  search", `compare.go`'s `resync` and `square`), and it fits all 541 merged
+  listings of the LAYOUT, MATCHING, LIMITS, and GENERATED sections.
+  - **The rule.** Subtask 3's (the fewest records in the section, both sides
+    together, the master's furthest place first) already fitted every pair at
+    the defaults, but four of the 40 `/MATCH=1` pairs (M1G017, M1G018,
+    M1G023, M1G033) showed VMS minimizing the *larger* side: the search is a
+    square growing a record at a time from the first records that differ, at
+    depth d trying (i+d, j+t) then (i+t, j+d) for t from 0 to d. Searching
+    the revision's place first fails 11 cases.
+  - **/WINDOW=w** stops the square at depth w; with no place found the
+    search starts again a record further on in both files, at depth 0. So
+    M03's eight changed records end where they would have at every window,
+    while a moved block is swallowed (H04 at /WINDOW=2). Moving on by w
+    records, the first reading, fitted all but five (H08_W2, H14_W5, H15_W2,
+    H22_W5, H26_W5): in H08_W2, for one, a jump of two records passes over
+    the place VMS's last section ends, a record before both files' ends.
+  - **/MAXIMUM_DIFFERENCES=n** stops at the section that brings the count to
+    n or more (L01_9: exactly 9); that section is cut to the records the
+    count had left, of each file from the section's start, whether or not
+    they are the section's (L01_2's master "entry 10" after an insertion),
+    with no matched records after it, and the echo says `/MERGED=0`. The
+    listing is written, then `%DIF-W-MAXDIF` (after it at the terminal too,
+    L04), status `%X006C8018`.
+  - **Tests.** `internal/diff`'s `TestProbeListings` (`probe_test.go`)
+    reads `cases.txt` and holds the 541 listings, up to the echo, in a few
+    milliseconds; `internal/console`'s `TestDif116MergedOracle` runs those
+    sections on govax and holds every case's messages, status, and whole
+    listing, but for the later forms' (PGnnn and EGnnn, subtask 5; SGnnn and
+    L03, subtask 6; L02, `dif116IsLater`). HELP DIFFERENCES describes the
+    rule, /WINDOW, /MAXIMUM_DIFFERENCES, and MAXDIF's status.
