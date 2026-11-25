@@ -102,4 +102,44 @@ func TestErr113BProcedure(t *testing.T) {
 			t.Errorf("no section %s in the log:\n%s", name, log)
 		}
 	}
+
+	vmsLog, err := os.ReadFile(filepath.Join("testdata", "err113", "vax", "round2", "err113b.log"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	vms := vms93Sections(strings.ReplaceAll(string(vmsLog), "\r", ""))
+
+	for name, diffs := range err113BDifferences {
+		want := vms[name]
+
+		for _, d := range diffs {
+			if !strings.Contains(want, d.vms) {
+				t.Errorf("%s: VMS's section has no %q (err113BDifferences: %s)", name, d.vms, d.why)
+			}
+
+			want = strings.Replace(want, d.vms, d.govax, 1)
+		}
+
+		if got := sections[name]; got != want {
+			t.Errorf("%s is\n%s\nVMS's (with err113BDifferences)\n%s", name, got, want)
+		}
+	}
 }
+
+// err113BDifferences are the round's sections TestErr113BProcedure compares
+// with VMS's log, each with where govax's differs and why.
+var err113BDifferences = map[string][]err113Difference{
+	// Every command's file specification with a directory left open is
+	// CLI$_DIRECT before the command runs (the grammar's $FILE; @ its own).
+	"DCL2": {{
+		vms: "%DCL-W-DIRECT, invalid directory syntax - check brackets and other delimiters\n" +
+			" \\DCL[X.TXT\\\n  $STATUS == \"%X00038030\"\n%DCL-W-DIRECT, invalid directory syntax - check brackets and other delimiters\n" +
+			" \\DCL[X.COM\\\n",
+		govax: "%DCL-E-UNDEFSYM, Undefined symbol \"DCL\"\n  $STATUS == \"%X00200072\"\n" +
+			"%DCL-W-DIRECT, invalid directory syntax - check brackets and other delimiters\n" +
+			" \\DCL[X.COM\\\n",
+		why: "govax's PRINT is the machine console's, printing an expression, not VMS's queue command",
+	}},
+}
+

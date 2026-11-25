@@ -890,8 +890,12 @@ func (g *Grammar) resolveValue(typ ValueType, typeName string, token string) (va
 		return Value{IsString: true, IsKeyword: true, Str: kw.Name, Int: kw.ID}, kw.Syntax, neg, nil
 
 	case TypeFile:
-		if !directoryClosed(token) {
-			return Value{}, "", false, vmserrors.NewSegment(vmserrors.CLI_DIRECT, upcase(token))
+		if !DirectoryClosed(token) {
+			// The segment stops at a version's ";" (VMS 7.1: DELETE
+			// DCL[X.TXT;1 showed \DCL[X.TXT\; testdata/err113's round 2).
+			segment, _, _ := strings.Cut(upcase(token), ";")
+
+			return Value{}, "", false, vmserrors.NewSegment(vmserrors.CLI_DIRECT, segment)
 		}
 
 		return Value{IsString: true, Str: token}, "", false, nil
@@ -913,10 +917,10 @@ func badParameter(err error, name string) error {
 	return vmserrors.Wrap(vmserrors.CLI_BADPARAMETER, err, name)
 }
 
-// directoryClosed reports whether spec, a file specification, closes each
+// DirectoryClosed reports whether spec, a file specification, closes each
 // directory it opens: a "[" (or "<") outside quotes has a "]" (or ">")
 // after it. A quoted host name is taken as it is.
-func directoryClosed(spec string) bool {
+func DirectoryClosed(spec string) bool {
 	quoted := false
 
 	for i := 0; i < len(spec); i++ {

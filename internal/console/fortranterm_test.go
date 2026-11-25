@@ -370,4 +370,18 @@ func TestFortranTerminalLongLine(t *testing.T) {
 	if out := shareRun(t, d, buf, "LONGLN"); out != want {
 		t.Errorf("RUN LONGLN printed:\n%q\nwant\n%q", out, want)
 	}
+
+	// Exactly 133 characters (testdata/err113's round 2, FOR81W): VMS's read
+	// ended when the buffer filled, with no Return, and was ERRDURREA with
+	// RMS$_TNS; a Return typed then is the next READ's line, empty. govax's
+	// terminal gives lines whole, so the Return is that empty line.
+	c.In = strings.NewReader(strings.Repeat("x", 133) + "\n")
+
+	want = " 39 000181B8\n" +
+		"  0   0\n" +
+		"  $STATUS == \"%X00000001\"\n"
+
+	if out := shareRun(t, d, buf, "LONGLN"); out != want {
+		t.Errorf("RUN LONGLN of 133 printed:\n%q\nwant\n%q", out, want)
+	}
 }

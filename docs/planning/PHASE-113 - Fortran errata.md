@@ -739,7 +739,9 @@ A.8.1 is not planned.
     - 14a. Round 2 of the probe round (`testdata/err113`'s README, "Round 2"): what 12 and 13 left
       unconfirmed, written and rehearsed, with FOR81W's terminal lines again and FTN86's round 7
       and F90R's round 4 (done 2026-11-25).
-    - 14b. Round 2's answers, after the author's run.
+    - 14b. Round 2's answers, after the author's run (2026-11-25), in parts: 14b1, DCL's file
+      parameters, MACRO's registers in data, FOR81M, and FOR81W (done 2026-11-25); 14b2, LINK's
+      NONPICREF and the DST's blocks; 14b3, RMS's extension size and HEADERFULL (ods2).
     - 14c. The documents: MANUAL.md, FORTRAN-INTERNALS.md, HELP, PLAN.md, "Where things stand".
 
 Each subtask may begin with a survey of its own, as earlier phases' did.
@@ -1721,4 +1723,30 @@ Each subtask may begin with a survey of its own, as earlier phases' did.
     slot found`), not VMS's conditions; govax's PRINT took `DCL[X.TXT`'s `DCL` for a symbol
     (UNDEFSYM). `TestBatchLaterSectionsOracle` passed 40 runs alone; its flake shows only under the
     whole suite's load.
+- **2026-11-25, subtask 14b1 (done):** round 2 ran on VMS 7.1 (`testdata/err113`'s README, "What
+  came back from round 2"; FTN86's round 7 and F90R's round 4 didn't run, for a later round).
+  - *DCL's file parameters* (DCL2): every command VMS was asked about refused a directory left
+    open as CLI$_DIRECT before running, so CREATE (and /FDL), CONVERT, DIRECTORY, DELETE, DUMP,
+    BACKUP, TYPE, MACRO, LINK, ANALYZE, LIBRARY, RENAME, SUBMIT, OPEN, RUN, and SET DEFAULT take
+    the grammar's `$FILE`; the segment stops at a version's `;`; `@` checks its own
+    (`dcl.DirectoryClosed`, the segment left out as VMS's). govax's PRINT is the console's, so its
+    case differs (`err113BDifferences`); `TestErr113BProcedure` holds DCL2 to VMS's log.
+  - *MACRO's registers in data* (MAC113F): an operator before a register ends the item
+    (`exprState.stopAtRegister`; `4+R1` stores 4, `2*R3` 2), and the register is the next item,
+    round 1's rule for a later one (DATALSTSYN and a zero; `.ADDRESS` ADRLSTSYNX alone, nothing
+    stored), the `!` under the operator (`operatorBefore`); `<R5>` first is DIRSYNX, the `!` under
+    the R (`registerGroupAhead`). `TestErr113Macro` holds the listing to VMS's but for the zeros'
+    relocatable marks, as MAC113A's.
+  - *FOR81M*: VMS's FORRTL gave the nine cases 14a's FTNRTL gives; `TestFor81MOnFTNRTL` and
+    `TestFor81MProcedure` hold both to `vax/for81m-vax.txt`.
+  - *FOR81W*: a READ of exactly 133 characters at the terminal ended when the buffer filled, with
+    no Return, ERRDURREA with RMS$_TNS, as govax's `terminalRecord` does; a Return typed then is the
+    next read's empty line, which is what govax's whole lines give. `TestFortranTerminalLongLine`
+    has the case.
+  - *For 14b2 and 14b3*: LNK113L (NONPICREF, BASDUERRS); LNK113D (VMS's DST blocks: the traceback
+    records' blocks, then `ceil((fixup bytes + X) / 512)` for an X from 21 to 294, every VMS image
+    in testdata agreeing; a sweep of fixup sizes for round 3 to settle X); FULL2 (the File
+    Applications guide's sequential extension, the smaller of twice the multiblock count and 256,
+    at least the volume's: 2 blocks here, all or nothing, which explains both rounds' last free
+    block); HDRFULL (HEADERFULL when the index file's map area fills, no extension header).
 

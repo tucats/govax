@@ -127,26 +127,25 @@ func TestFor81KProcedure(t *testing.T) { checkFor81K(t, runFor81K(t, true), for8
 func TestFor81KOnFTNRTL(t *testing.T) { checkFor81K(t, runFor81K(t, false), for81KFTNRTLDifferences) }
 
 // FOR81M (Phase 113's probe round 2, testdata/err113's README) asks the
-// associated variable after FIND, then DELETE by number. Until VMS's run,
-// vax/for81m-vax.txt, comes back, TestFor81MOnFTNRTL holds FTNRTL to VMS's
-// FORRTL over govax (this is FORRTL's own logic, not RMS's), or skips
-// without FORRTL.EXE on a local volume.
-func TestFor81MOnFTNRTL(t *testing.T) {
-	ftnrtl := runFor81Program(t, "FOR81M", false)
-	if !strings.Contains(ftnrtl, "##### the end of the cases") {
-		t.Fatalf("the program stopped before its end; its last lines:\n%s", lastLines(ftnrtl, 30))
-	}
+// associated variable after FIND, WRITE, or READ, then DELETE by number.
+// TestFor81MOnFTNRTL holds FTNRTL to VMS 7.1's run, vax/for81m-vax.txt, and
+// TestFor81MProcedure VMS's FORRTL over govax (or skips without FORRTL.EXE on a
+// local volume).
+func TestFor81MOnFTNRTL(t *testing.T) { checkFor81M(t, runFor81Program(t, "FOR81M", false)) }
 
-	if path := os.Getenv("FOR81M_WRITE"); path != "" {
-		if err := os.WriteFile(path, []byte(ftnrtl), 0o600); err != nil {
-			t.Fatal(err)
-		}
+func TestFor81MProcedure(t *testing.T) { checkFor81M(t, runFor81Program(t, "FOR81M", true)) }
+
+func checkFor81M(t *testing.T, out string) {
+	t.Helper()
+
+	if !strings.Contains(out, "##### the end of the cases") {
+		t.Fatalf("the program stopped before its end; its last lines:\n%s", lastLines(out, 30))
 	}
 
 	want, err := os.ReadFile(filepath.Join("..", "..", "testdata", "for81", "vax", "for81m-vax.txt"))
 	if err != nil {
-		want = []byte(runFor81Program(t, "FOR81M", true))
+		t.Fatal(err)
 	}
 
-	compareFor81G(t, for88Cases(ftnrtl), string(want), map[string]string{}, 9)
+	compareFor81G(t, for88Cases(out), string(want), map[string]string{}, 9)
 }

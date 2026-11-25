@@ -378,7 +378,11 @@ func (a *Assembler) pseudoAddress(c *cursor) error {
 			return err
 		}
 
-		v, deferred, err := a.exprValue(c, a.pc(), fixAddress)
+		v, deferred, err := a.exprValueOf(c, a.pc(), fixAddress, func(c *cursor, st *exprState) (exprVal, error) {
+			st.stopAtRegister = true
+
+			return a.exprTop(c, st)
+		})
 		if err != nil {
 			return err
 		}
@@ -392,6 +396,20 @@ func (a *Assembler) pseudoAddress(c *cursor) error {
 
 		if err := a.emitLongword(0); err != nil {
 			return err
+		}
+
+		// A register an operator left (.ADDRESS 4+R4 stores 4): ADRLSTSYNX
+		// alone, and nothing more (testdata/err113's round 2, MAC113F).
+		if registerAhead(c) {
+			c.pos = operatorBefore(c) // the "!" under the operator
+
+			if err := a.continuingError(vmserrors.New(vmserrors.VAX_ADRLSTSYNX)); err != nil {
+				return err
+			}
+
+			c.pos = len(c.s)
+
+			return nil
 		}
 	}
 }

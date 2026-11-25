@@ -243,6 +243,13 @@ func err113Masked(section string) string {
 // mac113Allowed are the lines of VMS's MAC113 listings govax's may differ in,
 // each with why (docs/planning/PHASE-113 - Fortran errata.md, subtask 13c).
 var mac113Allowed = map[string]map[string]string{
+	// Round 2: the zero a register an operator left stores is marked
+	// relocatable in VMS's listing, as MAC113A's R2's is; govax's is plain.
+	"MAC113F": {
+		"                           00000000' 0004       ": "R1's zero marked relocatable",
+		"                           00000000' 0010       ": "R2's zero marked relocatable",
+		"                               0000' 0016       ": "R3's zero marked relocatable",
+	},
 	"MAC113A": {
 		// VMS's object stores R2's zero by an STO_L of nothing it stacked,
 		// so its listing marks the zero relocatable; govax's is a plain 0.
@@ -335,7 +342,7 @@ func TestErr113Macro(t *testing.T) {
 	shareFindRun(t, d, "CREATE/DIRECTORY DUA1:[ERR113]")
 	shareFindRun(t, d, "SET DEFAULT DUA1:[ERR113]")
 
-	for _, name := range []string{"mac113a", "mac113b", "mac113c1", "mac113c2", "mac113d1", "mac113d2"} {
+	for _, name := range []string{"mac113a", "mac113b", "mac113c1", "mac113c2", "mac113d1", "mac113d2", "mac113f"} {
 		abs, err := filepath.Abs(filepath.Join(dir, name+".mar"))
 		if err != nil {
 			t.Fatal(err)
@@ -346,11 +353,12 @@ func TestErr113Macro(t *testing.T) {
 
 	said := map[string]string{}
 
-	for _, tc := range []struct{ name, command string }{
-		{"MAC113A", "MACRO/LIST MAC113A"},
-		{"MAC113B", "MACRO/LIST MAC113B"},
-		{"MAC113C", "MACRO/DEBUG/LIST=MAC113C/OBJECT=MAC113C MAC113C1+MAC113C2"},
-		{"MAC113D", "MACRO/LIST=MAC113D/OBJECT=MAC113D MAC113D1+MAC113D2"},
+	for _, tc := range []struct{ name, command, vax string }{
+		{"MAC113A", "MACRO/LIST MAC113A", "vax"},
+		{"MAC113B", "MACRO/LIST MAC113B", "vax"},
+		{"MAC113C", "MACRO/DEBUG/LIST=MAC113C/OBJECT=MAC113C MAC113C1+MAC113C2", "vax"},
+		{"MAC113D", "MACRO/LIST=MAC113D/OBJECT=MAC113D MAC113D1+MAC113D2", "vax"},
+		{"MAC113F", "MACRO/LIST MAC113F", filepath.Join("vax", "round2")}, // round 2
 	} {
 		buf.Reset()
 		_ = d.Dispatch(tc.command)
@@ -361,7 +369,7 @@ func TestErr113Macro(t *testing.T) {
 			t.Fatalf("%s: no listing: %v", tc.name, err)
 		}
 
-		vms, err := os.ReadFile(filepath.Join(dir, "vax", strings.ToLower(tc.name)+".lis"))
+		vms, err := os.ReadFile(filepath.Join(dir, tc.vax, strings.ToLower(tc.name)+".lis"))
 		if err != nil {
 			t.Fatal(err)
 		}

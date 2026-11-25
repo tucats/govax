@@ -71,7 +71,7 @@ grammar console
     ! this syntax.
     !
     syntax create_fdl
-        parameter file/id=1515/type=$string
+        parameter file/id=1515/type=$file
         qualifier fdl/id=1514/type=$string
         qualifier log/id=1516
 
@@ -83,7 +83,7 @@ grammar console
     ! get (docs/planning/PHASE-93 - file protection.md, subtask 11b).
     !
     verb create
-        parameter file/id=1511/type=$string/prompt="File"
+        parameter file/id=1511/type=$file/prompt="File"
         qualifier host/id=1512/parameter=file
         qualifier log/id=1513
         qualifier owner_uic/id=1517/type=$uic
@@ -98,8 +98,8 @@ grammar console
     ! 10c; internal/dclcmd/convert.go).
     !
     verb convert
-        parameter input/id=1520/type=$string/list/prompt="File"
-        parameter output/id=1521/type=$string/prompt="Output"
+        parameter input/id=1520/type=$file/list/prompt="File"
+        parameter output/id=1521/type=$file/prompt="Output"
         qualifier append/id=1522
         qualifier create/id=1523
         qualifier exceptions_file/id=1524/type=$string/default=""
@@ -569,7 +569,7 @@ grammar console
     verb directory/id=900
 
         parameter   spec/id=901                 -
-                    /type=$string/list
+                    /type=$file/list
         qualifier   full/id=902
         qualifier   file/id=903
         qualifier   size/id=904                 -
@@ -610,7 +610,7 @@ grammar console
     verb delete/id=1100
 
         parameter   spec/id=1101               -
-                    /type=$string/list          -
+                    /type=$file/list          -
                     /prompt="File specification"
         qualifier   log/id=1102
         ! DELETE/QUEUE (Phase 98): a stopped queue and its jobs.
@@ -637,7 +637,7 @@ grammar console
     verb dump/id=1170
 
         parameter   spec/id=1171                -
-                    /type=$string               -
+                    /type=$file               -
                     /prompt="File"
         qualifier   blocks/id=1172/nonegatable  -
                     /type=$string/default=ALL
@@ -664,7 +664,7 @@ grammar console
     verb backup/id=2200
 
         parameter   input/id=2201               -
-                    /type=$string/list          -
+                    /type=$file/list          -
                     /prompt="From"
         qualifier   host/id=2202/parameter=input
         qualifier   save_set/id=2203/parameter=input
@@ -685,7 +685,7 @@ grammar console
         qualifier   modified/id=2213/parameter=input
 
         parameter   output/id=2220              -
-                    /type=$string
+                    /type=$file
         qualifier   host/id=2221/parameter=output
         qualifier   save_set/id=2222/parameter=output
         qualifier   crc/id=2223/parameter=output
@@ -756,7 +756,7 @@ grammar console
     verb type/id=1200
 
         parameter   spec/id=1201                -
-                    /type=$string               -
+                    /type=$file               -
                     /prompt="File specification"
         qualifier   page/id=1202
         qualifier   host/id=1203
@@ -862,7 +862,7 @@ grammar console
     verb macro/id=1300
 
         parameter   source/id=1301              -
-                    /type=$string/list          -
+                    /type=$file/list          -
                     /joinable                   -
                     /prompt="Source"
         qualifier   host/id=1302                -
@@ -1023,7 +1023,7 @@ grammar console
     verb link/id=1350
 
         parameter   objects/id=1351             -
-                    /type=$string/list          -
+                    /type=$file/list          -
                     /prompt="Object"
         qualifier   host/id=1352                -
                     /parameter=objects
@@ -1077,7 +1077,7 @@ grammar console
     !
     syntax analyze_object
         parameter   files/id=1901               -
-                    /type=$string/list          -
+                    /type=$file/list          -
                     /prompt="File"
         qualifier   host/id=1902                -
                     /parameter=files
@@ -1104,7 +1104,7 @@ grammar console
     !
     syntax analyze_image
         parameter   files/id=1921               -
-                    /type=$string/list          -
+                    /type=$file/list          -
                     /prompt="File"
         qualifier   host/id=1922                -
                     /parameter=files
@@ -1122,7 +1122,7 @@ grammar console
     !
     syntax analyze_rms_file
         parameter   files/id=1931               -
-                    /type=$string/list          -
+                    /type=$file/list          -
                     /prompt="File"
         qualifier   host/id=1932                -
                     /parameter=files
@@ -1161,13 +1161,13 @@ grammar console
     verb library/id=1400
 
         parameter   library/id=1401             -
-                    /type=$string               -
+                    /type=$file               -
                     /prompt="Library"
         qualifier   host/id=1402                -
                     /parameter=library
 
         parameter   inputs/id=1403              -
-                    /type=$string/list
+                    /type=$file/list
         qualifier   host/id=1404                -
                     /parameter=inputs
         qualifier   module/id=1422              -
@@ -1229,10 +1229,10 @@ grammar console
     verb rename/id=1450
 
         parameter   inputs/id=1451              -
-                    /type=$string/list          -
+                    /type=$file/list          -
                     /prompt="From"
         parameter   output/id=1452              -
-                    /type=$string               -
+                    /type=$file               -
                     /prompt="To"
 
         qualifier   log/id=1453
@@ -1391,7 +1391,7 @@ grammar console
 
     verb submit/id=3110
         parameter   files/id=3111               -
-                    /type=$string/list          -
+                    /type=$file/list          -
                     /prompt="File"
         qualifier   queue/id=3112/type=$string
         qualifier   after/id=3113/type=$string
@@ -1607,7 +1607,7 @@ grammar console
         parameter   logical_name/id=2106        -
                     /type=$string
         parameter   filespec/id=2107            -
-                    /type=$string
+                    /type=$file
         qualifier   host/id=2108                -
                     /parameter=filespec
 
@@ -1666,7 +1666,7 @@ grammar console
     ! /NOEXECUTE loads without running.
     verb run/id=1680
         parameter   file/id=1681                -
-                    /type=$string               -
+                    /type=$file               -
                     /prompt="File"
         qualifier   host/id=1682                -
                     /parameter=file
@@ -2008,7 +2008,7 @@ grammar console
     ! (docs/PHASE-23.md).
     syntax set_default/id=1804
         parameter   spec/id=1805                -
-                    /type=$string               -
+                    /type=$file               -
                     /prompt="Directory"
 
     ! SET PROMPT="text", the console's prompt (and the vax.console.prompt

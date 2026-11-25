@@ -217,3 +217,30 @@ with P3 `KEEP` (govax has no INITIALIZE of a device, so the test mounts a scratc
 as `/HEADERS=16` makes it and the procedure deletes its files between sections), and
 `TestFor81MOnFTNRTL` holds FTNRTL to FOR81M on VMS's FORRTL over govax until VMS's own run,
 `testdata/for81/vax/for81m-vax.txt`, is back.
+
+### What came back from round 2
+
+`vax/round2/` is the author's run on VMS 7.1, 25-NOV-2026: ERR113B's log, LNK113L's image,
+object, and map, the sixteen LNK113D images, and MAC113F's listing and object;
+`testdata/for81/vax/for81m-vax.txt` and `for81m.log` are FOR81M's, and
+`testdata/for81/vax/for81w.log` FOR81W's terminal (round 3b's is `for81w-round3b.log`). FTN86's
+round 7 and F90R's round 4 weren't run; their volumes came back as the exchange scripts made
+them.
+
+- LNK113L: LINK-I-BASDUERRS, "basing image due to errors in relocatable references", and a
+  LINK-W-NONPICREF for each `.LONG` (status `%X10648268`).
+- LNK113D: every image's DST is 2 blocks, the fixup records in the second, though the records
+  total 505 to 520 bytes (VMS's are a byte more than govax's): subtask 13g's rule is wrong.
+- MAC113F: an operator before a register ends the item (`4+R1` stores 4), and the register is
+  the next item (DATALSTSYN and a zero; ADRLSTSYNX alone and nothing for `.ADDRESS`); `<R5>`
+  as the first item is DIRSYNX.
+- DCL2: every command's file parameter is CLI$_DIRECT (`%X00038030`) before the command runs,
+  the segment the specification up to its version's `;`; `@` with no segment.
+- FULL2: REST.DAT stopped at 1,242 blocks with one free (2,503 records), and CREATE then made
+  MORE.TXT and failed to write it (WRITEERR), the volume's last block gone.
+- HDRFULL: 2,305 8-block files, 1,163 7-block files, then 237 1-block files before
+  `-RMS-E-CRE, ACP file create failed` and `-SYSTEM-W-HEADERFULL`: INDEXF.SYS's 154 map words
+  full (73 retrieval pointers), 2,574 blocks, no extension header.
+- FOR81M: VMS's FORRTL gave what FORRTL over govax and FTNRTL now give.
+- FOR81W: a READ of exactly 133 characters ended when the buffer filled, with no Return,
+  ERRDURREA with RMS$_TNS; 132 characters and a Return read whole.

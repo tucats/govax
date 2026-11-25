@@ -1,0 +1,338 @@
+==== LNK113L
+  $STATUS == "%X10000001"
+%LINK-I-BASDUERRS, basing image due to errors in relocatable references
+%LINK-W-NONPICREF, failure to use .ADDRESS for relocatable data 
+	in psect $DATA offset %X00000000
+	in module LNK113L file DUA1:[ERR113]LNK113L.OBJ;1
+%LINK-W-NONPICREF, failure to use .ADDRESS for relocatable data 
+	in psect $DATA offset %X00000004
+	in module LNK113L file DUA1:[ERR113]LNK113L.OBJ;1
+%LINK-W-NONPICREF, failure to use .ADDRESS for relocatable data 
+	in psect $DATA offset %X00000008
+	in module LNK113L file DUA1:[ERR113]LNK113L.OBJ;1
+  $STATUS == "%X10648268"
+==== LNK113D
+
+Directory DUA1:[ERR113]
+
+LNK113D00.EXE;1            5/6      
+LNK113D01.EXE;1            5/6      
+LNK113D02.EXE;1            5/6      
+LNK113D03.EXE;1            5/6      
+LNK113D04.EXE;1            5/6      
+LNK113D05.EXE;1            5/6      
+LNK113D06.EXE;1            5/6      
+LNK113D07.EXE;1            5/6      
+LNK113D08.EXE;1            5/6      
+LNK113D09.EXE;1            5/6      
+LNK113D10.EXE;1            5/6      
+LNK113D11.EXE;1            5/6      
+LNK113D12.EXE;1            5/6      
+LNK113D13.EXE;1            5/6      
+LNK113D14.EXE;1            5/6      
+LNK113D15.EXE;1            5/6      
+
+Total of 16 files, 80/96 blocks.
+==== MAC113F
+                           00000004  0000     8 A:	.LONG	4+R1
+%MACRO-E-DATALSTSYN, Data list syntax error                      !
+                  00000004 00000001  0008     9 B:	.LONG	1,4+R2
+%MACRO-E-DATALSTSYN, Data list syntax error                        !
+                               0002  0014    10 C:	.WORD	2*R3
+%MACRO-E-DATALSTSYN, Data list syntax error                      !
+                           00000004' 0018    11 D:	.ADDRESS 4+R4
+%MACRO-E-ADRLSTSYNX, Address list syntax error                    !
+                           00000000  001C    12 E:	.LONG	<R5>
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+  $STATUS == "%X10000002"
+==== DCL2
+%DCL-W-DIRECT, invalid directory syntax - check brackets and other delimiters
+ \DCL[X.TXT\
+  $STATUS == "%X00038030"
+%DCL-W-DIRECT, invalid directory syntax - check brackets and other delimiters
+ \DCL[X.TXT\
+  $STATUS == "%X00038030"
+%DCL-W-DIRECT, invalid directory syntax - check brackets and other delimiters
+ \DCL[X.TXT\
+  $STATUS == "%X00038030"
+%DCL-W-DIRECT, invalid directory syntax - check brackets and other delimiters
+ \DCL[X.TXT\
+  $STATUS == "%X00038030"
+%DCL-W-DIRECT, invalid directory syntax - check brackets and other delimiters
+ \DCL[Y.TXT\
+  $STATUS == "%X00038030"
+%DCL-W-DIRECT, invalid directory syntax - check brackets and other delimiters
+ \DCL[X.TXT\
+  $STATUS == "%X00038030"
+%DCL-W-DIRECT, invalid directory syntax - check brackets and other delimiters
+ \DCL[X.TXT\
+  $STATUS == "%X00038030"
+%DCL-W-DIRECT, invalid directory syntax - check brackets and other delimiters
+ \DCL[X.TXT\
+  $STATUS == "%X00038030"
+%DCL-W-DIRECT, invalid directory syntax - check brackets and other delimiters
+ \DCL[X.TXT\
+  $STATUS == "%X00038030"
+%DCL-W-DIRECT, invalid directory syntax - check brackets and other delimiters
+ \DCL[X.COM\
+  $STATUS == "%X00038030"
+%DCL-W-DIRECT, invalid directory syntax - check brackets and other delimiters
+ \DCL[X.TXT\
+  $STATUS == "%X00038030"
+%DCL-W-DIRECT, invalid directory syntax - check brackets and other delimiters
+ \DCL[X.MAR\
+  $STATUS == "%X00038030"
+%DCL-W-DIRECT, invalid directory syntax - check brackets and other delimiters
+ \DCL[X.OBJ\
+  $STATUS == "%X00038030"
+%DCL-W-DIRECT, invalid directory syntax - check brackets and other delimiters
+ \DCL[X.OLB\
+  $STATUS == "%X00038030"
+%DCL-W-DIRECT, invalid directory syntax - check brackets and other delimiters
+ \DCL[X.OBJ\
+  $STATUS == "%X00038030"
+%DCL-W-DIRECT, invalid directory syntax - check brackets and other delimiters
+ \DCL[X.EXE\
+  $STATUS == "%X00038030"
+%DCL-W-DIRECT, invalid directory syntax - check brackets and other delimiters
+ \DCL[X.TXT\
+  $STATUS == "%X00038030"
+%DCL-W-DIRECT, invalid directory syntax - check brackets and other delimiters
+ \DCL[X\
+  $STATUS == "%X00038030"
+%DCL-W-DIRECT, invalid directory syntax - check brackets and other delimiters
+  $STATUS == "%X00038030"
+==== FULL2
+%MOUNT-I-MOUNTED, SCR113 mounted on _SIMVAX$DUA3:
+%COPY-E-OPENOUT, error opening DUA3:[000000]FILL6.DAT; as output
+-RMS-F-FUL, device full (insufficient space for allocation)
+%COPY-W-NOTCOPIED, DUA1:[ERR113]BIG.DAT;1 not copied
+COPIES 5 FREE 1243
+%RMS-F-FUL, device full (insufficient space for allocation)
+RECORDS 2503 FREE 1
+CLOSED FREE 1
+
+Directory DUA3:[000000]
+
+REST.DAT;1              1242/1242     25-NOV-2026 10:11:49.20
+
+Total of 1 file, 1242/1242 blocks.
+REST.DAT EOF 1242 FFB 370 ALQ 1242
+
+Directory DUA3:[000000]
+
+INDEXF.SYS;1              22/22     
+
+Total of 1 file, 22/22 blocks.
+%CREATE-E-WRITEERR, error writing DUA3:[000000]MORE.TXT;1
+-RMS-F-FUL, device full (insufficient space for allocation)
+  $STATUS == "%X109110D2"
+FREE 0
+==== HDRFULL
+%MOUNT-I-MOUNTED, SCR113 mounted on _SIMVAX$DUA3:
+
+Directory DUA3:[000000]
+
+H1.DAT;1                   1/1      
+H7.DAT;1                   7/7      
+H8.DAT;1                   8/8      
+
+Total of 3 files, 16/16 blocks.
+%COPY-E-OPENOUT, error opening DUA3:[A]A2306.DAT; as output
+-RMS-F-FUL, device full (insufficient space for allocation)
+%COPY-W-NOTCOPIED, DUA3:[000000]H8.DAT;1 not copied
+8-BLOCK FILES 2305 STATUS %X106710A2 FREE 129
+
+Directory DUA3:[000000]
+
+INDEXF.SYS;1            2450/2450   
+A.DIR;1                  144/300    
+B.DIR;1                    1/150    
+C.DIR;1                    1/100    
+
+Total of 4 files, 2596/3000 blocks.
+
+Directory DUA3:[A]
+
+A0001.DAT;1                8/8      
+A0002.DAT;1                8/8      
+
+Total of 2 files, 16/16 blocks.
+HOLES FREE 9353
+%COPY-E-OPENOUT, error opening DUA3:[B]B1164.DAT; as output
+-RMS-F-FUL, device full (insufficient space for allocation)
+%COPY-W-NOTCOPIED, DUA3:[000000]H7.DAT;1 not copied
+7-BLOCK FILES 1163 STATUS %X106710A2 FREE 1212
+
+Directory DUA3:[000000]
+
+INDEXF.SYS;1            2450/2450   
+
+Total of 1 file, 2450/2450 blocks.
+%COPY-E-OPENOUT, error opening DUA3:[C]C0238.DAT; as output
+-RMS-E-CRE, ACP file create failed
+-SYSTEM-W-HEADERFULL, file header is full
+%COPY-W-NOTCOPIED, DUA3:[000000]H1.DAT;1 not copied
+1-BLOCK FILES 237 STATUS %X106710A2 FREE 851
+
+Directory DUA3:[000000]
+
+INDEXF.SYS;1                  File ID:  (1,1,0)               
+Size:         2574/2574       Owner:    [SYSTEM]
+Created:   25-NOV-2026 10:11:50.53
+Revised:   25-NOV-2026 10:11:50.53 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 2574, Extend: 0, Global buffer count: 0, Version limit: 1, Contiguous best try
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+Total of 1 file, 2574/2574 blocks.
+
+Dump of file DUA3:[000000]INDEXF.SYS;1 on 25-NOV-2026 10:12:20.52
+File ID (1,1,0)   End of file block 2574 / Allocated 2574
+
+                             File Header
+
+Header area
+    Identification area offset:           40
+    Map area offset:                      100
+    Access control area offset:           255
+    Reserved area offset:                 255
+    Extension segment number:             0
+    Structure level and version:          2, 1
+    File identification:                  (1,1,0)
+    Extension file identification:        (0,0,0)
+    VAX-11 RMS attributes
+        Record type:                      Fixed
+        File organization:                Sequential
+        Record attributes:                <none specified>
+        Record size:                      512
+        Highest block:                    2574
+        End of file block:                2575
+        End of file byte:                 0
+        Bucket size:                      0
+        Fixed control area size:          0
+        Maximum record size:              512
+        Default extension size:           0
+        Global buffer count:              0
+        Directory version limit:          0
+    File characteristics:                 Contiguous best try
+    Map area words in use:                154
+    Access mode:                          0
+    File owner UIC:                       [SYSTEM]
+    File protection:                      S:RWED, O:RWED, G:RE, W:
+    Back link file identification:        (4,4,0)
+    Journal control flags:                <none specified>
+    Active recovery units:                None
+    Highest block written:                2574
+
+Identification area
+    File name:                            INDEXF.SYS;1                                                                          
+    Revision number:                      1
+    Creation date:                        25-NOV-2026 10:11:50.53
+    Revision date:                        25-NOV-2026 10:11:50.53
+    Expiration date:                      <none specified>
+    Backup date:                          <none specified>
+
+Map area
+    Retrieval pointers
+        Count:          2        LBN:          0
+        Count:          1        LBN:       1034
+        Count:          1        LBN:      11842
+        Count:         18        LBN:      10809
+        Count:       1197        LBN:       1035
+        Count:       1018        LBN:      11843
+        Count:        213        LBN:      21002
+        Count:          6        LBN:      17718
+        Count:          6        LBN:      18155
+        Count:          5        LBN:      10316
+        Count:          4        LBN:      14706
+        Count:          4        LBN:      17235
+
+Dump of file DUA3:[000000]INDEXF.SYS;1 on 25-NOV-2026 10:12:20.52
+File ID (1,1,0)   End of file block 2574 / Allocated 2574
+
+        Count:          4        LBN:      18914
+        Count:          4        LBN:      19772
+        Count:          4        LBN:      20225
+        Count:          4        LBN:      20586
+        Count:          4        LBN:      20733
+        Count:          4        LBN:      20880
+        Count:          4        LBN:      21540
+        Count:          4        LBN:       7657
+        Count:          3        LBN:      18560
+        Count:          3        LBN:      20015
+        Count:          3        LBN:      21474
+        Count:          2        LBN:      21319
+        Count:          2        LBN:      21401
+        Count:          2        LBN:      11591
+        Count:          2        LBN:      11840
+        Count:          2        LBN:      15445
+        Count:          1        LBN:      12988
+        Count:          1        LBN:      13036
+        Count:          1        LBN:      13068
+        Count:          1        LBN:      13100
+        Count:          1        LBN:      13132
+        Count:          1        LBN:      13164
+        Count:          1        LBN:      13196
+        Count:          1        LBN:      13228
+        Count:          1        LBN:      13260
+        Count:          1        LBN:      13292
+        Count:          1        LBN:      13324
+        Count:          1        LBN:      13356
+        Count:          1        LBN:      13388
+        Count:          1        LBN:      13420
+        Count:          1        LBN:      13452
+        Count:          1        LBN:      13484
+        Count:          1        LBN:      13516
+        Count:          1        LBN:      13548
+        Count:          1        LBN:      13580
+        Count:          1        LBN:      13612
+        Count:          1        LBN:      13644
+        Count:          1        LBN:      13676
+        Count:          1        LBN:      13708
+        Count:          1        LBN:      13740
+        Count:          1        LBN:      13772
+        Count:          1        LBN:      13804
+        Count:          1        LBN:      13836
+        Count:          1        LBN:      13868
+        Count:          1        LBN:      13922
+        Count:          1        LBN:      13954
+        Count:          1        LBN:      13986
+        Count:          1        LBN:      14018
+        Count:          1        LBN:      14050
+        Count:          1        LBN:      14082
+        Count:          1        LBN:      14114
+        Count:          1        LBN:      14146
+        Count:          1        LBN:      14178
+        Count:          1        LBN:      14210
+        Count:          1        LBN:      14242
+        Count:          1        LBN:      14274
+        Count:          1        LBN:      14306
+
+Dump of file DUA3:[000000]INDEXF.SYS;1 on 25-NOV-2026 10:12:20.52
+File ID (1,1,0)   End of file block 2574 / Allocated 2574
+
+        Count:          1        LBN:      14338
+        Count:          1        LBN:      14370
+        Count:          1        LBN:      14402
+        Count:          1        LBN:      14434
+        Count:          1        LBN:      14466
+        Count:          1        LBN:      14498
+        Count:          1        LBN:      14530
+
+Checksum:                                 40597
+Analyze/Disk_Structure for _SIMVAX$DUA3: started on 25-NOV-2026 10:12:20.53
+
+%ANALDISK-I-OPENQUOTA, error opening QUOTA.SYS
+-SYSTEM-W-NOSUCHFILE, no such file
+==== END

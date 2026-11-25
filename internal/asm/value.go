@@ -47,6 +47,12 @@ func (a *Assembler) parseFloat(c *cursor) (vaxfloat.Value, error) {
 // way the C source threads it through vax.assembler fields.
 type exprState struct {
 	allowForward bool
+
+	// stopAtRegister ends the expression before a register name that
+	// follows an operator, leaving the cursor there: a data directive's
+	// item, which VMS 7.1's MACRO ends there (4+R1 stores 4, and R1 is
+	// the next item; testdata/err113's round 2, MAC113F).
+	stopAtRegister bool
 }
 
 // exprVal is an expression's value while it is being evaluated: the
@@ -252,6 +258,10 @@ func (a *Assembler) exprTop(c *cursor, st *exprState) (exprVal, error) {
 
 		opPos := c.pos
 		c.next()
+
+		if st.stopAtRegister && registerAhead(c) {
+			break
+		}
 
 		x2, err := a.exprAtom(c, st)
 		if err != nil {

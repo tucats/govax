@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/tucats/govax/internal/corevms"
+	"github.com/tucats/govax/internal/dcl"
 	"github.com/tucats/govax/internal/dclcmd"
 	"github.com/tucats/govax/internal/respath"
 	"github.com/tucats/govax/internal/rms"
@@ -343,6 +344,13 @@ func parseProcedureCommand(text string) (procedureCommand, error) {
 	}
 
 	cmd.file = file
+
+	// A directory left open is CLI$_DIRECT, which VMS 7.1 gave for @ with no
+	// segment line (testdata/err113's round 2, DCL2). A quoted name is the
+	// host's, taken as it is.
+	if raw := strings.TrimLeft(text, " \t"); !strings.HasPrefix(raw, "\"") && !dcl.DirectoryClosed(file) {
+		return cmd, vmserrors.New(vmserrors.CLI_DIRECT)
+	}
 
 	for i < len(text) && text[i] == '/' {
 		j := i + 1

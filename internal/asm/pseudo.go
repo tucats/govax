@@ -102,11 +102,26 @@ func (a *Assembler) pseudoDataSigned(c *cursor, scale int, signed bool) error {
 
 		itemStart := c.pos
 
+		// A register an operator left (4+R1: the item before it stored 4)
+		// is the next item, with no comma (testdata/err113's round 2).
+		if !first && a.dialect == DialectMACRO && registerAhead(c) {
+			if done, err := a.registerItem(c, operatorBefore(c), false, scale); done || err != nil {
+				return err
+			}
+
+			continue
+		}
+
 		if err := a.listSeparator(c, first); err != nil || c.atEnd() {
 			return err
 		}
 
-		if a.dialect == DialectMACRO && registerAhead(c) {
+		if a.dialect == DialectMACRO && (registerAhead(c) || registerGroupAhead(c)) {
+			// In a group, the "!" stands under the register, past the "<".
+			if registerGroupAhead(c) {
+				itemStart = c.pos + 1
+			}
+
 			if done, err := a.registerItem(c, itemStart, first, scale); done || err != nil {
 				return err
 			}
@@ -116,7 +131,7 @@ func (a *Assembler) pseudoDataSigned(c *cursor, scale int, signed bool) error {
 
 		first = false
 
-		x, err := a.exprTop(c, &exprState{allowForward: true})
+		x, err := a.exprTop(c, &exprState{allowForward: true, stopAtRegister: a.dialect == DialectMACRO})
 		if err != nil {
 			return err
 		}
@@ -188,6 +203,33 @@ func registerAhead(c *cursor) bool {
 	_, err := parseRegister(&look, 0)
 
 	return err == nil
+}
+
+// operatorBefore is where the operator before c's register is, past any
+// blanks between them: where VMS 7.1's MACRO puts the "!" of a register an
+// operator left (testdata/err113's round 2, MAC113F).
+func operatorBefore(c *cursor) int {
+	at := c.pos - 1
+	for at > 0 && (c.s[at] == ' ' || c.s[at] == '\t') {
+		at--
+	}
+
+	return at
+}
+
+// registerGroupAhead reports whether a <...> group that starts with a
+// register name comes next (<R5>), which VMS 7.1's MACRO refuses as a data
+// item that starts with one (testdata/err113's round 2, MAC113F).
+func registerGroupAhead(c *cursor) bool {
+	if c.peek() != '<' {
+		return false
+	}
+
+	look := *c
+	look.next()
+	look.skipBlanks()
+
+	return registerAhead(&look)
 }
 
 // registerItem is a data item of .BYTE, .WORD, or .LONG that starts with a
