@@ -1,6 +1,9 @@
 package cpu
 
-import "sort"
+import (
+	"sort"
+	"sync"
+)
 
 // /* disabled unless neede dagian */ go:generate go run ./gen -in ../../reference/eVAX/eVAX/Headers/instruction_table.h -out instructions_table.go
 
@@ -61,8 +64,10 @@ type Table struct {
 	handlers map[*Instruction]Handler
 	// byName lazily indexes instructions by mnemonic for ByName; built on
 	// first use rather than at table-generation time, same rationale as
-	// handlers above.
-	byName map[string]*Instruction
+	// handlers above. byNameOnce builds it once, so assemblers running at
+	// the same time (parallel tests) can share the table.
+	byName     map[string]*Instruction
+	byNameOnce sync.Once
 }
 
 func extendedKey(op Opcode) uint16 {
@@ -114,7 +119,7 @@ func (t *Table) Lookup(op Opcode) *Instruction {
 // (Phase 11) to translate a source mnemonic into its opcode/operand
 // metadata without duplicating the instruction table.
 func (t *Table) ByName(name string) *Instruction {
-	if t.byName == nil {
+	t.byNameOnce.Do(func() {
 		t.byName = make(map[string]*Instruction)
 		for _, inst := range t.single {
 			if inst != nil {
@@ -125,8 +130,8 @@ func (t *Table) ByName(name string) *Instruction {
 		for _, inst := range t.extended {
 			t.byName[inst.Name] = inst
 		}
-	}
-	
+	})
+
 	return t.byName[name]
 }
 

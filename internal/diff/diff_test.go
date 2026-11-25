@@ -25,7 +25,7 @@ func TestMergedInsertion(t *testing.T) {
 	res := Compare(master.Records, revision.Records, Options{Match: 3})
 
 	l := NewListing(132)
-	Merged(l, master, revision, res, 1)
+	Merged(l, master, revision, res, Style{After: 1})
 	Summary(l, res)
 	Echo(l, []string{"/IGNORE=()", "/MERGED=1"}, []string{master.Name, revision.Name})
 
@@ -152,5 +152,47 @@ func TestEchoBreaksLists(t *testing.T) {
 
 	if got := l.Text(); got != want {
 		t.Errorf("got\n%s\nwant\n%s", got, want)
+	}
+}
+
+// The printable form /PARALLEL uses (testdata/dif116's R11 and R12): tabs to
+// every eighth column, LF, VT, FF, and CR named, other controls, DEL, the C1
+// controls, and %XFF a period.
+func TestPretty(t *testing.T) {
+	in := []byte("\x00\x01\x02\x03\x04\x05\x06\x07\x08\t\n\v\f\r\x0eX\x7f\x80\x9f\xa0\xfe\xff")
+	want := ".........       <LF><VT><FF><CR>.X...\xa0\xfe."
+
+	if got := Pretty(in); got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+// A change bar marks a section's records on its file's side, or where that
+// side has none, the record after the place (F40, F41).
+func TestMarks(t *testing.T) {
+	a := records("1", "2", "3", "4", "5", "6", "7")
+	b := records("1", "x", "2", "3", "4", "5", "7")
+	res := Compare(a, b, Options{Match: 3})
+
+	show := func(m []bool) string {
+		var s strings.Builder
+
+		for _, x := range m {
+			if x {
+				s.WriteByte('!')
+			} else {
+				s.WriteByte('.')
+			}
+		}
+
+		return s.String()
+	}
+
+	if got := show(Marks(res, len(a), masterSpan)); got != ".!...!." {
+		t.Errorf("master marks %s", got)
+	}
+
+	if got := show(Marks(res, len(b), revisionSpan)); got != ".!....!" {
+		t.Errorf("revision marks %s", got)
 	}
 }

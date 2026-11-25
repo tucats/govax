@@ -60,16 +60,25 @@
    that match as /MERGED says (1).  A record's line is its number, three
    blanks, and its text, cut at the listing's width.
 
+   The other forms: /SEPARATED lists each file's records of every
+   section under one heading; /PARALLEL lists a section's records side
+   by side, tabs expanded and characters that don't print shown as
+   periods (or <CR>, <LF>, <VT>, <FF>); /CHANGE_BAR after a file lists
+   that whole file, its changed records marked.  Several forms in one
+   command are listed in this order, a blank line between them: the
+   parallel listing, the merged one, the separated ones, the change
+   bars.  When /MAXIMUM_DIFFERENCES stops the comparison, only the first
+   is listed.  Files that are the same get no listing, only the counts.
+
    The status DIFFERENCES leaves is %X006C8009 (success) when the files
    are the same, %X006C8013 (informational) when they differ, and
    %X006C8018 (warning, MAXDIF) when /MAXIMUM_DIFFERENCES stopped it.
 
 2 Restrictions
 
-   This version of govax lists in the merged form only: /PARALLEL,
-   /SEPARATED, /CHANGE_BAR, /MODE=HEXADECIMAL and OCTAL, /NONUMBER, and
-   /SLP are accepted and shown in the command written out, but the
-   listing is the merged one.  /IGNORE and /COMMENT_DELIMITER are
+   This version of govax lists in ASCII only: /MODE=HEXADECIMAL and
+   OCTAL, and /SLP, are accepted and shown in the command written out,
+   but the listing is the ASCII one.  /IGNORE and /COMMENT_DELIMITER are
    checked and shown, but nothing is ignored yet.  VMS's /PAGE, /SEARCH,
    /EXACT, /HIGHLIGHT, and /WRAP are not available.
 
@@ -79,8 +88,11 @@
    /CHANGE_BAR[=(character[,[NO]NUMBER])]
 
    Follows a file: lists that whole file, each record that differs
-   marked with character ("!" by default).  It is a file's qualifier
-   only: after the verb, DCL refuses it (IVQLOC).
+   marked with character ("!" by default), after its number.  Where the
+   other file has records this one lacks, the record after the place is
+   marked.  NUMBER and NONUMBER override /[NO]NUMBER for this listing.
+   It is a file's qualifier only: after the verb, DCL refuses it
+   (IVQLOC).  Given alone, only the change bar listings are made.
 
 /COMMENT_DELIMITER
 
@@ -142,7 +154,8 @@
    /NUMBER (default)
    /NONUMBER
 
-   Whether a record's line starts with its number.
+   Whether a record's line starts with its number.  Under /PARALLEL,
+   /NONUMBER leaves the record numbers out of each section's rule.
 
 /OUTPUT
 
@@ -158,13 +171,15 @@
 
    Lists each section's records side by side, followed by n records
    that match (0 by default; at most /MATCH, with PARGTMTCH as for
-   /MERGED).
+   /MERGED).  Each section starts with a rule naming both files' first
+   record numbers; each side is a little less than half the width.
 
 /SEPARATED
 
    /SEPARATED[=(MASTER,REVISION)]
 
-   Lists each file's records of a section on their own; with a keyword,
+   Lists each file's records of every section on their own, the first
+   file's, then the second's, each under one heading; with one keyword,
    only that file's.
 
 /SLP

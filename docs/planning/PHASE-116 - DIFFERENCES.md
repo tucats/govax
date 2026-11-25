@@ -313,7 +313,7 @@ Each is one commit, with tests, stopping for review.
 4. **The engine and the merged form** (done 2026-11-25): `internal/diff`'s matching,
    `/MATCH`, `/WINDOW`, `/MAXIMUM_DIFFERENCES`, the merged listing, the
    summary, and the closing echo; held to every generated pair.
-5. **The other forms**: `/SEPARATED`, `/PARALLEL`, `/CHANGE_BAR`,
+5. **The other forms** (done 2026-11-25): `/SEPARATED`, `/PARALLEL`, `/CHANGE_BAR`,
    `/NONUMBER`, `/WIDTH`, several forms together.
 6. **Radix and SLP**: `/MODE=HEX` and `OCTAL`, `/SLP`.
 7. **Ignoring**: `/IGNORE`'s keywords, EDITED/EXACT/PRETTY,
@@ -500,3 +500,44 @@ The author's answers to the plan's three questions:
     listing, but for the later forms' (PGnnn and EGnnn, subtask 5; SGnnn and
     L03, subtask 6; L02, `dif116IsLater`). HELP DIFFERENCES describes the
     rule, /WINDOW, /MAXIMUM_DIFFERENCES, and MAXDIF's status.
+- **2026-11-25 — subtask 5 done: the other forms.** `internal/diff/forms.go`:
+  `Separated`, `Parallel` (with `Pretty`, the printable form), `ChangeBars`
+  and `Marks`, and `List`, which writes a command's forms in VMS's order;
+  `Merged` takes a `Style` (`After`, `NoNumber`, `Closing`). The command
+  builds the `diff.Forms` from its qualifiers (`differences.forms`).
+  `TestDif116FormsOracle` holds the FORMS section, and `TestDif116MergedOracle`
+  now the generated pairs run `/PARALLEL` (PGnnn) and `/SEPARATED` (EGnnn) and
+  N36, N62, and L02, all to VMS's listings; `internal/diff`'s
+  `TestProbeListings` holds the PG and EG listings too (591 in all). Only
+  `/MODE`'s and `/SLP`'s listings (and N64's ignoring) are left as later.
+  - **Parallel.** Every line is one less than the width, two halves of
+    (width-1)/2 with the `|` at the second's first column; each side's text
+    cut two short of it, the right's two after it, padded with blanks (F10,
+    F13, F14). A section's rule has `" n "` (each side's first record, an
+    empty side's place) from the middle of each half, none under
+    `/NONUMBER` (F16); its rows pair the two sides, then `/PARALLEL`'s n
+    records after both. The text is always printable: tabs expanded, LF,
+    VT, FF, and CR as `<LF>` and the rest, other controls, DEL, %X80 to %X9F,
+    and %XFF a period (R12, R11; %XA0 to %XFE kept).
+  - **Change bars.** The whole file, `%5d %c ` before each record (`%c `
+    under NONUMBER, N64), a changed record's bar its character; where a
+    section's side in this file is empty, the record after the place is
+    marked (F40's master 16, F41's revision 28). Both files' listings, the
+    master's first (F42). A file's `/CHANGE_BAR` alone lists only change
+    bars: no merged form, no `/MERGED` in the echo (F40). On identical
+    files, nothing (assumed, as for `/PARALLEL`'s F45: F44 put the
+    qualifier on the verb, IVQLOC). A file's NUMBER or NONUMBER over
+    `/[NO]NUMBER` is unconfirmed (F26 and F27 were on the verb too).
+  - **Several forms** (F31 to F33, N64, F21, F22): parallel, then per radix
+    the merged, separated, and change bar listings, a blank line between
+    each; a merged listing not first gets a closing section with no records
+    (`Style.Closing`). With `/MAXIMUM_DIFFERENCES` stopping, only the first
+    (L02), the two separated listings counting as one (unconfirmed).
+  - **The echo.** `/SEPARATED` of both files, by default or named, is bare
+    (F09); `/OUTPUT=` and the name are two pieces, so a narrow listing breaks
+    between them (F14, F23); `/MODE`'s order is OCTAL, HEXADECIMAL, ASCII
+    (F22, R13; subtask 3's note had it wrong), and `/PARALLEL` adds ASCII
+    (F34); a file's `/CHANGE_BAR` with no value is bare (F40).
+  - **A race fixed.** `cpu.Table.ByName` built its index lazily with no
+    lock, and two consoles assembling at once (the parallel oracle tests)
+    crashed on it; it is built under a `sync.Once` now.

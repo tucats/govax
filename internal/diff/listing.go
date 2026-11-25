@@ -54,33 +54,69 @@ type Input struct {
 	Records [][]byte
 }
 
+// Style is how a form writes a section's records.
+type Style struct {
+	// After is how many matched records follow each side of a section
+	// (/MERGED's or /PARALLEL's value; a negative count is none, as VMS's
+	// /MERGED=-1 was).
+	After int32
+
+	// NoNumber leaves out the records' numbers (/NONUMBER).
+	NoNumber bool
+
+	// Closing ends a merged listing with a section of no records, as VMS
+	// 7.1 ended every merged listing but the first a command wrote
+	// (testdata/dif116's F21, F22, F31, F33).
+	Closing bool
+}
+
 // Merged lists res's sections in the merged form: for each, master's
-// records, then revision's, each side followed by after records that match
-// (/MERGED; a negative count is none, as VMS's /MERGED=-1 was).
-func Merged(l *Listing, master, revision Input, res Result, after int32) {
+// records, then revision's, each side followed by st.After records that
+// match.
+func Merged(l *Listing, master, revision Input, res Result, st Style) {
+	after := st.After
+
 	for k, s := range res.Sections {
 		if res.Stopped && k == len(res.Sections)-1 {
 			after = 0
 		}
 
 		l.Cut(strings.Repeat("*", 12))
-		side(l, master, s.Master, after)
+		side(l, master, s.Master, after, st.NoNumber)
 		l.Cut(strings.Repeat("*", 6))
-		side(l, revision, s.Revision, after)
+		side(l, revision, s.Revision, after, st.NoNumber)
+		l.Cut(strings.Repeat("*", 12))
+	}
+
+	if st.Closing {
+		l.Cut(strings.Repeat("*", 12))
+		l.Cut("File " + master.Name)
+		l.Cut(strings.Repeat("*", 6))
+		l.Cut("File " + revision.Name)
 		l.Cut(strings.Repeat("*", 12))
 	}
 }
 
 // side lists one file's part of a section, and the after records that
 // follow it.
-func side(l *Listing, in Input, span Span, after int32) {
+func side(l *Listing, in Input, span Span, after int32, noNumber bool) {
 	l.Cut("File " + in.Name)
 
 	end := min(span.End+max(int(after), 0), len(in.Records))
 
 	for r := span.Start; r < end; r++ {
-		l.Cut(RecordLine(r+1, in.Records[r]))
+		l.Cut(recordLine(r+1, in.Records[r], noNumber))
 	}
+}
+
+// recordLine is a record's line in the merged and separated forms: with its
+// number (RecordLine) or, under /NONUMBER, its text alone (F15).
+func recordLine(number int, text []byte, noNumber bool) string {
+	if noNumber {
+		return string(text)
+	}
+
+	return RecordLine(number, text)
 }
 
 // RecordLine is a record's line: its number right-aligned in five columns

@@ -16,6 +16,10 @@ type probeCase struct {
 	ID, Master, Revision string
 	Opts                 Options
 	Merged               int32
+
+	// Parallel and Separated say the case asked for /PARALLEL or
+	// /SEPARATED (of both files) instead of the merged form.
+	Parallel, Separated bool
 }
 
 var probeQualifier = regexp.MustCompile(`/([A-Z_]+)=(-?\d+)`)
@@ -91,6 +95,14 @@ func readProbe(t *testing.T) (map[string][][]byte, []probeCase) {
 				return ""
 			})
 
+			for _, form := range []string{"/PARALLEL", "/SEPARATED"} {
+				if strings.Contains(rest, form) {
+					rest = strings.Replace(rest, form, "", 1)
+					c.Parallel = c.Parallel || form == "/PARALLEL"
+					c.Separated = c.Separated || form == "/SEPARATED"
+				}
+			}
+
 			if rest == "" {
 				cases = append(cases, c)
 			}
@@ -101,15 +113,18 @@ func readProbe(t *testing.T) (map[string][][]byte, []probeCase) {
 }
 
 // probeSections are the probe's sections whose cases this package can run
-// whole: two files named plainly, numeric qualifiers, the merged form.
-// (NAMES, FORMS, IGNORING, and FORMATS need the command or later subtasks.)
-var probeSections = map[byte]bool{'A': true, 'M': true, 'L': true, 'G': true, 'H': true, 'X': true, 'Z': true}
+// whole: two files named plainly, numeric qualifiers, the merged form, and
+// the generated pairs run /PARALLEL (PG) and /SEPARATED (EG). (NAMES, FORMS,
+// IGNORING, and FORMATS need the command or later subtasks.)
+var probeSections = map[byte]bool{
+	'A': true, 'M': true, 'L': true, 'G': true, 'H': true, 'X': true, 'Z': true, 'P': true, 'E': true,
+}
 
-// TestProbeListings holds the comparison and the merged listing, up to the
-// echo, to every merged listing VMS 7.1 made of the probe's LAYOUT,
-// MATCHING, LIMITS, and GENERATED cases (testdata/dif116/vax/out). The
-// echo, and the cases' messages and statuses, are internal/console's
-// TestDif116MergedOracle's.
+// TestProbeListings holds the comparison and the listing, up to the echo,
+// to every listing VMS 7.1 made of the probe's LAYOUT, MATCHING, LIMITS, and
+// GENERATED cases (testdata/dif116/vax/out), merged, parallel (PGnnn), and
+// separated (EGnnn). The echo, and the cases' messages and statuses, are
+// internal/console's TestDif116MergedOracle's.
 func TestProbeListings(t *testing.T) {
 	files, cases := readProbe(t)
 	ran := 0
@@ -134,8 +149,14 @@ func TestProbeListings(t *testing.T) {
 		a, b := files[c.Master], files[c.Revision]
 		res := Compare(a, b, c.Opts)
 		l := NewListing(132)
-		Merged(l, Input{Name: "DUA1:[DIF116.IN]" + c.Master + ";1", Records: a},
-			Input{Name: "DUA1:[DIF116.IN]" + c.Revision + ";1", Records: b}, res, c.Merged)
+		List(l, Input{Name: "DUA1:[DIF116.IN]" + c.Master + ";1", Records: a},
+			Input{Name: "DUA1:[DIF116.IN]" + c.Revision + ";1", Records: b}, res, Forms{
+				Merged:            !c.Parallel && !c.Separated,
+				MergedStyle:       Style{After: c.Merged},
+				Parallel:          c.Parallel,
+				SeparatedMaster:   c.Separated,
+				SeparatedRevision: c.Separated,
+			})
 		Summary(l, res)
 
 		if g := l.Text(); g != w {
@@ -143,8 +164,8 @@ func TestProbeListings(t *testing.T) {
 		}
 	}
 
-	if ran != 541 {
-		t.Errorf("%d of the probe's listings ran, not 541", ran)
+	if ran != 591 {
+		t.Errorf("%d of the probe's listings ran, not 591", ran)
 	}
 }
 

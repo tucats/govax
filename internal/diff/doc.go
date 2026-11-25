@@ -77,4 +77,11 @@
 // aligned in five columns, three blanks, and its text, cut at the listing's
 // width. Then a blank line, the counts, a blank line, and the command echoed
 // with the qualifiers it used (Echo), broken to the width with "-".
+//
+// The other forms are forms.go's: Separated (each file's records of every
+// section under one heading), Parallel (side by side, in the printable form,
+// Pretty), and ChangeBars (a whole file, its changed records marked, Marks).
+// List writes a command's forms in VMS's order: parallel, merged, separated,
+// change bars, a blank line between them; a merged listing that isn't the
+// first ends with a section of no records, as VMS's did.
 package diff

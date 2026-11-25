@@ -72,6 +72,7 @@ type differences struct {
 	ignore     []string // /IGNORE's keywords as the echo shows them
 	delimiters []string // /COMMENT_DELIMITER's, as the echo shows them
 	modes      []string // /MODE's, as the echo shows them
+	separated  []string // /SEPARATED's, MASTER and REVISION, in that order
 }
 
 // Differences runs DIFFERENCES.
@@ -96,7 +97,7 @@ func (c *Context) Differences(req DifferencesRequest) error {
 	})
 
 	l := diff.NewListing(d.width)
-	diff.Merged(l, master, revision, res, d.merged)
+	diff.List(l, master, revision, res, d.forms())
 	diff.Summary(l, res)
 
 	outName, err := d.output(master.Name)
@@ -230,10 +231,10 @@ func differencesNumber(text string) (int32, error) {
 }
 
 // The keywords /IGNORE, /MODE, and /SEPARATED take, each in the order the
-// echo shows them (N63, N64; A.4's answer 1).
+// echo shows them (N63, N64; A.4's answer 1; /MODE's by F22 and R13).
 var (
 	ignoreKeywords    = []string{"SPACING", "TRAILING_SPACES", "HEADER", "FORM_FEEDS", "CASE", "EXACT", "PRETTY", "COMMENTS", "BLANK_LINES", "EDITED"}
-	modeKeywords      = []string{"HEXADECIMAL", "OCTAL", "ASCII"}
+	modeKeywords      = []string{"OCTAL", "HEXADECIMAL", "ASCII"}
 	separatedKeywords = []string{"MASTER", "REVISION"}
 )
 
@@ -269,15 +270,30 @@ func (d *differences) keywords() error {
 		return err
 	}
 
+	// The parallel form is ASCII's, so /PARALLEL adds it to the modes
+	// given (F34: /PARALLEL/MODE=HEX echoes /MODE=(HEXADECIMAL,ASCII)).
+	if len(modes) > 0 && on(d.req.Parallel) {
+		modes["ASCII"] = ""
+	}
+
 	for _, k := range modeKeywords {
 		if _, ok := modes[k]; ok {
 			d.modes = append(d.modes, k)
 		}
 	}
 
-	_, err = matchKeywords(d.req.SeparatedList, separatedKeywords, false)
+	separated, err := matchKeywords(d.req.SeparatedList, separatedKeywords, false)
+	if err != nil {
+		return err
+	}
 
-	return err
+	for _, k := range separatedKeywords {
+		if _, ok := separated[k]; ok {
+			d.separated = append(d.separated, k)
+		}
+	}
+
+	return nil
 }
 
 // matchKeywords matches each value to one of keywords (any abbreviation),
@@ -647,7 +663,7 @@ func (d *differences) echo(outName string) []string {
 		pieces = append(pieces, fmt.Sprintf("/MAXIMUM_DIFFERENCES=%d", d.maxDifferences))
 	}
 
-	if on(req.Merged) || !(on(req.Parallel) || on(req.Separated) || req.MasterBar.Given || req.RevisionBar.Given) {
+	if d.mergedForm() {
 		pieces = append(pieces, fmt.Sprintf("/MERGED=%d", uint32(d.merged)))
 	}
 
@@ -655,8 +671,9 @@ func (d *differences) echo(outName string) []string {
 		pieces = append(pieces, listPieces("/MODE=", d.modes, true)...)
 	}
 
+	// "/OUTPUT=" and the name are pieces of their own (F14 at /WIDTH=40).
 	if outName != "" {
-		pieces = append(pieces, "/OUTPUT="+outName)
+		pieces = append(pieces, "/OUTPUT=", outName)
 	}
 
 	if on(req.Parallel) {
@@ -667,11 +684,12 @@ func (d *differences) echo(outName string) []string {
 		}
 	}
 
+	// /SEPARATED of both files, by default or named, is shown bare (F09).
 	if on(req.Separated) {
-		if len(req.SeparatedList) == 0 || req.SeparatedList[0] == "" {
-			pieces = append(pieces, "/SEPARATED")
+		if len(d.separated) == 1 {
+			pieces = append(pieces, "/SEPARATED="+d.separated[0])
 		} else {
-			pieces = append(pieces, listPieces("/SEPARATED=", upper(req.SeparatedList), false)...)
+			pieces = append(pieces, "/SEPARATED")
 		}
 	}
 
@@ -713,36 +731,93 @@ func listPieces(prefix string, values []string, paren bool) []string {
 	return pieces
 }
 
-// upper is values in uppercase.
-func upper(values []string) []string {
-	out := make([]string, len(values))
-	for i, v := range values {
-		out[i] = strings.ToUpper(v)
-	}
-
-	return out
-}
-
-// changeBarEcho is a file's /CHANGE_BAR in the echo: `/CHANGE_BAR=("#")`
-// (N64).
+// changeBarEcho is a file's /CHANGE_BAR in the echo: bare when given no
+// value (F40), else its character quoted, `/CHANGE_BAR=("#")` (F41), and
+// NUMBER or NONUMBER if given (unconfirmed: no case showed them).
 func changeBarEcho(v DifferencesValue, values []string) string {
-	if !v.Given || v.Negated {
+	if !on(v) {
 		return ""
 	}
 
 	bar, number := "!", ""
+	given := false
 
 	for _, value := range values {
 		switch {
 		case value == "":
 		case strings.EqualFold(value, "NUMBER"):
-			number = ",NUMBER"
+			number, given = ",NUMBER", true
 		case strings.EqualFold(value, "NONUMBER"):
-			number = ",NONUMBER"
+			number, given = ",NONUMBER", true
 		default:
-			bar = value
+			bar, given = value, true
 		}
 	}
 
+	if !given {
+		return "/CHANGE_BAR"
+	}
+
 	return `/CHANGE_BAR=("` + bar + `"` + number + ")"
+}
+
+// mergedForm says the merged form is listed: asked for, or no other form
+// was (F40: a file's /CHANGE_BAR alone lists only its change bars).
+func (d *differences) mergedForm() bool {
+	req := d.req
+
+	return on(req.Merged) ||
+		!(on(req.Parallel) || on(req.Separated) || on(req.MasterBar) || on(req.RevisionBar))
+}
+
+// forms is the listings the qualifiers ask for (internal/diff's List writes
+// them in VMS's order).
+func (d *differences) forms() diff.Forms {
+	req := d.req
+	noNumber := req.Number.Given && req.Number.Negated
+
+	f := diff.Forms{
+		Merged:        d.mergedForm(),
+		MergedStyle:   diff.Style{After: d.merged, NoNumber: noNumber},
+		Parallel:      on(req.Parallel),
+		ParallelStyle: diff.Style{After: d.parallel, NoNumber: noNumber},
+		NoNumber:      noNumber,
+		MasterBar:     changeBar(req.MasterBar, req.MasterBarList, noNumber),
+		RevisionBar:   changeBar(req.RevisionBar, req.RevisionBarList, noNumber),
+	}
+
+	if on(req.Separated) {
+		f.SeparatedMaster, f.SeparatedRevision = len(d.separated) != 1, len(d.separated) != 1
+
+		for _, k := range d.separated {
+			f.SeparatedMaster = f.SeparatedMaster || k == "MASTER"
+			f.SeparatedRevision = f.SeparatedRevision || k == "REVISION"
+		}
+	}
+
+	return f
+}
+
+// changeBar is a file's /CHANGE_BAR: its character ("!" unless given), and
+// its numbers, by its own NUMBER or NONUMBER, else by /[NO]NUMBER.
+func changeBar(v DifferencesValue, values []string, noNumber bool) *diff.Bar {
+	if !on(v) {
+		return nil
+	}
+
+	bar := &diff.Bar{Char: '!', NoNumber: noNumber}
+
+	for _, value := range values {
+		switch {
+		case value == "":
+		case strings.EqualFold(value, "NUMBER"):
+			bar.NoNumber = false
+		case strings.EqualFold(value, "NONUMBER"):
+			bar.NoNumber = true
+		default:
+			bar.Char = value[0]
+		}
+	}
+
+	return bar
 }
