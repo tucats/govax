@@ -760,6 +760,40 @@ grammar console
                     /prompt="File"
         qualifier   host/id=2255
 
+    !
+    ! DIFFERENCES compares two files record by record (docs/planning/PHASE-116
+    ! - DIFFERENCES.md; internal/dclcmd/differences.go, internal/diff). With
+    ! one file, the second is its next lower version. /CHANGE_BAR is each
+    ! file's alone (after the verb, %DCL-W-IVQLOC); the numbers and keyword
+    ! lists are read by the command, so its messages are VMS's.
+    !
+    verb differences/id=3200
+        parameter   master/id=3201              -
+                    /type=$file                 -
+                    /prompt="File 1"
+        qualifier   change_bar/id=3202          -
+                    /parameter=master           -
+                    /type=$any/list/default=""
+        parameter   revision/id=3203            -
+                    /type=$file                 -
+                    /prompt="File 2"/optional
+        qualifier   change_bar/id=3204          -
+                    /parameter=revision         -
+                    /type=$any/list/default=""
+        qualifier   comment_delimiter/id=3205/type=$any/list/default=""
+        qualifier   ignore/id=3206/type=$any/list
+        qualifier   match/id=3207/type=$any
+        qualifier   maximum_differences/id=3208/type=$any
+        qualifier   merged/id=3209/type=$any/default=""
+        qualifier   mode/id=3210/type=$any/list
+        qualifier   number/id=3211
+        qualifier   output/id=3212/type=$string/default=""
+        qualifier   parallel/id=3213/type=$any/default=""
+        qualifier   separated/id=3214/type=$any/list/default=""
+        qualifier   slp/id=3215
+        qualifier   width/id=3216/type=$any
+        qualifier   window/id=3217/type=$any
+
     verb type/id=1200
 
         parameter   spec/id=1201                -

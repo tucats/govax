@@ -132,9 +132,9 @@ func TestLoadEvaxGrammar_verbCount(t *testing.T) {
 	// CLEAR, VMINIT (now INITIALIZE/MEMORY), ZERO, and BOOT went
 	// (2026-11-08). Phase 94 adds INSTALL, Phase 95 AUTHORIZE, and
 	// Phase 98 START (START/QUEUE), SUBMIT, and SYNCHRONIZE; LO, an alias
-	// of LOGOUT, is VMS's (2026-11-16).
-	if len(g.verbOrder) != 68 {
-		t.Errorf("got %d verbs, want 68: %v", len(g.verbOrder), verbNames(g))
+	// of LOGOUT, is VMS's (2026-11-16). Phase 116 adds DIFFERENCES.
+	if len(g.verbOrder) != 69 {
+		t.Errorf("got %d verbs, want 69: %v", len(g.verbOrder), verbNames(g))
 	}
 }
 

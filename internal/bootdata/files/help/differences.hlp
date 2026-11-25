@@ -1,0 +1,195 @@
+1 DIFFERENCES
+
+   Compares two files record by record and lists the records that
+   differ.
+
+   Format
+
+     DIFFERENCES input1-filespec [input2-filespec]
+
+2 Parameters
+
+ input1-filespec
+
+   The first file, the master: one file, with no wildcards.  A version
+   left out is the newest.
+
+ input2-filespec
+
+   The second file, the revision.  The parts it leaves out are the
+   first file's, but for the version: DIFFERENCES A.TXT .OLD compares
+   A.TXT with the newest A.OLD.
+
+   With no second file, the first is compared with its next lower
+   version: DIFFERENCES A.TXT compares the newest A.TXT with the one
+   before it.  When there is none, DIFFERENCES says so (NOLOWVER).
+
+   At the terminal, DIFFERENCES with no files asks for them, "_File 1:"
+   then "_File 2:"; an empty reply to the second compares the first
+   with its next lower version.
+
+2 Description
+
+   DIFFERENCES walks both files a record at a time.  Where the records
+   stop agreeing, a difference section starts, and it ends where the
+   files agree again for /MATCH records in a row (3 unless told
+   otherwise), or where both files end.  Records that agree inside a
+   section, fewer than /MATCH of them, are part of it.
+
+   Each section is listed, then the number of sections and of
+   difference records (a section counts as many as its larger side
+   has), and last the command, written out with the qualifiers it
+   used.
+
+   In the default, merged, listing a section is
+
+     ************
+     File DUA1:[WORK]FOO.TXT;2
+         3   line 3
+     ******
+     File DUA1:[WORK]FOO.TXT;1
+         3   extra cat
+         4   extra dog
+         5   line 3
+     ************
+
+   each file's records of the section, and after them as many records
+   that match as /MERGED says (1).  A record's line is its number, three
+   blanks, and its text, cut at the listing's width.
+
+   The status DIFFERENCES leaves is %X006C8009 (success) when the files
+   are the same, and %X006C8013 (informational) when they differ.
+
+2 Restrictions
+
+   This version of govax lists in the merged form only: /PARALLEL,
+   /SEPARATED, /CHANGE_BAR, /MODE=HEXADECIMAL and OCTAL, /NONUMBER, and
+   /SLP are accepted and shown in the command written out, but the
+   listing is the merged one.  /IGNORE and /COMMENT_DELIMITER are
+   checked and shown, but nothing is ignored yet.  VMS's /PAGE, /SEARCH,
+   /EXACT, /HIGHLIGHT, and /WRAP are not available.
+
+2 Qualifiers
+/CHANGE_BAR
+
+   /CHANGE_BAR[=(character[,[NO]NUMBER])]
+
+   Follows a file: lists that whole file, each record that differs
+   marked with character ("!" by default).  It is a file's qualifier
+   only: after the verb, DCL refuses it (IVQLOC).
+
+/COMMENT_DELIMITER
+
+   /COMMENT_DELIMITER[=(character[,...])]
+
+   Names up to 32 characters that start a comment, for
+   /IGNORE=COMMENTS, which it implies.  A character is given as itself
+   (quoted to keep its case) or by one of these keywords: COLON, COMMA,
+   EXCLAMATION, FORM_FEED, LEFT, RIGHT, SEMI_COLON, SLASH, SPACE, TAB.
+   With none, the file type chooses.
+
+/IGNORE
+
+   /IGNORE=(keyword[,...])
+
+   What to leave out of the comparison: BLANK_LINES, CASE, COMMENTS,
+   FORM_FEEDS, HEADER[=n] (n header records, 2 by default),
+   SPACING, TRAILING_SPACES.  And how the listing shows what is
+   ignored: EDITED (left out; the default), EXACT (shown as it is),
+   PRETTY (formatted).
+
+/MATCH
+
+   /MATCH=n
+
+   How many records must agree in a row for the files to be in step
+   again after a difference.  The default is 3.
+
+/MAXIMUM_DIFFERENCES
+
+   /MAXIMUM_DIFFERENCES=n
+
+   Stops comparing after n difference records.  0 is no limit.
+
+/MERGED
+
+   /MERGED[=n]
+
+   The merged listing (the default), each side of a section followed by
+   n records that match (1 by default).  n is at most /MATCH: a larger
+   value is lowered to it, with a warning (MRGGTMTCH).
+
+/MODE
+
+   /MODE=(radix[,...])
+
+   The listing's radix: ASCII (the default), HEXADECIMAL, OCTAL, each a
+   listing of its own.
+
+/NUMBER
+
+   /NUMBER (default)
+   /NONUMBER
+
+   Whether a record's line starts with its number.
+
+/OUTPUT
+
+   /OUTPUT[=filespec]
+
+   Writes the listing to a file rather than to SYS$OUTPUT.  With no file
+   named, or only a directory, the file is the first file's name with
+   type .DIF in the default directory; a name with no type gets .DIF.
+
+/PARALLEL
+
+   /PARALLEL[=n]
+
+   Lists each section's records side by side, followed by n records
+   that match (0 by default; at most /MATCH, with PARGTMTCH as for
+   /MERGED).
+
+/SEPARATED
+
+   /SEPARATED[=(MASTER,REVISION)]
+
+   Lists each file's records of a section on their own; with a keyword,
+   only that file's.
+
+/SLP
+
+   Writes, in place of a listing, an edit script for the SLP editor
+   that turns the first file into the second.  Its file is the first
+   file's name with type .DIF unless /OUTPUT names another.  It can't be
+   given with another listing's qualifier (CONFLICT).
+
+/WIDTH
+
+   /WIDTH=n
+
+   The listing's width, 132 by default; at least 12.  A line longer is
+   cut, the counts and the command written out are broken with "-".
+
+/WINDOW
+
+   /WINDOW=n
+
+   How far past a difference, in records, to look for the files to be
+   in step again.  By default, to the ends of both files.  n must be
+   greater than 0.
+
+2 Examples
+
+   1.$ DIFFERENCES FOO.TXT FOO.TST
+
+     Lists the records FOO.TXT and FOO.TST don't share.
+
+   2.$ DIFFERENCES LOGIN.COM
+
+     Compares the newest LOGIN.COM with the version before it.
+
+   3.$ DIFFERENCES/OUTPUT/MATCH=1 [WORK]REPORT.LIS .OLD
+
+     Compares REPORT.LIS with REPORT.OLD, both in [WORK], the files in
+     step again at the first record they agree on, and writes the
+     listing to REPORT.DIF in the default directory.

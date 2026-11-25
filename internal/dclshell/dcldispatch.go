@@ -284,6 +284,13 @@ func verbError(err error) error {
 		name, _ := ve.Arguments[0].(string)
 
 		return vmserrors.NewSegment(vmserrors.CLI_NOVALU, name+"=")
+	case ve.Status == vmserrors.CLI_EXTRAPARAMETER && len(ve.Arguments) == 1:
+		// A parameter past the command's last, as VMS 7.1 showed it, the
+		// segment the extra parameter's first word (DIFFERENCES A02.A
+		// A02.B A03.A: \A03\, testdata/dif116's N27).
+		rest, _ := ve.Arguments[0].(string)
+
+		return vmserrors.NewSegment(vmserrors.CLI_MAXPARM, firstWord(rest))
 	}
 
 	if len(ve.Arguments) != 2 || ve.Arguments[0] != "verb" {
@@ -424,3 +431,18 @@ func (c *Interpreter) BindDCL(g *dcl.Grammar) {
 
 // isDecimalDigit reports whether ch is a decimal digit.
 func isDecimalDigit(ch byte) bool { return ch >= '0' && ch <= '9' }
+
+// firstWord is text's first word: the letters, digits, "$", and "_" at its
+// start.
+func firstWord(text string) string {
+	text = strings.TrimSpace(text)
+
+	end := strings.IndexFunc(text, func(r rune) bool {
+		return !(r >= 'A' && r <= 'Z' || r >= 'a' && r <= 'z' || r >= '0' && r <= '9' || r == '$' || r == '_')
+	})
+	if end < 0 {
+		return text
+	}
+
+	return text[:end]
+}

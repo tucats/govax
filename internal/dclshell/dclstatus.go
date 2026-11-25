@@ -161,12 +161,15 @@ func messageText(v uint32) string {
 		return m.Facility + "-" + letter + "-" + m.Ident + ", " + m.Text
 	}
 
-	facility, ok := vmsdef.MessageFacilities[v>>16&0xFFF]
+	facility, ok := vmsdef.FacilityName(v >> 16 & 0xFFF)
 	if !ok || v&0x0FFFFFF8 == 0 {
 		facility = "NONAME"
 	}
 
-	return fmt.Sprintf("%s-%s-NOMSG, Message number %08X", facility, letter, v&^stsInhibitMsg)
+	// The number is the whole value, STS$M_INHIB_MSG and all: VMS 7.1's
+	// F$MESSAGE(%X106C8064) was "%DIFF-F-NOMSG, Message number 106C8064"
+	// (testdata/dif116's N03).
+	return fmt.Sprintf("%s-%s-NOMSG, Message number %08X", facility, letter, v)
 }
 
 // commandStatus is what the command being dispatched says about

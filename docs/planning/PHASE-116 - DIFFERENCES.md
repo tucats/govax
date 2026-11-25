@@ -6,7 +6,7 @@ answers recorded in "The review". This document is the development plan; as
 the work goes on it becomes the implementation record: the progress log,
 and at the end "Where things stand".
 
-## Goal 
+## Goal
 
 govax gets VMS's DIFFERENCES command: two record files compared record
 by record, and the records that don't match listed in VMS's forms, with
@@ -304,7 +304,7 @@ Each is one commit, with tests, stopping for review.
 2. **The probe** (done 2026-11-25, two rounds on the VAX): `testdata/dif116`, as in Part D, written and its exchange
    volume built; run on the VAX by the author; A.3 answered (as A.4) and
    Part B adjusted.
-3. **The command's frame**: the grammar, HELP DIFFERENCES in VMS's
+3. **The command's frame** (done 2026-11-25): the grammar, HELP DIFFERENCES in VMS's
    shape, the messages and statuses in `vmsdef`, names (the second's
    defaults, the next lower version), the errors, identical files, the
    output file; held to the probe's NAMES section.
@@ -402,3 +402,67 @@ The author's answers to the plan's three questions:
   all. Twelve file cases made none, every one a `/CHANGE_BAR` on the
   verb, which VMS refuses (IVQLOC). A.4 is the answers; Decisions 5 and 7
   are adjusted to them.
+- **2026-11-25 — subtask 3 done: the command's frame.** DIFFERENCES runs:
+  `internal/dclcmd/differences.go` (the command), `internal/console/differences.go`
+  (its binding), `internal/diff` (the engine), and HELP DIFFERENCES
+  (`bootdata/files/help/differences.hlp`, with a Restrictions topic for what
+  the later subtasks add). `TestDif116NamesOracle` (`internal/console/dif116_test.go`)
+  makes the probe's volume from `cases.txt` as `exchange.cmd` does, runs the
+  NAMES and OUTPUT cases as DIF116.COM runs them, and holds every case's
+  messages, status, and listing to VMS's: all but N29 (two directory files,
+  whose records are the volume's own) and O20 (DIRECTORY/FULL's file IDs and
+  times), with N36, N62, and N64's listings left to subtasks 5 and 6
+  (`dif116Later`). The rest of `dif116_test.go` is for the later subtasks'
+  oracles: `holdDif116(t, sections...)`.
+  - **The engine came early.** NAMES' listings need the comparison, the
+    merged form, the counts, and the echo, so `internal/diff` has them now:
+    `Compare` is the manual's rule (the place that leaves the fewest records
+    in the section, both files' together; at least one record must agree,
+    whatever /MATCH is, so /MATCH=0 and -1 act as 1, as N30 and N31 show),
+    which subtask 4 fits to the generated pairs. `Echo` is VMS's line
+    breaking, worked out from N37, N38, N60, N61, and N64 and held by
+    `internal/diff`'s tests: pieces ("/IGNORE=(SPACING," is one, a list
+    breaking between elements) go on a line while they fit in one less than
+    the width, else a "-" and a new line of four blanks; each file starts a
+    line; and under that every line is cut into pieces of width-1 and a "-"
+    (so /WIDTH=12's "DIFFERENCES-" / " /IGNORE=()-"). The counts are broken
+    the same way, records and "File" lines cut at the width.
+  - **Names.** The inputs go through `$OPEN` with a NAM, as CONVERT's do
+    (`rms.Session.ReadInputDefaulted`: CONVERT's reader with a default name),
+    so the names and errors are RMS's. The second file's default is the
+    first's resultant name without its version (N04: V01.TXT;1 then V03.TXT
+    is ;3). One file is compared with its highest lower version, found by
+    `Session.Search` of `;*`. OPENIN's secondary status is shown only under
+    DNF (N20 has none under FNF). A wildcard in the first is NOWILD before
+    anything is opened, in the second RMS's WLD.
+  - **Qualifiers.** The numbers are read by the command (`$any` in the
+    grammar), so a bad one is VMS's `%DCL-W-NUMBER` with its segment, and in
+    32 bits compared signed (MRGGTMTCH and PARGTMTCH as N30, N31, N34, N36;
+    /MERGED=-1 lists no records after). /WIDTH below 12 is 12; /WINDOW=0 is
+    BADVALUE. /SLP's CONFLICT is the command's check, not a grammar
+    DISALLOW as Decision 7 had it: the grammar's DISALLOW gives
+    BADQUALIFIERCOMBO, and the message is VMS's either way.
+  - **Messages and statuses** (Decision 5, revised): `vmsdef/difmessages.go`
+    has the statuses and the texts of DIF's own messages, which
+    `LookupMessage` doesn't find, so govax's F$MESSAGE answers NOMSG for them
+    as VMS's did; the shared ones (OPENIN, NOWILD, and BADVALUE, new among
+    `sharedMessages`) it knows, as VMS's did. Facility 108's name, DIFF, is
+    in `otherFacilities`, and NOMSG now names such a facility
+    (`vmsdef.FacilityName`) and shows the whole value, STS$M_INHIB_MSG
+    included (VMS's "Message number 106C8064"). NOWILD's and BADVALUE's
+    values are reckoned, unconfirmed: round 1 printed no real status.
+  - **DCL, beyond DIFFERENCES.** `internal/dcl`: a qualifier only a
+    parameter takes, given after the verb, is `%DCL-W-IVQLOC` (N49), and a
+    parameter's `/optional` beside its `/prompt=` is asked for only after
+    an earlier one was (the terminal log's `_File 1:` then `_File 2:`; an
+    empty reply leaves it out). `dclshell`'s `verbError`: an extra
+    parameter is VMS's `%DCL-W-MAXPARM` with its first word as the segment
+    (N27's `\A03\`), for every command.
+  - **A user-mode SYS$OUTPUT** naming a file gets the listing (O09), as the
+    image's own SYS$OUTPUT: DIFFERENCES translates it itself
+    (`differences.userOutput`). govax's other utilities don't yet; not this
+    phase's.
+  - **Echo forms not yet seen settled**, to be checked by the subtasks whose
+    sections show them: /MODE's order (HEXADECIMAL, OCTAL, ASCII, from N64's
+    one case), /SEPARATED's and /CHANGE_BAR's NUMBER forms, and which
+    characters LEFT and RIGHT name ("[" and "]" assumed).

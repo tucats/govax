@@ -98,6 +98,7 @@ var sharedMessages = map[uint32]Message{
 	0x10A0: {Ident: "OPENOUT", Text: "error opening !AS as output", FAOCount: 1},
 	0x10B0: {Ident: "READERR", Text: "error reading !AS", FAOCount: 1},
 	0x10F8: {Ident: "SYNTAX", Text: "error parsing '!AS'", FAOCount: 1},
+	0x1110: {Ident: "BADVALUE", Text: "'!AS' is an invalid keyword value", FAOCount: 1},
 	0x1128: {Ident: "NOWILD", Text: "no wildcard permitted"},
 	0x11F0: {Ident: "FILNOTDEL", Text: "error deleting !AS", FAOCount: 1},
 	0x1230: {Ident: "FILNOTPUR", Text: "error deleting !AS", FAOCount: 1},
@@ -149,7 +150,8 @@ func sharedMessage(code uint32) (Message, bool) {
 // The DCL utilities' are the facility numbers govax's commands put in
 // their statuses, from the probes' $STATUS values (COPY's unconfirmed).
 var otherFacilities = map[uint32]string{
-	JBCFacility: "JBC",
+	JBCFacility:  "JBC",
+	DIFFFacility: "DIFF",
 	103:         "COPY",
 	119:         "SET",
 	120:         "SHOW",
@@ -216,4 +218,18 @@ const GovaxNotImplemented = GovaxFacility<<16 | 1<<15 | 1<<3 | 2
 // finds them after the system's.
 var govaxMessages = map[uint32]Message{
 	GovaxNotImplemented & messageKeyMask: {Facility: "GOVAX", Ident: "NOTIMPL", Text: "routine !AS is not implemented in govax", FAOCount: 1},
+}
+
+// FacilityName is facility fac's name as a message shows it: the system
+// message file's (MessageFacilities), or one of govax's utilities'
+// (otherFacilities), so a status of DIFFERENCES' with no message shows as
+// "%DIFF-I-NOMSG, Message number 006C8013", as VMS 7.1 showed it.
+func FacilityName(fac uint32) (string, bool) {
+	if name, ok := MessageFacilities[fac]; ok {
+		return name, true
+	}
+
+	name, ok := otherFacilities[fac]
+
+	return name, ok
 }

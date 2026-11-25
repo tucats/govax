@@ -251,6 +251,11 @@ const (
 	// setting, the last given winning (LOGOUT's /BRIEF and /FULL).
 	cliBadSynonym
 	cliSynonymNotFound
+
+	// docs/planning/PHASE-116 - DIFFERENCES.md: a qualifier only a parameter
+	// takes, given after the verb, and a number that isn't one.
+	cliIvqLoc
+	cliNumber
 )
 
 // CLI facility status codes -- CLI_ prefix, matching real VMS's CLI$_
@@ -559,6 +564,12 @@ const (
 	CLI_NOVALU = CLIFacility<<FacilityPosition | cliNOVALU<<MessagePosition | StatusWarning
 	CLI_ABKEYW = CLIFacility<<FacilityPosition | cliAbKeyw<<MessagePosition | StatusWarning
 
+	// CLI_IVQLOC is a qualifier only a parameter takes, given after the verb,
+	// and CLI_NUMBER a qualifier's number that isn't one, each with its
+	// segment, as VMS 7.1 showed them (testdata/dif116's N49 and N32).
+	CLI_IVQLOC = CLIFacility<<FacilityPosition | cliIvqLoc<<MessagePosition | StatusWarning
+	CLI_NUMBER = CLIFacility<<FacilityPosition | cliNumber<<MessagePosition | StatusWarning
+
 	// Verification's messages (docs/planning/PHASE-50, subtask 15), as VMS 7.3
 	// showed them (testdata/dcl50's round 2): CLI_CONFLICT, a warning,
 	// for SET NOVERIFY with keywords; CLI_INVPREFIX, an error, for a SET
@@ -819,6 +830,8 @@ func init() {
 	DefineMessage(CLI_IVQUAL, CLIFacility, "IVQUAL", "unrecognized qualifier - check validity, spelling, and placement")
 	DefineMessage(CLI_NOVALU, CLIFacility, "NOVALU", "value not allowed - remove value specification")
 	DefineMessage(CLI_ABKEYW, CLIFacility, "ABKEYW", "ambiguous qualifier or keyword - supply more characters")
+	DefineMessage(CLI_IVQLOC, CLIFacility, "IVQLOC", "invalid qualifier location - place after a parameter")
+	DefineMessage(CLI_NUMBER, CLIFacility, "NUMBER", "invalid numeric value - supply an integer")
 	DefineMessage(CLI_CONFLICT, CLIFacility, "CONFLICT", "illegal combination of command elements - check documentation")
 	DefineMessage(CLI_INVPREFIX, CLIFacility, "INVPREFIX", "invalid prefix format string - check FAO directives")
 	DefineMessage(CLI_UNDFIL, CLIFacility, "UNDFIL", "file has not been opened by DCL - check logical name")

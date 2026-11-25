@@ -75,8 +75,9 @@ type ConvertOpenError struct {
 
 func (e *ConvertOpenError) Error() string { return "rms: can't open " + e.Name }
 
-// convertBlocks starts a context and a FAB and NAM for a file called name.
-func (s *Session) convertBlocks(name string, fac, shr byte) (*Context, error) {
+// convertBlocks starts a context and a FAB and NAM for a file called name,
+// with default name dna ("" for none).
+func (s *Session) convertBlocks(name, dna string, fac, shr byte) (*Context, error) {
 	ctx := s.blockContext()
 	ctx.Mem = vm.NewMemory(convMemSize) // room for a record of any size
 
@@ -89,6 +90,10 @@ func (s *Session) convertBlocks(name string, fac, shr byte) (*Context, error) {
 	b.byteAt(fab+fabSHR, shr)
 
 	fdlText(b, fab+fabOffset("FNA"), fab+fabOffset("FNS"), fdlFNAAddr, name)
+
+	if dna != "" {
+		fdlText(b, fab+fabOffset("DNA"), fab+fabOffset("DNS"), fdlDNAAddr, dna)
+	}
 
 	nam := fdlNAMAddr
 	b.long(fab+fabOffset("NAM"), nam)
@@ -133,6 +138,19 @@ func openBlocks(ctx *Context) *ConvertOpenError {
 // of damaged files did (C12's X05 and X07: status 1). A host file is text, a record
 // a line.
 func (s *Session) ReadConvertInput(spec string, krf int, share bool) (*ConvertInput, error) {
+	return s.readInput(spec, "", krf, share)
+}
+
+// ReadInputDefaulted reads the file spec names, its missing fields taken
+// from dna, a default name, as $OPEN takes them (DIFFERENCES' second file,
+// named from its first: docs/planning/PHASE-116 - DIFFERENCES.md). A host
+// file is text, a record a line, and has no defaults.
+func (s *Session) ReadInputDefaulted(spec, dna string) (*ConvertInput, error) {
+	return s.readInput(spec, dna, 0, false)
+}
+
+// readInput is ReadConvertInput with a default name.
+func (s *Session) readInput(spec, dna string, krf int, share bool) (*ConvertInput, error) {
 	loc, err := s.Locate(spec, false)
 	if err != nil {
 		return nil, err
@@ -147,7 +165,7 @@ func (s *Session) ReadConvertInput(spec string, krf int, share bool) (*ConvertIn
 		shr |= facPut | facUpd | facDel
 	}
 
-	ctx, err := s.convertBlocks(loc.Name, facGet, shr)
+	ctx, err := s.convertBlocks(loc.Name, dna, facGet, shr)
 	if err != nil {
 		return nil, err
 	}
@@ -458,7 +476,7 @@ type ConvertOutput struct {
 // this conversion just made it; appending positions at the end of a sequential
 // file, as /APPEND does.
 func (s *Session) OpenConvertOutput(name string, created, appending bool) (*ConvertOutput, error) {
-	ctx, err := s.convertBlocks(name, facPut|facGet|facUpd, 0)
+	ctx, err := s.convertBlocks(name, "", facPut|facGet|facUpd, 0)
 	if err != nil {
 		return nil, err
 	}

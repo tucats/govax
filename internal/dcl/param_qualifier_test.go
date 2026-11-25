@@ -281,18 +281,20 @@ func TestParse_paramScopedQualifier_quotedValueThenQualifier(t *testing.T) {
 // FILES do, CREATE, whose FILE does, OPEN, whose FILESPEC does,
 // BACKUP (docs/planning/PHASE-69 - backup save sets.md), whose INPUT and OUTPUT
 // carry their own save-set and file qualifiers, and FORTRAN
-// (docs/planning/PHASE-74 - FORTRAN plan.md), whose SOURCES take /HOST.
+// (docs/planning/PHASE-74 - FORTRAN plan.md), whose SOURCES take /HOST, and
+// DIFFERENCES (docs/planning/PHASE-116 - DIFFERENCES.md), whose files each take
+// /CHANGE_BAR.
 func TestLoadEvaxGrammar_unaffectedByParamQualifierFeature(t *testing.T) {
 	g := loadEvaxGrammar(t)
 
 	for _, e := range g.entries {
-		if e.Name == "COPY" || e.Name == "MACRO" || e.Name == "LINK" || e.Name == "LIBRARY" || e.Name == "RUN" || e.Name == "ANALYZE_OBJECT" || e.Name == "ANALYZE_IMAGE" || e.Name == "ANALYZE_RMS_FILE" || e.Name == "CREATE" || e.Name == "OPEN" || e.Name == "BACKUP" || e.Name == "FORTRAN" {
+		if e.Name == "COPY" || e.Name == "MACRO" || e.Name == "LINK" || e.Name == "LIBRARY" || e.Name == "RUN" || e.Name == "ANALYZE_OBJECT" || e.Name == "ANALYZE_IMAGE" || e.Name == "ANALYZE_RMS_FILE" || e.Name == "CREATE" || e.Name == "OPEN" || e.Name == "BACKUP" || e.Name == "FORTRAN" || e.Name == "DIFFERENCES" {
 			continue
 		}
 
 		for _, p := range e.Parameters {
 			if len(p.Qualifiers) != 0 {
-				t.Errorf("%s parameter %s unexpectedly has parameter-scoped qualifiers %+v (only COPY, MACRO, LINK, LIBRARY, RUN, ANALYZE, CREATE, OPEN, BACKUP, and FORTRAN declare any)",
+				t.Errorf("%s parameter %s unexpectedly has parameter-scoped qualifiers %+v (only COPY, MACRO, LINK, LIBRARY, RUN, ANALYZE, CREATE, OPEN, BACKUP, FORTRAN, and DIFFERENCES declare any)",
 					e.Name, p.Name, p.Qualifiers)
 			}
 		}

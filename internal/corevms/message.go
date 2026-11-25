@@ -88,7 +88,7 @@ func messageFor(code uint32) (m vmsdef.Message, found bool) {
 	// The system facility's message 0, in a severity other than
 	// SS$_NORMAL's, is NONAME's: VMS 7.3 showed EXIT 0, 2, and 4 so
 	// (testdata/dcl50).
-	facility, ok := vmsdef.MessageFacilities[code>>16&0xFFF]
+	facility, ok := vmsdef.FacilityName(code >> 16 & 0xFFF)
 	if !ok || code&0x0FFFFFF8 == 0 {
 		facility = "NONAME"
 	}

@@ -146,6 +146,13 @@ type Parameter struct {
 	// A.4). Without it a value's commas are its own.
 	Single bool
 
+	// Optional marks a parameter declared with /optional beside its
+	// /prompt=: not required, and asked for only when the command has
+	// already asked for a parameter before it, as VMS's DIFFERENCES asks
+	// "_File 2:" only after "_File 1:" (docs/planning/PHASE-116 -
+	// DIFFERENCES.md, A.4's answer 7).
+	Optional bool
+
 	// Separator, when nonzero, is a character that ends this parameter's
 	// value (the grammar's /separator="c"): one is skipped, with blanks
 	// around it, before the next parameter, so DEPOSIT X=5 reads as
@@ -158,7 +165,7 @@ type Parameter struct {
 // required reports whether this parameter must be supplied, matching
 // DCLprompt's DCL_REQ side effect: a parameter becomes required exactly when
 // its grammar statement carries a /prompt= clause.
-func (p *Parameter) required() bool { return p.Prompt != "" }
+func (p *Parameter) required() bool { return p.Prompt != "" && !p.Optional }
 
 // qualifier resolves name (an unambiguous prefix, "NO"-negation allowed)
 // against this parameter's own private qualifier list — the parameter-scoped
@@ -193,6 +200,18 @@ func (e *Entry) positionalQualifiers() []*Qualifier {
 	}
 
 	return out
+}
+
+// parameterQualifier finds name among the qualifiers the entry's
+// parameters take for themselves (/parameter=, not positional), or nil.
+func (e *Entry) parameterQualifier(name string) *Qualifier {
+	for _, p := range e.Parameters {
+		if q, _, err := p.qualifier(name); err == nil && !q.Positional {
+			return q
+		}
+	}
+
+	return nil
 }
 
 // Qualifier is one /-prefixed switch of an Entry, matching a grammar

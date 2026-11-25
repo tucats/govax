@@ -395,8 +395,28 @@ var ErrCanceled = errors.New("command canceled at a parameter prompt")
 // given), and the line is parsed again, which may ask for the next one
 // (COPY's "_From: " and "_To: ").
 func (g *Grammar) ParsePrompting(line string, ask func(prompt string) (reply string, ok bool)) (*Result, error) {
+	asked := false
+
 	for {
 		r, missing, err := g.parse(line)
+
+		// Once a parameter has been asked for, an /optional one after it
+		// is asked for too, an empty reply leaving it out.
+		if missing == nil && err == nil && asked && ask != nil {
+			if p := g.missingOptional(r); p != nil {
+				text, ok := ask("_" + p.Prompt + ": ")
+				if !ok {
+					return nil, ErrCanceled
+				}
+
+				if reply := strings.TrimSpace(text); reply != "" {
+					line = strings.TrimRight(line, " \t") + " " + reply
+
+					continue
+				}
+			}
+		}
+
 		if missing == nil || missing.Prompt == "" || ask == nil {
 			return r, err
 		}
@@ -412,8 +432,26 @@ func (g *Grammar) ParsePrompting(line string, ask func(prompt string) (reply str
 			reply = strings.TrimSpace(text)
 		}
 
+		asked = true
 		line = strings.TrimRight(line, " \t") + " " + reply
 	}
+}
+
+// missingOptional is the first /optional parameter of r's command that it
+// doesn't have, or nil.
+func (g *Grammar) missingOptional(r *Result) *Parameter {
+	e, ok := g.entries[upcase(r.Active)]
+	if !ok {
+		return nil
+	}
+
+	for _, p := range e.Parameters {
+		if p.Optional && p.Prompt != "" && !r.Present(p.Name) {
+			return p
+		}
+	}
+
+	return nil
 }
 
 // parse is Parse, also returning the required parameter that was
@@ -684,6 +722,13 @@ func (g *Grammar) parseQualifier(r *Result, active *Entry, nextParam int, lastPa
 			// (MACRO/LIBRARY=(A,B) PROG): filed as an entry-level qualifier.
 			pq, pn, perr := matchQualifier(active.positionalQualifiers(), name)
 			if perr != nil {
+				// One only a parameter takes is in the wrong place:
+				// VMS 7.1's DIFFERENCES/CHANGE_BAR was %DCL-W-IVQLOC
+				// (testdata/dif116's N49).
+				if oq := active.parameterQualifier(name); oq != nil {
+					return nil, 0, nil, "", vmserrors.NewSegment(vmserrors.CLI_IVQLOC, oq.Name)
+				}
+
 				return nil, 0, nil, "", err
 			}
 

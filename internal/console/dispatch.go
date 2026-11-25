@@ -465,6 +465,7 @@ func (d *Dispatcher) bindGrammar() {
 	// Phase 25: DEFINE, ASSIGN, DEASSIGN, CREATE/NAME_TABLE, SHOW LOGICAL
 	// and SHOW TRANSLATION (logical.go).
 	bindLogicalCommands(g, d.Console)
+	bindDifferences(g, d.Console)
 
 	// Phase 22 (internal/rms): MOUNT/DISMOUNT attach/detach a disk-image
 	// container file to a device name via internal/rms.MountTable
