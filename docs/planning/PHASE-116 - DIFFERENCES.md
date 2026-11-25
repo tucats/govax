@@ -316,7 +316,7 @@ Each is one commit, with tests, stopping for review.
 5. **The other forms** (done 2026-11-25): `/SEPARATED`, `/PARALLEL`, `/CHANGE_BAR`,
    `/NONUMBER`, `/WIDTH`, several forms together.
 6. **Radix and SLP** (done 2026-11-25): `/MODE=HEX` and `OCTAL`, `/SLP`.
-7. **Ignoring**: `/IGNORE`'s keywords, EDITED/EXACT/PRETTY,
+7. **Ignoring** (done 2026-11-25): `/IGNORE`'s keywords, EDITED/EXACT/PRETTY,
    `/COMMENT_DELIMITER` and the defaults by file type.
 8. **The terminal and the rest**: the terminal's width, records that
    aren't text.
@@ -583,3 +583,50 @@ The author's answers to the plan's three questions:
     stopped at an insertion of two after a section of one, its script
     replacing one record with one, where the merged L01_3 listed two of
     each. Fitted to that one case, unconfirmed.
+- **2026-11-25 — subtask 7 done: ignoring.** `internal/diff/ignore.go`:
+  `Ignore` (what /IGNORE and /COMMENT_DELIMITER ask), `Delimiter`, and
+  `Prepare`, which edits a file's records into the keys `Compare` compares
+  and an `Input` of the records kept, as the listing shows them, each with
+  its number in the file (`Input.Numbers`, `Input.Number`, now what every
+  form and SLP print; `SLP` takes the master too). The command builds the
+  `Ignore` from its qualifiers and settles the comment characters once the
+  master's name is known (`typeDelimiters`). `TestDif116IgnoringOracle`
+  holds the IGNORING section, every case's listing, echo, and status, to
+  VMS's, and N64's listing is held now too (`dif116Later` is empty);
+  `internal/diff`'s `TestProbeListings` reads /IGNORE and
+  /COMMENT_DELIMITER and holds 770 listings.
+  - **The edits**, in the manual's order: comments (from a character to the
+    record's end), form feeds, each page's header, spacing (each run of
+    blanks and tabs one blank, leading runs too: I03), then trailing blanks
+    and tabs, then records left empty (I40, I41). CASE compares ASCII
+    letters folded; whether VMS folded DEC's multinational ones no case
+    shows (R10 and R11 agree there). A record left out is neither compared
+    nor listed, and the rest keep their numbers (I05).
+  - **What a record shows**: EDITED's edited text (I03's `trail `, IC_MAR's
+    `y = 2 `), EXACT's text as it was (I07, IE10), PRETTY's edited text in
+    the printable form (I09, I11, IE11); CASE never changes it (I02). The
+    parallel form shows the edited text, formatted (I12, IE12); the dumps
+    the edited bytes (I14). Under PRETTY the other forms' records are
+    already formatted; with a radix that is unconfirmed.
+  - **HEADER=n** applies to every page, not only the first (I22's `Date
+    2`): a record starting with a form feed starts a header; one of a form
+    feed alone is kept and not counted, one with text is the header's first
+    record (I23, I28). It is found in the record as it was, so FORM_FEEDS
+    doesn't hide it (I25). A form feed alone inside a header is kept and not
+    counted (the manual; unconfirmed).
+  - **Comment characters.** Given ones start a comment anywhere (IE06's
+    `*`); the type's defaults, the manual's table as the ID_ cases echo it,
+    are used by `/IGNORE=COMMENTS` alone (IC_) and by `/COMMENT_DELIMITER`
+    with no value (ID_), which then echoes them (`(EXCLAMATION,"C","D",
+    "c","d")`; a type with none, bare `/COMMENT_DELIMITERS`). `.COB`'s `*`
+    and `/` and `.FOR`'s C, D, c, and d count only in column 1. The first
+    file's type chooses (unconfirmed: every case's files had one type). By
+    the author's direction, `.F90` has `!` anywhere, govax's own
+    (DEVIATIONS.md).
+  - **The echo.** PRETTY comes before FORM_FEEDS and COMMENTS and after
+    SPACING (I26, IE11, I09), EXACT after CASE (I10); PRETTY's place beside
+    TRAILING_SPACES and HEADER is unconfirmed. EDITED isn't echoed (I08).
+  - **A bug the probe found in the first try**: `bytes.ToUpper` reads text as
+    UTF-8, so under CASE every byte from %X80 up became one replacement
+    character and R15's records 9, which differ, matched; `upperASCII` folds
+    byte by byte.

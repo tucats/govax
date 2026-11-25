@@ -2152,3 +2152,14 @@ nothing is changed until a program needs it. `TestLink82Oracle` lists the case.
 - **Status**: open. The placement needs a probe of its own (files made one at a time, the map after each);
   the version limit is DIRECTORY/FULL reading the directory record, which would change every oracle that
   shows one.
+
+### [Phase 116] DIFFERENCES' default comment characters for .F90 files
+
+- **Where**: `internal/diff/ignore.go`'s `defaultDelimiters`.
+- **What**: VMS 7.1's DIFFERENCES has no default comment characters for a `.F90` file (its table
+  predates Fortran 90), so `/IGNORE=COMMENTS` ignores nothing in one and `/COMMENT_DELIMITER` with no
+  value echoes a bare `/COMMENT_DELIMITERS`, as for `.TXT` (testdata/dif116's ID_TXT). govax gives
+  `.F90` the free source form's comment character, `!` anywhere; not `.FOR`'s C, D, c, and d in
+  column 1, which in free form would cut statements beginning with those letters. By the author's
+  direction (Phase 116, subtask 7).
+- **Status**: by choice.

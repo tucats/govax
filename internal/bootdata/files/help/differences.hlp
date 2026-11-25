@@ -77,9 +77,8 @@
 
 2 Restrictions
 
-   /IGNORE and /COMMENT_DELIMITER are checked and shown in the command
-   written out, but nothing is ignored yet.  VMS's /PAGE, /SEARCH,
-   /EXACT, /HIGHLIGHT, and /WRAP are not available.
+   VMS's /PAGE, /SEARCH, /EXACT, /HIGHLIGHT, and /WRAP are not
+   available.
 
 2 Qualifiers
 /CHANGE_BAR
@@ -101,17 +100,46 @@
    /IGNORE=COMMENTS, which it implies.  A character is given as itself
    (quoted to keep its case) or by one of these keywords: COLON, COMMA,
    EXCLAMATION, FORM_FEED, LEFT, RIGHT, SEMI_COLON, SLASH, SPACE, TAB.
-   With none, the file type chooses.
+   A comment runs from its character to the end of the record.
+
+   With no character, or with /IGNORE=COMMENTS alone, the first file's
+   type chooses:
+
+     .B2S .B32 .BAS .BLI .COM .COR .HLP .R32 .REQ   !
+     .CBL .CMD                                     ! and ;
+     .COB                                          * and / in column 1
+     .FOR                     ! anywhere, C D c d in column 1
+     .F90                                          ! (govax's own)
+     .MAC .MAR                                     ;
+
+   Any other type has none, and no comments are ignored.
 
 /IGNORE
 
    /IGNORE=(keyword[,...])
 
-   What to leave out of the comparison: BLANK_LINES, CASE, COMMENTS,
-   FORM_FEEDS, HEADER[=n] (n header records, 2 by default),
-   SPACING, TRAILING_SPACES.  And how the listing shows what is
-   ignored: EDITED (left out; the default), EXACT (shown as it is),
-   PRETTY (formatted).
+   What to leave out of the comparison:
+
+     COMMENTS         from a comment character to the record's end
+     FORM_FEEDS       form feed characters
+     HEADER[=n]       each page's header: after a record starting
+                      with a form feed, n records (2 by default); a
+                      record of a form feed alone is kept and not
+                      counted, one with text is the header's first
+     SPACING          each run of blanks and tabs is one blank
+     TRAILING_SPACES  blanks and tabs at a record's end
+     CASE             compared without regard to case
+     BLANK_LINES      records left empty by the edits above
+
+   They are applied in that order, so COMMENTS, TRAILING_SPACES, and
+   BLANK_LINES together leave out a record of blanks and a comment.
+   Records left out keep their numbers in the listing.
+
+   And how a listing shows each record: EDITED (the default) with the
+   ignored characters taken out, EXACT as it is in the file, PRETTY
+   edited and formatted (tabs expanded, <LF>, <VT>, <FF>, <CR>, and a
+   period for other unprintable characters).  CASE never changes what
+   is shown.  /PARALLEL always formats.
 
 /MATCH
 

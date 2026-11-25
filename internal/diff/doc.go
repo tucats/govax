@@ -68,6 +68,15 @@
 // more: that section lists only the records the count had left, of each file
 // from its start, with no matched records after it.
 //
+// # Ignoring
+//
+// /IGNORE and /COMMENT_DELIMITER are applied before the comparison
+// (ignore.go): Ignore.Prepare edits each record (comments, form feeds, page
+// headers, spacing, trailing blanks, then empty records, in the DCL
+// Dictionary's order) into the key Compare compares, and gives the listing
+// the records kept, each shown as EDITED, EXACT, or PRETTY says and keeping
+// its number in the file (Input.Numbers).
+//
 // # The listing
 //
 // A section is listed in the merged form by default: a row of 12 asterisks,

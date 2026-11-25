@@ -74,6 +74,9 @@ type differences struct {
 	modes      []string     // /MODE's, as the echo shows them
 	radixes    []diff.Radix // /MODE's as given, the listings' radixes
 	separated  []string     // /SEPARATED's, MASTER and REVISION, in that order
+
+	ign      diff.Ignore // what /IGNORE and /COMMENT_DELIMITER ignore
+	comments []byte      // /COMMENT_DELIMITER's characters, none for the type's
 }
 
 // Differences runs DIFFERENCES.
@@ -93,7 +96,12 @@ func (c *Context) Differences(req DifferencesRequest) error {
 		return err
 	}
 
-	res := diff.Compare(master.Records, revision.Records, diff.Options{
+	d.typeDelimiters(master.Name)
+
+	masterKeys, master := d.ign.Prepare(master)
+	revisionKeys, revision := d.ign.Prepare(revision)
+
+	res := diff.Compare(masterKeys, revisionKeys, diff.Options{
 		Match: d.match, Window: int(d.window), MaxDifferences: int(d.maxDifferences),
 		BothSides: on(req.SLP),
 	})
@@ -106,7 +114,7 @@ func (c *Context) Differences(req DifferencesRequest) error {
 	// /SLP writes its script alone: no counts, no echo (F35).
 	l := diff.NewListing(d.width)
 	if on(req.SLP) {
-		l.Lines = diff.SLP(revision, res)
+		l.Lines = diff.SLP(master, revision, res)
 	} else {
 		diff.List(l, master, revision, res, d.forms())
 		diff.Summary(l, res)
@@ -241,8 +249,11 @@ func differencesNumber(text string) (int32, error) {
 
 // The keywords /IGNORE, /MODE, and /SEPARATED take, each in the order the
 // echo shows them (N63, N64; A.4's answer 1; /MODE's by F22 and R13).
+// PRETTY comes before FORM_FEEDS (I26) and COMMENTS (IE11), after SPACING
+// (I09), where EXACT comes after CASE (I10); its place beside
+// TRAILING_SPACES and HEADER is unconfirmed.
 var (
-	ignoreKeywords    = []string{"SPACING", "TRAILING_SPACES", "HEADER", "FORM_FEEDS", "CASE", "EXACT", "PRETTY", "COMMENTS", "BLANK_LINES", "EDITED"}
+	ignoreKeywords    = []string{"SPACING", "TRAILING_SPACES", "HEADER", "PRETTY", "FORM_FEEDS", "CASE", "EXACT", "COMMENTS", "BLANK_LINES", "EDITED"}
 	modeKeywords      = []string{"OCTAL", "HEXADECIMAL", "ASCII"}
 	separatedKeywords = []string{"MASTER", "REVISION"}
 )
@@ -267,11 +278,41 @@ func (d *differences) keywords() error {
 		case !ok || k == "EDITED":
 		case k == "HEADER" && v == "":
 			d.ignore = append(d.ignore, "HEADER=2")
+			d.ign.Header = 2
 		case k == "HEADER":
+			n, err := differencesNumber(v)
+			if err != nil {
+				return err
+			}
+
 			d.ignore = append(d.ignore, "HEADER="+v)
+			d.ign.Header = int(n)
 		default:
 			d.ignore = append(d.ignore, k)
 		}
+	}
+
+	_, d.ign.FormFeeds = ignore["FORM_FEEDS"]
+	_, d.ign.Spacing = ignore["SPACING"]
+	_, d.ign.TrailingSpaces = ignore["TRAILING_SPACES"]
+	_, d.ign.BlankLines = ignore["BLANK_LINES"]
+	_, d.ign.Case = ignore["CASE"]
+
+	if _, ok := ignore["COMMENTS"]; ok {
+		// The characters are /COMMENT_DELIMITER's, or the master's type's
+		// (typeDelimiters); a type with none ignores nothing (IC_TXT).
+		d.ign.Comments = []diff.Delimiter{}
+	}
+
+	// EXACT and PRETTY choose what a listing shows; EDITED, the default,
+	// isn't echoed (I08). Given more than one, the last in the echo's
+	// order wins (unconfirmed: no case gave two).
+	if _, ok := ignore["PRETTY"]; ok {
+		d.ign.Shown = diff.PrettyForm
+	}
+
+	if _, ok := ignore["EXACT"]; ok {
+		d.ign.Shown = diff.Exact
 	}
 
 	modes, err := matchKeywords(d.req.ModeList, modeKeywords, false)
@@ -406,15 +447,47 @@ func (d *differences) commentDelimiters() error {
 		}
 	}
 
-	for _, ch := range chars {
-		if name, ok := commentShown[ch]; ok {
-			d.delimiters = append(d.delimiters, name)
-		} else {
-			d.delimiters = append(d.delimiters, `"`+string(ch)+`"`)
-		}
-	}
+	d.comments = chars
 
 	return nil
+}
+
+// typeDelimiters settles the comment characters once the master's name is
+// known: /COMMENT_DELIMITER's, or with none given (/IGNORE=COMMENTS alone,
+// or /COMMENT_DELIMITER with no value) the master's type's (IC_ and ID_
+// cases), which the echo then shows for /COMMENT_DELIMITER (ID_FOR's
+// "(EXCLAMATION,"C","D","c","d")", ID_TXT's bare "/COMMENT_DELIMITERS").
+func (d *differences) typeDelimiters(master string) {
+	if d.ign.Comments == nil {
+		return
+	}
+
+	if len(d.comments) > 0 {
+		for _, ch := range d.comments {
+			d.ign.Comments = append(d.ign.Comments, diff.Delimiter{Char: ch})
+		}
+	} else {
+		name, _ := rms.SplitVersion(rms.NameType(master))
+
+		fileType := ""
+		if i := strings.LastIndexByte(name, '.'); i >= 0 {
+			fileType = name[i+1:]
+		}
+
+		d.ign.Comments = append(d.ign.Comments, diff.DefaultDelimiters(fileType)...)
+	}
+
+	if !on(d.req.CommentDelimiter) {
+		return
+	}
+
+	for _, c := range d.ign.Comments {
+		if name, ok := commentShown[c.Char]; ok {
+			d.delimiters = append(d.delimiters, name)
+		} else {
+			d.delimiters = append(d.delimiters, `"`+string(c.Char)+`"`)
+		}
+	}
 }
 
 // uniqueKeyword is the comment keyword text abbreviates, if only one.

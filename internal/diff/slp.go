@@ -23,8 +23,9 @@ import "fmt"
 // their text, never cut; an insertion before the master's first record is a
 // bare "-" (SA06). Files that don't differ get only the "/" (SG137).
 // A comparison /MAXIMUM_DIFFERENCES stopped ends with its cut last section
-// (L03).
-func SLP(revision Input, res Result) []string {
+// (L03). The numbers are the master's records' in its file, records
+// /IGNORE left out counted (I13).
+func SLP(master, revision Input, res Result) []string {
 	var lines []string
 
 	for _, s := range res.Sections {
@@ -32,9 +33,9 @@ func SLP(revision Input, res Result) []string {
 		case s.Master.Len() == 0 && s.Master.Start == 0:
 			lines = append(lines, "-")
 		case s.Master.Len() == 0:
-			lines = append(lines, fmt.Sprintf("-%5d", s.Master.Start))
+			lines = append(lines, fmt.Sprintf("-%5d", master.Number(s.Master.Start-1)))
 		default:
-			lines = append(lines, fmt.Sprintf("-%5d,%5d", s.Master.Start+1, s.Master.End))
+			lines = append(lines, fmt.Sprintf("-%5d,%5d", master.Number(s.Master.Start), master.Number(s.Master.End-1)))
 		}
 
 		for r := s.Revision.Start; r < min(s.Revision.End, len(revision.Records)); r++ {

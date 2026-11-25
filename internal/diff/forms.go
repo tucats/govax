@@ -161,7 +161,7 @@ func Separated(l *Listing, in Input, res Result, span func(Section) Span, st Sty
 		sp := span(s)
 
 		for r := sp.Start; r < min(sp.End, len(in.Records)); r++ {
-			record(l, r+1, in.Records[r], st)
+			record(l, in.Number(r), in.Records[r], st)
 		}
 	}
 
@@ -210,7 +210,7 @@ func ChangeBars(l *Listing, in Input, marks []bool, bar Bar, radix Radix) {
 
 	for r, text := range in.Records {
 		if radix != ASCII {
-			dumpRecord(l, newDumpLayout(radix, l.Width), r+1, text, marks[r])
+			dumpRecord(l, newDumpLayout(radix, l.Width), in.Number(r), text, marks[r])
 
 			continue
 		}
@@ -223,7 +223,7 @@ func ChangeBars(l *Listing, in Input, marks []bool, bar Bar, radix Radix) {
 		if bar.NoNumber {
 			l.Cut(fmt.Sprintf("%c %s", mark, text))
 		} else {
-			l.Cut(fmt.Sprintf("%5d %c %s", r+1, mark, text))
+			l.Cut(fmt.Sprintf("%5d %c %s", in.Number(r), mark, text))
 		}
 	}
 
@@ -278,8 +278,8 @@ func Parallel(l *Listing, master, revision Input, res Result, st Style) {
 
 		sep := []byte(rule)
 		if !st.NoNumber {
-			put(sep, half/2, " "+strconv.Itoa(s.Master.Start+1)+" ")
-			put(sep, half+1+half/2, " "+strconv.Itoa(s.Revision.Start+1)+" ")
+			put(sep, half/2, " "+strconv.Itoa(master.Number(s.Master.Start))+" ")
+			put(sep, half+1+half/2, " "+strconv.Itoa(revision.Number(s.Revision.Start))+" ")
 		}
 
 		l.Lines = append(l.Lines, string(sep))

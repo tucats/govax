@@ -48,10 +48,27 @@ func (l *Listing) Text() string {
 }
 
 // Input is one file as the listing names it: its full name and its
-// records.
+// records, with their numbers in the file when records were left out
+// (Ignore.Prepare; nil numbers them from 1).
 type Input struct {
 	Name    string
 	Records [][]byte
+	Numbers []int
+}
+
+// Number is record r's number in the file: from Numbers, or r+1. A place
+// past the last record is the number after the last's.
+func (in Input) Number(r int) int {
+	switch {
+	case in.Numbers == nil:
+		return r + 1
+	case r < len(in.Numbers):
+		return in.Numbers[r]
+	case len(in.Numbers) > 0:
+		return in.Numbers[len(in.Numbers)-1] + 1 + r - len(in.Numbers)
+	default:
+		return r + 1
+	}
 }
 
 // Style is how a form writes a section's records.
@@ -109,7 +126,7 @@ func side(l *Listing, in Input, span Span, after int32, st Style) {
 	end := min(span.End+max(int(after), 0), len(in.Records))
 
 	for r := span.Start; r < end; r++ {
-		record(l, r+1, in.Records[r], st)
+		record(l, in.Number(r), in.Records[r], st)
 	}
 }
 

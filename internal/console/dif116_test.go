@@ -419,9 +419,7 @@ func dif116Status(got, want []string) []string {
 
 // dif116Later are the cases of a section an oracle test holds whose listings
 // a later subtask writes: only their messages and status are compared.
-var dif116Later = map[string]string{
-	"N64": "/IGNORE's listings are subtask 7's",
-}
+var dif116Later = map[string]string{}
 
 // dif116IsLater says a case's listing is a later subtask's.
 func dif116IsLater(id string) bool {
@@ -543,4 +541,14 @@ func TestDif116FormsOracle(t *testing.T) {
 	t.Parallel()
 
 	holdDif116(t, "FORMS")
+}
+
+// TestDif116IgnoringOracle holds /IGNORE and /COMMENT_DELIMITER to VMS's
+// (subtask 7): each keyword alone and together, EDITED, EXACT, and PRETTY,
+// HEADER's pages, comment characters given and by each file type, and what
+// the echo shows of them: the IGNORING section.
+func TestDif116IgnoringOracle(t *testing.T) {
+	t.Parallel()
+
+	holdDif116(t, "IGNORING")
 }

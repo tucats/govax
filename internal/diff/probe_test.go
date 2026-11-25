@@ -26,6 +26,91 @@ type probeCase struct {
 	Width   int
 	Radixes []Radix
 	SLP     bool
+
+	// Ignore is /IGNORE's and /COMMENT_DELIMITER's (the master's type's
+	// characters filled in by readProbe's caller).
+	Ignore       Ignore
+	TypeComments bool
+}
+
+var (
+	probeIgnore    = regexp.MustCompile(`/IGNORE=(\([A-Z_=0-9,]+\)|[A-Z_=0-9]+)`)
+	probeDelimiter = regexp.MustCompile(`/COMMENT_DELIMITER(=(\([^)]*\)|"[^"]*"|[A-Za-z]+))?`)
+)
+
+// probeCommentKeywords are /COMMENT_DELIMITER's keywords.
+var probeCommentKeywords = map[string]byte{
+	"COLON": ':', "COMMA": ',', "EXCLAMATION": '!', "FORM_FEED": '\f', "LEFT": '[',
+	"RIGHT": ']', "SEMI_COLON": ';', "SLASH": '/', "SPACE": ' ', "TAB": '\t',
+}
+
+// probeIgnoreOf reads a command's /IGNORE and /COMMENT_DELIMITER into c,
+// returning the command without them.
+func probeIgnoreOf(c *probeCase, cmd string) string {
+	cmd = probeIgnore.ReplaceAllStringFunc(cmd, func(q string) string {
+		for k := range strings.SplitSeq(strings.Trim(probeIgnore.FindStringSubmatch(q)[1], "()"), ",") {
+			name, value, _ := strings.Cut(k, "=")
+
+			switch name {
+			case "SPACING":
+				c.Ignore.Spacing = true
+			case "TRAILING_SPACES":
+				c.Ignore.TrailingSpaces = true
+			case "BLANK_LINES":
+				c.Ignore.BlankLines = true
+			case "CASE":
+				c.Ignore.Case = true
+			case "FORM_FEEDS":
+				c.Ignore.FormFeeds = true
+			case "HEADER":
+				c.Ignore.Header = 2
+				if value != "" {
+					c.Ignore.Header, _ = strconv.Atoi(value)
+				}
+			case "COMMENTS":
+				c.TypeComments = c.Ignore.Comments == nil
+				c.Ignore.Comments = []Delimiter{}
+			case "EXACT":
+				c.Ignore.Shown = Exact
+			case "PRETTY":
+				c.Ignore.Shown = PrettyForm
+			}
+		}
+
+		return ""
+	})
+
+	return probeDelimiter.ReplaceAllStringFunc(cmd, func(q string) string {
+		c.Ignore.Comments, c.TypeComments = []Delimiter{}, true
+
+		value := probeDelimiter.FindStringSubmatch(q)[2]
+		if value == "" {
+			return ""
+		}
+
+		c.TypeComments = false
+
+		for v := range strings.SplitSeq(strings.Trim(value, "()"), ",") {
+			ch := byte(0)
+
+			switch {
+			case strings.HasPrefix(v, `"`):
+				ch = v[1]
+			case len(v) == 1:
+				ch = strings.ToUpper(v)[0]
+			default:
+				for k, x := range probeCommentKeywords {
+					if strings.HasPrefix(k, v) {
+						ch = x
+					}
+				}
+			}
+
+			c.Ignore.Comments = append(c.Ignore.Comments, Delimiter{Char: ch})
+		}
+
+		return ""
+	})
 }
 
 var probeModes = regexp.MustCompile(`/MODE=(\([A-Z,]+\)|[A-Z]+)`)
@@ -128,6 +213,7 @@ func readProbe(t *testing.T) (map[string][][]byte, []probeCase) {
 			}
 
 			c.Opts.BothSides = c.SLP
+			rest = probeIgnoreOf(&c, rest)
 
 			if rest == "" {
 				cases = append(cases, c)
@@ -139,17 +225,17 @@ func readProbe(t *testing.T) (map[string][][]byte, []probeCase) {
 }
 
 // probeSections are the probe's sections whose cases this package can run
-// whole: two files named plainly, numeric qualifiers, /MODE, and the merged,
-// parallel, separated, and SLP forms (the FORMS, IGNORING, and FORMATS
-// sections' cases that ask for nothing else). NAMES needs the command, and
-// /IGNORE and change bars aren't read here.
+// whole: two files named plainly, numeric qualifiers, /MODE, /IGNORE,
+// /COMMENT_DELIMITER, and the merged, parallel, separated, and SLP forms (the
+// FORMS, IGNORING, and FORMATS sections' cases that ask for nothing else).
+// NAMES needs the command, and change bars aren't read here.
 var probeSections = map[byte]bool{
 	'A': true, 'M': true, 'L': true, 'G': true, 'H': true, 'X': true, 'Z': true, 'P': true, 'E': true,
 	'F': true, 'S': true, 'R': true, 'I': true,
 }
 
 // probeListings is how many of the probe's listings TestProbeListings holds.
-const probeListings = 696
+const probeListings = 770
 
 // TestProbeListings holds the comparison and the listing, up to the echo,
 // to every listing VMS 7.1 made of the probe's LAYOUT, MATCHING, LIMITS, and
@@ -183,14 +269,19 @@ func TestProbeListings(t *testing.T) {
 
 		ran++
 
-		res := Compare(a, b, c.Opts)
+		ig := c.Ignore
+		if c.TypeComments {
+			ig.Comments = append(ig.Comments, DefaultDelimiters(c.Master[strings.LastIndexByte(c.Master, '.')+1:])...)
+		}
+
+		keysA, master := ig.Prepare(Input{Name: "DUA1:[DIF116.IN]" + c.Master + ";1", Records: a})
+		keysB, revision := ig.Prepare(Input{Name: "DUA1:[DIF116.IN]" + c.Revision + ";1", Records: b})
+
+		res := Compare(keysA, keysB, c.Opts)
 		l := NewListing(c.Width)
 
-		master := Input{Name: "DUA1:[DIF116.IN]" + c.Master + ";1", Records: a}
-		revision := Input{Name: "DUA1:[DIF116.IN]" + c.Revision + ";1", Records: b}
-
 		if c.SLP {
-			l.Lines = SLP(revision, res)
+			l.Lines = SLP(master, revision, res)
 		} else {
 			List(l, master, revision, res, Forms{
 				Merged:            c.AlsoMerged || (!c.Parallel && !c.Separated),
