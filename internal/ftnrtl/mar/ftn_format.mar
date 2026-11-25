@@ -198,6 +198,8 @@ CTX_COUNTED	= CTX_RECP+92		; long: the characters data edit descriptors
 CTX_EOR		= CTX_RECP+96		; byte: 1 once an item's field ran past the
 					;  end of a nonadvancing READ's record
 CTX_PADNO	= CTX_RECP+97		; byte: 1 if the unit is PAD='NO'
+CTX_PCMOVE	= CTX_RECP+98		; byte: whose call a failure's user PC is
+PC_PREVIOUS	= 1			;  (FTN_STATEMENT's FTN$IO_ITEM)
 
 ;
 ; A parsed format: its size (for LIB$FREE_VM), the address of the
@@ -428,13 +430,15 @@ BLANKS:	.ASCII	/        /		; a source of blanks, 8 at a time
 	MOVL	DSC$A_POINTER(R3),R5	; the first element
 	MOVZBL	DSC$B_DTYPE(R3),R6	; its type
 	MOVL	#1,R7			; how many: one, for a scalar
+	MOVL	#1,R9			; 1 for the first element
 	CMPB	DSC$B_CLASS(R3),#DSC$K_CLASS_A
 	BNEQ	10$
 	TSTL	R4			; an array of no bytes: nothing
-	BEQL	90$
+	BEQL	2$
 	DIVL3	R4,DSC$L_ARSIZE(R3),R7	; the array's elements: its bytes divided
 					;  by an element's (DIVL3's divisor first)
-	BEQL	90$
+	BNEQ	10$
+2$:	BRW	90$
 	;
 	; A complex type: its parts, each half its length, of the matching
 	; real type.
@@ -462,8 +466,14 @@ BLANKS:	.ASCII	/        /		; a source of blanks, 8 at a time
 	CLRL	-(SP)			; not the statement's end
 	PUSHL	R2
 	CALLS	#2,WALK
+	TSTL	CTX_STATUS(R2)		; a record it read failed (a / at the end
+	BNEQ	31$			;  of the file), or
 	TSTL	R0
-	BEQL	90$			; stopped by an error
+	BNEQ	32$
+31$:	BLBC	R9,90$			; stopped by an error: on the way to the
+	MOVB	#PC_PREVIOUS,CTX_PCMOVE(R2) ;  first element's descriptor, VMS's
+	BRB	90$			;  FORRTL finds it at the call before
+32$:	CLRL	R9
 	PUSHL	R6			; the type,
 	PUSHL	R4			;  the length,
 	PUSHL	R5			;  the address,

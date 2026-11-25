@@ -602,7 +602,7 @@ func (f *DCLFile) Update(record []byte) uint32 {
 
 	h.wrote(f.ctx, s.current)
 
-	if err := writeAt(h.File, s.current+recordFraming(h.File), data); err != nil {
+	if err := h.writeInPlace(s.current+recordFraming(h.File), data); err != nil {
 		s.lost()
 
 		return rmsDeviceError

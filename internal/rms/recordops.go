@@ -203,7 +203,7 @@ func SysUpdate(ctx *Context, argv []uint32) (uint32, error) {
 
 	handle.wrote(ctx, at)
 
-	if err := writeAt(handle.File, at+recordFraming(handle.File), data); err != nil {
+	if err := handle.writeInPlace(at+recordFraming(handle.File), data); err != nil {
 		return fail(rmsDeviceError)
 	}
 
@@ -263,6 +263,31 @@ func writeAt(f *volume.File, off int64, data []byte) error {
 		}
 
 		data, off = data[n:], off+int64(n)
+	}
+
+	return nil
+}
+
+// writeInPlace writes data at byte offset off of h's file, over what is there,
+// keeping the stream's Writer, if it has one, in step: the Writer holds the
+// file's partly filled last block for the records it appends, and would put its
+// copy back over a record rewritten in that block at its next flush or close
+// (testdata/for81's round 3b: FORRTL's REWRITE of a one-block FIX file lost).
+// So the Writer's records go to the disk first, and it reads the block again
+// after.
+func (h *FileHandle) writeInPlace(off int64, data []byte) error {
+	if h.Writer != nil {
+		if err := h.Writer.Flush(); err != nil {
+			return err
+		}
+	}
+
+	if err := writeAt(h.File, off, data); err != nil {
+		return err
+	}
+
+	if h.Writer != nil {
+		return h.Writer.Reload()
 	}
 
 	return nil

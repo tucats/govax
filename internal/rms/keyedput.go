@@ -78,7 +78,7 @@ func (ctx *Context) putKeyed(rabAddr uint32, h *FileHandle, record []byte) (uint
 
 	h.wrote(ctx, at)
 
-	if err := writeAt(h.File, start, data); err != nil {
+	if err := h.writeInPlace(start, data); err != nil {
 		return fail(rmsDeviceError)
 	}
 

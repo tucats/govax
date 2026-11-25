@@ -197,15 +197,13 @@ RANDOM:	CMPB	UB_ACCESS(R7),#ACCESS_DIRECT
 	BRW	REFUSED
 
 ;
-; TAKE_CURRENT: the unit's current record taken away. One a READ reached is
-; CURRENT_GONE, so that a REWRITE's FOR$_NO_CURREC has RMS's RMS$_CUR, as
-; VMS's FORRTL's has, which asks RMS for it (testdata/for81's round 3, #4).
+; TAKE_CURRENT: the unit's current record taken away, CURRENT_GONE, so that a
+; REWRITE's FOR$_NO_CURREC has RMS's RMS$_CUR, as VMS's FORRTL's has, which asks
+; RMS for it (testdata/for81's round 3, #4, and 3b's #26, with nothing read).
 ;
 TAKE_CURRENT:
-	TSTB	UB_CURRENT(R7)
-	BEQL	10$
 	MOVB	#CURRENT_GONE,UB_CURRENT(R7)
-10$:	RSB
+	RSB
 
 ;
 ; FTN$ENDFILE(control block, unit)

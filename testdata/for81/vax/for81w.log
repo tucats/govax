@@ -1,0 +1,26 @@
+$ run FOR81w
+#0 type exactly 133 characters, then Return (READ unit 5, (Q,A))
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+=IO_END r=00000000
+=Q r=00000079
+  0000: 7878787878787878787878787878787878787878787878787878787878787878
+#1 type a short line (READ unit 5, (Q,A))
+short line
+=IO_END r=00000000
+=Q r=0000000A
+  0000: 73686F7274206C696E6520202020202020202020202020202020202020202020
+ errsns n=0 sts=00000000 stv=00000000 u=0 c=00000000
+#2 type exactly 132 characters, then Return (READ unit 5, (Q,A))
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+=IO_END r=00000000
+=Q r=00000077
+  0000: 7878787878787878787878787878787878787878787878787878787878787878
+#3 type a short line (READ unit 5, (Q,A))
+a short line
+=IO_END r=00000000
+=Q r=0000000C
+  0000: 612073686F7274206C696E652020202020202020202020202020202020202020
+ errsns n=0 sts=00000000 stv=00000000 u=0 c=00000000
+##### the end of the cases
+$ 
+

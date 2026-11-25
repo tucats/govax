@@ -730,7 +730,8 @@ A.8.1 is not planned.
     - 13d. The index file's growth (A.9.1): ods2 extending INDEXF.SYS as VMS's XQP does (done 2026-11-24).
     - 13e. FTNRTL to the FORRTL round (`testdata/for81`'s round 3 and the terminal's limits) (done 2026-11-24).
     - 13e2. Round 3b, what 13e left open (`testdata/for81`'s FOR81K and FOR81W): written and
-      rehearsed (2026-11-24); its VMS 7.1 run and the fixes it calls for to come.
+      rehearsed, run on VMS 7.1, and govax and FTNRTL made its answers (2026-11-24); FOR81W's
+      terminal lines to be run again.
     - 13f. The debugger to the debugger round (`testdata/dbg113`'s sessions).
     - 13g. The FORTRAN rounds: `TestFTN86Oracle` on `testdata/ftn86`'s round 6 and
       `TestF90ROracle` on `testdata/f90r`'s round 3, their awaiting lists emptied.
@@ -1576,3 +1577,41 @@ Each subtask may begin with a survey of its own, as earlier phases' did.
     first item's call, and FILNOTFOU at the begin call reports the begin call's user PC (FTNRTL:
     FOR$IO_END's for both); a REWRITE after BACKSPACE rewrites the record before the one gone
     back to; govax's OTS$CVT_L_TO into no columns writes nothing and returns OTS$_OUTCONERR.
+- **2026-11-24, subtask 13e2 (VMS's answers):** the author ran round 3b on VMS 7.1 (V7.1, a VAX
+  8600 on simh); `vax/for81k-vax.txt` and `for81k.log` came back by `copyoutk.cmd`, and FOR81W's
+  terminal text is `vax/for81w.log`. `TestFor81KProcedure` (FORRTL over govax) now holds all 28
+  cases to VMS's run, and `TestFor81KOnFTNRTL` all but #19 (`for81KFTNRTLDifferences`); round 3's
+  `for81GDifferences` and `for81GFTNRTLDifferences` are empty.
+  - *An RMS bug* (C and F): a REWRITE of a sequential FIX record under FORRTL or FTNRTL was lost.
+    `$UPDATE` wrote the record, then `$CLOSE` flushed ods2's Writer, which held the file's partly
+    filled last block for appends, over it. ods2's `Writer.Reload` (in the sibling checkout, to be
+    tagged with 13e's change) reads the block again; `rms`'s `FileHandle.writeInPlace` flushes the
+    Writer, writes, and reloads it, for `$UPDATE`, DCL's WRITE/UPDATE, a keyed `$PUT`, and `$WRITE`.
+  - *OTS$* (B): VMS's OTS$CVT_L_TO and _TZ given 0 and a string of no characters write the 0 in
+    the byte before it and return OTS$_OUTCONERR (L_TI writes nothing), which is round 3's
+    `O0 0 0|`; govax's do so now (`librtl/otscvt.go`'s `zeroBeforeEmpty`,
+    `TestOTSZeroIntoNoColumns`), and so does FTNRTL's O0 and Z0 of 0 outside Fortran 90
+    (`ftn_edit.mar`'s OUT_OZ).
+  - *The associated variable* (A): FORRTL over govax gave VMS's values throughout: DELETE (u'r)
+    makes the next record r+1, or r+2 when it was r+1 already (READ 4, DELETE 4: 6); FTNRTL's
+    `ftn_record.mar` follows (after FIND r, whose next record is r, unconfirmed).
+  - *The current record* (C, F): after a REWRITE on a direct unit DELETE (u) is DELERR with no RMS
+    status, and FORRTL reports RMS's status for such a refusal only when RMS's last operation failed
+    (`CURRENT_UNLOCKED`, set by FTN$IO_END for a direct REWRITE); a REWRITE after UNLOCK goes on; a
+    REWRITE after BACKSPACE with nothing read is NO_CURREC with RMS$_CUR (`TAKE_CURRENT` always).
+  - *Keys* (D): an unsigned word key takes a longword from 0 to 65,535, a signed one -32,768 to
+    32,767, and a word as it stands, as 13e had them.
+  - *The user PC* (E): it is the call during which FORRTL found the error. An unformatted READ's
+    record is read at the first item's call (`ftn_unformatted.mar` marks `PC_NEXT`); after an item
+    FORRTL goes on through the format to the next data descriptor, so a `/`'s end of file is the
+    item before's (`ftn_format.mar` marks `PC_PREVIOUS` for a failure on the way to an item's first
+    descriptor); OUTSTAOVE and INPSTAREQ are their item's, FILNOTFOU the begin call's. FTN$IO_END
+    reports every failure found before the end at its call (`CTX_ITEMPC`, adjusted by
+    `CTX_PCMOVE`, a byte of the context), but OPEFAI, which keeps FOR$IO_END's (ftn86's DIALOG).
+    #19 is left: FTNRTL signals at FOR$IO_END, after the second item's call, where VMS's FORRTL
+    signals during the first; the user PC is VMS's.
+  - *FOR81W*: the lines typed were 121 and 119 characters, under the 133 asked for, so whether a
+    line of exactly 133 leaves its Return to the next READ is still open; the README gives lines
+    to paste for another run.
+  - *Found and left*: `TestBatchLaterSectionsOracle` fails about one run in six, before this work
+    too (a SYNCHRONIZE/ENTRY=63 whose job is sometimes still there): a timing race in the test.

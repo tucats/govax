@@ -64,6 +64,8 @@ CTX_UNF_LEN	= 508			; long: the bytes the buffer holds
 CTX_UNF_STATE	= 512			; long: S_ bits
 CTX_DIRECT	= 516			; long: 1 for a direct statement
 CTX_REWRITE	= 520			; byte: 1 for a REWRITE
+CTX_PCMOVE	= 542			; byte: whose call a failure's user PC is
+PC_NEXT		= 2			;  (FTN_STATEMENT's FTN$IO_ITEM)
 
 S_SEGMENTED	= 1			; the unit's records are segmented
 S_WRITTEN	= 2			; a segment of this record has been written
@@ -97,6 +99,8 @@ ALL_MASK	= ^M<R2,R3,R4,R5,R6,R7,R8,R9>
 10$:	BLBS	CTX_KIND(R6),90$	; a WRITE
 	MOVL	#SEG_FIRST,R0
 	BSBW	GET_SEGMENT
+	BLBS	R0,90$			; a failure VMS's FORRTL finds at the first
+	MOVB	#PC_NEXT,CTX_PCMOVE(R6)	;  item's call, which reads the record
 90$:	MOVL	#SS$_NORMAL,R0
 	RET
 

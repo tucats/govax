@@ -144,7 +144,7 @@ func TestFor81GProcedure(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	compareFor81G(t, cases, string(text), for81GDifferences)
+	compareFor81G(t, cases, string(text), for81GDifferences, 64)
 }
 
 // TestFor81GOnFTNRTL runs round 3's cases on FTNRTL, by for88f.mar's and
@@ -163,35 +163,25 @@ func TestFor81GOnFTNRTL(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	compareFor81G(t, for88Cases(out), string(text), for81GFTNRTLDifferences)
+	compareFor81G(t, for88Cases(out), string(text), for81GFTNRTLDifferences, 64)
 }
 
 // for81GDifferences are the cases whose output on VMS's FORRTL over govax differs
 // from the VAX's, with why.
-var for81GDifferences = map[string]string{
-	"#58 B0, O0, Z0, each between bars": "VMS writes a 0 in the column before an O0 or Z0 field of 0 " +
-		"(the record shows 'O0 0 0|'), seemingly an OTS$ conversion's into a field of no columns; govax's " +
-		"OTS$ writes nothing (unconfirmed)",
-}
+var for81GDifferences = map[string]string{}
 
 // for81GFTNRTLDifferences are the cases whose output on FTNRTL differs from VMS's
 // on FORRTL, with why.
-var for81GFTNRTLDifferences = map[string]string{
-	"#14 the associated variable after DELETE by number": "VMS's DELETE of record 1 after a READ of it " +
-		"set 3, where FTNRTL sets r+1, 2; two rules fit VMS's five values (the larger of FORRTL's next " +
-		"record and r, plus 1; or the next record plus r), unconfirmed",
-	"#58 B0, O0, Z0, each between bars": "VMS's 0 before a zero-width field of 0 (for81GDifferences) " +
-		"isn't followed",
-}
+var for81GFTNRTLDifferences = map[string]string{}
 
-// compareFor81G holds each case of VMS's run, text, to got's, masked by
-// for81GMasked, but for those differences lists.
-func compareFor81G(t *testing.T, got map[string]string, text string, differences map[string]string) {
+// compareFor81G holds each case of VMS's run, text, of count cases, to got's,
+// masked by for81GMasked, but for those differences lists.
+func compareFor81G(t *testing.T, got map[string]string, text string, differences map[string]string, count int) {
 	t.Helper()
 
 	want := for88Cases(text)
-	if len(want) != 64 {
-		t.Errorf("%d cases in VMS's run, where gen.go wrote 64", len(want))
+	if len(want) != count {
+		t.Errorf("%d cases in VMS's run, where gen.go wrote %d", len(want), count)
 	}
 
 	for title, w := range want {

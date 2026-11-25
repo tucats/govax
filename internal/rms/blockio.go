@@ -220,7 +220,7 @@ func SysWrite(ctx *Context, argv []uint32) (uint32, error) {
 	copy(data, text)
 
 	off := int64(vbn-1) * ondisk.BlockSize
-	if err := writeAt(h.File, off, data); err != nil {
+	if err := h.writeInPlace(off, data); err != nil {
 		return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsDeviceError)
 	}
 

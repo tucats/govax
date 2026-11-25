@@ -23,14 +23,18 @@
 ;			0 or less, or one past the unit's MAXREC, is FOR$_RECNUMOUT; a
 ;			record that isn't there FOR$_ATTACCNON. It takes the current
 ;			record away, and on a direct unit the next record is r+1, its
-;			NEXTREC and associated variable's value (the LRM's 9.7). A
-;			sequential-access unit is FOR$_OPEDEFREQ (round 3's #13).
+;			NEXTREC and associated variable's value (the LRM's 9.7), but
+;			r+2 if the next record was r+1 already, as after a READ of r
+;			(VMS's FORRTL, round 3's #14 and 3b's section A; after a FIND of
+;			r, whose next record is r, unconfirmed). A sequential-access
+;			unit is FOR$_OPEDEFREQ (round 3's #13).
 ;	UNLOCK		A $FREE of the records the unit holds; with none held
 ;			(RMS$_RNL), nothing. On a direct unit, the current record is
 ;			then CURRENT_UNLOCKED: DELETE (u) is FOR$_DELERR with the
 ;			$FREE's status (round 3's #11; on a sequential-access unit
-;			it went on, #9). What a REWRITE does then is unconfirmed:
-;			it goes on.
+;			it went on, #9), and so it is after a REWRITE on a direct unit,
+;			with no RMS status (3b's #13, #14). A REWRITE after UNLOCK goes
+;			on (3b's #13).
 ;
 ; Both DELETEs are FOR$_DELERR on a unit not connected and on a sequential file,
 ; and UNLOCK is FOR$_UNLERR on a unit not connected; none of them connects a unit.
@@ -53,6 +57,7 @@ UB_OPEN		= 0			; A unit's block (FTN_UNITS)
 UB_STS		= 8
 UB_STV		= 12
 UB_ACCESS	= 37
+UB_NEXTREC	= 44
 UB_FAB		= 76
 UB_RAB		= UB_FAB+FAB$C_BLN
 UB_ASV		= 620
@@ -125,8 +130,9 @@ RELATIVE:
 	BEQL	2$
 	CMPB	UB_CURRENT(R7),#CURRENT_UNLOCKED
 	BNEQ	3$
-	MOVL	#FOR$_DELERR,R0		; UNLOCK's $FREE's status, RMS$_RNL
-	BRW	RMS_FAILED
+	MOVL	#FOR$_DELERR,R0		; refused, with RMS's status if its last
+	BLBS	RAB$L_STS(R6),2$	;  operation failed (UNLOCK's $FREE's
+	BRW	RMS_FAILED		;  RMS$_RNL), else none
 2$:	BRW	REFUSED
 3$:	$DELETE	RAB=R6
 	BLBC	R0,4$
@@ -170,7 +176,11 @@ RELATIVE:
 12$:	MOVB	R8,RAB$B_RAC(R6)
 	CMPB	UB_ACCESS(R7),#ACCESS_DIRECT
 	BNEQ	15$
-	ADDL3	#1,R2,-(SP)		; the next record
+	ADDL3	#1,R2,R0		; the next record: r+1, or r+2 if that was
+	CMPL	R0,UB_NEXTREC(R7)	;  r+1 already, as after a READ of r (VMS's
+	BNEQ	13$			;  FORRTL: testdata/for81's #14, round 3b's A)
+	INCL	R0
+13$:	PUSHL	R0
 	PUSHL	R7
 	CALLS	#2,FTN$$UNIT_FOUND	; FTN_UNITS
 15$:	BRW	END

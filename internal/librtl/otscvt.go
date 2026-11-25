@@ -54,7 +54,9 @@ import (
 // TZ_L's input (accepted); tabs in TO_L's input (bit 4 as for the
 // others); what TB_L, TO_L, TU_L, and TZ_L leave in the result on an
 // error (nothing is stored); and the longest size L_TB/TO/TZ and
-// TB/TO/TZ_L take (16 bytes, an octaword, here).
+// TB/TO/TZ_L take (16 bytes, an octaword, here). L_TO and L_TZ given a zero
+// and a string of no characters write their 0 in the byte before it, as VMS
+// 7.1's do (zeroBeforeEmpty).
 
 var (
 	otsOutConErr = vmsdef.LibrarySymbols["OTS$_OUTCONERR"]
@@ -115,11 +117,38 @@ func otsCvtLTB(env *corevms.Environment, argv []uint32) (uint32, error) {
 }
 
 func otsCvtLTO(env *corevms.Environment, argv []uint32) (uint32, error) {
-	return unsignedToText(env, argv, 8, anySize(argv, 3))
+	return zeroBeforeEmpty(env, argv, 8)
 }
 
 func otsCvtLTZ(env *corevms.Environment, argv []uint32) (uint32, error) {
-	return unsignedToText(env, argv, 16, anySize(argv, 3))
+	return zeroBeforeEmpty(env, argv, 16)
+}
+
+// zeroBeforeEmpty is L_TO's and L_TZ's work: unsignedToText, but for a zero
+// value given a string of no characters, whose "0" VMS 7.1's routines write in
+// the byte before the string, returning OTS$_OUTCONERR all the same (testdata/
+// for81's round 3b; what FORRTL's O0 and Z0 of 0 showed in round 3). L_TI
+// writes nothing there; L_TB's and L_TU's are unconfirmed, and write nothing.
+func zeroBeforeEmpty(env *corevms.Environment, argv []uint32, radix int) (uint32, error) {
+	value, err := loadSized(env, arg(argv, 0), anySize(argv, 3))
+	if err != nil {
+		return memoryFault(env, err)
+	}
+
+	d, err := readOTSOutput(env, arg(argv, 1))
+	if err != nil {
+		return otsStringFailure(env, err)
+	}
+
+	if d.length == 0 && intDigits(argv, 2) > 0 && new(big.Int).SetBytes(value).Sign() == 0 {
+		if err := env.Memory().StoreByte(env.CPU(), d.text-1, '0'); err != nil {
+			return memoryFault(env, writing(err))
+		}
+
+		return otsOutConErr, nil
+	}
+
+	return unsignedToText(env, argv, radix, anySize(argv, 3))
 }
 
 func otsCvtLTL(env *corevms.Environment, argv []uint32) (uint32, error) {

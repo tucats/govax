@@ -267,7 +267,16 @@ OUT_OZ:	MULL3	#8,16(AP),R7
 	JSB	ZERO_WIDTH		; B0, O0, Z0: just those
 	CMPL	R0,R9
 	BLEQ	30$
-	BRW	STARS
+	TSTL	R9			; O0 or Z0 of 0 outside Fortran 90: as
+	BNEQ	28$			;  VMS's FORRTL, whose OTS$CVT_L_TO and
+	TSTL	R4			;  _TZ write it so, a 0 in the column
+	BNEQ	28$			;  before the field, then OUTCONERR
+	CMPL	R6,#1			;  (testdata/for81's round 3's #58 and 3b's
+	BEQL	28$			;  B; B0 is VMS's FMTSYN, unasked)
+	DECL	CTX_POS(R11)
+	MOVL	#^A/0/,R0
+	JSB	PUT_CHAR
+28$:	BRW	STARS
 30$:	SUBL3	R0,R9,R0
 	JSB	PUT_BLANKS
 	MOVL	R3,R0

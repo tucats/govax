@@ -189,12 +189,21 @@ the question. Then, with the volume back on the host:
 
     ./govax --profile tbprobe --system-file none console < testdata/for81/copyoutk.cmd
 
-`TestFor81KProcedure` (`internal/console/for81k_test.go`) rehearses FOR81K on VMS's
-FORRTL.EXE over govax (or skips without one on a local volume), and `TestFor81KOnFTNRTL`
-on FTNRTL; until `vax/for81k-vax.txt` exists they only check that it runs to its end.
-FORRTL's own logic answers some of the questions over govax already (E's user PCs, A's
-values as FORRTL computes them from govax's RMS); the VAX confirms them and answers the
-rest. `FOR81K_WRITE` names a file for govax's output.
+`TestFor81KProcedure` (`internal/console/for81k_test.go`) runs FOR81K on VMS's FORRTL.EXE
+over govax (or skips without one on a local volume) and holds it to VMS 7.1's run,
+`vax/for81k-vax.txt`, but for `for81KDifferences`; `TestFor81KOnFTNRTL` holds FTNRTL to it
+but for `for81KFTNRTLDifferences`. `FOR81K_WRITE` names a file for govax's output. The phase
+doc's subtask 13e2 has what the run settled.
+
+FOR81W's first run (`vax/for81w.log`) read lines of 121 and 119 characters, so its
+question is still open. To run it again, paste these lines rather than type them, the
+first at case #0 and the second at case #2, each followed by Return:
+
+    1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123
+    123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012
+
+and after each, wait a moment: if the next case's short line is read at once, with
+nothing typed, note it.
 
 ## What the tests hold
 

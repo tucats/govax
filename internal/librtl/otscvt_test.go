@@ -104,6 +104,45 @@ func TestOTSIntegerToText(t *testing.T) {
 	}
 }
 
+// TestOTSZeroIntoNoColumns: OTS$CVT_L_TO and _TZ given 0 and a string of no
+// characters write their 0 in the byte before it and return OTS$_OUTCONERR, as
+// VMS 7.1's do (testdata/for81's round 3b, section B); any other value, and
+// L_TI's 0, write nothing.
+func TestOTSZeroIntoNoColumns(t *testing.T) {
+	env := fixture(t)
+
+	cases := []struct {
+		routine string
+		value   uint32
+		args    []uint32
+		want    string // the byte before the string, the string's place
+	}{
+		{"OTS$CVT_L_TO", 0, nil, "0|"},
+		{"OTS$CVT_L_TO", 0, []uint32{1}, "0|"},
+		{"OTS$CVT_L_TZ", 0, nil, "0|"},
+		{"OTS$CVT_L_TO", 8, nil, "||"},
+		{"OTS$CVT_L_TZ", 0xFFFFFFFF, nil, "||"},
+		{"OTS$CVT_L_TI", 0, nil, "||"},
+	}
+
+	for _, c := range cases {
+		putBytes(t, env, otsTextAddr-1, "||")
+		putLongword(t, env, otsValueAddr, c.value)
+		putDescriptor(t, env, otsDescAddr, otsTextAddr, "")
+
+		sts := call(t, env, c.routine, append([]uint32{otsValueAddr, otsDescAddr}, c.args...)...)
+
+		got, err := readText(env, otsTextAddr-1, 2)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if sts != otsOutConErr || got != c.want {
+			t.Errorf("%s(%#x, no columns, %v) = %#x %q; want OTS$_OUTCONERR %q", c.routine, c.value, c.args, sts, got, c.want)
+		}
+	}
+}
+
 // TestOTSTextToIntegerAnyClass: FORRTL's input descriptors, like its output
 // ones, may have only their length and pointer set.
 func TestOTSTextToIntegerAnyClass(t *testing.T) {
