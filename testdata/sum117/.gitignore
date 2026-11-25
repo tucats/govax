@@ -1,1 +1,5 @@
 in/
+# The outputs VMS made are evidence: keep them past the root
+# .gitignore's *.out.
+!*.out
+!*.OUT

@@ -1,0 +1,14 @@
+                                                            25-NOV-2026 14:37:48    VAX-11 SUMSLP V01.00                Page    1
+                                                            25-NOV-2026 17:12:43    DUA1:[SUM117.IN]S10.SRC;1                    
+
+                      1 source line 1
+                      2 source line 2
+                      3 source line 3
+%SUM-W-EDITSCLSH, edits clash
+-4,6    DUA1:[SUM117.IN]G14B.UPD;1
+-5    DUA1:[SUM117.IN]G14C.UPD;1
+-5,5    DUA1:[SUM117.IN]G14A.UPD;1
+-3                    7 source line 7
+                      8 source line 8
+                      9 source line 9
+                     10 source line 10

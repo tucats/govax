@@ -1,0 +1,58 @@
+SUMB                            SUMSLP probe module B                    25-NOV-2026 14:37:53  VAX MACRO V5.4-3            Page   1
+                                                                         25-NOV-2026 17:12:43  DUA1:[SUM117.IN]SUMB.MAR;1        (1)
+
+                                     0000     1 	.TITLE	SUMB	SUMSLP probe module B
+                                 00000000     2 	.PSECT	CODE,EXE,NOWRT
+                               0000  0000     3 	.ENTRY	SUMB,^M<>
+                       50   02   D0  0002     4 	MOVL	#2,R0
+                                 04  0005     5 	RET
+                                     0006     6 	.END
+SUMB                            SUMSLP probe module B                    25-NOV-2026 14:37:53  VAX MACRO V5.4-3            Page   2
+Symbol table                                                             25-NOV-2026 17:12:43  DUA1:[SUM117.IN]SUMB.MAR;1        (1)
+
+SUMB             00000000 RG    01      
+
+                                                +----------------+
+                                                ! Psect synopsis !
+                                                +----------------+
+
+PSECT name                      Allocation          PSECT No.  Attributes     
+----------                      ----------          ---------  ----------     
+.  ABS  .                       00000000  (    0.)  00 (  0.)  NOPIC   USR   CON   ABS   LCL NOSHR NOEXE NORD  NOWRT NOVEC BYTE  
+CODE                            00000006  (    6.)  01 (  1.)  NOPIC   USR   CON   REL   LCL NOSHR   EXE   RD  NOWRT NOVEC BYTE  
+
+                                             +------------------------+
+                                             ! Performance indicators !
+                                             +------------------------+
+
+Phase                    Page faults    CPU Time       Elapsed Time   
+-----                    -----------    --------       ------------   
+Initialization                  275     00:00:00.00    00:00:00.00
+Command processing              861     00:00:00.01    00:00:00.01
+Pass 1                          184     00:00:00.00    00:00:00.00
+Symbol table sort                 1     00:00:00.00    00:00:00.00
+Pass 2                           27     00:00:00.00    00:00:00.00
+Symbol table output               0     00:00:00.00    00:00:00.00
+Psect synopsis output             2     00:00:00.00    00:00:00.00
+Cross-reference output            0     00:00:00.00    00:00:00.00
+Assembler run totals           1354     00:00:00.01    00:00:00.01
+
+The working set limit was 1112 pages.
+120 bytes (1 page) of virtual memory were used to buffer the intermediate code.
+There were 10 pages of symbol table space allocated to hold 1 non-local and 0 local symbols.
+6 source lines were read in Pass 1, producing 14 object records in Pass 2.
+0 pages of virtual memory were used to define 0 macros.
+
+                                            +--------------------------+
+                                            ! Macro library statistics !
+                                            +--------------------------+
+
+Macro library name                           Macros defined      
+------------------                           --------------      
+SYS$COMMON:[SYSLIB]STARLET.MLB;1                        0        
+
+0 GETS were required to define 0 macros.
+
+There were no errors, warnings or information messages.
+
+MACRO SUMA/UPDATE=M04/LIST=SUM$OUT:M04A.LIS/OBJECT=SUM$OUT:M04A.OBJ,SUMB/LIST=SUM$OUT:M04B.LIS/OBJECT=SUM$OUT:M04B.OBJ

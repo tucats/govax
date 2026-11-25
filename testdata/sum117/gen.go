@@ -62,6 +62,11 @@ var (
 	files []file
 	cases []probeCase
 	named = map[string]bool{}
+
+	// round1Files and round1Cases are how many files and cases round 1
+	// had: what follows them is round 2's (the VAX ran round 1 as it was,
+	// so its files, cases, and procedure never change).
+	round1Files, round1Cases int
 )
 
 // addFile adds an input file. A name may be added only once.
@@ -155,12 +160,23 @@ func main() {
 	roundtrip()
 	macro()
 
+	round1Files, round1Cases = len(files), len(cases)
+
+	clash2()
+	numbers()
+	pastEnd()
+	lengths()
+	pages()
+	slpVerb()
+	dates()
+
 	writeCases()
 	writeInputs()
 	writeProcedure()
 	writeTerminal()
 	writeExchange()
 	writeCopyout()
+	writeRound2Scripts()
 }
 
 // sources adds the input files many sections share.
@@ -807,6 +823,7 @@ func writeCases() {
 #   step COMMAND       a DCL line whose $STATUS the log shows
 #   data LINE          a line after the step (its SYS$INPUT), escaped
 #   post COMMAND       a DCL line run after it
+# round 2              what follows is round 2's (sum117b.com)
 #
 # Outputs go to [SUM117.OUT] as ID.OUT (the edited file), ID.LIS (the
 # listing), ID.DIF and ID.CMP (ROUNDTRIP), ID.OBJ (MACRO), ID.Kn (a file
@@ -814,46 +831,54 @@ func writeCases() {
 #
 `)
 
+	writeEntries(&b, files[:round1Files], cases[:round1Cases])
+	b.WriteString("round 2\n")
+	writeEntries(&b, files[round1Files:], cases[round1Cases:])
+
+	write("cases.txt", b.String())
+}
+
+// writeEntries writes files' and cases' entries for cases.txt.
+func writeEntries(b *strings.Builder, files []file, cases []probeCase) {
 	for _, f := range files {
-		fmt.Fprintf(&b, "file %s", f.Name)
+		fmt.Fprintf(b, "file %s", f.Name)
 		if f.Format != "" {
-			fmt.Fprintf(&b, " %s", f.Format)
+			fmt.Fprintf(b, " %s", f.Format)
 		}
 
 		b.WriteString("\n")
 
 		if rule, ok := linesRule(f.Records); ok {
-			fmt.Fprintf(&b, "%s\n", rule)
+			fmt.Fprintf(b, "%s\n", rule)
 			continue
 		}
 
 		for _, r := range f.Records {
-			fmt.Fprintf(&b, "|%s\n", escape(r))
+			fmt.Fprintf(b, "|%s\n", escape(r))
 		}
 	}
 
 	for _, c := range cases {
-		fmt.Fprintf(&b, "case %s %s\n", c.ID, c.Section)
-		fmt.Fprintf(&b, "  title %s\n", c.Title)
+		fmt.Fprintf(b, "case %s %s\n", c.ID, c.Section)
+		fmt.Fprintf(b, "  title %s\n", c.Title)
 
 		for _, p := range c.Pre {
-			fmt.Fprintf(&b, "  pre %s\n", p)
+			fmt.Fprintf(b, "  pre %s\n", p)
 		}
 
 		for _, st := range c.Steps {
-			fmt.Fprintf(&b, "  step %s\n", st.Command)
+			fmt.Fprintf(b, "  step %s\n", st.Command)
 
 			for _, d := range st.Data {
-				fmt.Fprintf(&b, "  data %s\n", escape(d))
+				fmt.Fprintf(b, "  data %s\n", escape(d))
 			}
 		}
 
 		for _, p := range c.Post {
-			fmt.Fprintf(&b, "  post %s\n", p)
+			fmt.Fprintf(b, "  post %s\n", p)
 		}
 	}
 
-	write("cases.txt", b.String())
 }
 
 // linesRule describes a big file of "PREFIX 1" to "PREFIX n" as a rule.
@@ -938,6 +963,29 @@ $ DIRECTORY/SIZE S10.SRC
 $ TYPE S10.SRC
 `
 
+// procedureHeadB starts sum117b.com, round 2: the same names, round 1's
+// outputs left where they are.
+const procedureHeadB = `$ ! SUM117B.COM - Phase 117's probe of SUMSLP, round 2: what round 1 left
+$ ! open. Written by testdata/sum117/gen.go. Run it as SYSTEM, with the
+$ ! exchange volume mounted, from its [SUM117] directory:
+$ !
+$ !     $ SET DEFAULT DUA1:[SUM117]
+$ !     $ @SUM117B/OUTPUT=SUM117B.LOG
+$ !
+$ SET NOON
+$ SET VERIFY
+$ WRITE SYS$OUTPUT "######## ENVIRONMENT"
+$ WRITE SYS$OUTPUT F$GETSYI("VERSION"), " ", F$GETSYI("HW_NAME"), " ", F$GETSYI("NODENAME")
+$ WRITE SYS$OUTPUT F$TIME()
+$ TOP = F$PARSE("[000000]",,,"DEVICE")
+$ DEFINE SUM$TOP 'TOP'
+$ DEFINE SUM$OUT SUM$TOP:[SUM117.OUT]
+$ DEFINE SUM$SCR SUM$TOP:[SUM117.SCR]
+$ DELETE SUM$TOP:[SUM117.SCR]*.*;*/NOLOG
+$ SET DEFAULT SUM$TOP:[SUM117.IN]
+$ SHOW DEFAULT
+`
+
 // procedureTail ends sum117.com: the outputs listed.
 const procedureTail = `$ !
 $ WRITE SYS$OUTPUT "######## THE OUTPUTS"
@@ -955,9 +1003,15 @@ const statusLine = "$ S = $STATUS\n$ WRITE SYS$OUTPUT \"STATUS \", S, \" \", F$M
 // writeProcedure writes sum117.com: each case under a heading, each step's
 // status and F$MESSAGE's text of it.
 func writeProcedure() {
+	write("sum117.com", procedure(procedureHead, cases[:round1Cases], "SUM117"))
+	write("sum117b.com", procedure(procedureHeadB, cases[round1Cases:], "SUM117B"))
+}
+
+// procedure writes a run of cases after head.
+func procedure(head string, cases []probeCase, name string) string {
 	var b strings.Builder
 
-	b.WriteString(procedureHead)
+	b.WriteString(head)
 
 	section := ""
 
@@ -992,9 +1046,9 @@ func writeProcedure() {
 		}
 	}
 
-	b.WriteString(procedureTail)
+	b.WriteString(strings.ReplaceAll(procedureTail, "SUM117 FINISHED", name+" FINISHED"))
 
-	write("sum117.com", b.String())
+	return b.String()
 }
 
 // dclLine breaks a command longer than 200 characters into continuation
@@ -1085,7 +1139,18 @@ COPY "testdata/sum117/sum117.com"/HOST DUA5:[SUM117]SUM117.COM
 COPY "testdata/sum117/sum117t.com"/HOST DUA5:[SUM117]SUM117T.COM
 `)
 
-	for i, f := range files {
+	writeCopies(&b, 0, files[:round1Files])
+
+	b.WriteString("DIRECTORY/SIZE DUA5:[SUM117...]\nDISMOUNT DUA5\n")
+
+	write("exchange.cmd", b.String())
+}
+
+// writeCopies writes exchange.cmd's COPY of each file, the first being
+// file number first.
+func writeCopies(b *strings.Builder, first int, files []file) {
+	for n, f := range files {
+		i := first + n
 		target := "DUA5:[SUM117.IN]" + f.Name
 		if strings.HasPrefix(f.Name, "[") {
 			target = "DUA5:" + f.Name
@@ -1102,12 +1167,9 @@ COPY "testdata/sum117/sum117t.com"/HOST DUA5:[SUM117]SUM117T.COM
 			quals += "/BINARY/RECORD_FORMAT=FIXED/RECORD_SIZE=" + strings.TrimPrefix(f.Format, "FIX ")
 		}
 
-		fmt.Fprintf(&b, "COPY \"%s/%s\"%s %s/QUIET\n", dir, hostName(i), quals, target)
+		fmt.Fprintf(b, "COPY \"%s/%s\"%s %s/QUIET\n", dir, hostName(i), quals, target)
 	}
 
-	b.WriteString("DIRECTORY/SIZE DUA5:[SUM117...]\nDISMOUNT DUA5\n")
-
-	write("exchange.cmd", b.String())
 }
 
 // writeCopyout writes copyout.cmd, which brings the run's results back.
@@ -1136,4 +1198,226 @@ func write(name, text string) {
 	if err := os.WriteFile(filepath.Join(dir, name), []byte(text), 0o644); err != nil {
 		log.Fatal(err)
 	}
+}
+
+// writeRound2Scripts writes exchange2.cmd, which puts round 2's files and
+// procedure on the exchange volume beside round 1's results, and
+// copyout2.cmd, which brings round 2's log and every output back.
+func writeRound2Scripts() {
+	var b strings.Builder
+
+	b.WriteString(`! EXCHANGE2.CMD - adds Phase 117's round 2 to sum117-exchange.dsk.
+! Written by testdata/sum117/gen.go. Run from the repository root, after
+! gen.go has written in/:
+!
+!     go run ./cmd/govax --profile tbprobe --system-file none console < testdata/sum117/exchange2.cmd
+!
+MOUNT/WRITE DUA5 "testdata/disks/sum117-exchange.dsk"
+CREATE/DIRECTORY DUA5:[SUM117.IN.A_LONG_DIRECTORY_NAME_OF_THIRTY_NINE_CH]/PROTECTION=(S:RWE,O:RWE,G:RWE,W:RWE)
+COPY "testdata/sum117/sum117b.com"/HOST DUA5:[SUM117]SUM117B.COM
+`)
+	writeCopies(&b, round1Files, files[round1Files:])
+	b.WriteString("DIRECTORY/SIZE DUA5:[SUM117]\nDISMOUNT DUA5\n")
+
+	write("exchange2.cmd", b.String())
+
+	write("copyout2.cmd", `! COPYOUT2.CMD - copies Phase 117's round 2 results off sum117-exchange.dsk
+! into testdata/sum117/vax (README.md). Written by testdata/sum117/gen.go.
+! Run from the repository root after the VAX runs round 2:
+!
+!     go run ./cmd/govax --profile tbprobe --system-file none console < testdata/sum117/copyout2.cmd
+!     for f in testdata/sum117/vax/out/*\;*; do mv "$f" "${f%;*}"; done
+!
+MOUNT DUA5 "testdata/disks/sum117-exchange.dsk"
+DIRECTORY/SIZE DUA5:[SUM117],[SUM117.SCR]
+COPY DUA5:[SUM117]SUM117B.LOG "testdata/sum117/vax/sum117b.log"/HOST/QUIET
+COPY DUA5:[SUM117.OUT]*.* "testdata/sum117/vax/out/"/HOST/QUIET
+DISMOUNT DUA5
+`)
+}
+
+// Round 2: what round 1 left open (the phase doc's A.4).
+
+// clash2 asks why G14's insert was lost: a delete, a replace, and an
+// insert meeting at one line, in every order of their files, and the
+// pieces two at a time.
+func clash2() {
+	const s = "CLASH2"
+
+	for _, order := range [][]string{{"G14A", "G14C", "G14B"}, {"G14B", "G14A", "G14C"}, {"G14B", "G14C", "G14A"}, {"G14C", "G14A", "G14B"}} {
+		id := "K" + string(order[0][3]) + string(order[1][3]) + string(order[2][3])
+		sumCase(s, id, "G14's files in the order "+strings.Join(order, ","), "", "S10.SRC", order...)
+	}
+
+	sumCase(s, "K01", "a replace of 5 and a delete of 4 to 6", "", "S10.SRC", "G14A", "G14B")
+	sumCase(s, "K01R", "a delete of 4 to 6 and a replace of 5", "", "S10.SRC", "G14B", "G14A")
+	sumCase(s, "K02", "a replace of 5 and an insert after 5 (G04 again)", "", "S10.SRC", "G14A", "G14C")
+
+	addFile("K03A.UPD", "-4,6", "K03A replaced 4 to 6", "/")
+	addFile("K03B.UPD", "-5", "K03B after 5", "/")
+	sumCase(s, "K03", "a replace of 4 to 6 and an insert after 5", "", "S10.SRC", "K03A", "K03B")
+	sumCase(s, "K03R", "the same, the other order", "", "S10.SRC", "K03B", "K03A")
+
+	addFile("K04B.UPD", "-5,5", "K04B replaced 5", "/")
+	addFile("K04C.UPD", "-6", "K04C after 6", "/")
+	sumCase(s, "K04", "a delete of 4 to 6, a replace of 5, an insert after 6", "", "S10.SRC", "G14B", "K04B", "K04C")
+
+	addFile("K05A.UPD", "-3,7", "/")
+	addFile("K05B.UPD", "-5", "K05B after 5", "/")
+	addFile("K05C.UPD", "-4", "K05C after 4", "/")
+	sumCase(s, "K05", "a delete of 3 to 7 and inserts after 5 and 4", "", "S10.SRC", "K05A", "K05B", "K05C")
+
+	addFile("K06.UPD", "-4,6", "-5", "K06 after 5", "-5,5", "K06 replaced 5", "/")
+	sumCase(s, "K06", "G14's three edits in one file", "", "S10.SRC", "K06")
+	addFile("K07.UPD", "-4,6", "-5", "K07 after 5", "/")
+	sumCase(s, "K07", "a delete and an insert inside it, in one file", "", "S10.SRC", "K07")
+	addFile("K08.UPD", "-4,6", "-5,5", "K08 replaced 5", "/")
+	sumCase(s, "K08", "a delete and a replace inside it, in one file", "", "S10.SRC", "K08")
+
+	addFile("K09A.UPD", "-4,6", "/")
+	addFile("K09B.UPD", "-5,5", "/")
+	addFile("K09C.UPD", "-5", "K09C after 5", "/")
+	sumCase(s, "K09", "a delete of 4 to 6, a delete of 5, an insert after 5", "", "S10.SRC", "K09A", "K09B", "K09C")
+	sumCase(s, "K09R", "the same, the other order", "", "S10.SRC", "K09C", "K09B", "K09A")
+
+	addFile("K10B.UPD", "-6,6", "K10B replaced 6", "/")
+	sumCase(s, "K10", "a delete of 4 to 6, a replace of its last line, an insert after 5", "", "S10.SRC", "G14B", "K10B", "G14C")
+}
+
+// numbers asks what happens to a locator past 32767 (Y05's -99999 went
+// after line 1).
+func numbers() {
+	const s = "NUMBERS"
+
+	n := func(id, title string, upd ...string) {
+		addFile(id+".UPD", upd...)
+		sumCase(s, id, title, "", "S10.SRC", id)
+	}
+
+	n("N01", "32768", "-32768", "N01 text", "/")
+	n("N02", "40000", "-40000", "N02 text", "/")
+	n("N03", "65535", "-65535", "N03 text", "/")
+	n("N04", "65536", "-65536", "N04 text", "/")
+	n("N05", "65537", "-65537", "N05 text", "/")
+	n("N06", "65541 (5 more than 65536)", "-65541", "N06 text", "/")
+	n("N07", "100000", "-100000", "N07 text", "/")
+	n("N08", "131077 (5 more than twice 65536)", "-131077", "N08 text", "/")
+	n("N09", "99999 after an insert after 3", "-3", "N09 after 3", "-99999", "N09 text", "/")
+	n("N10", "a range of 99999 to 99999", "-99999,99999", "N10 text", "/")
+	n("N11", "a range of 5 to 65541", "-5,65541", "N11 text", "/")
+	n("N12", "a range of 5 to 32768", "-5,32768", "N12 text", "/")
+	n("N13", "six digits that are 5", "-000005", "N13 text", "/")
+	n("N14", "99999 as the second of two inserts", "-7", "N14 after 7", "-99999", "N14 text", "/")
+}
+
+// pastEnd asks what an edit past the input's end does (Y13 read the input
+// again, Y12 lost its insert).
+func pastEnd() {
+	const s = "PASTEND"
+
+	e := func(id, title, src string, upd ...string) {
+		addFile(id+".UPD", upd...)
+		sumCase(s, id, title, "", src, id)
+	}
+
+	e("E01", "a replace of line 11 alone", "S10.SRC", "-11,11", "E01 text", "/")
+	e("E02", "a replace of 10 to 11", "S10.SRC", "-10,11", "E02 text", "/")
+	e("E03", "a replace of 10 to 12", "S10.SRC", "-10,12", "E03 text", "/")
+	e("E04", "a delete of 11 to 12, no text", "S10.SRC", "-11,12", "/")
+	e("E05", "a replace of 2 to 5 on three lines", "S03.SRC", "-2,5", "E05 text", "/")
+	e("E06", "a replace of 2 to 9 on three lines", "S03.SRC", "-2,9", "E06 text", "/")
+	e("E07", "a replace of 4 to 4 on three lines", "S03.SRC", "-4,4", "E07 text", "/")
+	e("E08", "an insert after 4 on three lines", "S03.SRC", "-4", "E08 text", "/")
+	e("E09", "a replace past the end, then an insert after it", "S03.SRC", "-2,5", "E09 replaced", "-7", "E09 after 7", "/")
+	e("E10", "a replace past the end, then a replace of the reread", "S03.SRC", "-2,4", "E10 replaced", "-5,5", "E10 second", "/")
+	e("E11", "an insert after 10, then after 11", "S10.SRC", "-10", "E11 after 10", "-11", "E11 after 11", "/")
+	e("E12", "the last line deleted, then an insert after 11", "S10.SRC", "-10,10", "-11", "E12 after 11", "/")
+	e("E13", "a replace of 1 to 4 on three lines", "S03.SRC", "-1,4", "E13 text", "/")
+	e("E14", "an empty input, a replace of 1 to 1", "EMPTY.SRC", "-1,1", "E14 text", "/")
+	e("E15", "an empty input, an insert after 1", "EMPTY.SRC", "-1", "E15 text", "/")
+}
+
+// lengths asks how long an update file's record and a source's record may
+// be (B30's 300 bytes was RTB).
+func lengths() {
+	const s = "LENGTHS"
+
+	long := func(n int) string {
+		r := strings.Repeat("0123456789", n/10+1)[:n-4]
+		return fmt.Sprintf("%04d", n) + r
+	}
+
+	for _, n := range []int{132, 133, 255, 256, 257, 511, 512, 513} {
+		id := fmt.Sprintf("W%03d", n)
+		addFile(id+".UPD", "-5", long(n), "/")
+		sumCase(s, id, fmt.Sprintf("an update record of %d bytes", n), "", "S10.SRC", id)
+	}
+
+	for _, n := range []int{255, 256, 257, 512, 513, 1024, 2048, 4096, 8192, 16384, 32767} {
+		id := fmt.Sprintf("X%05d", n)
+		addFile(id+".SRC", "first", long(n), "last")
+		sumCase(s, id, fmt.Sprintf("a source record of %d bytes", n), "", id+".SRC", "B05")
+	}
+}
+
+// pages asks how messages and long inserts lay out across the listing's
+// pages, and how a long name fills the heading.
+func pages() {
+	const s = "PAGES"
+
+	addFile("P120.SRC", lines("page record", 120)...)
+	addFile("P01A.UPD", "-55", "P01A after 55", "-56", "P01A after 56", "/")
+	addFile("P01B.UPD", "-55", "P01B after 55", "-A", "P01B after a bad command", "/")
+	sumCase(s, "P01", "messages at the end of page 1", "", "P120.SRC", "P01A", "P01B")
+
+	var many []string
+	for i := 1; i <= 70; i++ {
+		many = append(many, fmt.Sprintf("P02 inserted %d", i))
+	}
+
+	addFile("P02.UPD", append(append([]string{"-50"}, many...), "/")...)
+	sumCase(s, "P02", "70 records inserted across a page", "", "P120.SRC", "P02")
+
+	addFile("P03.UPD", "-50,60", "/")
+	sumCase(s, "P03", "a deletion across a page break", "", "P120.SRC", "P03")
+
+	long := "[SUM117.IN.A_LONG_DIRECTORY_NAME_OF_THIRTY_NINE_CH]LONG_FILE_NAME_OF_THIRTY_NINE_CHARACTER.LONG_TYPE_OF_THIRTY_NINE_CHARACTERS_XYZ"
+	addFile(long, s10...)
+	addCase(s, "P04", "a long name in the heading",
+		"EDIT/SUM/OUTPUT=SUM$OUT:P04.OUT/LISTING=SUM$OUT:P04.LIS "+long+"/UPDATE=[SUM117.IN]C01")
+}
+
+// slpVerb asks what EDIT/SLP is (round 1's C23: IVQUAL on /UPDATE).
+func slpVerb() {
+	const s = "SLPVERB"
+
+	scratch := []string{"COPY S10.SRC SUM$SCR:", "SET DEFAULT SUM$SCR:"}
+	end := []string{"DIRECTORY/SIZE SUM$SCR:", "SET DEFAULT SUM$TOP:[SUM117.IN]", "DELETE SUM$SCR:*.*;*/NOLOG"}
+
+	addCase(s, "V01", "HELP EDIT /SLP", "HELP/NOPROMPT EDIT /SLP")
+	cases = append(cases, probeCase{ID: "V02", Section: s, Title: "EDIT/SLP with no other qualifier, its input empty",
+		Pre: scratch, Steps: []step{{Command: "EDIT/SLP S10.SRC"}}, Post: end})
+	cases = append(cases, probeCase{ID: "V03", Section: s, Title: "EDIT/SLP/OUTPUT",
+		Pre: scratch, Steps: []step{{Command: "EDIT/SLP/OUTPUT=SUM$OUT:V03.OUT S10.SRC"}}, Post: end})
+	addCase(s, "V04", "EDIT/SLP/SUM", "EDIT/SLP/SUM/OUTPUT=SUM$OUT:V04.OUT S10.SRC/UPDATE=C01")
+	addCase(s, "V05", "EDIT/SU, an abbreviation", "EDIT/SU/OUTPUT=SUM$OUT:V05.OUT S10.SRC/UPDATE=C01")
+	addCase(s, "V06", "EDIT/S, an abbreviation", "EDIT/S/OUTPUT=SUM$OUT:V06.OUT S10.SRC/UPDATE=C01")
+}
+
+// dates asks which of the input's dates the listing's second heading
+// line shows: a copy appended to after a wait, so its dates differ.
+func dates() {
+	const s = "DATES"
+
+	cases = append(cases, probeCase{ID: "D01", Section: s, Title: "the listing's dates for an input revised after its creation",
+		Pre: []string{
+			"COPY S10.SRC SUM$SCR:D01.SRC",
+			"WAIT 00:00:03",
+			"OPEN/APPEND D01F SUM$SCR:D01.SRC",
+			"WRITE D01F \"appended\"",
+			"CLOSE D01F",
+			"DIRECTORY/FULL SUM$SCR:D01.SRC",
+		},
+		Steps: []step{{Command: "EDIT/SUM/OUTPUT=SUM$OUT:D01.OUT/LISTING=SUM$OUT:D01.LIS SUM$SCR:D01.SRC/UPDATE=C01"}},
+		Post:  []string{"DELETE SUM$SCR:*.*;*/NOLOG"}})
 }

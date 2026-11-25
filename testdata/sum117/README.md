@@ -37,6 +37,14 @@ and MACRO/UPDATE (the phase doc's A.3):
   missing update file, `/NOUPDATE`, the listing's audit trail.
 - **The terminal**: `sum117t.com`, by hand.
 
+Round 2 (`sum117b.com`) asks what round 1 left open: CLASH2 (a delete, a
+replace, and an insert meeting, G14's lost insert), NUMBERS (locators past
+32,767), PASTEND (edits past the input's end), LENGTHS (the longest update
+and source records), PAGES (messages and long inserts at a page's end, a
+long name in the heading), SLPVERB (what EDIT/SLP is on VMS 7.1), and DATES
+(which date the listing's heading shows). `cases.txt` has its files and
+cases after a `round 2` line.
+
 | File | What it holds |
 | ---- | ------------- |
 | `gen.go` | Writes everything below but this README: `go run testdata/sum117/gen.go` from the repository root |
@@ -45,7 +53,8 @@ and MACRO/UPDATE (the phase doc's A.3):
 | `sum117.com` | The run: 346 cases in sections, each step's `$STATUS` and its message in the log, outputs in `[SUM117.OUT]` |
 | `sum117t.com` | The terminal cases, run by hand |
 | `exchange.cmd`, `copyout.cmd` | The govax console scripts that build the exchange volume and bring the results back |
-| `vax/` | VMS 7.1's answers, once run: `sum117.log`, `terminal.log`, `out/` |
+| `sum117b.com`, `exchange2.cmd`, `copyout2.cmd` | Round 2: what round 1 left open (76 cases), and its scripts |
+| `vax/` | VMS 7.1's answers: `sum117.log` (round 1), `terminal.log`, `out/` (every output), and round 2's `sum117b.log` once run |
 
 Each case in the log starts with a `#### CASE id: title` line, then its
 commands (the procedure runs with SET VERIFY), any messages, and a
@@ -121,3 +130,51 @@ gives the world no access.
 the exchange volume, to find mistakes in the procedure itself. govax has no
 EDIT/SUM or MACRO/UPDATE yet, so those steps fail with `%DCL-W-IVQUAL`, and
 nothing else did.
+
+## Round 1 (2026-11-25)
+
+The author ran steps 1 to 6 (`copyout.cmd`'s files had `;1` and `;2` on
+their names, taken off after). Everything ran: `vax/sum117.log`,
+`vax/terminal.log`, and 627 files in `vax/out/`; the answers are the phase
+doc's A.4. Two things about the run itself:
+
+- The ROUNDTRIP cases' closing `DIFFERENCES SUM$OUT:ID.OUT ID.B` failed
+  (`%DIFF-F-OPENIN`): DIFFERENCES takes the second file's directory from
+  the first's, so it looked for `ID.B` in `[SUM117.OUT]`. The outputs came
+  back, and comparing them with `cases.txt`'s revisions on the host showed
+  all 136 the same.
+- At the terminal, `/UPDATE=SYS$COMMAND` ended at the first `/` with
+  `%SUM-E-READERR` / `-RMS-F-RAC`: SUMSLP reads an update file twice, and a
+  terminal can't be read again.
+
+## Round 2
+
+1. **Add it to the exchange volume** (done 2026-11-25 with the round's
+   files; run it again only after `gen.go` changes them), from the
+   repository root:
+
+       go run ./cmd/govax --profile tbprobe --system-file none console < testdata/sum117/exchange2.cmd
+
+2. **Attach** the volume to the simh VAX again (`attach rq1
+   testdata/disks/sum117-exchange.dsk`).
+
+3. **As SYSTEM**:
+
+       $ MOUNT DUA1: SUM117
+       $ SET DEFAULT DUA1:[SUM117]
+       $ @SUM117B/OUTPUT=SUM117B.LOG
+
+   Its last line is `SUM117B FINISHED`. Cases V02 and V03 run `EDIT/SLP`
+   on a copy in `[SUM117.SCR]` to see what it is; if it starts an editor
+   that waits at the terminal, type Ctrl/Z (or `EXIT`, or `QUIT`), and say
+   which in the log's notes.
+
+4. **Dismount** and detach, as in round 1.
+
+5. **Bring the results back**:
+
+       go run ./cmd/govax --profile tbprobe --system-file none console < testdata/sum117/copyout2.cmd
+       for f in testdata/sum117/vax/out/*\;*; do mv "$f" "${f%;*}"; done
+
+   This copies the log to `vax/sum117b.log` and every output again
+   (round 1's unchanged).

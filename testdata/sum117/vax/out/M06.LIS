@@ -1,0 +1,68 @@
+SUMA                            SUMSLP probe module A                    25-NOV-2026 14:37:54  VAX MACRO V5.4-3            Page   1
+V1.0                                                                     25-NOV-2026 17:12:43  DUA1:[SUM117.IN]SUMA.MAR;1        (1)
+
+                                     0000     1 	.TITLE	SUMA	SUMSLP probe module A
+                                     0000     2 	.IDENT	/V1.0/
+                                 00000000     3 	.PSECT	DATA,NOEXE,WRT
+                           00000001  0000     4 VALUE:	.LONG	1		; a value
+                                 00000000     5 	.PSECT	CODE,EXE,NOWRT
+                               0000  0000     6 	.ENTRY	START,^M<>
+                            01   D0  0002    .1 	MOVL	#1	; M06, an operand missing
+%MACRO-E-NOTENUFOPR, Not enough operands supplied                !
+                                     0004       
+                   00000000'EF   D0  0004     7 	MOVL	VALUE,R0	; return it
+                            50       000A       
+                                 04  000B     8 	RET
+                                     000C     9 	.END	START
+SUMA                            SUMSLP probe module A                    25-NOV-2026 14:37:54  VAX MACRO V5.4-3            Page   2
+Symbol table                                                             25-NOV-2026 17:12:43  DUA1:[SUM117.IN]SUMA.MAR;1        (1)
+
+START            00000000 RG    02      
+VALUE            00000000 R     01      
+
+                                                +----------------+
+                                                ! Psect synopsis !
+                                                +----------------+
+
+PSECT name                      Allocation          PSECT No.  Attributes     
+----------                      ----------          ---------  ----------     
+.  ABS  .                       00000000  (    0.)  00 (  0.)  NOPIC   USR   CON   ABS   LCL NOSHR NOEXE NORD  NOWRT NOVEC BYTE  
+DATA                            00000004  (    4.)  01 (  1.)  NOPIC   USR   CON   REL   LCL NOSHR NOEXE   RD    WRT NOVEC BYTE  
+CODE                            0000000C  (   12.)  02 (  2.)  NOPIC   USR   CON   REL   LCL NOSHR   EXE   RD  NOWRT NOVEC BYTE  
+
+                                             +------------------------+
+                                             ! Performance indicators !
+                                             +------------------------+
+
+Phase                    Page faults    CPU Time       Elapsed Time   
+-----                    -----------    --------       ------------   
+Initialization                  446     00:00:00.01    00:00:00.01
+Command processing              927     00:00:00.01    00:00:00.01
+Pass 1                          176     00:00:00.00    00:00:00.00
+Symbol table sort                 1     00:00:00.00    00:00:00.00
+Pass 2                          117     00:00:00.01    00:00:00.01
+Symbol table output               1     00:00:00.00    00:00:00.00
+Psect synopsis output             2     00:00:00.00    00:00:00.00
+Cross-reference output            0     00:00:00.00    00:00:00.00
+Assembler run totals           1693     00:00:00.03    00:00:00.03
+
+The working set limit was 962 pages.
+196 bytes (1 page) of virtual memory were used to buffer the intermediate code.
+There were 10 pages of symbol table space allocated to hold 2 non-local and 0 local symbols.
+10 source lines were read in Pass 1, producing 16 object records in Pass 2.
+0 pages of virtual memory were used to define 0 macros.
+
+                                            +--------------------------+
+                                            ! Macro library statistics !
+                                            +--------------------------+
+
+Macro library name                           Macros defined      
+------------------                           --------------      
+SYS$COMMON:[SYSLIB]STARLET.MLB;1                        0        
+
+0 GETS were required to define 0 macros.
+
+There were 1 error, 0 warnings and 0 information messages, on lines:
+    6.1 (1)   
+
+MACRO/LIST=SUM$OUT:M06.LIS/OBJECT=SUM$OUT:M06.OBJ SUMA/UPDATE=M06

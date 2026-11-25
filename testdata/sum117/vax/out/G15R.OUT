@@ -1,0 +1,12 @@
+source line 1
+G15B after 1
+source line 2
+G15A replaced 3
+source line 4
+source line 5
+source line 6
+G15A after 6
+source line 7
+source line 8
+G15B after 9
+source line 10

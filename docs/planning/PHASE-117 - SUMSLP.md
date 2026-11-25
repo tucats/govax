@@ -181,7 +181,199 @@ The probe (Part D) is to answer each:
     `.UPD`'s default, a missing update file's message, a list and a
     concatenation, `/NOUPDATE`, `/UPDATE` after the verb.
 
-## Part B — decisions (proposed)
+### A.4 The probe's answers (round 1, 2026-11-25)
+
+Round 1 ran whole on VMS 7.1 (`testdata/sum117/vax/sum117.log`, 627 files
+in `vax/out/`, the terminal in `vax/terminal.log`). Case IDs are
+`cases.txt`'s.
+
+1. **The command.**
+   - EDIT/SUM's online help is the EDIT topic's one line, "Invoke the
+     SUMSLP batch-oriented editor to update a single input file with
+     multiple files of edit commands (see /SUM)", and a `/SUM` subtopic
+     with no text ("Sorry, no documentation on EDIT /SUM...", H01);
+     there is no SUMSLP topic and no MACRO /UPDATE one (H02, H04).
+     HELP/MESSAGE/FACILITY=SUM (or SUMSLP) lists EDITSCLSH "edits
+     clash", EDOUTSEQ "edits out of sequence", and PRMEOF "premature
+     end-of-file" (H05, H06).
+   - `.UPD` is the update file's type (C01); a bare `/UPDATE` is the
+     input's name and `.UPD` (C02, C14); none copies the input and lists
+     it (C03). Each later update file takes the device and directory of
+     the one before (C16: `C16B` read from `[SUM117.IN2]`) but **not**
+     its type, against the manual's example 3: C04's `C04C` was read as
+     `C04C.UPD`, not found, `%SUM-I-OPENIN` and `-RMS-E-FNF`, and the
+     other two applied.
+   - `/UPDATE` after the verb is `%DCL-W-IVQLOC` (C05); `/LISTING` and
+     `/OUTPUT` work after the file too (C06, C07).
+   - No `/OUTPUT` is the input's name, a new version (C08, C10, C13: even
+     for `S10.SRC;1`); a bare `/LISTING` is `S10.LIS` (C09);
+     `/OUTPUT=.NEW` and `/LISTING=.LST` take the input's name (C12);
+     `/NOOUTPUT` makes no output (C11); `/NOLISTING` after `/LISTING`
+     makes none (C24).
+   - A missing input: `%SUM-I-OPENIN, error opening
+     DUA1:[SUM117.IN]NOSUCH.SRC; as input` / `-RMS-E-FNF`, status
+     `%X10018292` (C17). A missing update file: the same `-I-` message,
+     the others applied, success (C18, C19). A wildcard in either:
+     `%SUM-E-OPENIN` / `-RMS-F-WLD`, `%X10018744` (C20, C21). Two inputs:
+     `%DCL-W-NOLIST` (C27). Qualifiers EDIT/SUM lacks: `%DCL-W-IVQUAL`
+     (C25, C26).
+   - **EDIT/SLP** fails (C23): `%DCL-W-IVQUAL` naming `\UPDATE\`, not
+     `\SLP\`, so 7.1's EDIT takes `/SLP` as something else; round 2's
+     SLPVERB asks what.
+   - **Statuses are RMS's**, with bit 28 (inhibit message) set: success
+     `%X10010001` (RMS-S-NORMAL), whatever warnings the run had (B17's
+     PRMEOF, G12's EDITSCLSH, Y03's SLPSYNERR); a failure is its RMS
+     status (FNF, WLD, RAC). SUM's own message numbers never reach
+     `$STATUS`, so the probe has none (F$MESSAGE knows only RMS's).
+   - **Messages**: the OPENIN and READERR failures go to SYS$OUTPUT (and
+     the log). The editing warnings (SLPSYNERR, EDITSCLSH, EDOUTSEQ,
+     PRMEOF) go **into the listing** when there is one, else to
+     SYS$OUTPUT (the terminal's Y08). Each is the message line, then a
+     line per edit it is about: the command line as written, four
+     blanks, the update file's full name (`-5,5    DUA1:[...]G03B.UPD;1`;
+     PRMEOF's command is empty: `    DUA1:[...]B17.UPD;1`, or
+     `SYS$INPUT:.;`).
+   - `/UPDATE=SYS$INPUT` in a procedure works (C29), and without `/` is
+     PRMEOF at the next `$` line (C30). Under SET VERIFY the log shows
+     the data lines read twice, the command lines doubled the second
+     time: SUMSLP reads each update file twice. At a terminal
+     (`/UPDATE=SYS$COMMAND`) the first reading ends at `/` (or Ctrl/Z,
+     shown ` Exit `) and the second fails: `%SUM-E-READERR, error reading
+     SYS$COMMAND:.;` / `-RMS-F-RAC`, `%X10018644`; the author's session
+     ended at the first `/`.
+   - Missing parameter: `%DCL-W-INSFPRM` (no prompt).
+2. **The edit commands.**
+   - A bare `-`, `-0`, `-.` at the start, and `-0,5` all insert before
+     line 1 (B08, B09, B33, Y24); `-n` inserts after line n, `-m,n`
+     replaces m to n, nothing following deletes them.
+   - Blanks and tabs inside a command are ignored (`- 5,5`, `-5 , 5`,
+     `-\t5,5`, `-5   `: Y01, Y04, Y15, Y23), as are leading zeros
+     (Y02); `-5 6` is a syntax error (Y11). A trailing comma, `-5,`, is
+     an insert (B38). `-5,5,;Y16` is a replace (the third field not an
+     audit trail, ignored, Y16); `-5,5,//` an empty trail (Y18).
+   - `;` starts a comment wherever it is (B34, B35, B37); after the trail
+     too (B36).
+   - **Syntax errors** (SLPSYNERR): a sign (Y03, Y19), letters (Y08,
+     Y09), `%X5` (Y20), an unterminated trail (Y10), `-5,/;Y17/` (Y17),
+     extra commas (Y07), a reversed range (O04), a record starting with
+     `-` (B20). The bad command is **numbered as an inserted line but not
+     written** (the next line is `.2`), and the text after it is
+     inserted where the edit before left off (Y21) or before line 1.
+   - **The terminator**: `/` in column 1 ends the file, whatever follows
+     on its line (B39); a line ` /` is text (B40); after `/` nothing is
+     read (B18). No `/` is PRMEOF, the edits applied (B17); an empty
+     update file applies nothing, with no message (B19).
+   - **Operators** (B21 to B28, B41): `<` makes the next character
+     ordinary (`<-`, `</`, `<<`, `<\`, `<%`), and is dropped before any
+     other (`<B24` is `B24`); a line of only `<` is an empty record.
+     `\` and `%` lines turn the audit trail off and on and **their text
+     is dropped** (`\B25 ...` and `%B26 ...` vanish).
+   - **Record length**: an update record of 300 bytes is `%SUM-E-READERR,
+     error reading ...B30.UPD;1` / `-RMS-W-RTB, 300 byte record too
+     large for user's buffer`, nothing applied, success (B30); round 2's
+     LENGTHS finds the limit, and a source record's (140 is fine).
+   - **DIFFERENCES/SLP** writes a revision record that starts with `-`,
+     `/`, `<`, `\`, or `%` after a `<` (R09 to R14), which govax's
+     `diff.SLP` didn't: fixed (commit ae4b4e3d, `TestSum117Scripts`).
+3. **Order in one file** (O01 to O12) and **4. merging** (G01 to G18,
+   C22) fit one rule, with one exception. The edits of every update
+   file, the first listed lowest, a file's later lines above its
+   earlier ones, are sorted by locator1, the higher first among equals,
+   and applied in one pass over the input:
+   - a replace or delete whose first line has already been written is
+     dropped (O02, O06, O09, O12, G03, G04, G06, G07, G17R, G18);
+   - an insert after a line already passed goes at the current place
+     (O05, O08, G05: an insert after 5 inside a delete of 4 to 6 follows
+     it);
+   - EDOUTSEQ is reported for a command whose locator1 is not above the
+     one before it in its file (O01, O03, O06 to O10, O12, B32); it is
+     listed just before that edit is applied;
+   - EDITSCLSH is reported for edits whose ranges meet (an insert after
+     n being n's range): two inserts at one line (O03, G02, G13, C22),
+     an insert inside a range (O05, G05), overlapping ranges (O02, G07,
+     G18), but not adjacent ones (O10, O11, G10). It is listed when the
+     pass reaches the first line of the first of them, before that line,
+     naming them in the sorted order.
+   - Inserts at one line come out highest first (O03, G02, G13); a
+     replace and an insert at one line both survive if the replace is
+     higher (O07, G04R, G17), the insert only if it is (O06, G04, G17R).
+   - **The exception, G14**: a replace of 5, a delete of 4 to 6, and an
+     insert after 5 in three files, in both orders, write only the
+     delete: the insert is lost, where G05 kept it. Round 2's CLASH2
+     asks why.
+   - The manual's "a delete takes away lower-precedence inserts" (3.3)
+     isn't what G05 shows.
+5. **The audit trail** (U01 to U10, G12, B36):
+   - The default trail is **empty**: nothing is marked (U01, C01).
+   - A trail given on a command (`/;U02 AUDIT/`) or by `-,,/text/`
+     marks every line inserted after it **in that update file**, until
+     changed; `-,,/;U03 NEW/` after an insert marked that earlier insert
+     too (U03: the trail seems to be the file's at its end, or applied
+     when the edits are sorted; round 2 doesn't ask, so unconfirmed).
+     Each file has its own (G12).
+   - It shows only in the listing (and `/HEADER`'s record headers), cut
+     to 16 characters in the listing (U06), any text (U07, U08). A `\`
+     line suppresses it for the lines after, `%` brings it back (U09).
+     Deleted lines have none (U10).
+6. **The listing** (all `.LIS`, L01 to L08):
+   - A variable-length file, CR carriage control. Pages of 60 lines: two
+     heading lines, a blank line, and 57 lines. Heading line 1 is a form
+     feed, 60 blanks, the listing's date and time (`25-NOV-2026
+     14:37:46`), 4 blanks, `VAX-11 SUMSLP V01.00`, 16 blanks, `Page`,
+     and the page number right-aligned in 5; line 2 is 60 blanks, the
+     input's date (creation or revision: round 2's DATES asks), 4 blanks,
+     and the input's full name, blank-padded (to 45 characters in C01;
+     round 2's P04 shows a long one).
+   - Each line: a 16-column field (the audit trail, or the `-n`
+     deletion marker), the line number right-aligned in 7 columns
+     (`.1`, `.2`, ... for inserted lines, counted from each run's start;
+     an insert next to a replace is one run, L04), a blank, and the
+     record as it is (tabs kept, never cut: 140 bytes in U04).
+   - The marker `-n` (n the lines deleted or replaced) is on the first
+     line after them that is written; a deletion at the input's end
+     leaves none (B12, B13, U05). Runs of deleted lines separated only by
+     written lines each get their own (B15).
+   - Messages are listing lines (do they count toward the 57? round 2's
+     P01).
+   - An empty input's listing is the heading alone (L02).
+7. **Files** (F01 to F09, U11 to U14, L09, L10):
+   - The output is always variable-length, CR carriage control, whatever
+     the input's format (VFC, Stream_LF, fixed). Records come out byte
+     for byte (control and 8-bit bytes, form feeds, tabs, empty records,
+     trailing blanks).
+   - `/HEADER`: VFC with a 12-byte header, CR carriage control: a word
+     with the input's line number (0 for an inserted line), a word with
+     the insert number (`.n`'s n, 0 for an input line), and 8 bytes of
+     the audit trail, zero-filled.
+   - No limit at 32,767 lines: 32,768 lines edited as well (L10).
+   - (The probe's own inputs were Stream_LF, govax's COPY/HOST's
+     default, not variable as `cases.txt` says: F05S.)
+8. **The round trip**: all 136 pairs give the revision back exactly
+   (compared on the host; the procedure's own DIFFERENCES took its second
+   file's directory from the first and failed, a slip in the probe).
+9. **Past the end** (Y06, Y12 to Y14): an insert after a line past the
+   end is lost, with no message; a replace or delete reaching past the end
+   reads the input **again from its start**, numbering on (Y13: the ten
+   lines, the text, then lines 11 to 20, the input once more). A locator
+   past 32,767 is EDOUTSEQ and went after line 1 (Y05's 99999). Round 2's
+   NUMBERS and PASTEND look for the rules.
+10. **MACRO/UPDATE** (M01 to M16): `/UPDATE` is a file qualifier
+    (IVQLOC after the verb, M11); a missing update file is
+    `%SUM-I-OPENIN` and the assembly goes on (M07, M16); `/NOUPDATE`
+    after `/UPDATE` applies none (M08). The listing is MACRO's own, with
+    SUMSLP's numbering in the line-number column (`.1`, `.2`) and its
+    16-column field (audit trail, `-n`) over the left of the object code
+    columns (M10); SUMSLP's warnings are lines in it (M13). The listing
+    header and assembly messages otherwise as MACRO's. The objects and
+    listings are kept.
+
+What round 1 left is round 2 (`sum117b.com`, 76 cases): CLASH2 (G14's
+exception), NUMBERS, PASTEND, LENGTHS (update records of 132 to 513
+bytes, source records of 255 to 32,767), PAGES (messages and a long
+insert at a page's end, a long name in the heading), SLPVERB (what
+EDIT/SLP is), and DATES (which date the heading shows).
+
+## Part B — decisions (proposed; adjusted by A.4)
 
 1. **VMS 7.1 is the reference**, as for every probe since Phase 55.
 2. **The engine is a package of its own, `internal/sumslp`** (the
@@ -195,8 +387,10 @@ The probe (Part D) is to answer each:
 3. **The command is `internal/dclcmd/sumslp.go`**: names, files, output,
    listing, status. The grammar: EDIT's syntax switched by `/SUM` (and
    `/SLP`) to an `edit_sum` syntax with its own parameter and qualifiers:
-   `/LISTING`, `/OUTPUT`, and `/HEADER` the verb's, `/UPDATE` the file's
-   (the manual), so its messages are DCL's.
+   `/UPDATE` the file's alone (IVQLOC on the verb), `/LISTING`,
+   `/OUTPUT`, and `/HEADER` either's (A.4.1), so its messages are DCL's.
+   EDIT/SLP is govax's own (VMS 7.1 refuses it, A.4.1; the review's
+   answer 1), in DEVIATIONS.md.
 4. **The rules are fitted to VMS's output**, never written from VMS's
    code (clean room): each rule written in `doc.go` with the cases that
    showed it; what no case settles is a choice marked unconfirmed and
@@ -206,8 +400,16 @@ The probe (Part D) is to answer each:
    random pairs, in milliseconds, and the scripts VMS wrote (Phase 116's
    62 and this probe's 136) applied to their masters give their
    revisions.
-6. **Messages** go into `vmsdef` as SUMSLP's facility (its number from
-   the probe's `$STATUS` values), as DIF's did.
+6. **Messages** go into `vmsdef` as SUMSLP's facility, SUM, with the
+   texts the probe showed; `$STATUS` is RMS's status with the inhibit bit
+   (A.4.1), so the SUM messages' numbers never show and are govax's
+   choice, unconfirmed.
+8. **What VMS does with bad input is followed where round 2 makes a rule
+   of it** (a range past the end reading the input again, a locator past
+   32,767, a syntax error's dropped line); what stays unclear is
+   govax's choice, unconfirmed, in DEVIATIONS.md. SUMSLP's reading each
+   update file twice is not copied: govax reads a terminal's update
+   once (a deviation that only makes `/UPDATE=SYS$COMMAND` work).
 7. **MACRO/UPDATE is in this phase** (the review's answer 2): a
    positional qualifier on each source, the update files merged by
    `sumslp` and the updated text handed to the assembler (`internal/asm`
@@ -219,7 +421,8 @@ The probe (Part D) is to answer each:
 Each is one commit, with tests, stopping for review.
 
 1. **The survey**: Part A, this plan.
-2. **The probe** (written 2026-11-25; the VAX run waits for the author):
+2. **The probe** (written 2026-11-25; round 1 run on VMS 7.1 the same
+   day, its answers A.4; round 2 written, waiting for the VAX):
    the documentation CD searched for the SUMSLP manual (found, A.1);
    `testdata/sum117`, as in Part D, written, rehearsed on govax, and its
    exchange volume built; run on the VAX by the author (a short round 2
@@ -337,3 +540,16 @@ The author's answers to the plan's four questions:
   DIRECTORY's `/DATE` takes no value (VMS's `/DATE=CREATED`); the probe
   uses neither, and both are for a later fix. The VAX run waits for the
   author (README.md's steps).
+- **2026-11-25 — subtask 2, round 1 on VMS.** The author ran
+  `sum117.com` and `sum117t.com` on VMS 7.1; the results came back with
+  `copyout.cmd` (`vax/sum117.log`, `vax/terminal.log`, 627 files in
+  `vax/out/`). Their answers are A.4. The round trip held for all 136
+  pairs (compared on the host: the procedure's closing DIFFERENCES looked
+  for the revision in `[SUM117.OUT]`, a slip). They found a Phase 116 bug:
+  DIFFERENCES/SLP writes a `<` before a record that starts with an SLP
+  operator, and govax's `diff.SLP` didn't; fixed (commit ae4b4e3d), and
+  `internal/diff`'s `TestSum117Scripts` holds `diff.SLP` to all 136 of
+  VMS's scripts. Round 2, `sum117b.com` (76 cases; `gen.go` writes it
+  after round 1's cases, which don't change: `cases.txt` marks it with a
+  `round 2` line), asks what A.4 left open; `exchange2.cmd` put its files
+  on the exchange volume, and it was rehearsed on govax on a copy.
