@@ -1,7 +1,8 @@
 # Phase 116 — DIFFERENCES
 
-**Status:** planned 2026-11-25 (subtask 1, the survey and this plan),
-awaiting the author's review. This document is the development plan; as
+**Status:** planned 2026-11-25 (subtask 1, the survey and this plan);
+the plan reviewed and accepted by the author the same day, with the
+answers recorded in "The review". This document is the development plan; as
 the work goes on it becomes the implementation record: the progress log,
 and at the end "Where things stand".
 
@@ -177,10 +178,10 @@ The probe (Part D) is to answer each:
 ## Part B — decisions (proposed)
 
 1. **VMS 7.1 is the reference**, as for every probe since Phase 55: what
-   7.3-1's dictionary adds that 7.1 refuses is left out (the probe's
-   A.3.10). If 7.1 has `/PAGE`, govax takes `/PAGE` and `/PAGE=SCROLL`
-   and `CLEAR_SCREEN` through `page.go`, and refuses `SAVE` (screen
-   navigation) with a message, a deviation logged. *Question 1.*
+   7.3-1's dictionary adds that 7.1 refuses is left out. `/PAGE` and its
+   companions (`/SEARCH`, `/EXACT`, `/HIGHLIGHT`, `/WRAP`) are left out
+   whatever 7.1 has, by the author's choice (the review's answer 1); the
+   probe still asks whether 7.1 has them, for DEVIATIONS.md.
 2. **The engine is a leaf package**, `internal/diff`: records in (bytes,
    with their numbers), options in, a `Result` of sections out, and the
    listing forms as functions from a `Result` to lines. Plain Go, knowing
@@ -200,8 +201,8 @@ The probe (Part D) is to answer each:
    own (`vmsdef/difmessages.go`), the numbers from the probe's
    `$STATUS` values and the texts from its log, as JBC's were in Phase 98.
 6. **`/SLP` is written** though govax has no SLP editor: it is only an
-   output form, and a script made on govax should work on VMS.
-   *Question 2.*
+   output form, and a script made on govax should work on VMS (the
+   review's answer 2).
 7. **The grammar**: a verb `DIFFERENCES` (abbreviable to `DIF`, as VMS's)
    with two `$file` parameters, `/CHANGE_BAR` on the verb and on each
    parameter.
@@ -226,8 +227,8 @@ Each is one commit, with tests, stopping for review.
 6. **Radix and SLP**: `/MODE=HEX` and `OCTAL`, `/SLP`.
 7. **Ignoring**: `/IGNORE`'s keywords, EDITED/EXACT/PRETTY,
    `/COMMENT_DELIMITER` and the defaults by file type.
-8. **The terminal and the rest**: the terminal's width, `/PAGE` if
-   Decision 1 keeps it, records that aren't text.
+8. **The terminal and the rest**: the terminal's width, records that
+   aren't text.
 9. **The close-out**: MANUAL.md (section 6's file commands), HELP,
    VAX-VMS-INTERNALS.md if a mechanism changed, DEVIATIONS.md (what
    stays unconfirmed), PLAN.md, CLAUDE.md.
@@ -258,16 +259,17 @@ DIRECTORY/FULL of the outputs. The oracle test (subtask 4 on) reads the
 case list from `gen.go`'s output, runs each case on govax, and compares
 the `.DIF` files byte for byte and the log's `$STATUS` lines.
 
-## Questions for the author
+## The review (2026-11-25)
 
-1. If VMS 7.1 has `/PAGE`, is `/PAGE=SAVE` (screen navigation with the
-   keypad, search, highlighting) worth doing, or left out as a deviation?
-2. `/SLP`: write its output form (proposed), or refuse it since govax has
-   no SLP editor?
-3. Is 116 the right number, with Phases 114 and 115 planned and not yet
-   done?
+The author's answers to the plan's three questions:
+
+1. **`/PAGE`**: not needed at this time; left out with its companions
+   (Decision 1).
+2. **`/SLP`**: yes, written, to match VMS's behavior (Decision 6).
+3. **The number**: 116 is right.
 
 ## Progress log
 
 - **2026-11-25 — subtask 1, the survey.** The DCL Dictionary's entry
   read; govax's pieces found; the plan and the probe's design written.
+  The author accepted it the same day ("The review").
