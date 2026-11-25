@@ -2285,16 +2285,23 @@ VAX> SHOW DEFAULT
 
 ```text
 INITIALIZE/CONTAINER "file" [label] [/DEVICE=type | /SIZE=blocks] [/CLUSTER=n]
-                     [/HEADERS=n] [/DIRECTORIES=n]
+                     [/HEADERS=n] [/MAXIMUM_FILES=n] [/DIRECTORIES=n]
+                     [/EXTENSION=n]
 ```
 
 Creates a new, empty ODS-2 volume in a host file. It isn't mounted; use
-`MOUNT`. `/HEADERS` makes the index file with room for that many files and
-`/DIRECTORIES` the MFD with room for that many entries, as VMS's INITIALIZE
-does; each grows by itself when it must. A volume going to a VMS system that
-will hold many files should have headers for all of them: the index file
-grown past its header needs an extension header, and VMS 7.1's file system
-has failed on a volume where govax made one. Writing over a container that already exists needs the `VOLPRO`
+`MOUNT`. `/HEADERS` makes the index file with room for that many files,
+`/MAXIMUM_FILES` is the most files the volume can ever hold, `/DIRECTORIES`
+makes the MFD with room for that many entries, and `/EXTENSION` is the
+volume's default extension quantity, as VMS's INITIALIZE has them. The MFD
+and the index file grow by themselves when they must, the index file as VMS
+7.1's does: by 15% of the headers `/MAXIMUM_FILES` still allows, or by the
+longest free run of blocks if that's less, each growth a retrieval pointer
+in its one header. There is no extension header: when that header's map is
+full, no more files can be made (`-SYSTEM-W-HEADERFULL` under the utility's
+message). On a volume whose free space is in small pieces that can come
+long before the volume is full, so a volume that will hold many files
+should have headers for them from the start. Writing over a container that already exists needs the `VOLPRO`
 privilege, and with `vax.host.sysprv` on any container needs `SYSPRV`
 ([Who may use host files](#who-may-use-host-files)).
 
@@ -8864,13 +8871,15 @@ would give `COMPLEX(16)`: write `CMPLX(X, KIND=16)` for that. Of the intrinsic f
 complex routines). A power `Z**N` with `N` a constant from 1 to 8 is written in line, the
 products of `Z`'s squares; any other `INTEGER` power calls `FTN$CHPOWJ`, which multiplies
 the same way, so the two give the same value, and a power to a `COMPLEX` (or `REAL`) one
-calls `FTN$CHPOW`, `EXP(Y * LOG(Z))`. `MERGE` takes `COMPLEX(16)` values too. It goes in
+calls `FTN$CHPOW`, `EXP(Y * LOG(Z))`. `MERGE`, `SUM`, `PRODUCT`, `DOT_PRODUCT`, and `MATMUL`
+take `COMPLEX(16)` values too. It goes in
 I/O lists of every kind as the other complex types do: in a format, each part takes an edit
 descriptor of its own (`'(2F10.4)'`); list-directed, each part is `1PG42.33E4` without its
 blanks, a field of up to 86 bytes, which a record of its own holds whole, longer than the
 usual 81 (VMS's FORTRAN had no `COMPLEX*32`; govax's choice); in a NAMELIST group; and
-unformatted, its 32 bytes. The other intrinsic functions of one are not there yet
-(`%FORT-E-NOTIMPL`).
+unformatted, its 32 bytes. Every generic intrinsic that takes a `COMPLEX` takes a
+`COMPLEX(16)`; a specific name of another complex type, `CSIN` or `DREAL`, given one is
+`%FORT-E-BADARG`, as any other wrong type is.
 
 #### The intrinsic procedures
 

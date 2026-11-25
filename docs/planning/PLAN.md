@@ -162,7 +162,7 @@ questions, and a progress log extended as that phase is worked.
 | 110 | [PHASE-110 - Fortran 90 compiler usability](PHASE-110%20-%20Fortran%2090%20compiler%20usability.md) | `/STANDARD=F90` and the obsolescent features, warnings, listings and cross references by scope, `/CHECK` on shapes and pointers, `/DEBUG` and the debugger on Fortran 90's data, traceback lines, stepped addresses and fused nests — planned 2026-11-17; done 2026-11-20 |
 | 111 | [PHASE-111 - Fortran 90 milestone](PHASE-111%20-%20Fortran%2090%20milestone.md) | fcalc, a scientific calculator of 11,000 lines, as the Fortran 90 milestone: every mode, gfortran's witness, the VMS round (fcalc and the whole corpus on VMS 7.1), shipped as SYS$SYSTEM:FCALC.EXE with HELP FCALC; the manual's 14.13 and Appendix E and FORTRAN-INTERNALS.md finished — planned 2026-11-17; done 2026-11-22 |
 | 112 | [PHASE-112 - Fortran 95](PHASE-112%20-%20Fortran%2095.md) | Fortran 95's additions under `/F90`: FORALL, PURE and ELEMENTAL, `NULL()` and default initialization, nested WHERE, the intrinsic changes, CPU_TIME, zero widths, zero-sized arrays, `/STANDARD=F90` widened — planned 2026-11-22, split from the errata at its survey's review; done 2026-11-23 |
-| 113 | [PHASE-113 - Fortran errata](PHASE-113%20-%20Fortran%20errata.md) | The errata of both Fortran programs and their tools: the survey's whole to-do list (Part A, done 2026-11-22) and what the author chose done (Part B), with a VMS probe round — planned 2026-11-22 |
+| 113 | [PHASE-113 - Fortran errata](PHASE-113%20-%20Fortran%20errata.md) | The errata of both Fortran programs and their tools: the survey's whole to-do list (Part A, done 2026-11-22) and what the author chose done (Part B), with a VMS probe round — planned 2026-11-22; done 2026-11-25 |
 | 114 | [PHASE-114 - FORTRAN CONVERT](PHASE-114%20-%20FORTRAN%20CONVERT.md) | OPEN's `CONVERT=` other than NATIVE in FTNRTL, held to VMS's FORRTL — planned 2026-11-22 |
 | 115 | [PHASE-115 - Fortran 90 NOTIMPLs](PHASE-115%20-%20Fortran%2090%20NOTIMPLs.md) | The compiler's remaining NOTIMPLs, compiled or refused with a reason — planned 2026-11-23 |
 
@@ -1246,3 +1246,40 @@ section 37 describe it; the phase doc's "Where things stand" lists what it left.
 113, the errata. At the review of its refreshed survey (2026-11-23) the author took Phase 112's
 FORALL NOTIMPLs into it, and split the compiler's other remaining NOTIMPLs, which Phase 113 had
 left not planned, into Phase 115, so the phases stay alike in size.
+
+Phase 113 (done 2026-11-25) is the errata of both Fortran programs and their tools: a survey
+(Part A) that gathered every phase doc's follow-up list, DEVIATIONS.md, the manual's lists, the
+compiler's NOTIMPLs, and the oracles' differences into one to-do list, each item given a place,
+and the part the author chose done, each with a test.
+
+- **The compiler**: Fortran 90's cheap NOTIMPLs (a DIM= or ORDER= known only at run time, an array
+  BACK=, COMPLEX(16) to the reductions, CHARACTER of length zero, a statement function of a derived
+  type, TRANSFER to a CHARACTER MOLD of run-time length); PURE's and ELEMENTAL's remaining rules;
+  Phase 112's FORALL NOTIMPLs, by recording a FORALL's stores and playing them back, all but one;
+  `/STANDARD`'s short spellings, a typed intrinsic's cell, floating short literals (`S^#1.5`),
+  CHARACTER constant formats compiled as FORMATs are, and the definition modules to USE
+  (`USE STARLET_SSDEF`).
+- **The tools**: MACRO's positional `PROG+LIB/LIBRARY`, an object for a module with errors (and LINK
+  refusing it, as VMS's), every undefined symbol, a register in data and `.WARN`/`.ERROR`/`.PRINT`
+  as VMS's; LINK's options file by logical name, the image's symbol tables compared with VMS's, and
+  NONPICREF; the debugger counting FORTRAN's lines and taking a component after subscripts, then
+  made VMS 7.1's in a round of eleven sessions (scopes, registers as locations, operands,
+  eventpoints, interrupted steps, SOURCE, EXIT and QUIT).
+- **The libraries and services**: LIB$INITIALIZE as the LIB$ manual's chapter 7 has it (LINK's
+  initialization list, govax's own routine; the old `SHARE$name_INITIALIZE` call gone); STR$'s
+  arithmetic; the UTC services, `$GETCHN`, and `$GETDEV`; VMS's own LIBRTL.EXE running on govax,
+  once a shareable image's transfer address was no longer called as its initialization.
+- **Housekeeping**: a full volume's messages, COPY quiet without `/LOG`, PURGE's `/KEEP`, DELETE's
+  DELVER, the deviations copied twice, every command a grammar parses given a handler
+  (`TestNoCommandWithoutHandler`).
+- **The probe round**, two sessions on VMS 7.1 (`testdata/err113`, `str113`, `svc113`, `dbg113`,
+  `for81`'s rounds 3 to 3c, FTN86's round 6, F90R's round 3), and its fixes: FTNRTL's user PC,
+  associated variable, current record, segment words, and the terminal's 133 characters; RMS's
+  REWRITE of a fixed-length record (lost to the block cache), a short last record, and sequential
+  files' extension size; ods2's index file growing as VMS's and HEADERFULL in place of an extension
+  header; DCL's file parameters checked as VMS's; COPY/CONTIGUOUS and INITIALIZE/CONTAINER's
+  `/MAXIMUM_FILES` and `/EXTENSION`.
+
+MANUAL.md, HELP, and FORTRAN-INTERNALS.md's section 38 (what a second look found) describe it; the
+phase doc's "Where things stand" lists what it left: `CONVERT=` (Phase 114), the compiler's other
+NOTIMPLs (Phase 115), and the questions for a next VMS round.

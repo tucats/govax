@@ -183,9 +183,8 @@
    COMPLEX(16), also written COMPLEX*32, has two REAL(16) parts:
    (1.0_16, 0.0) is a constant.  Its arithmetic, comparisons,
    conversions, powers, and I/O are compiled, and INT, REAL, DBLE,
-   QEXT, CMPLX, DCMPLX, AIMAG, CONJG, ABS, SQRT, EXP, LOG, SIN, COS, and
-   MERGE take one.  SUM, PRODUCT, DOT_PRODUCT, and MATMUL of COMPLEX(16)
-   arrays draw %FORT-E-NOTIMPL.
+   QEXT, CMPLX, DCMPLX, AIMAG, CONJG, ABS, SQRT, EXP, LOG, SIN, COS,
+   MERGE, SUM, PRODUCT, DOT_PRODUCT, and MATMUL take one.
 
 3 Intrinsics
 

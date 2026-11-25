@@ -1,6 +1,7 @@
 # Phase 113 — Fortran errata
 
-**Status:** planned 2026-11-22. Phase 111's close-out planned Phase 112 as the
+**Status:** planned 2026-11-22; done 2026-11-25 with subtask 14c, the documents ("Where things
+stand", at the end, is its follow-up list; PLAN.md summarizes it). Phase 111's close-out planned Phase 112 as the
 Fortran errata, Fortran 95's additions among them; subtask 1, the survey (Part A),
 was done the same day, and at its review the author split the phase
 ("The author's answers", below): **Fortran 95 is Phase 112**
@@ -743,7 +744,8 @@ A.8.1 is not planned.
       parameters, MACRO's registers in data, FOR81M, and FOR81W (done 2026-11-25); 14b2, LINK's
       NONPICREF and the DST's blocks (done 2026-11-25); 14b3, RMS's extension size and HEADERFULL (ods2)
       (done 2026-11-25).
-    - 14c. The documents: MANUAL.md, FORTRAN-INTERNALS.md, HELP, PLAN.md, "Where things stand".
+    - 14c. The documents: MANUAL.md, FORTRAN-INTERNALS.md, HELP, PLAN.md, "Where things stand"
+      (done 2026-11-25).
 
 Each subtask may begin with a survey of its own, as earlier phases' did.
 
@@ -1810,4 +1812,78 @@ Each subtask may begin with a survey of its own, as earlier phases' did.
     VMS's (`/HEADERS=16/EXTENSION=1`) and runs HDRFULL again on one with `/MAXIMUM_FILES=8000`.
     `tools/odscheck` has `-map`, each file's extents, which showed where VMS put each piece.
   - Subtask 14c, the documents, is next.
+- **2026-11-25, subtask 14c (done):** the documents, and the phase is done.
+  - *MANUAL.md*: INITIALIZE/CONTAINER's `/MAXIMUM_FILES` and `/EXTENSION`, and the index file's
+    growth as VMS's (15% of the headers left, HEADERFULL, no extension header) in place of the old
+    warning about extension headers; 14.13's COMPLEX(16) paragraph (the reductions take one, a
+    specific name of another complex type is BADARG, where it said NOTIMPL). The rest had been kept
+    up by each subtask; a sweep for the phase's changed names (`SHARE$name_INITIALIZE`, SET DEBUG
+    LIBINIT, PURGE's `/LIMIT`, COPY's message, the extension header, NOTIMPLs compiled) found
+    nothing else.
+  - *FORTRAN-INTERNALS.md*: section 38, "The errata: what a second look found", on the phase's
+    method (FORRTL over govax and on the VAX, and telling the two oracles apart), the user PC rule,
+    the state a library keeps (the associated variable, the current record), the terminal's 133
+    characters, LIB$INITIALIZE from the manual alone and LIBRTL's fault, and what the rounds found
+    outside FORTRAN; section 37's "What waits" now says what this phase did of it.
+  - *HELP*: HELP FORTRAN's COMPLEX(16) paragraph (the reductions), the library rebuilt
+    (`go generate ./internal/bootdata`'s `mkhelp`).
+  - *PLAN.md* (the phase table and a section after Phase 112's), CLAUDE.md, and "Where things
+    stand" below.
+
+## Where things stand
+
+Phase 113 is done: of the survey's to-do list (Part A), everything Part B chose is done, each with a
+test, and its probe round ran on VMS 7.1 in two sessions, with FORRTL rounds 3, 3b, and 3c and a
+debugger round beside it, every answer now govax's. What it did, in short: Fortran 90's cheap
+NOTIMPLs, PURE's and ELEMENTAL's remaining rules, and Phase 112's FORALL NOTIMPLs (all but one);
+`/STANDARD`'s short spellings, a typed intrinsic's cell, floating short literals, and `USE
+STARLET_name`; MACRO's positional `/LIBRARY`, objects with errors, and every undefined symbol;
+LINK's options by logical name, LIB$INITIALIZE as VMS's, and NONPICREF; STR$'s arithmetic; the UTC
+services, `$GETCHN`, and `$GETDEV`; FORMAT constants compiled; the debugger's FORTRAN lines and
+components after subscripts; VMS's LIBRTL running on govax; the housekeeping; and from the rounds,
+FTNRTL's user PC, associated variable, current record, and terminal lines, RMS's extension size, and
+ods2's index file grown as VMS's. What it left, and where each goes:
+
+- **Own phases**: `CONVERT=` other than NATIVE, **Phase 114**; the compiler's other NOTIMPLs (A.16),
+  **Phase 115**, with the two this phase met and left: a CHARACTER pointer component of length zero,
+  and TRANSFER to a CHARACTER array MOLD that is an expression other than a name, a section, a
+  substring, or a constructor. Phases 60 and 61 keep LIBRTL's trees and the rest of their lists
+  (A.2.2), Phase 42's Part B the debugger's future features (A.8.5), and `tools/odscheck` is the
+  seed of an ANALYZE/DISK_STRUCTURE/REPAIR phase (A.9.1).
+- **NOTIMPL, named, in no phase**: in a FORALL, a WHERE of more than one assignment whose assignments
+  change what its masks read and overlap what they assign (subtask 3; MANUAL.md's table gives the
+  way around it).
+- **For a next VMS round**: FTN86's round 7 and F90R's round 4, written in 14a and not run (STRMATH as
+  it is now, and every program on FTNRTL as subtasks 13e and 14a left it); the slack in a shareable
+  image's DST blocks, `dstFixupSlack` (255, known only to lie in 21 to 294: a sweep of fixup records
+  from about 730 to 1,010 bytes settles it); the CLI coroutine and image information LIB$INITIALIZE's
+  routines get (0 in govax); RUN of a shareable image that has a transfer address, and such an
+  image's ident; SS$_IDXFILEFULL as the STV of a CREATE refused for MAXFILES; A.2.4's last bits of OTS$ negative powers and MTHRTL's complex
+  functions; A.9.4's indexed file items; A.7.5's LIBRARIAN rules.
+- **Known differences, explained** (DEVIATIONS.md's Phase 113 entries and the oracles' lists): a
+  user-mode SYS$OUTPUT that govax's built-in utilities don't follow; STR$RECIP with a precision of
+  zero digits (VMS loops, govax says LIB$_INVARG) and STR$ROUND to -1 places; where VMS's file
+  system puts a file's pieces (so HDRFULL's counts differ from VMS's) and DIRECTORY/FULL's version
+  limit; FOR81K's #19 (FTNRTL signals after the next item's call, the user PC VMS's); the MACRO
+  listing's relocatable marks on a data error's zero and `.ADDRESS`'s `!` columns
+  (`mac113Allowed`); the console's PRINT in DCL2 (`err113BDifferences`); the debugger's activator
+  registers, govax's larger P0 (OPCDEC where VMS had an access violation), and the condition
+  dispatcher at an exception break (subtask 13f).
+- **Found and left**: `TestBatchLaterSectionsOracle` fails now and then under the whole suite's load
+  (a SYNCHRONIZE whose job is sometimes still there), a timing race in the test, not in govax.
+  Whether VMS's own LIBRTL.EXE may serve as a black box on govax, as FORRTL does, is the author's to
+  say (subtask 10).
+- **Recorded, ours** (no VMS can settle them): the 128-bit UTC form (DCE's, subtask 8); FORTRAN
+  lines numbered by the source file, not a listing (subtask 9); a TRANSFER to a MOLD of empty
+  elements with no SIZE giving no elements where the compiler can't see it (subtask 2); LIB$INITIALIZE
+  passing a main program with no initialization routines no arguments; Part A's recorded items
+  (A.2.7, A.2.10, A.9.6, A.10's compiler choices).
+- **Measured and left**: the optimizer's items (A.5), A.1.9's identities, FTNRTL's per-statement
+  paths (A.2.5).
+- **Not planned**, as Part A gives each reason: real FORTRAN debugger records (A.8.1, the author's
+  answer 6); `/STANDARD=SEMANTIC`; host files for a running program; objects from the compiler
+  itself; frame alignment past a longword and a frame variable's uninitialized check; DICTIONARY,
+  CPAR$, threads; the same frames after an unwind; heap blocks after an unwind; VMS MACRO's byte
+  through the stack (A.6.4); LINK82's five maps, the GST's padding, `STACK=` with paging off, and
+  ANALYZE/IMAGE's debug tables; SECNDS within a second; what later standards added.
 

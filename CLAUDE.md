@@ -1502,7 +1502,11 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   **Phase 113 is the errata** (its Part B the scope: the cheap
   Fortran 90 NOTIMPLs, LIB$INITIALIZE, STR$'s arithmetic, `USE
   STARLET_SSDEF`, MACRO's and LINK's gaps, housekeeping, and a VMS probe
-  round at its end), and **Phase 114 is `CONVERT=`** (`PHASE-114 - FORTRAN
+  round at its end; done 2026-11-25: two VMS 7.1 sessions, with FORRTL
+  rounds 3 to 3c and a debugger round, `testdata/err113`, `str113`,
+  `svc113`, and `dbg113`, every answer now govax's; FORTRAN-INTERNALS.md's
+  section 38; its "Where things stand" the follow-up list, and PLAN.md
+  summarizes it), and **Phase 114 is `CONVERT=`** (`PHASE-114 - FORTRAN
   CONVERT.md`), and **Phase 115 the compiler's remaining NOTIMPLs** (`PHASE-115 -
   Fortran 90 NOTIMPLs.md`, split from Phase 113 at its survey's refresh, 2026-11-23); real FORTRAN debugger records are not planned. An item an old
   phase doc or DEVIATIONS.md still lists that a later phase did is marked

@@ -128,6 +128,10 @@ each topic to the files that hold it.
 
 - [37. Fortran 95](#37-fortran-95-phase-112)
 
+**A second look**
+
+- [38. The errata: what a second look found](#38-the-errata-what-a-second-look-found-phase-113)
+
 ## 1. The shape of the compiler
 
 A compiler is a series of passes, each reading what the one before it
@@ -7172,10 +7176,125 @@ feature is a new way of reaching old code, and the old code's assumptions ("a sh
 elements is unknown", "a generic's arguments are passed the ordinary way") were true only of the
 ways it had been reached before.
 
-What waits: the NOTIMPLs the manual's 14.13 lists (FORALL statements whose temporaries would need
-a shape not yet built; a target whose subscripts read its own storage, `V(V(I)) = 0`; all but one
-compiled in Phase 113, "Recording the stores" above); a few of
-PURE's rules not checked (an EQUIVALENCE partner of a global, a global reached through a pointer
-component); ELEMENTAL's rule on dummies in specification expressions; a STRUCTURE's initial
-values in a module's text (Phase 113); and the VMS round of the new programs (Phase 113's probe
-round). What later standards added, IMPURE among it, is not planned.
+What Phase 112 left, Phase 113 took up: FORALL's statements whose temporaries would need a shape
+not yet built, and a target whose subscripts read its own storage, `V(V(I)) = 0`, are compiled
+("Recording the stores" above), all but a WHERE of more than one assignment whose assignments change
+what its masks read; PURE's remaining rules (a global reached through a pointer component, a
+constructor's pointer component given a global, an internal procedure of a PURE one) and
+ELEMENTAL's rule on dummies in specification expressions are checked; a STRUCTURE's initial values
+go in a module's text; and VMS 7.1 built and ran the new programs (`testdata/f90r`'s third round),
+printing what govax does. What later standards added, IMPURE among it, is not planned.
+
+## 38. The errata: what a second look found (Phase 113)
+
+Every phase ends with a list of what it left: a NOTIMPL, a choice no manual settled, a difference
+from VMS an oracle test lists and explains. After two Fortran programs and forty phases those
+lists were long, and scattered across phase docs, DEVIATIONS.md, and the manual. Phase 113 gathered
+them into one to-do list, sorted each item into a place (done here, its own phase, a question for a
+VMS run, measured and left, or not planned), and did the part the author chose. Most of the work is
+described where it belongs: recorded FORALL stores in section 37, compiled constant formats in
+section 14, floating short literals in section 11, FORTRAN line numbers for the debugger in section
+35, `USE STARLET_SSDEF` in section 15's definition modules. This section is about what the
+phase's method showed, which applies to any compiler built against a system you can only observe.
+
+### Two oracles, and telling them apart
+
+The phase's probe round ran VMS's own FORTRAN library, FORRTL.EXE, two ways: on a real VAX
+(VMS 7.1 on simh), and on govax, as a black box over govax's RMS (section 14's rule: its behavior
+studied, its code neither copied nor disassembled). The difference between the two runs is
+the useful part. Whatever FORRTL decides by itself, the associated variable's next value or which
+call a user PC names, comes out the same both ways, so the run over govax answers it the same day
+and the VAX only confirms it. Whatever FORRTL asks RMS, the current record after a REWIND, a keyed
+`$GET`'s status, how a relative file grows, only the VAX can answer, and when the two runs
+differ, the difference is in govax's RMS, not in FTNRTL. Round 3 of `testdata/for81` was planned
+that way: its rehearsal over govax sorted its 64 cases into "FORRTL already says" and "for the
+VAX", and the VAX's run was then compared case by case with FTNRTL's (`TestFor81GOnFTNRTL`) and
+with FORRTL over govax (`TestFor81GProcedure`), each holding the other honest.
+
+That is how an RMS bug no FORTRAN test had shown came out: a REWRITE of a sequential
+fixed-length record was lost under both libraries over govax, and not on the VAX. `$UPDATE`
+wrote the record, then `$CLOSE` flushed the record writer's copy of the file's last block,
+which it held for appends, over it. Neither library was wrong; the block cache under both was.
+
+### The user PC: whose call found it
+
+A signaled I/O error names a *user PC*, the place in the program the message points at. Section
+14's FTNRTL gave the PC `FTN$IO_END` returns to for nearly everything, since that is where it
+signals. VMS's rule, read off rounds 3 and 3b, is different and simple once seen: the PC is the
+return address of the call *during which the library found the error*. An unformatted READ's
+record is read at its first item's call, so an end of file there names that call. A formatted
+statement, after each item, walks its format on to the next data descriptor, so an end of file met
+at a `/` on the way belongs to the item *before*. An open's failure is found at the begin call.
+
+FTNRTL still signals at `FTN$IO_END`, after every item has been called (its first error is kept in
+the statement's context, and later calls do nothing), so it can't use the stack's own return
+address. Instead each item call records where it will return (`CTX_ITEMPC`), and a failure records
+which call it belongs to, this one, the one before (`PC_PREVIOUS`, `ftn_format.mar`), or the next
+(`PC_NEXT`, `ftn_unformatted.mar`), in a byte of the context (`CTX_PCMOVE`). `FTN$IO_END` builds
+the signal from them. One case stays different and is listed: where FORRTL signals *during* an
+item's call and FTNRTL only after the next one, the PC is right but the next item's call has
+happened.
+
+### State a library keeps that the manual doesn't mention
+
+The associated variable of a direct-access unit holds the next record's number. The manual says
+DELETE by number leaves it r+1, and round 3 found a case where VMS's left r+2. Round 3c found why:
+FORRTL remembers whether the unit's last direct statement was a READ of that very record, and only
+then moves past it. FTNRTL now keeps the same fact, one byte in the unit's block (`UB_LASTREAD`,
+set by a direct READ and cleared by any other positioning). The current record that REWRITE and
+`DELETE (u)` act on turned out to have three such states, not two: present, never there, and
+*taken away* by a REWIND or BACKSPACE after a READ reached it, which FORRTL reports with RMS's
+`RMS$_CUR` beside its own `NO_CURREC`.
+
+The lesson for a library writer is that "what the manual says" and "what programs observe" part
+company exactly where a library keeps state between statements. Each such state is a case to
+probe, in each order the state can be reached.
+
+### The terminal's 133 characters
+
+A FORTRAN READ at a terminal asks RMS for the unit's record size, 133 by default. VMS's run showed
+what happens to a longer line: RMS fills the buffer, returns `RMS$_TNS`, and FORRTL reports
+`ERRDURREA`; the rest of the line is the next READ's. A line of exactly 133 characters ends
+when the buffer fills, with no Return, and the Return typed after it is the next READ's empty
+line. govax's terminal now hands out lines that way (`rms/terminal.go`), and FTNRTL asks for the
+unit's size again before each `$GET`. One program felt it: fcalc read 199-character lines, and at a
+terminal now refuses past 132 with a message of its own, as a VMS-built fcalc would.
+
+### Image initialization, from the manual alone
+
+`LIB$INITIALIZE` is the one mechanism in this phase that is neither compiler nor library but both
+and the linker together, and the VMS 5.0 LIB$ manual's chapter 7 describes all three parts: a
+program puts routine addresses in a program section named `LIB$INITIALIZE` and refers to the
+routine of that name; LINK puts that routine's address in the image's list of transfer
+addresses, between the debugger's (or SYS$IMGSTA's) and the main program's; and the routine calls
+each address in turn, then the rest of the list as a coroutine, which runs the main program and
+returns its status. govax's routine is its own MACRO (`bootdata/files/libinit.mar`), offered to
+LINK after STARLET.OLB, and LINK sorts the sections `LIB$INITIALIZD`, `LIB$INITIALIZE`, and
+`LIB$INITIALIZE$` by name so the first and last bracket the list.
+
+The probe round settled what the chapter leaves open: a shareable image's routines run first, with
+one argument; the main image's, and the main program itself, get six. It also explained an old
+fault. Running VMS's own LIBRTL.EXE on govax had always crashed at a strange offset, because govax
+called a shareable image's first transfer address at activation, and LIBRTL's is a leftover
+`.END` address, LIB$EMODD's, which nothing should call. VMS calls a shareable image's
+initialization through a header flag and a separate address (`IHD$V_INISHR`, `IHA$L_INISHR`),
+never through its transfer addresses; govax now does the same, and VMS's LIBRTL runs.
+
+### What the rounds found outside FORTRAN
+
+A probe round asks more than its subject. ERR113's sections, on a full volume and a volume of
+3,000 files, found govax's file system growing its index file 16 blocks at a time where VMS's
+grows it by 15% of the files it may still hold; growing past the header's room into an *extension
+header*, where VMS stops with `HEADERFULL` (and VMS 7.1's file system failed on govax's); and DCL's utilities
+reporting a full disk as a bad file name. Round 2 found sequential files extended two blocks at a
+time, all or nothing, as the File Applications guide's auto-extend rule gives for DCL's one-block
+writes, which is why VMS left one block free where govax had filled the disk. Each is now VMS's.
+None of them was a FORTRAN bug, and each would have shown up, eventually, as a FORTRAN program that
+failed on a VAX after running on govax.
+
+### What is left
+
+The phase doc's "Where things stand" is the list. In short: `CONVERT=` other than NATIVE is Phase
+114, the compiler's remaining NOTIMPLs Phase 115; real FORTRAN debugger records are not planned;
+and the oracles' lists of differences hold only what is explained (a stack address, an undefined
+value, a timing).
