@@ -1,0 +1,16 @@
+************
+File DUA1:[DIF116.IN]G233.A;1
+    2   bravo
+    3   charlie
+******
+File DUA1:[DIF116.IN]G233.B;1
+    2   alpha
+    3   delta
+************
+
+Number of difference sections found: 1
+Number of difference records found: 2
+
+DIFFERENCES /IGNORE=()/MAXIMUM_DIFFERENCES=2/MERGED=0/OUTPUT=DUA1:[DIF116.OUT]XG233.DIF;1-
+    DUA1:[DIF116.IN]G233.A;1-
+    DUA1:[DIF116.IN]G233.B;1

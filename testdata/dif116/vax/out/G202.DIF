@@ -1,0 +1,24 @@
+************
+File DUA1:[DIF116.IN]G202.A;1
+    2   india
+******
+File DUA1:[DIF116.IN]G202.B;1
+    2   echo
+    3   lima
+    4   kilo
+    5   india
+************
+************
+File DUA1:[DIF116.IN]G202.A;1
+    5   hotel
+    6   charlie
+******
+File DUA1:[DIF116.IN]G202.B;1
+************
+
+Number of difference sections found: 2
+Number of difference records found: 5
+
+DIFFERENCES /IGNORE=()/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]G202.DIF;1-
+    DUA1:[DIF116.IN]G202.A;1-
+    DUA1:[DIF116.IN]G202.B;1

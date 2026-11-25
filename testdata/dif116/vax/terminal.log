@@ -666,4 +666,28 @@ $ DIFFERENCES/EXACT A02.A A02.B
 $ SET TERMINAL/WIDTH=177
 $ SET DEFAULT [-]
 $ SET NOVERIFY
+$ ! Begin interactive terminal probe2
+$ set default [DIF116.IN]
+$ differences
+_File 1: A02.A
+_File 2: A02.B
+************
+File DUA1:[DIF116.IN]A02.A;1
+    5   record 5
+    6   record 6
+******
+File DUA1:[DIF116.IN]A02.B;1
+    5   record five changed
+    6   record 6
+************
+
+Number of difference sections found: 1
+Number of difference records found: 1
+
+DIFFERENCES /IGNORE=()/MERGED=1-
+    DUA1:[DIF116.IN]A02.A;1-
+    DUA1:[DIF116.IN]A02.B;1
+$ differences A02.A
+%DIF-F-NOLOWVER, no lower version of file DUA1:[DIF116.IN]A02.A;1 found
+$ 
 

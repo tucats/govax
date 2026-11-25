@@ -1,0 +1,27 @@
+************
+File DUA1:[DIF116.IN]G016.A;1
+    4   echo
+******
+File DUA1:[DIF116.IN]G016.B;1
+    4   india
+    5   juliet
+    6   india
+    7   echo
+************
+************
+File DUA1:[DIF116.IN]G016.A;1
+    6   charlie
+******
+File DUA1:[DIF116.IN]G016.B;1
+    9   echo
+   10   golf
+   11   kilo
+   12   charlie
+************
+
+Number of difference sections found: 2
+Number of difference records found: 6
+
+DIFFERENCES /IGNORE=()/MATCH=1/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]M1G016.DIF;1-
+    DUA1:[DIF116.IN]G016.A;1-
+    DUA1:[DIF116.IN]G016.B;1

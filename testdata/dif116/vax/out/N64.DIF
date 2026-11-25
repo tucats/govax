@@ -1,0 +1,498 @@
+-------------------------------------------------------------------------------
+File DUA1:[DIF116.IN]F01.A;1           |  File DUA1:[DIF116.IN]F01.B;1         
+-------------------------------------------------------------------------------
+data line 5                            |  data line 5, revised                 
+data line 6                            |  data line 6                          
+-------------------------------------------------------------------------------
+                                       |  inserted one                         
+                                       |  inserted two                         
+data line 16                           |  data line 16                         
+-------------------------------------------------------------------------------
+data line 26                           |                                       
+data line 27                           |                                       
+data line 28                           |  data line 28                         
+-------------------------------------------------------------------------------
+
+************
+File DUA1:[DIF116.IN]F01.A;1
+data line 5
+data line 6
+data line 7
+******
+File DUA1:[DIF116.IN]F01.B;1
+data line 5, revised
+data line 6
+data line 7
+************
+************
+File DUA1:[DIF116.IN]F01.A;1
+data line 16
+data line 17
+******
+File DUA1:[DIF116.IN]F01.B;1
+inserted one
+inserted two
+data line 16
+data line 17
+************
+************
+File DUA1:[DIF116.IN]F01.A;1
+data line 26
+data line 27
+data line 28
+data line 29
+******
+File DUA1:[DIF116.IN]F01.B;1
+data line 28
+data line 29
+************
+************
+File DUA1:[DIF116.IN]F01.A;1
+******
+File DUA1:[DIF116.IN]F01.B;1
+************
+
+************
+File DUA1:[DIF116.IN]F01.A;1
+data line 5
+data line 26
+data line 27
+************
+
+************
+File DUA1:[DIF116.IN]F01.A;1
+  data line 1
+  data line 2
+  data line 3
+  data line 4
+% data line 5
+  data line 6
+  data line 7
+  data line 8
+  data line 9
+  data line 10
+  data line 11
+  data line 12
+  data line 13
+  data line 14
+  data line 15
+% data line 16
+  data line 17
+  data line 18
+  data line 19
+  data line 20
+  data line 21
+  data line 22
+  data line 23
+  data line 24
+  data line 25
+% data line 26
+% data line 27
+  data line 28
+  data line 29
+  data line 30
+************
+
+************
+File DUA1:[DIF116.IN]F01.B;1
+  data line 1
+  data line 2
+  data line 3
+  data line 4
+# data line 5, revised
+  data line 6
+  data line 7
+  data line 8
+  data line 9
+  data line 10
+  data line 11
+  data line 12
+  data line 13
+  data line 14
+  data line 15
+# inserted one
+# inserted two
+  data line 16
+  data line 17
+  data line 18
+  data line 19
+  data line 20
+  data line 21
+  data line 22
+  data line 23
+  data line 24
+  data line 25
+# data line 28
+  data line 29
+  data line 30
+************
+
+************
+File DUA1:[DIF116.IN]F01.A;1
+
+RECORD NUMBER 5 (00000005) LENGTH 11 (0000000B) 
+
+            352065 6E696C20 61746164 data line 5..... 000000
+
+RECORD NUMBER 6 (00000006) LENGTH 11 (0000000B) 
+
+            362065 6E696C20 61746164 data line 6..... 000000
+
+RECORD NUMBER 7 (00000007) LENGTH 11 (0000000B) 
+
+            372065 6E696C20 61746164 data line 7..... 000000
+******
+File DUA1:[DIF116.IN]F01.B;1
+
+RECORD NUMBER 5 (00000005) LENGTH 20 (00000014) 
+
+ 76657220 2C352065 6E696C20 61746164 data line 5, rev 000000
+                            64657369 ised............ 000010
+
+RECORD NUMBER 6 (00000006) LENGTH 11 (0000000B) 
+
+            362065 6E696C20 61746164 data line 6..... 000000
+
+RECORD NUMBER 7 (00000007) LENGTH 11 (0000000B) 
+
+            372065 6E696C20 61746164 data line 7..... 000000
+************
+************
+File DUA1:[DIF116.IN]F01.A;1
+
+RECORD NUMBER 16 (00000010) LENGTH 12 (0000000C) 
+
+          36312065 6E696C20 61746164 data line 16.... 000000
+
+RECORD NUMBER 17 (00000011) LENGTH 12 (0000000C) 
+
+          37312065 6E696C20 61746164 data line 17.... 000000
+******
+File DUA1:[DIF116.IN]F01.B;1
+
+RECORD NUMBER 16 (00000010) LENGTH 12 (0000000C) 
+
+          656E6F20 64657472 65736E69 inserted one.... 000000
+
+RECORD NUMBER 17 (00000011) LENGTH 12 (0000000C) 
+
+          6F777420 64657472 65736E69 inserted two.... 000000
+
+RECORD NUMBER 18 (00000012) LENGTH 12 (0000000C) 
+
+          36312065 6E696C20 61746164 data line 16.... 000000
+
+RECORD NUMBER 19 (00000013) LENGTH 12 (0000000C) 
+
+          37312065 6E696C20 61746164 data line 17.... 000000
+************
+************
+File DUA1:[DIF116.IN]F01.A;1
+
+RECORD NUMBER 26 (0000001A) LENGTH 12 (0000000C) 
+
+          36322065 6E696C20 61746164 data line 26.... 000000
+
+RECORD NUMBER 27 (0000001B) LENGTH 12 (0000000C) 
+
+          37322065 6E696C20 61746164 data line 27.... 000000
+
+RECORD NUMBER 28 (0000001C) LENGTH 12 (0000000C) 
+
+          38322065 6E696C20 61746164 data line 28.... 000000
+
+RECORD NUMBER 29 (0000001D) LENGTH 12 (0000000C) 
+
+          39322065 6E696C20 61746164 data line 29.... 000000
+******
+File DUA1:[DIF116.IN]F01.B;1
+
+RECORD NUMBER 28 (0000001C) LENGTH 12 (0000000C) 
+
+          38322065 6E696C20 61746164 data line 28.... 000000
+
+RECORD NUMBER 29 (0000001D) LENGTH 12 (0000000C) 
+
+          39322065 6E696C20 61746164 data line 29.... 000000
+************
+************
+File DUA1:[DIF116.IN]F01.A;1
+******
+File DUA1:[DIF116.IN]F01.B;1
+************
+
+************
+File DUA1:[DIF116.IN]F01.A;1
+
+RECORD NUMBER 5 (00000005) LENGTH 11 (0000000B) 
+
+            352065 6E696C20 61746164 data line 5..... 000000
+
+RECORD NUMBER 26 (0000001A) LENGTH 12 (0000000C) 
+
+          36322065 6E696C20 61746164 data line 26.... 000000
+
+RECORD NUMBER 27 (0000001B) LENGTH 12 (0000000C) 
+
+          37322065 6E696C20 61746164 data line 27.... 000000
+************
+
+************
+File DUA1:[DIF116.IN]F01.A;1
+
+RECORD NUMBER 1 (00000001) LENGTH 11 (0000000B) 
+
+            312065 6E696C20 61746164 data line 1..... 000000
+
+RECORD NUMBER 2 (00000002) LENGTH 11 (0000000B) 
+
+            322065 6E696C20 61746164 data line 2..... 000000
+
+RECORD NUMBER 3 (00000003) LENGTH 11 (0000000B) 
+
+            332065 6E696C20 61746164 data line 3..... 000000
+
+RECORD NUMBER 4 (00000004) LENGTH 11 (0000000B) 
+
+            342065 6E696C20 61746164 data line 4..... 000000
+
+RECORD NUMBER 5 (00000005) LENGTH 11 (0000000B)  ***CHANGE**
+
+            352065 6E696C20 61746164 data line 5..... 000000
+
+RECORD NUMBER 6 (00000006) LENGTH 11 (0000000B) 
+
+            362065 6E696C20 61746164 data line 6..... 000000
+
+RECORD NUMBER 7 (00000007) LENGTH 11 (0000000B) 
+
+            372065 6E696C20 61746164 data line 7..... 000000
+
+RECORD NUMBER 8 (00000008) LENGTH 11 (0000000B) 
+
+            382065 6E696C20 61746164 data line 8..... 000000
+
+RECORD NUMBER 9 (00000009) LENGTH 11 (0000000B) 
+
+            392065 6E696C20 61746164 data line 9..... 000000
+
+RECORD NUMBER 10 (0000000A) LENGTH 12 (0000000C) 
+
+          30312065 6E696C20 61746164 data line 10.... 000000
+
+RECORD NUMBER 11 (0000000B) LENGTH 12 (0000000C) 
+
+          31312065 6E696C20 61746164 data line 11.... 000000
+
+RECORD NUMBER 12 (0000000C) LENGTH 12 (0000000C) 
+
+          32312065 6E696C20 61746164 data line 12.... 000000
+
+RECORD NUMBER 13 (0000000D) LENGTH 12 (0000000C) 
+
+          33312065 6E696C20 61746164 data line 13.... 000000
+
+RECORD NUMBER 14 (0000000E) LENGTH 12 (0000000C) 
+
+          34312065 6E696C20 61746164 data line 14.... 000000
+
+RECORD NUMBER 15 (0000000F) LENGTH 12 (0000000C) 
+
+          35312065 6E696C20 61746164 data line 15.... 000000
+
+RECORD NUMBER 16 (00000010) LENGTH 12 (0000000C)  ***CHANGE*
+
+          36312065 6E696C20 61746164 data line 16.... 000000
+
+RECORD NUMBER 17 (00000011) LENGTH 12 (0000000C) 
+
+          37312065 6E696C20 61746164 data line 17.... 000000
+
+RECORD NUMBER 18 (00000012) LENGTH 12 (0000000C) 
+
+          38312065 6E696C20 61746164 data line 18.... 000000
+
+RECORD NUMBER 19 (00000013) LENGTH 12 (0000000C) 
+
+          39312065 6E696C20 61746164 data line 19.... 000000
+
+RECORD NUMBER 20 (00000014) LENGTH 12 (0000000C) 
+
+          30322065 6E696C20 61746164 data line 20.... 000000
+
+RECORD NUMBER 21 (00000015) LENGTH 12 (0000000C) 
+
+          31322065 6E696C20 61746164 data line 21.... 000000
+
+RECORD NUMBER 22 (00000016) LENGTH 12 (0000000C) 
+
+          32322065 6E696C20 61746164 data line 22.... 000000
+
+RECORD NUMBER 23 (00000017) LENGTH 12 (0000000C) 
+
+          33322065 6E696C20 61746164 data line 23.... 000000
+
+RECORD NUMBER 24 (00000018) LENGTH 12 (0000000C) 
+
+          34322065 6E696C20 61746164 data line 24.... 000000
+
+RECORD NUMBER 25 (00000019) LENGTH 12 (0000000C) 
+
+          35322065 6E696C20 61746164 data line 25.... 000000
+
+RECORD NUMBER 26 (0000001A) LENGTH 12 (0000000C)  ***CHANGE*
+
+          36322065 6E696C20 61746164 data line 26.... 000000
+
+RECORD NUMBER 27 (0000001B) LENGTH 12 (0000000C)  ***CHANGE*
+
+          37322065 6E696C20 61746164 data line 27.... 000000
+
+RECORD NUMBER 28 (0000001C) LENGTH 12 (0000000C) 
+
+          38322065 6E696C20 61746164 data line 28.... 000000
+
+RECORD NUMBER 29 (0000001D) LENGTH 12 (0000000C) 
+
+          39322065 6E696C20 61746164 data line 29.... 000000
+
+RECORD NUMBER 30 (0000001E) LENGTH 12 (0000000C) 
+
+          30332065 6E696C20 61746164 data line 30.... 000000
+************
+
+************
+File DUA1:[DIF116.IN]F01.B;1
+
+RECORD NUMBER 1 (00000001) LENGTH 11 (0000000B) 
+
+            312065 6E696C20 61746164 data line 1..... 000000
+
+RECORD NUMBER 2 (00000002) LENGTH 11 (0000000B) 
+
+            322065 6E696C20 61746164 data line 2..... 000000
+
+RECORD NUMBER 3 (00000003) LENGTH 11 (0000000B) 
+
+            332065 6E696C20 61746164 data line 3..... 000000
+
+RECORD NUMBER 4 (00000004) LENGTH 11 (0000000B) 
+
+            342065 6E696C20 61746164 data line 4..... 000000
+
+RECORD NUMBER 5 (00000005) LENGTH 20 (00000014)  ***CHANGE**
+
+ 76657220 2C352065 6E696C20 61746164 data line 5, rev 000000
+                            64657369 ised............ 000010
+
+RECORD NUMBER 6 (00000006) LENGTH 11 (0000000B) 
+
+            362065 6E696C20 61746164 data line 6..... 000000
+
+RECORD NUMBER 7 (00000007) LENGTH 11 (0000000B) 
+
+            372065 6E696C20 61746164 data line 7..... 000000
+
+RECORD NUMBER 8 (00000008) LENGTH 11 (0000000B) 
+
+            382065 6E696C20 61746164 data line 8..... 000000
+
+RECORD NUMBER 9 (00000009) LENGTH 11 (0000000B) 
+
+            392065 6E696C20 61746164 data line 9..... 000000
+
+RECORD NUMBER 10 (0000000A) LENGTH 12 (0000000C) 
+
+          30312065 6E696C20 61746164 data line 10.... 000000
+
+RECORD NUMBER 11 (0000000B) LENGTH 12 (0000000C) 
+
+          31312065 6E696C20 61746164 data line 11.... 000000
+
+RECORD NUMBER 12 (0000000C) LENGTH 12 (0000000C) 
+
+          32312065 6E696C20 61746164 data line 12.... 000000
+
+RECORD NUMBER 13 (0000000D) LENGTH 12 (0000000C) 
+
+          33312065 6E696C20 61746164 data line 13.... 000000
+
+RECORD NUMBER 14 (0000000E) LENGTH 12 (0000000C) 
+
+          34312065 6E696C20 61746164 data line 14.... 000000
+
+RECORD NUMBER 15 (0000000F) LENGTH 12 (0000000C) 
+
+          35312065 6E696C20 61746164 data line 15.... 000000
+
+RECORD NUMBER 16 (00000010) LENGTH 12 (0000000C)  ***CHANGE*
+
+          656E6F20 64657472 65736E69 inserted one.... 000000
+
+RECORD NUMBER 17 (00000011) LENGTH 12 (0000000C)  ***CHANGE*
+
+          6F777420 64657472 65736E69 inserted two.... 000000
+
+RECORD NUMBER 18 (00000012) LENGTH 12 (0000000C) 
+
+          36312065 6E696C20 61746164 data line 16.... 000000
+
+RECORD NUMBER 19 (00000013) LENGTH 12 (0000000C) 
+
+          37312065 6E696C20 61746164 data line 17.... 000000
+
+RECORD NUMBER 20 (00000014) LENGTH 12 (0000000C) 
+
+          38312065 6E696C20 61746164 data line 18.... 000000
+
+RECORD NUMBER 21 (00000015) LENGTH 12 (0000000C) 
+
+          39312065 6E696C20 61746164 data line 19.... 000000
+
+RECORD NUMBER 22 (00000016) LENGTH 12 (0000000C) 
+
+          30322065 6E696C20 61746164 data line 20.... 000000
+
+RECORD NUMBER 23 (00000017) LENGTH 12 (0000000C) 
+
+          31322065 6E696C20 61746164 data line 21.... 000000
+
+RECORD NUMBER 24 (00000018) LENGTH 12 (0000000C) 
+
+          32322065 6E696C20 61746164 data line 22.... 000000
+
+RECORD NUMBER 25 (00000019) LENGTH 12 (0000000C) 
+
+          33322065 6E696C20 61746164 data line 23.... 000000
+
+RECORD NUMBER 26 (0000001A) LENGTH 12 (0000000C) 
+
+          34322065 6E696C20 61746164 data line 24.... 000000
+
+RECORD NUMBER 27 (0000001B) LENGTH 12 (0000000C) 
+
+          35322065 6E696C20 61746164 data line 25.... 000000
+
+RECORD NUMBER 28 (0000001C) LENGTH 12 (0000000C)  ***CHANGE*
+
+          38322065 6E696C20 61746164 data line 28.... 000000
+
+RECORD NUMBER 29 (0000001D) LENGTH 12 (0000000C) 
+
+          39322065 6E696C20 61746164 data line 29.... 000000
+
+RECORD NUMBER 30 (0000001E) LENGTH 12 (0000000C) 
+
+          30332065 6E696C20 61746164 data line 30.... 000000
+************
+
+Number of difference sections found: 3
+Number of difference records found: 5
+
+DIFFERENCES /IGNORE=(SPACING,TRAILING_SPACES,HEADER=2,FORM_FEEDS,CASE,EXACT,-
+    COMMENTS,BLANK_LINES)/COMMENT_DELIMITERS=(EXCLAMATION,";",COLON,TAB)-
+    /WIDTH=80/MATCH=4/MAXIMUM_DIFFERENCES=50/MERGED=2/MODE=(HEXADECIMAL,ASCII)-
+    /OUTPUT=DUA1:[DIF116.OUT]N64.DIF;1/PARALLEL=1/SEPARATED=MASTER/WINDOW=10-
+    /NONUMBER-
+    DUA1:[DIF116.IN]F01.A;1/CHANGE_BAR=("%")-
+    DUA1:[DIF116.IN]F01.B;1/CHANGE_BAR=("#")

@@ -1,0 +1,17 @@
+************
+File DUA1:[DIF116.IN]G182.A;1
+    6   kilo
+    7   charlie
+************
+
+************
+File DUA1:[DIF116.IN]G182.B;1
+    2   golf
+************
+
+Number of difference sections found: 2
+Number of difference records found: 3
+
+DIFFERENCES /IGNORE=()/OUTPUT=DUA1:[DIF116.OUT]EG182.DIF;1/SEPARATED-
+    DUA1:[DIF116.IN]G182.A;1-
+    DUA1:[DIF116.IN]G182.B;1

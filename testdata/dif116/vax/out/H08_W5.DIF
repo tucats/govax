@@ -1,0 +1,46 @@
+************
+File DUA1:[DIF116.IN]H08.A;1
+    9   bravo
+******
+File DUA1:[DIF116.IN]H08.B;1
+    9   india
+   10   bravo
+************
+************
+File DUA1:[DIF116.IN]H08.A;1
+   20   bravo
+******
+File DUA1:[DIF116.IN]H08.B;1
+   21   charlie
+   22   bravo
+************
+************
+File DUA1:[DIF116.IN]H08.A;1
+   23   delta
+******
+File DUA1:[DIF116.IN]H08.B;1
+   25   juliet
+   26   delta
+************
+************
+File DUA1:[DIF116.IN]H08.A;1
+   32   charlie
+   33   echo
+   34   alpha
+   35   india
+******
+File DUA1:[DIF116.IN]H08.B;1
+   35   india
+   36   charlie
+   37   charlie
+   38   echo
+   39   kilo
+   40   india
+************
+
+Number of difference sections found: 4
+Number of difference records found: 8
+
+DIFFERENCES /IGNORE=()/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]H08_W5.DIF;1/WINDOW=5-
+    DUA1:[DIF116.IN]H08.A;1-
+    DUA1:[DIF116.IN]H08.B;1

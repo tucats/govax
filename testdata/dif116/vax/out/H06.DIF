@@ -1,0 +1,51 @@
+************
+File DUA1:[DIF116.IN]H06.A;1
+    9   charlie
+******
+File DUA1:[DIF116.IN]H06.B;1
+    9   bravo
+   10   charlie
+************
+************
+File DUA1:[DIF116.IN]H06.A;1
+   13   bravo
+   14   juliet
+******
+File DUA1:[DIF116.IN]H06.B;1
+   14   delta
+   15   juliet
+************
+************
+File DUA1:[DIF116.IN]H06.A;1
+   24   bravo
+   25   charlie
+******
+File DUA1:[DIF116.IN]H06.B;1
+   25   hotel
+   26   charlie
+************
+************
+File DUA1:[DIF116.IN]H06.A;1
+   28   lima
+   29   delta
+******
+File DUA1:[DIF116.IN]H06.B;1
+   29   golf
+   30   delta
+************
+************
+File DUA1:[DIF116.IN]H06.A;1
+   36   delta
+   37   lima
+   38   lima
+******
+File DUA1:[DIF116.IN]H06.B;1
+   37   lima
+************
+
+Number of difference sections found: 5
+Number of difference records found: 6
+
+DIFFERENCES /IGNORE=()/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]H06.DIF;1-
+    DUA1:[DIF116.IN]H06.A;1-
+    DUA1:[DIF116.IN]H06.B;1

@@ -1,0 +1,17 @@
+************
+File DUA1:[DIF116.IN]G026.A;1
+    5   charlie
+******
+File DUA1:[DIF116.IN]G026.B;1
+    5   foxtrot
+    6   golf
+    7   echo
+    8   charlie
+************
+
+Number of difference sections found: 1
+Number of difference records found: 3
+
+DIFFERENCES /IGNORE=()/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]G026.DIF;1-
+    DUA1:[DIF116.IN]G026.A;1-
+    DUA1:[DIF116.IN]G026.B;1

@@ -1,0 +1,22 @@
+************
+File DUA1:[DIF116.IN]G234.A;1
+    2   bravo
+******
+File DUA1:[DIF116.IN]G234.B;1
+    2   alpha
+    3   bravo
+************
+************
+File DUA1:[DIF116.IN]G234.A;1
+    9   foxtrot
+******
+File DUA1:[DIF116.IN]G234.B;1
+   10   alpha
+************
+
+Number of difference sections found: 2
+Number of difference records found: 2
+
+DIFFERENCES /IGNORE=()/MAXIMUM_DIFFERENCES=2/MERGED=0/OUTPUT=DUA1:[DIF116.OUT]XG234.DIF;1-
+    DUA1:[DIF116.IN]G234.A;1-
+    DUA1:[DIF116.IN]G234.B;1

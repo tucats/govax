@@ -1,0 +1,26 @@
+************
+File DUA1:[DIF116.IN]G238.A;1
+    4   hotel
+    5   india
+    6   echo
+    7   lima
+    8   delta
+    9   charlie
+   10   charlie
+   11   foxtrot
+   12   india
+******
+File DUA1:[DIF116.IN]G238.B;1
+    4   bravo
+    5   india
+    6   kilo
+    7   charlie
+    8   india
+************
+
+Number of difference sections found: 1
+Number of difference records found: 8
+
+DIFFERENCES /IGNORE=()/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]G238.DIF;1-
+    DUA1:[DIF116.IN]G238.A;1-
+    DUA1:[DIF116.IN]G238.B;1

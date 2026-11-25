@@ -1,0 +1,46 @@
+************
+File DUA1:[DIF116.IN]H21.A;1
+    3   juliet
+******
+File DUA1:[DIF116.IN]H21.B;1
+    3   charlie
+    4   charlie
+    5   juliet
+************
+************
+File DUA1:[DIF116.IN]H21.A;1
+    9   india
+   10   bravo
+******
+File DUA1:[DIF116.IN]H21.B;1
+   11   lima
+   12   bravo
+************
+************
+File DUA1:[DIF116.IN]H21.A;1
+   20   golf
+   21   india
+   22   lima
+   23   alpha
+******
+File DUA1:[DIF116.IN]H21.B;1
+   22   alpha
+************
+************
+File DUA1:[DIF116.IN]H21.A;1
+   26   golf
+   27   kilo
+   28   lima
+   29   golf
+   30   delta
+******
+File DUA1:[DIF116.IN]H21.B;1
+   25   delta
+************
+
+Number of difference sections found: 4
+Number of difference records found: 10
+
+DIFFERENCES /IGNORE=()/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]H21.DIF;1-
+    DUA1:[DIF116.IN]H21.A;1-
+    DUA1:[DIF116.IN]H21.B;1

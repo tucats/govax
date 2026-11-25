@@ -1,0 +1,32 @@
+************
+File DUA1:[DIF116.IN]G144.A;1
+    2   hotel
+    3   lima
+******
+File DUA1:[DIF116.IN]G144.B;1
+    2   india
+    3   lima
+************
+************
+File DUA1:[DIF116.IN]G144.A;1
+    6   india
+    7   alpha
+******
+File DUA1:[DIF116.IN]G144.B;1
+    6   echo
+    7   golf
+    8   alpha
+************
+************
+File DUA1:[DIF116.IN]G144.A;1
+******
+File DUA1:[DIF116.IN]G144.B;1
+   12   hotel
+************
+
+Number of difference sections found: 3
+Number of difference records found: 4
+
+DIFFERENCES /IGNORE=()/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]G144.DIF;1-
+    DUA1:[DIF116.IN]G144.A;1-
+    DUA1:[DIF116.IN]G144.B;1

@@ -1,0 +1,27 @@
+************
+File DUA1:[DIF116.IN]G096.A;1
+    1   hotel
+    2   delta
+    3   foxtrot
+    4   juliet
+    5   foxtrot
+    6   echo
+    7   kilo
+    8   bravo
+******
+File DUA1:[DIF116.IN]G096.B;1
+    1   bravo
+    2   hotel
+    3   delta
+    4   foxtrot
+    5   foxtrot
+    6   echo
+    7   kilo
+************
+
+Number of difference sections found: 1
+Number of difference records found: 8
+
+DIFFERENCES /IGNORE=()/MATCH=5/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]M5G096.DIF;1-
+    DUA1:[DIF116.IN]G096.A;1-
+    DUA1:[DIF116.IN]G096.B;1

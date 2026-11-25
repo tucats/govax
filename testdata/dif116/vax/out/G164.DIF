@@ -1,0 +1,24 @@
+************
+File DUA1:[DIF116.IN]G164.A;1
+    2   lima
+    3   golf
+    4   kilo
+    5   echo
+    6   india
+******
+File DUA1:[DIF116.IN]G164.B;1
+    2   echo
+    3   lima
+    4   golf
+    5   golf
+    6   echo
+    7   delta
+    8   india
+************
+
+Number of difference sections found: 1
+Number of difference records found: 6
+
+DIFFERENCES /IGNORE=()/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]G164.DIF;1-
+    DUA1:[DIF116.IN]G164.A;1-
+    DUA1:[DIF116.IN]G164.B;1

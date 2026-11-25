@@ -1,0 +1,23 @@
+************
+File DUA1:[DIF116.IN]G030.A;1
+    8   foxtrot
+    9   foxtrot
+   10   india
+******
+File DUA1:[DIF116.IN]G030.B;1
+    8   india
+************
+************
+File DUA1:[DIF116.IN]G030.A;1
+******
+File DUA1:[DIF116.IN]G030.B;1
+   11   foxtrot
+   12   foxtrot
+************
+
+Number of difference sections found: 2
+Number of difference records found: 4
+
+DIFFERENCES /IGNORE=()/MATCH=1/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]M1G030.DIF;1-
+    DUA1:[DIF116.IN]G030.A;1-
+    DUA1:[DIF116.IN]G030.B;1

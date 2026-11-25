@@ -1,0 +1,26 @@
+************
+File DUA1:[DIF116.IN]G224.A;1
+    3   foxtrot
+    4   charlie
+    5   charlie
+    6   alpha
+    7   charlie
+    8   kilo
+    9   golf
+******
+File DUA1:[DIF116.IN]G224.B;1
+    3   kilo
+    4   charlie
+    5   juliet
+    6   kilo
+    7   charlie
+    8   kilo
+    9   juliet
+************
+
+Number of difference sections found: 1
+Number of difference records found: 7
+
+DIFFERENCES /IGNORE=()/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]G224.DIF;1-
+    DUA1:[DIF116.IN]G224.A;1-
+    DUA1:[DIF116.IN]G224.B;1

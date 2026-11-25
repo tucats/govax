@@ -1,0 +1,16 @@
+************
+File DUA1:[DIF116.IN]G120.A;1
+******
+File DUA1:[DIF116.IN]G120.B;1
+    1   hotel
+    2   alpha
+    3   foxtrot
+    4   delta
+************
+
+Number of difference sections found: 1
+Number of difference records found: 4
+
+DIFFERENCES /IGNORE=()/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]G120.DIF;1-
+    DUA1:[DIF116.IN]G120.A;1-
+    DUA1:[DIF116.IN]G120.B;1

@@ -1,0 +1,16 @@
+************
+File DUA1:[DIF116.IN]G078.A;1
+    6   lima
+    7   kilo
+******
+File DUA1:[DIF116.IN]G078.B;1
+    6   delta
+    7   kilo
+************
+
+Number of difference sections found: 1
+Number of difference records found: 1
+
+DIFFERENCES /IGNORE=()/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]G078.DIF;1-
+    DUA1:[DIF116.IN]G078.A;1-
+    DUA1:[DIF116.IN]G078.B;1

@@ -1,0 +1,25 @@
+************
+File DUA1:[DIF116.IN]G018.A;1
+    1   kilo
+    2   alpha
+    3   bravo
+    4   golf
+    5   india
+    6   kilo
+    7   juliet
+    8   foxtrot
+******
+File DUA1:[DIF116.IN]G018.B;1
+    1   alpha
+    2   bravo
+    3   kilo
+    4   india
+    5   foxtrot
+************
+
+Number of difference sections found: 1
+Number of difference records found: 7
+
+DIFFERENCES /IGNORE=()/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]G018.DIF;1-
+    DUA1:[DIF116.IN]G018.A;1-
+    DUA1:[DIF116.IN]G018.B;1

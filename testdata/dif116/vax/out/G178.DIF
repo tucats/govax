@@ -1,0 +1,25 @@
+************
+File DUA1:[DIF116.IN]G178.A;1
+    2   lima
+******
+File DUA1:[DIF116.IN]G178.B;1
+    2   delta
+    3   delta
+    4   lima
+************
+************
+File DUA1:[DIF116.IN]G178.A;1
+    5   delta
+    6   delta
+    7   juliet
+******
+File DUA1:[DIF116.IN]G178.B;1
+    7   juliet
+************
+
+Number of difference sections found: 2
+Number of difference records found: 4
+
+DIFFERENCES /IGNORE=()/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]G178.DIF;1-
+    DUA1:[DIF116.IN]G178.A;1-
+    DUA1:[DIF116.IN]G178.B;1

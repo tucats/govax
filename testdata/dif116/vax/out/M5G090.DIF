@@ -1,0 +1,27 @@
+************
+File DUA1:[DIF116.IN]G090.A;1
+    1   bravo
+    2   charlie
+    3   charlie
+    4   lima
+    5   india
+    6   india
+******
+File DUA1:[DIF116.IN]G090.B;1
+    1   lima
+    2   lima
+    3   foxtrot
+    4   foxtrot
+    5   bravo
+    6   bravo
+    7   charlie
+    8   charlie
+    9   lima
+************
+
+Number of difference sections found: 1
+Number of difference records found: 9
+
+DIFFERENCES /IGNORE=()/MATCH=5/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]M5G090.DIF;1-
+    DUA1:[DIF116.IN]G090.A;1-
+    DUA1:[DIF116.IN]G090.B;1

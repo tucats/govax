@@ -1,0 +1,15 @@
+************
+File DUA1:[DIF116.IN]G216.A;1
+    5   foxtrot
+******
+File DUA1:[DIF116.IN]G216.B;1
+    5   lima
+    6   foxtrot
+************
+
+Number of difference sections found: 1
+Number of difference records found: 1
+
+DIFFERENCES /IGNORE=()/MAXIMUM_DIFFERENCES=2/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]XG216.DIF;1-
+    DUA1:[DIF116.IN]G216.A;1-
+    DUA1:[DIF116.IN]G216.B;1

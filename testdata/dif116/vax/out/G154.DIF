@@ -1,0 +1,23 @@
+************
+File DUA1:[DIF116.IN]G154.A;1
+    1   golf
+    2   delta
+******
+File DUA1:[DIF116.IN]G154.B;1
+    1   delta
+************
+************
+File DUA1:[DIF116.IN]G154.A;1
+    5   india
+******
+File DUA1:[DIF116.IN]G154.B;1
+    4   golf
+    5   india
+************
+
+Number of difference sections found: 2
+Number of difference records found: 2
+
+DIFFERENCES /IGNORE=()/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]G154.DIF;1-
+    DUA1:[DIF116.IN]G154.A;1-
+    DUA1:[DIF116.IN]G154.B;1

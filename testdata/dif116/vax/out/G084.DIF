@@ -1,0 +1,15 @@
+************
+File DUA1:[DIF116.IN]G084.A;1
+   12   delta
+   13   hotel
+   14   kilo
+******
+File DUA1:[DIF116.IN]G084.B;1
+************
+
+Number of difference sections found: 1
+Number of difference records found: 3
+
+DIFFERENCES /IGNORE=()/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]G084.DIF;1-
+    DUA1:[DIF116.IN]G084.A;1-
+    DUA1:[DIF116.IN]G084.B;1

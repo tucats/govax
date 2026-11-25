@@ -1,0 +1,18 @@
+************
+File DUA1:[DIF116.IN]G056.A;1
+    1   hotel
+    2   lima
+    3   charlie
+    4   lima
+******
+File DUA1:[DIF116.IN]G056.B;1
+    1   bravo
+    2   lima
+************
+
+Number of difference sections found: 1
+Number of difference records found: 3
+
+DIFFERENCES /IGNORE=()/MATCH=2/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]M2G056.DIF;1-
+    DUA1:[DIF116.IN]G056.A;1-
+    DUA1:[DIF116.IN]G056.B;1

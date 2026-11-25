@@ -1,0 +1,14 @@
+-----------------------------------------------------------------------------------------------------------------------------------
+File DUA1:[DIF116.IN.A_LONG_DIRECTORY_NAME_OF_THIRTY_NINE_CH]A_  |  File DUA1:[DIF116.IN.A_LONG_DIRECTORY_NAME_OF_THIRTY_NINE_CH]A_
+-------------------------------- 2 --------------------------------------------------------------- 2 ------------------------------
+two                                                              |  TWO                                                            
+-----------------------------------------------------------------------------------------------------------------------------------
+
+Number of difference sections found: 1
+Number of difference records found: 1
+
+DIFFERENCES /IGNORE=()/OUTPUT=DUA1:[DIF116.OUT]N62.DIF;1/PARALLEL-
+    DUA1:[DIF116.IN.A_LONG_DIRECTORY_NAME_OF_THIRTY_NINE_CH]A_FILE_NAME_OF_THIRTY_NINE_CHARACTERS_X.A_TYPE_OF_THIRTY_NINE_CHARACTER-
+S_XXXXXX;1-
+    DUA1:[DIF116.IN.A_LONG_DIRECTORY_NAME_OF_THIRTY_NINE_CH]A_FILE_NAME_OF_THIRTY_NINE_CHARACTERS_X.B_TYPE_OF_THIRTY_NINE_CHARACTER-
+S_XXXXXX;1

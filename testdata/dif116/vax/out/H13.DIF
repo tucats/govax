@@ -1,0 +1,51 @@
+************
+File DUA1:[DIF116.IN]H13.A;1
+    1   golf
+    2   india
+    3   alpha
+    4   india
+******
+File DUA1:[DIF116.IN]H13.B;1
+    1   india
+************
+************
+File DUA1:[DIF116.IN]H13.A;1
+   19   bravo
+   20   delta
+******
+File DUA1:[DIF116.IN]H13.B;1
+   16   delta
+************
+************
+File DUA1:[DIF116.IN]H13.A;1
+   35   lima
+   36   juliet
+******
+File DUA1:[DIF116.IN]H13.B;1
+   31   hotel
+   32   juliet
+************
+************
+File DUA1:[DIF116.IN]H13.A;1
+   43   india
+******
+File DUA1:[DIF116.IN]H13.B;1
+   39   lima
+   40   india
+************
+************
+File DUA1:[DIF116.IN]H13.A;1
+   46   kilo
+   47   charlie
+   48   india
+******
+File DUA1:[DIF116.IN]H13.B;1
+   43   india
+************
+
+Number of difference sections found: 5
+Number of difference records found: 8
+
+DIFFERENCES /IGNORE=()/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]H13.DIF;1-
+    DUA1:[DIF116.IN]H13.A;1-
+    DUA1:[DIF116.IN]H13.B;1

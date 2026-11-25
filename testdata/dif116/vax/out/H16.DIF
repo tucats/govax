@@ -1,0 +1,66 @@
+************
+File DUA1:[DIF116.IN]H16.A;1
+    6   india
+******
+File DUA1:[DIF116.IN]H16.B;1
+    6   kilo
+    7   kilo
+    8   echo
+    9   india
+************
+************
+File DUA1:[DIF116.IN]H16.A;1
+   21   delta
+   22   echo
+   23   charlie
+******
+File DUA1:[DIF116.IN]H16.B;1
+   24   charlie
+************
+************
+File DUA1:[DIF116.IN]H16.A;1
+   26   delta
+   27   alpha
+   28   alpha
+   29   echo
+******
+File DUA1:[DIF116.IN]H16.B;1
+   27   hotel
+   28   delta
+   29   delta
+   30   alpha
+   31   hotel
+   32   echo
+   33   delta
+   34   alpha
+   35   lima
+   36   echo
+   37   echo
+************
+************
+File DUA1:[DIF116.IN]H16.A;1
+   32   delta
+   33   lima
+   34   echo
+   35   kilo
+   36   echo
+   37   echo
+   38   kilo
+******
+File DUA1:[DIF116.IN]H16.B;1
+   40   kilo
+************
+************
+File DUA1:[DIF116.IN]H16.A;1
+   43   juliet
+******
+File DUA1:[DIF116.IN]H16.B;1
+   45   lima
+************
+
+Number of difference sections found: 5
+Number of difference records found: 22
+
+DIFFERENCES /IGNORE=()/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]H16.DIF;1-
+    DUA1:[DIF116.IN]H16.A;1-
+    DUA1:[DIF116.IN]H16.B;1

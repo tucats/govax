@@ -1,0 +1,34 @@
+************
+File DUA1:[DIF116.IN]G021.A;1
+    2   alpha
+    3   charlie
+    4   bravo
+    5   bravo
+******
+File DUA1:[DIF116.IN]G021.B;1
+    2   bravo
+    3   alpha
+    4   charlie
+    5   delta
+    6   bravo
+************
+************
+File DUA1:[DIF116.IN]G021.A;1
+    8   alpha
+    9   alpha
+   10   alpha
+******
+File DUA1:[DIF116.IN]G021.B;1
+    9   bravo
+   10   alpha
+   11   charlie
+   12   delta
+   13   alpha
+************
+
+Number of difference sections found: 2
+Number of difference records found: 8
+
+DIFFERENCES /IGNORE=()/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]G021.DIF;1-
+    DUA1:[DIF116.IN]G021.A;1-
+    DUA1:[DIF116.IN]G021.B;1

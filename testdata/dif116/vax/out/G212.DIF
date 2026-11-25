@@ -1,0 +1,32 @@
+************
+File DUA1:[DIF116.IN]G212.A;1
+    1   foxtrot
+    2   lima
+******
+File DUA1:[DIF116.IN]G212.B;1
+    1   hotel
+    2   bravo
+    3   delta
+    4   lima
+************
+************
+File DUA1:[DIF116.IN]G212.A;1
+    5   juliet
+    6   lima
+    7   lima
+    8   hotel
+******
+File DUA1:[DIF116.IN]G212.B;1
+    7   hotel
+    8   foxtrot
+    9   juliet
+   10   lima
+   11   foxtrot
+************
+
+Number of difference sections found: 2
+Number of difference records found: 8
+
+DIFFERENCES /IGNORE=()/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]G212.DIF;1-
+    DUA1:[DIF116.IN]G212.A;1-
+    DUA1:[DIF116.IN]G212.B;1

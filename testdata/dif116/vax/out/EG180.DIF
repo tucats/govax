@@ -1,0 +1,29 @@
+************
+File DUA1:[DIF116.IN]G180.A;1
+    1   lima
+    2   bravo
+    3   lima
+    4   india
+    5   charlie
+   10   alpha
+   11   kilo
+   12   lima
+   13   juliet
+************
+
+************
+File DUA1:[DIF116.IN]G180.B;1
+    1   alpha
+    2   lima
+    3   foxtrot
+    8   kilo
+    9   lima
+   10   golf
+************
+
+Number of difference sections found: 2
+Number of difference records found: 9
+
+DIFFERENCES /IGNORE=()/OUTPUT=DUA1:[DIF116.OUT]EG180.DIF;1/SEPARATED-
+    DUA1:[DIF116.IN]G180.A;1-
+    DUA1:[DIF116.IN]G180.B;1

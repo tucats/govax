@@ -1,0 +1,16 @@
+************
+File DUA1:[DIF116.IN]R01.FIX;1
+    6   text 6          
+    7   text 7          
+******
+File DUA1:[DIF116.IN]R02.FIX;1
+    6   text 6 changed  
+    7   text 7          
+************
+
+Number of difference sections found: 1
+Number of difference records found: 1
+
+DIFFERENCES /IGNORE=()/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]R05.DIF;1-
+    DUA1:[DIF116.IN]R01.FIX;1-
+    DUA1:[DIF116.IN]R02.FIX;1

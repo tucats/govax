@@ -1,0 +1,26 @@
+************
+File DUA1:[DIF116.IN]G072.A;1
+    1   echo
+    2   golf
+******
+File DUA1:[DIF116.IN]G072.B;1
+    1   golf
+************
+************
+File DUA1:[DIF116.IN]G072.A;1
+    6   alpha
+    7   charlie
+******
+File DUA1:[DIF116.IN]G072.B;1
+    5   echo
+    6   alpha
+    7   charlie
+    8   charlie
+************
+
+Number of difference sections found: 2
+Number of difference records found: 4
+
+DIFFERENCES /IGNORE=()/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]G072.DIF;1-
+    DUA1:[DIF116.IN]G072.A;1-
+    DUA1:[DIF116.IN]G072.B;1

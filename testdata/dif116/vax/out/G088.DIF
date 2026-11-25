@@ -1,0 +1,22 @@
+************
+File DUA1:[DIF116.IN]G088.A;1
+    1   charlie
+    2   charlie
+    3   hotel
+******
+File DUA1:[DIF116.IN]G088.B;1
+    1   hotel
+************
+************
+File DUA1:[DIF116.IN]G088.A;1
+******
+File DUA1:[DIF116.IN]G088.B;1
+    5   charlie
+************
+
+Number of difference sections found: 2
+Number of difference records found: 3
+
+DIFFERENCES /IGNORE=()/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]G088.DIF;1-
+    DUA1:[DIF116.IN]G088.A;1-
+    DUA1:[DIF116.IN]G088.B;1

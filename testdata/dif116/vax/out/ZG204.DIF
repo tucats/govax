@@ -1,0 +1,15 @@
+************
+File DUA1:[DIF116.IN]G204.A;1
+    5   alpha
+    6   charlie
+    7   foxtrot
+******
+File DUA1:[DIF116.IN]G204.B;1
+************
+
+Number of difference sections found: 1
+Number of difference records found: 3
+
+DIFFERENCES /IGNORE=()/MERGED=0/OUTPUT=DUA1:[DIF116.OUT]ZG204.DIF;1-
+    DUA1:[DIF116.IN]G204.A;1-
+    DUA1:[DIF116.IN]G204.B;1

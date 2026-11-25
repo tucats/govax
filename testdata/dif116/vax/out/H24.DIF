@@ -1,0 +1,56 @@
+************
+File DUA1:[DIF116.IN]H24.A;1
+    8   juliet
+    9   bravo
+******
+File DUA1:[DIF116.IN]H24.B;1
+    8   echo
+    9   bravo
+************
+************
+File DUA1:[DIF116.IN]H24.A;1
+   15   foxtrot
+   16   juliet
+******
+File DUA1:[DIF116.IN]H24.B;1
+   15   juliet
+   16   juliet
+   17   juliet
+   18   india
+   19   juliet
+************
+************
+File DUA1:[DIF116.IN]H24.A;1
+   42   echo
+   43   echo
+******
+File DUA1:[DIF116.IN]H24.B;1
+   45   charlie
+   46   echo
+************
+************
+File DUA1:[DIF116.IN]H24.A;1
+   47   golf
+******
+File DUA1:[DIF116.IN]H24.B;1
+   50   foxtrot
+   51   juliet
+   52   golf
+************
+************
+File DUA1:[DIF116.IN]H24.A;1
+   50   foxtrot
+   51   india
+   52   echo
+   53   hotel
+******
+File DUA1:[DIF116.IN]H24.B;1
+   55   hotel
+************
+
+Number of difference sections found: 5
+Number of difference records found: 11
+
+DIFFERENCES /IGNORE=()/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]H24.DIF;1-
+    DUA1:[DIF116.IN]H24.A;1-
+    DUA1:[DIF116.IN]H24.B;1

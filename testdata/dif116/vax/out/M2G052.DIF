@@ -1,0 +1,46 @@
+************
+File DUA1:[DIF116.IN]G052.A;1
+    1   bravo
+******
+File DUA1:[DIF116.IN]G052.B;1
+    1   foxtrot
+    2   india
+    3   bravo
+************
+************
+File DUA1:[DIF116.IN]G052.A;1
+    5   charlie
+    6   echo
+******
+File DUA1:[DIF116.IN]G052.B;1
+    7   bravo
+    8   echo
+************
+************
+File DUA1:[DIF116.IN]G052.A;1
+    8   foxtrot
+    9   charlie
+******
+File DUA1:[DIF116.IN]G052.B;1
+   10   echo
+   11   charlie
+************
+************
+File DUA1:[DIF116.IN]G052.A;1
+   12   golf
+   13   foxtrot
+   14   india
+******
+File DUA1:[DIF116.IN]G052.B;1
+   14   alpha
+   15   lima
+   16   charlie
+   17   golf
+************
+
+Number of difference sections found: 4
+Number of difference records found: 8
+
+DIFFERENCES /IGNORE=()/MATCH=2/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]M2G052.DIF;1-
+    DUA1:[DIF116.IN]G052.A;1-
+    DUA1:[DIF116.IN]G052.B;1

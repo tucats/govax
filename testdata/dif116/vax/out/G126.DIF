@@ -1,0 +1,24 @@
+************
+File DUA1:[DIF116.IN]G126.A;1
+    4   alpha
+    5   delta
+    6   foxtrot
+    7   echo
+    8   delta
+    9   foxtrot
+   10   echo
+******
+File DUA1:[DIF116.IN]G126.B;1
+    4   foxtrot
+    5   foxtrot
+    6   echo
+    7   india
+    8   echo
+************
+
+Number of difference sections found: 1
+Number of difference records found: 6
+
+DIFFERENCES /IGNORE=()/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]G126.DIF;1-
+    DUA1:[DIF116.IN]G126.A;1-
+    DUA1:[DIF116.IN]G126.B;1

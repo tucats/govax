@@ -1,0 +1,16 @@
+************
+File DUA1:[DIF116.IN]G183.A;1
+   11   delta
+************
+
+************
+File DUA1:[DIF116.IN]G183.B;1
+   11   alpha
+************
+
+Number of difference sections found: 1
+Number of difference records found: 1
+
+DIFFERENCES /IGNORE=()/OUTPUT=DUA1:[DIF116.OUT]EG183.DIF;1/SEPARATED-
+    DUA1:[DIF116.IN]G183.A;1-
+    DUA1:[DIF116.IN]G183.B;1

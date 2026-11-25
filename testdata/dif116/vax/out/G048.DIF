@@ -1,0 +1,24 @@
+************
+File DUA1:[DIF116.IN]G048.A;1
+    1   lima
+    2   alpha
+******
+File DUA1:[DIF116.IN]G048.B;1
+    1   alpha
+************
+************
+File DUA1:[DIF116.IN]G048.A;1
+    5   hotel
+******
+File DUA1:[DIF116.IN]G048.B;1
+    4   echo
+    5   hotel
+    6   hotel
+************
+
+Number of difference sections found: 2
+Number of difference records found: 3
+
+DIFFERENCES /IGNORE=()/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]G048.DIF;1-
+    DUA1:[DIF116.IN]G048.A;1-
+    DUA1:[DIF116.IN]G048.B;1

@@ -1,0 +1,25 @@
+************
+File DUA1:[DIF116.IN]G172.A;1
+    1   charlie
+    2   lima
+******
+File DUA1:[DIF116.IN]G172.B;1
+    1   foxtrot
+    2   lima
+************
+************
+File DUA1:[DIF116.IN]G172.A;1
+   10   india
+   11   charlie
+******
+File DUA1:[DIF116.IN]G172.B;1
+   10   hotel
+   11   charlie
+************
+
+Number of difference sections found: 2
+Number of difference records found: 2
+
+DIFFERENCES /IGNORE=()/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]G172.DIF;1-
+    DUA1:[DIF116.IN]G172.A;1-
+    DUA1:[DIF116.IN]G172.B;1

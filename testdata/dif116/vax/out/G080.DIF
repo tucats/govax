@@ -1,0 +1,15 @@
+************
+File DUA1:[DIF116.IN]G080.A;1
+******
+File DUA1:[DIF116.IN]G080.B;1
+    1   golf
+    2   alpha
+    3   golf
+************
+
+Number of difference sections found: 1
+Number of difference records found: 3
+
+DIFFERENCES /IGNORE=()/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]G080.DIF;1-
+    DUA1:[DIF116.IN]G080.A;1-
+    DUA1:[DIF116.IN]G080.B;1

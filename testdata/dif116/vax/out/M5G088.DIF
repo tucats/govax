@@ -1,0 +1,23 @@
+************
+File DUA1:[DIF116.IN]G088.A;1
+    1   charlie
+    2   charlie
+    3   hotel
+    4   bravo
+    5   india
+    6   foxtrot
+******
+File DUA1:[DIF116.IN]G088.B;1
+    1   hotel
+    2   bravo
+    3   india
+    4   foxtrot
+    5   charlie
+************
+
+Number of difference sections found: 1
+Number of difference records found: 6
+
+DIFFERENCES /IGNORE=()/MATCH=5/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]M5G088.DIF;1-
+    DUA1:[DIF116.IN]G088.A;1-
+    DUA1:[DIF116.IN]G088.B;1

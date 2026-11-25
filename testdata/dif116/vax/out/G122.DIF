@@ -1,0 +1,17 @@
+************
+File DUA1:[DIF116.IN]G122.A;1
+    3   hotel
+    4   lima
+******
+File DUA1:[DIF116.IN]G122.B;1
+    3   kilo
+    4   alpha
+    5   lima
+************
+
+Number of difference sections found: 1
+Number of difference records found: 2
+
+DIFFERENCES /IGNORE=()/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]G122.DIF;1-
+    DUA1:[DIF116.IN]G122.A;1-
+    DUA1:[DIF116.IN]G122.B;1

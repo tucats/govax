@@ -1,0 +1,32 @@
+************
+File DUA1:[DIF116.IN]H09.A;1
+   22   echo
+   23   lima
+   24   delta
+******
+File DUA1:[DIF116.IN]H09.B;1
+   22   juliet
+   23   lima
+   24   delta
+   25   delta
+************
+************
+File DUA1:[DIF116.IN]H09.A;1
+   33   echo
+   34   lima
+   35   echo
+   36   india
+******
+File DUA1:[DIF116.IN]H09.B;1
+   34   charlie
+   35   lima
+   36   bravo
+   37   india
+************
+
+Number of difference sections found: 2
+Number of difference records found: 6
+
+DIFFERENCES /IGNORE=()/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]H09_W5.DIF;1/WINDOW=5-
+    DUA1:[DIF116.IN]H09.A;1-
+    DUA1:[DIF116.IN]H09.B;1

@@ -1,0 +1,87 @@
+************
+File DUA1:[DIF116.IN]H26.A;1
+   12   charlie
+   13   india
+   14   lima
+   15   alpha
+   16   alpha
+   17   hotel
+   18   india
+   19   india
+   20   golf
+   21   delta
+   22   juliet
+   23   alpha
+   24   bravo
+   25   bravo
+   26   delta
+   27   hotel
+   28   delta
+   29   hotel
+   30   charlie
+   31   bravo
+   32   foxtrot
+   33   delta
+   34   hotel
+   35   hotel
+   36   echo
+   37   kilo
+   38   golf
+   39   india
+   40   hotel
+   41   charlie
+   42   kilo
+   43   kilo
+   44   foxtrot
+******
+File DUA1:[DIF116.IN]H26.B;1
+   12   echo
+   13   charlie
+   14   echo
+   15   alpha
+   16   charlie
+   17   lima
+   18   lima
+   19   alpha
+   20   alpha
+   21   hotel
+   22   india
+   23   india
+   24   golf
+   25   delta
+   26   juliet
+   27   alpha
+   28   bravo
+   29   bravo
+   30   delta
+   31   hotel
+   32   lima
+   33   delta
+   34   kilo
+   35   india
+   36   echo
+   37   delta
+   38   hotel
+   39   charlie
+   40   bravo
+   41   foxtrot
+   42   delta
+   43   hotel
+   44   hotel
+   45   echo
+   46   kilo
+   47   golf
+   48   india
+   49   hotel
+   50   charlie
+   51   kilo
+   52   kilo
+   53   foxtrot
+************
+
+Number of difference sections found: 1
+Number of difference records found: 42
+
+DIFFERENCES /IGNORE=()/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]H26_W2.DIF;1/WINDOW=2-
+    DUA1:[DIF116.IN]H26.A;1-
+    DUA1:[DIF116.IN]H26.B;1

@@ -1,0 +1,38 @@
+************
+File DUA1:[DIF116.IN]G034.A;1
+    4   echo
+    5   delta
+******
+File DUA1:[DIF116.IN]G034.B;1
+    4   foxtrot
+    5   echo
+    6   charlie
+    7   delta
+************
+************
+File DUA1:[DIF116.IN]G034.A;1
+    8   charlie
+    9   bravo
+******
+File DUA1:[DIF116.IN]G034.B;1
+   10   bravo
+************
+************
+File DUA1:[DIF116.IN]G034.A;1
+   12   golf
+   13   echo
+   14   hotel
+******
+File DUA1:[DIF116.IN]G034.B;1
+   13   hotel
+   14   juliet
+   15   golf
+   16   echo
+************
+
+Number of difference sections found: 3
+Number of difference records found: 8
+
+DIFFERENCES /IGNORE=()/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]G034.DIF;1-
+    DUA1:[DIF116.IN]G034.A;1-
+    DUA1:[DIF116.IN]G034.B;1

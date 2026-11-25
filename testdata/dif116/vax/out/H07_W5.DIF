@@ -1,0 +1,52 @@
+************
+File DUA1:[DIF116.IN]H07.A;1
+    7   alpha
+******
+File DUA1:[DIF116.IN]H07.B;1
+    7   kilo
+    8   alpha
+************
+************
+File DUA1:[DIF116.IN]H07.A;1
+   10   golf
+   11   charlie
+   12   juliet
+   13   echo
+******
+File DUA1:[DIF116.IN]H07.B;1
+   11   echo
+************
+************
+File DUA1:[DIF116.IN]H07.A;1
+   16   bravo
+   17   hotel
+   18   foxtrot
+******
+File DUA1:[DIF116.IN]H07.B;1
+   14   foxtrot
+************
+************
+File DUA1:[DIF116.IN]H07.A;1
+   43   foxtrot
+   44   kilo
+******
+File DUA1:[DIF116.IN]H07.B;1
+   39   kilo
+************
+************
+File DUA1:[DIF116.IN]H07.A;1
+   53   kilo
+   54   charlie
+   55   charlie
+   56   foxtrot
+******
+File DUA1:[DIF116.IN]H07.B;1
+   48   foxtrot
+************
+
+Number of difference sections found: 5
+Number of difference records found: 10
+
+DIFFERENCES /IGNORE=()/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]H07_W5.DIF;1/WINDOW=5-
+    DUA1:[DIF116.IN]H07.A;1-
+    DUA1:[DIF116.IN]H07.B;1

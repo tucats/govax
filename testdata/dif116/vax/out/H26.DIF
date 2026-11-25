@@ -1,0 +1,34 @@
+************
+File DUA1:[DIF116.IN]H26.A;1
+   12   charlie
+   13   india
+   14   lima
+******
+File DUA1:[DIF116.IN]H26.B;1
+   12   echo
+   13   charlie
+   14   echo
+   15   alpha
+   16   charlie
+   17   lima
+   18   lima
+************
+************
+File DUA1:[DIF116.IN]H26.A;1
+   28   delta
+******
+File DUA1:[DIF116.IN]H26.B;1
+   32   lima
+   33   delta
+   34   kilo
+   35   india
+   36   echo
+   37   delta
+************
+
+Number of difference sections found: 2
+Number of difference records found: 11
+
+DIFFERENCES /IGNORE=()/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]H26.DIF;1-
+    DUA1:[DIF116.IN]H26.A;1-
+    DUA1:[DIF116.IN]H26.B;1

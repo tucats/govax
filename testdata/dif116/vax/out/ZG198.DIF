@@ -1,0 +1,17 @@
+************
+File DUA1:[DIF116.IN]G198.A;1
+    6   bravo
+    7   golf
+******
+File DUA1:[DIF116.IN]G198.B;1
+    6   india
+    7   golf
+    8   bravo
+************
+
+Number of difference sections found: 1
+Number of difference records found: 3
+
+DIFFERENCES /IGNORE=()/MERGED=0/OUTPUT=DUA1:[DIF116.OUT]ZG198.DIF;1-
+    DUA1:[DIF116.IN]G198.A;1-
+    DUA1:[DIF116.IN]G198.B;1

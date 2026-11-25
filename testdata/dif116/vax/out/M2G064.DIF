@@ -1,0 +1,17 @@
+************
+File DUA1:[DIF116.IN]G064.A;1
+   12   bravo
+   13   golf
+   14   bravo
+******
+File DUA1:[DIF116.IN]G064.B;1
+   12   juliet
+   13   bravo
+************
+
+Number of difference sections found: 1
+Number of difference records found: 2
+
+DIFFERENCES /IGNORE=()/MATCH=2/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]M2G064.DIF;1-
+    DUA1:[DIF116.IN]G064.A;1-
+    DUA1:[DIF116.IN]G064.B;1

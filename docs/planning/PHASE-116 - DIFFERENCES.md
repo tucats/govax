@@ -6,7 +6,7 @@ answers recorded in "The review". This document is the development plan; as
 the work goes on it becomes the implementation record: the progress log,
 and at the end "Where things stand".
 
-## Goal
+## Goal 
 
 govax gets VMS's DIFFERENCES command: two record files compared record
 by record, and the records that don't match listed in VMS's forms, with
@@ -175,6 +175,90 @@ The probe (Part D) is to answer each:
     `/WIDTH` ignored there; and whether VMS 7.1 has `/PAGE` and its
     companions.
 
+### A.4 The probe's answers (2026-11-25)
+
+Two rounds on VMS 7.1 (`testdata/dif116/vax`: `dif116.log` round 1 to
+case N59, `dif116b.log` round 2 from N60, `terminal.log`, 796 listings
+in `out/`). What they settle, by A.3's question; the details each
+subtask needs are in the listings, which its oracle holds govax to.
+
+1. **Layout.** Spaces, never tabs. A section is a row of 12 asterisks,
+   `File` and the master's full name with version, its records, 6
+   asterisks, the revision's, 12 asterisks; sections follow one another
+   with no blank line. A record's line is its number right-aligned in
+   five columns (wider when it needs: `100005`), three blanks, the text,
+   cut (never wrapped) at `/WIDTH`. Then a blank line, `Number of
+   difference sections found: n`, `Number of difference records found:
+   n`, a blank line, and the echo: `DIFFERENCES ` and the qualifiers in a
+   fixed order (IGNORE always, as `/IGNORE=()` when empty; then
+   COMMENT_DELIMITERS, WIDTH, MATCH, MAXIMUM_DIFFERENCES, MERGED, MODE,
+   OUTPUT with the listing's full name, PARALLEL, SEPARATED, WINDOW,
+   NONUMBER), each written only if given or a default the form uses
+   (`/MERGED=1`); a line broken with `-` before the width, continued
+   with four blanks; then each file's full name on its own line, with its
+   change bar (`/CHANGE_BAR=("#")`), `-` after all but the last.
+   `/IGNORE`'s keywords come in a fixed order (SPACING, TRAILING_SPACES,
+   HEADER=n, FORM_FEEDS, CASE, EXACT, COMMENTS, BLANK_LINES), and a
+   comment delimiter is shown as its keyword (`EXCLAMATION`, `SLASH`) or
+   quoted (`";"`, `"C"`).
+2. **Matching.** A section takes in matched records between two
+   differences until `/MATCH` of them run together (A16, A17: one
+   section; A18: two). The listing's records are the section's, then
+   `/MERGED`'s n matched records after it; an insertion's master side
+   (or a deletion's revision side) lists only those. Which records a
+   section claims when records repeat (A23, the generated pairs) is not
+   the longest common subsequence's choice: subtask 4 fits the rule to
+   the 540 generated runs.
+3. **Counting.** A section's count is its larger side's records, the
+   matched ones inside it included (A16: 3); the total is their sum.
+   `/MAXIMUM_DIFFERENCES` stops with `%DIF-W-MAXDIF, maximum number of
+   difference records encountered - DIF aborted` and status `%X006C8018`;
+   `/MAXIMUM_DIFFERENCES=0` is no limit.
+4. **Identical files** (and two empty ones): no section, the two counts
+   of 0, and the echo; status `%X006C8009`. Different files:
+   `%X006C8013`.
+5. **The forms.** `/SEPARATED` lists one file's section records under one
+   section header. `/PARALLEL` is a rule of width less one, the two
+   names, and per section a rule with each side's first record number, a
+   `|` between columns; no line numbers. `/MODE=HEX` and `OCTAL` list
+   each record as `RECORD NUMBER n (hex) LENGTH n (hex or octal)` and a
+   DUMP-style line per 16 bytes. `/CHANGE_BAR` lists the whole file, a
+   changed record marked after its number (a master's bar also marks the
+   matched record that follows an insertion), one listing per file with
+   a bar. `/SLP` is `-    5,    5` (the master's records replaced),
+   `-   15` (insert after 15), the new records, and `/` at the end.
+6. **Ignoring.** Each file type's default comment characters are the
+   manual's table (CBL, CMD: `!` and `;`; COB: `*` and `/`; FOR: `!`, C,
+   D, c, d; MAC, MAR: `;`; others of the table `!`; any other type
+   none). How each keyword and EDITED, EXACT, PRETTY change a listing is
+   subtask 7's, from cases I01 to I42.
+7. **Names and errors.** The prompts are `_File 1: ` and `_File 2: `;
+   in a procedure a missing parameter is `%DCL-W-INSFPRM`. One file is
+   its next lower version, `%DIF-F-NOLOWVER, no lower version of file
+   name found` (`%X106C8064`) when there's none. A missing file is
+   `%DIFF-F-OPENIN, error opening name as input` with RMS's reason
+   (FNF, DNF, DEV, NOSUCHFILE); a wildcard in the first is
+   `%DIFF-F-NOWILD`, in the second an OPENIN; no type opens `name.`.
+   `/CHANGE_BAR` is only a parameter's (`%DCL-W-IVQLOC` on the verb);
+   `/SLP` with `/MERGED`, `/PARALLEL`, `/SEPARATED`, or `/MODE` is
+   `%DCL-W-CONFLICT`; `/MERGED` or `/PARALLEL` above `/MATCH` is a
+   warning (`%DIF-W-MRGGTMTCH`, `%DIF-W-PARGTMTCH`) and goes on;
+   `/WINDOW=0` is `%DIFF-F-BADVALUE, '0' is an invalid keyword value`; a
+   comment delimiter of two characters `%DIF-F-CMDSYNTAX`, 33 of them
+   `%DIF-F-TOOMNYDLM`. The facility is 108 (`%X6C`); messages of its own
+   show as `DIF`, the shared ones (OPENIN, NOWILD, BADVALUE) as `DIFF`;
+   F$MESSAGE knows none of them.
+8. **The output file.** Variable records, carriage-return carriage
+   control. `/OUTPUT` with no file, a directory, or a name with no type,
+   and `/SLP` without `/OUTPUT`, make `name.DIF` in the default
+   directory (the first input's name where none is given).
+9. **Record formats.** VFC, STREAM_LF, and fixed files compare by their
+   records' text (R01 to R07); the listings of every byte are R10 to R15.
+10. **The terminal.** At a terminal the listing is the terminal's width,
+    `/WIDTH` ignored (`terminal.log`). VMS 7.1 takes `/PAGE`; `/SEARCH`,
+    `/WRAP`, `/HIGHLIGHT`, and `/EXACT` without `/PAGE=SAVE` are
+    `%DCL-W-CONFLICT` (`\NOPAGE\`).
+
 ## Part B — decisions (proposed)
 
 1. **VMS 7.1 is the reference**, as for every probe since Phase 55: what
@@ -198,22 +282,26 @@ The probe (Part D) is to answer each:
    the output through `LocateOutput`, its record format what the probe
    shows (VAR with CR carriage control expected).
 5. **Messages and statuses** go into `vmsdef` as a facility of their
-   own (`vmsdef/difmessages.go`), the numbers from the probe's
-   `$STATUS` values and the texts from its log, as JBC's were in Phase 98.
+   own, 108 (`vmsdef/difmessages.go`), the numbers from the probe's
+   `$STATUS` values and the texts from its log, as JBC's were in Phase 98:
+   its own messages shown as `DIF`, the shared ones as `DIFF` (A.4.7).
+   VMS's F$MESSAGE knows none of them; govax's will, a harmless
+   deviation, unless the author prefers VMS's NOMSG.
 6. **`/SLP` is written** though govax has no SLP editor: it is only an
    output form, and a script made on govax should work on VMS (the
    review's answer 2).
 7. **The grammar**: a verb `DIFFERENCES` (abbreviable to `DIF`, as VMS's)
-   with two `$file` parameters, `/CHANGE_BAR` on the verb and on each
-   parameter.
+   with two `$file` parameters prompting `_File 1:` and `_File 2:`,
+   `/CHANGE_BAR` on each parameter only (A.4.7), and `/SLP`'s conflicts
+   as the grammar's DISALLOW, so the messages are DCL's, as VMS's are.
+   The paging qualifiers are IVQUAL on govax (Decision 1), a deviation.
 
 ## Part C — subtasks
 
 Each is one commit, with tests, stopping for review.
 
 1. **The survey**: Part A, this plan.
-2. **The probe** (written and rehearsed 2026-11-25; awaiting the VAX
-   run): `testdata/dif116`, as in Part D, written and its exchange
+2. **The probe** (done 2026-11-25, two rounds on the VAX): `testdata/dif116`, as in Part D, written and its exchange
    volume built; run on the VAX by the author; A.3 answered (as A.4) and
    Part B adjusted.
 3. **The command's frame**: the grammar, HELP DIFFERENCES in VMS's
@@ -308,3 +396,9 @@ The author's answers to the plan's three questions:
   procedure is `%DCL-W-INSFPRM`. Round 2 (`dif116b.com`, `exchange2.cmd`,
   `copyout2.cmd`; long lines broken after a blank too) runs the cases from
   N60 on, and the prompts at the `$` prompt by hand.
+- **2026-11-25 — subtask 2 done: round 2 and A.4.** The author ran round
+  2 and the prompts by hand; `copyout2.cmd` brought back `dif116b.log`
+  (599 cases to `DIF116B FINISHED`) and the rest of the listings, 796 in
+  all. Twelve file cases made none, every one a `/CHANGE_BAR` on the
+  verb, which VMS refuses (IVQLOC). A.4 is the answers; Decisions 5 and 7
+  are adjusted to them.

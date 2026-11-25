@@ -1,0 +1,33 @@
+************
+File DUA1:[DIF116.IN]G220.A;1
+    1   juliet
+    2   golf
+******
+File DUA1:[DIF116.IN]G220.B;1
+    1   echo
+    2   foxtrot
+    3   golf
+    4   juliet
+    5   alpha
+    6   echo
+    7   hotel
+    8   golf
+************
+************
+File DUA1:[DIF116.IN]G220.A;1
+    9   golf
+   10   golf
+   11   kilo
+******
+File DUA1:[DIF116.IN]G220.B;1
+   15   india
+   16   hotel
+   17   kilo
+************
+
+Number of difference sections found: 2
+Number of difference records found: 9
+
+DIFFERENCES /IGNORE=()/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]G220.DIF;1-
+    DUA1:[DIF116.IN]G220.A;1-
+    DUA1:[DIF116.IN]G220.B;1

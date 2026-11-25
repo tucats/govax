@@ -1,0 +1,16 @@
+************
+File DUA1:[DIF116.IN]G218.A;1
+   11   echo
+******
+File DUA1:[DIF116.IN]G218.B;1
+   11   bravo
+   12   lima
+   13   echo
+************
+
+Number of difference sections found: 1
+Number of difference records found: 2
+
+DIFFERENCES /IGNORE=()/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]G218.DIF;1-
+    DUA1:[DIF116.IN]G218.A;1-
+    DUA1:[DIF116.IN]G218.B;1

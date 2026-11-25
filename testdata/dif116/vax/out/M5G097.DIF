@@ -1,0 +1,17 @@
+************
+File DUA1:[DIF116.IN]G097.A;1
+******
+File DUA1:[DIF116.IN]G097.B;1
+    7   bravo
+    8   bravo
+    9   charlie
+   10   alpha
+   11   delta
+************
+
+Number of difference sections found: 1
+Number of difference records found: 5
+
+DIFFERENCES /IGNORE=()/MATCH=5/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]M5G097.DIF;1-
+    DUA1:[DIF116.IN]G097.A;1-
+    DUA1:[DIF116.IN]G097.B;1

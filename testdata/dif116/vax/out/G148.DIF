@@ -1,0 +1,27 @@
+************
+File DUA1:[DIF116.IN]G148.A;1
+    7   delta
+    8   lima
+    9   juliet
+   10   india
+******
+File DUA1:[DIF116.IN]G148.B;1
+    7   india
+************
+************
+File DUA1:[DIF116.IN]G148.A;1
+   14   golf
+******
+File DUA1:[DIF116.IN]G148.B;1
+   11   delta
+   12   lima
+   13   juliet
+   14   golf
+************
+
+Number of difference sections found: 2
+Number of difference records found: 6
+
+DIFFERENCES /IGNORE=()/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]G148.DIF;1-
+    DUA1:[DIF116.IN]G148.A;1-
+    DUA1:[DIF116.IN]G148.B;1

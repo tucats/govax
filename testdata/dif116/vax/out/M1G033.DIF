@@ -1,0 +1,49 @@
+************
+File DUA1:[DIF116.IN]G033.A;1
+    1   alpha
+    2   delta
+******
+File DUA1:[DIF116.IN]G033.B;1
+    1   charlie
+    2   delta
+************
+************
+File DUA1:[DIF116.IN]G033.A;1
+    4   charlie
+******
+File DUA1:[DIF116.IN]G033.B;1
+    4   alpha
+    5   charlie
+************
+************
+File DUA1:[DIF116.IN]G033.A;1
+    6   alpha
+    7   alpha
+    8   charlie
+******
+File DUA1:[DIF116.IN]G033.B;1
+    7   delta
+    8   charlie
+************
+************
+File DUA1:[DIF116.IN]G033.A;1
+    9   delta
+   10   delta
+   11   charlie
+******
+File DUA1:[DIF116.IN]G033.B;1
+    9   charlie
+************
+************
+File DUA1:[DIF116.IN]G033.A;1
+   12   charlie
+******
+File DUA1:[DIF116.IN]G033.B;1
+************
+
+Number of difference sections found: 5
+Number of difference records found: 7
+
+DIFFERENCES /IGNORE=()/MATCH=1/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]M1G033.DIF;1-
+    DUA1:[DIF116.IN]G033.A;1-
+    DUA1:[DIF116.IN]G033.B;1

@@ -1,0 +1,29 @@
+************
+File DUA1:[DIF116.IN]G014.A;1
+    2   lima
+    3   alpha
+    4   juliet
+    5   india
+******
+File DUA1:[DIF116.IN]G014.B;1
+    2   alpha
+    3   alpha
+    4   lima
+    5   kilo
+    6   india
+************
+************
+File DUA1:[DIF116.IN]G014.A;1
+   10   alpha
+   11   hotel
+******
+File DUA1:[DIF116.IN]G014.B;1
+   11   hotel
+************
+
+Number of difference sections found: 2
+Number of difference records found: 5
+
+DIFFERENCES /IGNORE=()/MERGED=1/OUTPUT=DUA1:[DIF116.OUT]G014.DIF;1-
+    DUA1:[DIF116.IN]G014.A;1-
+    DUA1:[DIF116.IN]G014.B;1
