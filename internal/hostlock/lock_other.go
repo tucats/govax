@@ -16,3 +16,8 @@ func lockFile(*os.File) error {
 func waitFile(*os.File) error {
 	return nil
 }
+
+// unlockFile has nothing to let go, as lockFile locks nothing.
+func unlockFile(*os.File) error {
+	return nil
+}

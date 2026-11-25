@@ -81,5 +81,18 @@ func (l *Lock) Close() error {
 	f := l.f
 	l.f = nil
 
-	return f.Close() // closing the file releases its lock
+	// Unlock before closing. Closing alone releases the lock only when no
+	// other descriptor refers to the same open file, and a child process
+	// this one is starting holds a copy of every descriptor from its fork
+	// until it execs (close-on-exec closes them only then). A lock let go
+	// by closing alone would stay held through that copy for as long, and a
+	// session that mounted the volume again at that moment would find it in
+	// use. Unlocking releases it whatever copies there are.
+	unlockErr := unlockFile(f)
+
+	if err := f.Close(); err != nil {
+		return err
+	}
+
+	return unlockErr
 }

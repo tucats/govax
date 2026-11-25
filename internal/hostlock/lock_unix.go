@@ -29,3 +29,14 @@ func waitFile(f *os.File) error {
 		}
 	}
 }
+
+// unlockFile lets flock(2)'s lock on f go (LOCK_UN), for the open file
+// itself, so that no copy of its descriptor keeps it held.
+func unlockFile(f *os.File) error {
+	for {
+		err := syscall.Flock(int(f.Fd()), syscall.LOCK_UN)
+		if !errors.Is(err, syscall.EINTR) {
+			return err
+		}
+	}
+}
