@@ -4,7 +4,7 @@ go 1.26.0
 
 require (
 	github.com/chzyer/readline v1.5.1
-	github.com/tucats/gopackages v0.1.4
+	github.com/tucats/gopackages v0.1.5
 	github.com/tucats/ods2 v0.1.34
 	golang.org/x/crypto v0.52.0
 	golang.org/x/sys v0.48.0
