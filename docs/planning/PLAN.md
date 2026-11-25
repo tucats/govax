@@ -166,7 +166,7 @@ questions, and a progress log extended as that phase is worked.
 | 114 | [PHASE-114 - FORTRAN CONVERT](PHASE-114%20-%20FORTRAN%20CONVERT.md) | OPEN's `CONVERT=` other than NATIVE in FTNRTL, held to VMS's FORRTL — planned 2026-11-22 |
 | 115 | [PHASE-115 - Fortran 90 NOTIMPLs](PHASE-115%20-%20Fortran%2090%20NOTIMPLs.md) | The compiler's remaining NOTIMPLs, compiled or refused with a reason — planned 2026-11-23 |
 | 116 | [PHASE-116 - DIFFERENCES](PHASE-116%20-%20DIFFERENCES.md) | DCL's DIFFERENCES: VMS's matching rule, listing forms, and statuses, held to a VMS 7.1 probe — planned 2026-11-25; done 2026-11-25 |
-| 117 | [PHASE-117 - SUMSLP](PHASE-117%20-%20SUMSLP.md) | SUMSLP, VMS's batch editor, as EDIT/SUM (and EDIT/SLP): SLP scripts like DIFFERENCES/SLP's merged and applied to a file, held to a VMS 7.1 probe — planned 2026-11-25 |
+| 117 | [PHASE-117 - SUMSLP](PHASE-117%20-%20SUMSLP.md) | SUMSLP, VMS's batch editor, as EDIT/SUM (and EDIT/SLP): SLP scripts like DIFFERENCES/SLP's merged and applied to a file, and MACRO/UPDATE, held to a VMS 7.1 probe — planned 2026-11-25 |
 
 Phase 13 was split out of Phase 10 once that phase's own investigation found that
 `console_run.c`'s `RUN` command (real `.exe` image activation: ICB/ISD/IHD/IHI struct
