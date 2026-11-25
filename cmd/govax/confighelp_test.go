@@ -10,7 +10,7 @@ import (
 	"github.com/tucats/govax/internal/lbr"
 )
 
-// TestConfigKeysHaveHelp: every configuration key govax reads (validConfigs)
+// TestConfigKeysHaveHelp: every configuration key govax reads (configKeys)
 // is described under HELP CONFIGURATION KEYS (docs/planning/PHASE-90 - VMS help.md,
 // Decision 10). The debug switches are described together, as
 // vax.debug.NAME (SET DEBUG's names).
@@ -35,7 +35,8 @@ func TestConfigKeysHaveHelp(t *testing.T) {
 		t.Fatal("no CONFIGURATION KEYS topic")
 	}
 
-	for key := range validConfigs {
+	for _, k := range configKeys {
+		key := k.Name
 		if strings.HasPrefix(key, "vax.debug.") && strings.Contains(text, "vax.debug.NAME") {
 			continue
 		}

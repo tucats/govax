@@ -23,9 +23,12 @@
 
        govax config set vax.default.volume.file="~/vax/work.dsk"
 
-   Keys are case-sensitive and written in lowercase.  govax warns at
-   exit about any key in the profile it doesn't recognize, which usually
-   means a misspelling.
+   Keys are written in lowercase.  CONFIG SET refuses a vax. key govax
+   doesn't read (usually a misspelling) and a value the key can't take
+   (a count that isn't a number, say), saying why; CONFIG DELETE removes
+   any key.  govax warns at exit about any such key that got into the
+   profile another way, as by editing its file, and uses the default
+   instead of a value it can't use.
 
    For the list of keys and what each one does, type:
 

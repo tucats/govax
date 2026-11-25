@@ -580,10 +580,20 @@ true
 $ govax config delete vax.sysgen.paging.enable
 ```
 
-Keys are lowercase. govax warns, as it exits, about any key in the profile
-it doesn't recognize; that usually means a misspelling. It also warns
-about a value it can't use (a page count that isn't a number, say) and
-uses the default instead.
+Keys are lowercase. `govax config set` refuses a `vax.` key govax doesn't
+read, which usually means a misspelling, and a value the key can't take (a
+page count that isn't a number, say), and says why:
+
+```text
+$ govax config set vax.sysgen.minwscnt=lots
+govax: invalid configuration value: vax.sysgen.minwscnt="lots": must be a positive integer (decimal, or %X and hexadecimal)
+$ govax config set vax.libary=~/vax/lib
+govax: invalid configuration name: vax.libary
+```
+
+`govax config delete` removes any key, known or not. A key that got into
+the profile another way, as by editing its file, is warned about as govax
+exits, and for a value it can't use govax uses the default instead.
 
 Quote values your shell would otherwise change. In particular, zsh and
 some other shells treat `[...]` as a file name pattern:

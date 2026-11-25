@@ -68,6 +68,9 @@ func main() {
 	app.MakePrivate("insecure")
 	app.MakePrivate("quiet")
 
+	// The vax. keys "govax config set" may set, and their values.
+	reserveConfigKeys()
+
 	govaxApp := app.New("govax: VAX/VMS emulator")
 	govaxApp.SetVersion(parseVersion(BuildVersion))
 	govaxApp.SetCopyright("(C) Copyright Tom Cole 2026")
@@ -84,7 +87,7 @@ func main() {
 		os.Exit(reportFailure(os.Stderr, err))
 	}
 
-	auditConfig()
+	auditConfig(os.Stdout)
 }
 
 // reportFailure shows govax's failure err on w, unless its message has
