@@ -1,6 +1,9 @@
 package diff
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // SLP writes /SLP's script: the edits SLP, VMS's batch editor, would make to
 // turn the master into the revision (testdata/dif116's F35, L03, SAnn,
@@ -20,7 +23,9 @@ import "fmt"
 // to 27 deleted (no records follow), and "/", the script's end.
 //
 // The numbers are five columns wide, more if they need them; the records are
-// their text, never cut; an insertion before the master's first record is a
+// their text, never cut, but a record that starts with one of SLP's
+// operators (- / < \ %) gets a "<" before it, so SLP takes it as text
+// (testdata/sum117's R09 to R14); an insertion before the master's first record is a
 // bare "-" (SA06). Files that don't differ get only the "/" (SG137).
 // A comparison /MAXIMUM_DIFFERENCES stopped ends with its cut last section
 // (L03). The numbers are the master's records' in its file, records
@@ -39,9 +44,19 @@ func SLP(master, revision Input, res Result) []string {
 		}
 
 		for r := s.Revision.Start; r < min(s.Revision.End, len(revision.Records)); r++ {
-			lines = append(lines, string(revision.Records[r]))
+			lines = append(lines, slpText(revision.Records[r]))
 		}
 	}
 
 	return append(lines, "/")
+}
+
+// slpText is a record as a script's text line: with a "<" before it if it
+// starts with an SLP operator, which SLP would otherwise act on.
+func slpText(r []byte) string {
+	if len(r) > 0 && strings.IndexByte("-/<\\%", r[0]) >= 0 {
+		return "<" + string(r)
+	}
+
+	return string(r)
 }
