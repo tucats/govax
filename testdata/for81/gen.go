@@ -3993,19 +3993,27 @@ func main() {
 	d := rms2()
 	g := round3()
 	t := term3()
+	k := round3b()
+	w := term3b()
 
 	files := map[string]string{
-		"for81.mar":  f.write("Phase 81's probe of FORRTL's file statements", forrtlCode),
-		"for81r.mar": r.write("Phase 81's probe of RMS's relative and fixed-length files", rmsCode),
-		"for81c.mar": c.write2("round 2 of Phase 81's probe, FORRTL", forrtlCode),
-		"for81d.mar": d.write2("round 2 of Phase 81's probe, RMS", rmsCode),
-		"for81x.mar": exitProg,
-		"for81g.mar": g.write2("Phase 113's FORRTL round, round 3 of Phase 81's probe", forrtlCode+round3Code),
-		"for81t.mar": t.write2("Phase 113's FORRTL round at a terminal, by hand", forrtlCode+round3Code),
-		"for81g.com": comG,
-		"for81h.com": "$ SET NOVERIFY\n$ RUN FOR81G\n$ EXIT $STATUS\n",
-		"for81c.com": comC,
-		"for81f.com": comF,
+		"for81.mar":     f.write("Phase 81's probe of FORRTL's file statements", forrtlCode),
+		"for81r.mar":    r.write("Phase 81's probe of RMS's relative and fixed-length files", rmsCode),
+		"for81c.mar":    c.write2("round 2 of Phase 81's probe, FORRTL", forrtlCode),
+		"for81d.mar":    d.write2("round 2 of Phase 81's probe, RMS", rmsCode),
+		"for81x.mar":    exitProg,
+		"for81g.mar":    g.write2("Phase 113's FORRTL round, round 3 of Phase 81's probe", forrtlCode+round3Code),
+		"for81t.mar":    t.write2("Phase 113's FORRTL round at a terminal, by hand", forrtlCode+round3Code),
+		"for81g.com":    comG,
+		"for81k.mar":    k.write2("Round 3b of Phase 81's probe, round 3's follow-up", forrtlCode+round3Code+round3bCode),
+		"for81w.mar":    w.write2("Round 3b at a terminal, by hand", forrtlCode+round3Code+round3bCode),
+		"for81k.com":    comK,
+		"for81l.com":    "$ SET NOVERIFY\n$ RUN FOR81K\n$ EXIT $STATUS\n",
+		"exchangek.cmd": exchangeK,
+		"copyoutk.cmd":  copyoutK,
+		"for81h.com":    "$ SET NOVERIFY\n$ RUN FOR81G\n$ EXIT $STATUS\n",
+		"for81c.com":    comC,
+		"for81f.com":    comF,
 		"exchangef.cmd": `! EXCHANGEF.CMD - builds the volume for round 2's FORRTL program, run again.
 ! Written by testdata/for81/gen.go. Run from the repository root:
 !
@@ -4095,6 +4103,453 @@ DISMOUNT DUA2
 		}
 	}
 
-	fmt.Printf("for81.mar: %d cases; for81r.mar: %d cases; for81c.mar: %d cases; for81d.mar: %d cases; for81g.mar: %d cases\n",
-		f.n, r.n, c.n, d.n, g.n)
+	fmt.Printf("for81.mar: %d cases; for81r.mar: %d cases; for81c.mar: %d cases; for81d.mar: %d cases; for81g.mar: %d cases; for81k.mar: %d cases\n",
+		f.n, r.n, c.n, d.n, g.n, k.n)
 }
+
+// round3b is round 3's follow-up, FOR81K (docs/planning/PHASE-113 - Fortran
+// errata.md, subtask 13e's "Left, unconfirmed"): what round 3 left open, each
+// section one question.
+//
+//	A  the associated variable and NEXTREC after DELETE by number, in orders
+//	   where "the larger of the next record and r, plus 1" and "the next record
+//	   plus r" differ (round 3's #14 fits both)
+//	B  OTS$CVT_L_TO, _TZ, and _TI into a field of no columns, called directly:
+//	   round 3's O0 and Z0 of 0 showed a 0 in the column before the field
+//	C  REWRITE and DELETE after a direct READ, with and without UNLOCK
+//	D  a key that is an unsigned word (a file made by RMS), and a signed
+//	   word's limits, read by longwords
+//	E  the user PC of errors other than INPCONERR found at an item's call or
+//	   at the begin call (with two items, i= is the second item's call)
+//	F  REWRITE after BACKSPACE, the records told apart, so it shows which one
+//	   is rewritten, and after a BACKSPACE to the first record or none
+//
+// Its terminal part, FOR81W, is run by hand: lines of exactly 133 and 132
+// characters at the terminal.
+func round3b() *prog {
+	p := newProg("FOR81K")
+
+	p.section("setup")
+
+	p.kase("make the relative files, eight records each, record n's text RECn", func() {
+		for _, name := range []string{"AV1", "AV2", "AV3", "AV4", "AV5", "AV6", "AV7", "RU1", "RU2"} {
+			p.open(10, file(p, name+".DAT"), imm(kOrg, 2), imm(kForm, 1), imm(kRecl, 8), imm(kAccess, 1), imm(kStatus, 2))
+			for r := 1; r <= 8; r++ {
+				p.wrDO(10, r, fmt.Sprintf("REC%d", r))
+			}
+			p.closeU(10)
+		}
+	})
+	p.kase("make the sequential FIX files, their records ONE to FOUR", func() {
+		for _, name := range []string{"BS1", "BS2", "BS3", "BS4", "FU1", "FU2"} {
+			p.open(10, file(p, name+".DAT"), imm(kRecType, 1), imm(kRecl, 8), imm(kStatus, 2))
+			for _, s := range []string{"ONE", "TWO", "THREE", "FOUR"} {
+				p.wrF(10, s)
+			}
+			p.closeU(10)
+		}
+	})
+	p.kase("make ONE.DAT, one record, and SEG.DAT, unformatted, one record of 8 bytes", func() {
+		p.open(14, file(p, "ONE.DAT"), imm(kStatus, 2))
+		p.wrF(14, "ABCD")
+		p.closeU(14)
+		p.open(15, file(p, "SEG.DAT"), imm(kForm, 2), imm(kStatus, 2))
+		p.wrU(15, 8)
+		p.closeU(15)
+	})
+
+	p.section("A: the associated variable (asv, -1 before each statement) and NEXTREC (nr) after DELETE by number")
+
+	avCases := []struct {
+		title string
+		ops   []string // "R n" READ, "D n" DELETE, "F n" FIND, "W n" WRITE
+	}{
+		{"DELETE 5 first", []string{"D 5"}},
+		{"READ 2, then DELETE 6", []string{"R 2", "D 6"}},
+		{"READ 6, then DELETE 2", []string{"R 6", "D 2"}},
+		{"FIND 3, then DELETE 7", []string{"F 3", "D 7"}},
+		{"DELETE 2, DELETE 5, DELETE 3", []string{"D 2", "D 5", "D 3"}},
+		{"READ 4, then DELETE 4", []string{"R 4", "D 4"}},
+		{"WRITE 3, then DELETE 1, then READ 2", []string{"W 3", "D 1", "R 2"}},
+	}
+	for i, c := range avCases {
+		name := fmt.Sprintf("AV%d.DAT", i+1)
+		p.kase(c.title, func() {
+			p.emit("MOVL\t#-1,ASVL")
+			p.open(10, file(p, name), imm(kOrg, 2), imm(kForm, 1), imm(kAccess, 1), imm(kStatus, 1),
+				ref(kAssocVar, mLongRef, "ASVL"))
+			p.asvNext()
+			for _, op := range c.ops {
+				var r int
+				fmt.Sscanf(op[2:], "%d", &r)
+				p.emit("MOVL\t#-1,ASVL")
+				switch op[0] {
+				case 'R':
+					p.rdDO(10, r, 8)
+				case 'D':
+					p.call("FOR$DELETE_D", true, "#10", fmt.Sprintf("#%d", r))
+				case 'F':
+					p.call("FOR$FIND", true, "#10", fmt.Sprintf("#%d", r))
+				case 'W':
+					p.wrDO(10, r, "NEW")
+				}
+				p.asvNext()
+			}
+			p.closeU(10)
+		})
+	}
+
+	p.section("B: OTS$ conversions into fields of no columns: R0, then 12 bytes from 4 before the field, bars before the call")
+
+	cvts := []struct {
+		routine string
+		values  []int
+	}{
+		{"OTS$CVT_L_TO", []int{0, 8, -1}},
+		{"OTS$CVT_L_TZ", []int{0, 255, -1}},
+		{"OTS$CVT_L_TI", []int{0, 5, -5}},
+	}
+	for _, c := range cvts {
+		p.kase(c.routine+" of a longword, lengths 0 and 1, with no digits and with 1", func() {
+			for _, v := range c.values {
+				for _, n := range []int{0, 1} {
+					p.cvt(c.routine, v, n, -1)
+					p.cvt(c.routine, v, n, 1)
+				}
+			}
+		})
+	}
+
+	p.section("C: REWRITE and DELETE after a direct READ, with and without UNLOCK")
+
+	p.kase("relative: READ 2, UNLOCK, REWRITE", func() {
+		p.open(10, file(p, "RU1.DAT"), imm(kOrg, 2), imm(kForm, 1), imm(kAccess, 1), imm(kStatus, 1))
+		p.rdDO(10, 2, 8)
+		p.call("FOR$UNLOCK", true, "#10")
+		p.rwF(10, "NEW2")
+		p.errs()
+		p.call("FOR$DELETE", true, "#10")
+		p.errs()
+		p.closeU(10)
+		p.stat("RU1.DAT", 1)
+	})
+	p.kase("relative: READ 3, REWRITE, DELETE, with no UNLOCK", func() {
+		p.open(10, file(p, "RU2.DAT"), imm(kOrg, 2), imm(kForm, 1), imm(kAccess, 1), imm(kStatus, 1))
+		p.rdDO(10, 3, 8)
+		p.rwF(10, "NEW3")
+		p.errs()
+		p.call("FOR$DELETE", true, "#10")
+		p.errs()
+		p.closeU(10)
+		p.stat("RU2.DAT", 1)
+	})
+	p.kase("sequential FIX, direct: READ 2, UNLOCK, REWRITE", func() {
+		p.open(10, file(p, "FU1.DAT"), imm(kAccess, 1), imm(kForm, 1), imm(kRecType, 1), imm(kRecl, 8), imm(kStatus, 1))
+		p.rdDO(10, 2, 8)
+		p.call("FOR$UNLOCK", true, "#10")
+		p.rwF(10, "NEW2")
+		p.errs()
+		p.closeU(10)
+		p.stat("FU1.DAT", 1)
+	})
+	p.kase("sequential FIX, direct: READ 3, REWRITE, with no UNLOCK", func() {
+		p.open(10, file(p, "FU2.DAT"), imm(kAccess, 1), imm(kForm, 1), imm(kRecType, 1), imm(kRecl, 8), imm(kStatus, 1))
+		p.rdDO(10, 3, 8)
+		p.rwF(10, "NEW3")
+		p.errs()
+		p.closeU(10)
+		p.stat("FU2.DAT", 1)
+	})
+
+	p.section("D: word keys read by longwords and words")
+
+	p.kase("an unsigned word key (UW.IDX, made by RMS with DTP=BN2)", func() {
+		p.stmt(func() {
+			p.emit("CALLS\t#0,L^MKUW")
+			p.shownow("MKUW")
+		})
+		p.open(10, file(p, "UW.IDX"), imm(kOrg, 3), imm(kForm, 2), imm(kAccess, 4), imm(kStatus, 1))
+		p.fab(10)
+		for _, r := range []string{"UR1", "UR2", "UR3"} {
+			p.wrBytes(10, r, "8")
+		}
+		for _, k := range []string{"KDL5", "KDL65535", "KDL32768", "KDL65536", "KDLM1", "KDW5", "KDWM1"} {
+			p.rdKey(10, k, 8)
+			p.errs()
+		}
+		p.closeU(10)
+	})
+	p.kase("a signed word key's limits (SW.IDX, by KEY=)", func() {
+		p.open(10, file(p, "SW.IDX"), imm(kOrg, 3), addr(kKey, "KWB"), imm(kRecl, 2), imm(kRecType, 1),
+			imm(kForm, 2), imm(kAccess, 4), imm(kStatus, 2))
+		for _, r := range []string{"SR1", "SR2", "SR3"} {
+			p.wrBytes(10, r, "8")
+		}
+		for _, k := range []string{"KDL32767", "KDL32768", "KDLM32768", "KDLM32769", "KDLM1"} {
+			p.rdKey(10, k, 8)
+			p.errs()
+		}
+		p.closeU(10)
+	})
+
+	p.section("E: the user PC of errors found at an item's call or the begin call: b=, i=, e= as round 3's")
+
+	p.kase("ENDDURREA at the second item: (A4,/,A4) of a file of one record", func() {
+		p.open(14, file(p, "ONE.DAT"), imm(kStatus, 1), imm(kReadOnly, 1))
+		p.pcStatement(func() {
+			p.call("FOR$READ_SO", false, "#14", "&"+p.fmtz("(A4,/,A4)"))
+		}, func() {
+			p.rdItem(4)
+		}, func() {
+			p.emit("MOVAB\t904$,PCR1") // i= is then the second item's
+			p.rdItem(4)
+			p.emit("904$:")
+		})
+		p.errs()
+		p.closeU(14)
+	})
+	p.kase("OUTSTAOVE at the second item: (A80,A80) to unit 13", func() {
+		p.pcStatement(func() {
+			p.call("FOR$WRITE_SO", false, "#13", "&"+p.fmtz("(A80,A80)"))
+		}, func() {
+			p.call("FOR$IO_T_DS", false, "&"+p.text(strings.Repeat("A", 80)))
+		}, func() {
+			p.emit("MOVAB\t904$,PCR1")
+			p.call("FOR$IO_T_DS", false, "&"+p.text(strings.Repeat("B", 80)))
+			p.emit("904$:")
+		})
+		p.errs()
+		p.closeU(13, imm(kDispose, 2))
+	})
+	p.kase("INPSTAREQ at the item: an unformatted READ of 16 bytes from a record of 8", func() {
+		p.open(15, file(p, "SEG.DAT"), imm(kForm, 2), imm(kStatus, 1), imm(kReadOnly, 1))
+		p.pcStatement(func() {
+			p.call("FOR$READ_SU", false, "#15")
+		}, func() {
+			p.rdItem(16)
+		})
+		p.errs()
+		p.closeU(15)
+	})
+	p.kase("ENDDURREA at the begin call: a second unformatted READ of SEG.DAT", func() {
+		p.open(15, file(p, "SEG.DAT"), imm(kForm, 2), imm(kStatus, 1), imm(kReadOnly, 1))
+		p.rdU(15, 8)
+		p.pcStatement(func() {
+			p.call("FOR$READ_SU", false, "#15")
+		}, func() {
+			p.rdItem(8)
+		})
+		p.closeU(15)
+	})
+	p.kase("FILNOTFOU at the begin call: READ of unit 18, no FOR018.DAT", func() {
+		p.pcStatement(func() {
+			p.call("FOR$READ_SO", false, "#18", "&FMTA")
+		}, func() {
+			p.rdItem(4)
+		})
+		p.errs()
+	})
+
+	p.section("F: REWRITE after BACKSPACE, the records ONE to FOUR")
+
+	bs := []struct {
+		title string
+		reads int
+		backs int
+		after int // reads after the BACKSPACEs
+	}{
+		{"two READs, BACKSPACE, REWRITE", 2, 1, 0},
+		{"one READ, BACKSPACE (to the first), REWRITE", 1, 1, 0},
+		{"no READ, BACKSPACE, REWRITE", 0, 1, 0},
+		{"three READs, two BACKSPACEs, REWRITE", 3, 2, 0},
+	}
+	for i, c := range bs {
+		name := fmt.Sprintf("BS%d.DAT", i+1)
+		p.kase(c.title, func() {
+			p.open(10, file(p, name), imm(kStatus, 1))
+			for range c.reads {
+				p.rdF(10, 8)
+			}
+			for range c.backs {
+				p.unitCall("FOR$BACKSPACE", 10)
+			}
+			p.rwF(10, "NEW")
+			p.errs()
+			p.rdF(10, 8)
+			p.closeU(10)
+			p.stat(name, 1)
+		})
+	}
+
+	return p
+}
+
+// asvNext shows the associated variable and INQUIRE's NEXTREC (code 42).
+func (p *prog) asvNext() {
+	p.asv()
+	p.emit("PUSHL\t#0")
+	p.emit("PUSHL\t#^X000A0101")
+	p.emit("PUSHL\t#42")
+	p.emit("CALLS\t#3,L^INQ1")
+}
+
+// cvt calls an OTS$CVT_L_Tx routine on v into a field of n columns, with digits
+// as its third argument (by value) unless digits is -1.
+func (p *prog) cvt(routine string, v, n, digits int) {
+	p.stmt(func() {
+		p.emit("PUSHAB\t%s", p.text(fmt.Sprintf("%s v=%d n=%d d=%d", strings.TrimPrefix(routine, "OTS$"), v, n, digits)))
+		p.emit("CALLS\t#1,G^LIB$PUT_OUTPUT")
+		p.emit("MOVC5\t#0,CVB,#^A/|/,#12,CVB")
+		p.emit("MOVL\t#%d,CVV", v)
+		p.emit("MOVW\t#%d,CVD", n)
+		count := 2
+		if digits >= 0 {
+			p.emit("PUSHL\t#%d", digits)
+			count = 3
+		}
+		p.emit("PUSHAB\tCVD")
+		p.emit("PUSHAB\tCVV")
+		p.emit("CALLS\t#%d,G^%s", count, routine)
+		p.shownow("R0")
+		p.emit("PUSHL\t#12")
+		p.emit("PUSHAB\tCVB")
+		p.emit("CALLS\t#2,L^HEXS")
+	})
+}
+
+// term3b is round 3b's terminal program, run by hand: lines of exactly 133 and
+// 132 characters, each followed by a short line.
+func term3b() *prog {
+	p := newProg("FOR81W")
+
+	p.kase("type exactly 133 characters, then Return (READ unit 5, (Q,A))", func() { p.rdQ(5, 300) })
+	p.kase("type a short line (READ unit 5, (Q,A))", func() {
+		p.rdQ(5, 300)
+		p.errs()
+	})
+	p.kase("type exactly 132 characters, then Return (READ unit 5, (Q,A))", func() { p.rdQ(5, 300) })
+	p.kase("type a short line (READ unit 5, (Q,A))", func() {
+		p.rdQ(5, 300)
+		p.errs()
+	})
+
+	return p
+}
+
+// round3bCode is round 3b's own data and routines beside round 3's.
+const round3bCode = `	.PSECT	D,NOEXE,WRT,LONG
+; B's field: CVD describes 0 or 1 columns at CVB+4.
+CVV:	.LONG	0
+CVB:	.BLKB	12
+CVD:	.WORD	0
+	.BYTE	14,1
+	.ADDRESS CVB+4
+; D's records and keys.
+UR1:	.WORD	5
+	.ASCII	/FIVE  /
+UR2:	.WORD	65535
+	.ASCII	/MAXUNS/
+UR3:	.WORD	32768
+	.ASCII	/32768 /
+SR1:	.WORD	32767
+	.ASCII	/MAXPOS/
+SR2:	.WORD	-32768
+	.ASCII	/MINNEG/
+SR3:	.WORD	-1
+	.ASCII	/MINUS1/
+	.ALIGN	LONG
+KL65535:	.LONG	65535
+KL32768:	.LONG	32768
+KL65536:	.LONG	65536
+KLM1:	.LONG	-1
+KL32767:	.LONG	32767
+KLM32768:	.LONG	-32768
+KLM32769:	.LONG	-32769
+KWM1:	.WORD	-1
+	.ALIGN	LONG
+KDL65535:	.WORD	4
+	.BYTE	8,1
+	.ADDRESS KL65535
+KDL32768:	.WORD	4
+	.BYTE	8,1
+	.ADDRESS KL32768
+KDL65536:	.WORD	4
+	.BYTE	8,1
+	.ADDRESS KL65536
+KDLM1:	.WORD	4
+	.BYTE	8,1
+	.ADDRESS KLM1
+KDL32767:	.WORD	4
+	.BYTE	8,1
+	.ADDRESS KL32767
+KDLM32768:	.WORD	4
+	.BYTE	8,1
+	.ADDRESS KLM32768
+KDLM32769:	.WORD	4
+	.BYTE	8,1
+	.ADDRESS KLM32769
+KDWM1:	.WORD	2
+	.BYTE	7,1
+	.ADDRESS KWM1
+; UW.IDX: FIX 8, one key, an unsigned word at byte 0.
+	.ALIGN	LONG
+UFB:	$FAB	FNM=<UW.IDX>,ORG=IDX,RFM=FIX,MRS=8,FAC=<PUT>,XAB=UXK
+	.ALIGN	LONG
+UXK:	$XABKEY	REF=0,DTP=BN2,POS=0,SIZ=2
+	.PSECT	C,EXE,NOWRT,LONG
+; MKUW makes UW.IDX, returning RMS's status.
+	.ENTRY	MKUW,^M<>
+	$CREATE	FAB=UFB
+	BLBC	R0,90$
+	$CLOSE	FAB=UFB
+90$:	RET
+`
+
+const comK = `$ ! FOR81K.COM - round 3b of testdata/for81, round 3's follow-up.
+$ ! Written by testdata/for81/gen.go. Run it from the exchange volume's [000000]
+$ ! (testdata/for81's README, "Round 3b"):
+$ !
+$ !     @FOR81K/OUTPUT=FOR81K.LOG
+$ !
+$ SET NOON
+$ SET VERIFY
+$ WRITE SYS$OUTPUT F$GETSYI("VERSION"), " ", F$GETSYI("HW_NAME")
+$ MACRO/NOLIST FOR81K
+$ LINK/NOMAP FOR81K,FOR81/OPTIONS
+$ MACRO/NOLIST FOR81W
+$ LINK/NOMAP FOR81W,FOR81/OPTIONS
+$ !
+$ ! Through a procedure with /OUTPUT, so that unit 6's records join the cases'
+$ ! lines in one file.
+$ @FOR81L/OUTPUT=FOR81K-VAX.TXT
+$ SHOW SYMBOL $STATUS
+$ DIRECTORY/SIZE=ALL *.DAT,*.IDX
+$ EXIT
+`
+
+const exchangeK = `! EXCHANGEK.CMD - builds round 3b's exchange volume with govax.
+! Written by testdata/for81/gen.go. Run from the repository root:
+!
+!     govax console < testdata/for81/exchangek.cmd
+!
+INITIALIZE/CONTAINER "testdata/disks/for81k-exchange.dsk" /DEVICE=RD54 FOR81K
+MOUNT/WRITE DUA2 "testdata/disks/for81k-exchange.dsk"
+COPY "testdata/for81/for81k.mar"/HOST DUA2:[000000]FOR81K.MAR
+COPY "testdata/for81/for81w.mar"/HOST DUA2:[000000]FOR81W.MAR
+COPY "testdata/for81/for81.opt"/HOST DUA2:[000000]FOR81.OPT
+COPY "testdata/for81/for81k.com"/HOST DUA2:[000000]FOR81K.COM
+COPY "testdata/for81/for81l.com"/HOST DUA2:[000000]FOR81L.COM
+DIRECTORY DUA2:[000000]
+DISMOUNT DUA2
+`
+
+const copyoutK = `! COPYOUTK.CMD - copies round 3b's output off its exchange volume.
+! Written by testdata/for81/gen.go. Run from the repository root:
+!
+!     govax console < testdata/for81/copyoutk.cmd
+!
+MOUNT DUA2 "testdata/disks/for81k-exchange.dsk"
+COPY DUA2:[000000]FOR81K-VAX.TXT "testdata/for81/vax/for81k-vax.txt"/HOST
+COPY DUA2:[000000]FOR81K.LOG "testdata/for81/vax/for81k.log"/HOST
+DISMOUNT DUA2
+`

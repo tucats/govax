@@ -8,6 +8,8 @@
 ;	FOR$IO_L_R(address)	a longword by reference
 ;	FOR$IO_F_R(address)	an F_floating value by reference
 ;	FOR$ERRSNS(...)		FTN$ERRSNS, the same arguments
+;	FOR$READ_DO(unit, record, format)	FTN$READ_DF(control block, unit,
+;	FOR$WRITE_DO(the same)		 format's descriptor, record): round 3b's
 ;
 ; FTNRTL takes every item by descriptor, FTN$IO_ITEM(desc), so each item routine
 ; makes a class S descriptor of its item and runs FTN$IO_ITEM's code in its own
@@ -23,6 +25,13 @@ ITEM:	.WORD	4			; the item's descriptor
 	.BYTE	8,1			; DSC$K_DTYPE_L, DSC$K_CLASS_S
 	.ADDRESS 0
 VALUE:	.LONG	0			; a value by value
+DARGS:	.BLKL	5			; a direct formatted statement's arguments
+DCTL:	.WORD	8			; its control block
+	.WORD	8			;  a run-time format
+	.LONG	0
+DFMT:	.WORD	0			; the format's descriptor
+	.BYTE	14,1
+	.ADDRESS 0
 
 	.PSECT	FOR81GF_CODE,EXE,NOWRT,LONG
 
@@ -47,6 +56,32 @@ ALL	= ^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
 	.ENTRY	FOR$IO_F_R,ALL
 	MOVL	4(AP),ITEM+4
 	ITEM_GO	10			; DSC$K_DTYPE_F
+
+;
+; DIRECT: FOR$READ_DO's arguments as FTN$READ_DF's, AP pointed at them.
+;
+DIRECT:	MOVL	#4,DARGS
+	MOVAB	DCTL,DARGS+4
+	MOVL	4(AP),DARGS+8		; the unit
+	MOVL	12(AP),R2		; the format, .ASCIZ
+	MOVL	R2,DFMT+4
+	LOCC	#0,#255,(R2)
+	SUBL3	R2,R1,R0
+	MOVW	R0,DFMT
+	MOVAB	DFMT,DARGS+12
+	MOVL	8(AP),DARGS+16		; the record, last
+	MOVAB	DARGS,AP
+	RSB
+
+	.ENTRY	FOR$READ_DO,ALL
+	BSBW	DIRECT
+	MOVAB	G^FTN$READ_DF,R0
+	JMP	2(R0)
+
+	.ENTRY	FOR$WRITE_DO,ALL
+	BSBW	DIRECT
+	MOVAB	G^FTN$WRITE_DF,R0
+	JMP	2(R0)
 
 	.ENTRY	FOR$ERRSNS,^M<>
 	CALLG	(AP),G^FTN$ERRSNS

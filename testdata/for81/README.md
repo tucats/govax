@@ -156,6 +156,46 @@ masked, being wherever the library was loaded. `FOR81G_WRITE` names a file for g
 and `FOR81G_DEBUG` turns on SET DEBUG RMS for the run. FOR81T's terminal session is held by
 `TestFortranTerminalLongLine`.
 
+## Round 3b: what round 3 left open
+
+`docs/planning/PHASE-113 - Fortran errata.md`'s subtask 13e held FTNRTL to round 3 and
+left a few questions, which round 3b asks. `gen.go`'s `round3b` and `term3b` write:
+
+| File | What it holds |
+| ---- | ------------- |
+| `for81k.mar` | 28 cases, a section per question: A, the associated variable (`asv`) and INQUIRE's NEXTREC (`q42`) after DELETE by number, in orders where round 3's two candidate rules differ; B, OTS$CVT_L_TO, _TZ, and _TI called directly into a field of no columns and of one (R0, then the 12 bytes from 4 before the field, bars before the call), for round 3's `0` before an O0 or Z0 field of 0; C, REWRITE and DELETE after a direct READ, with and without UNLOCK, on a relative file and a sequential FIX one; D, a key that is an unsigned word (UW.IDX, made by RMS with DTP=BN2) and a signed word's limits, read by longwords and words; E, the user PC of errors found at an item's call or the begin call (ENDDURREA at a `/`, OUTSTAOVE, INPSTAREQ, an unformatted ENDDURREA, FILNOTFOU; with two items, `i=` is the second item's call); F, REWRITE after BACKSPACE on records ONE to FOUR, so the records show which one changed |
+| `for81w.mar` | At a terminal, by hand: a line of exactly 133 characters, then a short one; one of 132, then a short one |
+| `for81k.com`, `for81l.com` | Build both, run FOR81K with its output in FOR81K-VAX.TXT, list the files |
+| `exchangek.cmd`, `copyoutk.cmd` | The exchange volume, `testdata/disks/for81k-exchange.dsk`, and the copy back |
+
+The session, from the repository root:
+
+    go build -o govax ./cmd/govax
+    ./govax --profile tbprobe --system-file none console < testdata/for81/exchangek.cmd
+
+In simh, attach `testdata/disks/for81k-exchange.dsk` as DUA1, then:
+
+    $ MOUNT DUA1: FOR81K
+    $ SET DEFAULT DUA1:[000000]
+    $ @FOR81K/OUTPUT=FOR81K.LOG
+    $ RUN FOR81W
+    $ DISMOUNT DUA1:
+
+Paste the terminal's text from `$ RUN FOR81W` to its end into `vax/for81w.log`. FOR81W's
+cases say what to type. For each line of 133 or 132 characters, type exactly that many
+(a ruler helps: `1234567890` thirteen times and then `123` or `12`), then Return, and wait:
+if the short line's prompt is answered at once, with nothing typed, note it; that is
+the question. Then, with the volume back on the host:
+
+    ./govax --profile tbprobe --system-file none console < testdata/for81/copyoutk.cmd
+
+`TestFor81KProcedure` (`internal/console/for81k_test.go`) rehearses FOR81K on VMS's
+FORRTL.EXE over govax (or skips without one on a local volume), and `TestFor81KOnFTNRTL`
+on FTNRTL; until `vax/for81k-vax.txt` exists they only check that it runs to its end.
+FORRTL's own logic answers some of the questions over govax already (E's user PCs, A's
+values as FORRTL computes them from govax's RMS); the VAX confirms them and answers the
+rest. `FOR81K_WRITE` names a file for govax's output.
+
 ## What the tests hold
 
 `internal/console/for81rms_test.go` runs the RMS programs on govax, on a fresh RD54 volume as

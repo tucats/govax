@@ -729,6 +729,8 @@ A.8.1 is not planned.
       `TestErr113Procedure` held to `vax/err113.log` (done 2026-11-24).
     - 13d. The index file's growth (A.9.1): ods2 extending INDEXF.SYS as VMS's XQP does (done 2026-11-24).
     - 13e. FTNRTL to the FORRTL round (`testdata/for81`'s round 3 and the terminal's limits) (done 2026-11-24).
+    - 13e2. Round 3b, what 13e left open (`testdata/for81`'s FOR81K and FOR81W): written and
+      rehearsed (2026-11-24); its VMS 7.1 run and the fixes it calls for to come.
     - 13f. The debugger to the debugger round (`testdata/dbg113`'s sessions).
     - 13g. The FORTRAN rounds: `TestFTN86Oracle` on `testdata/ftn86`'s round 6 and
       `TestF90ROracle` on `testdata/f90r`'s round 3, their awaiting lists emptied.
@@ -1553,3 +1555,24 @@ Each subtask may begin with a survey of its own, as earlier phases' did.
     exactly 133 characters (whether its return is an empty next line); a REWRITE after a
     BACKSPACE to the first record.
   - Subtask 13f, the debugger to the debugger round, is next.
+- **2026-11-24, subtask 13e2 (written and rehearsed):** round 3b of `testdata/for81`, by the
+  author's offer of another VAX run, asks what 13e left open (its README's "Round 3b").
+  `gen.go`'s `round3b` writes FOR81K (28 cases): A, the associated variable and INQUIRE's NEXTREC
+  after DELETE by number in orders where 13e's two candidate rules differ; B, OTS$CVT_L_TO, _TZ,
+  and _TI called directly into fields of 0 and 1 columns; C, REWRITE and DELETE after a direct
+  READ, with and without UNLOCK; D, an unsigned word key (UW.IDX, made by RMS, DTP=BN2) and a
+  signed word key's limits; E, the user PC of ENDDURREA at a `/`, OUTSTAOVE, INPSTAREQ, an
+  unformatted ENDDURREA, and FILNOTFOU; F, REWRITE after BACKSPACE on records told apart. `term3b`
+  writes FOR81W, lines of exactly 133 and 132 characters at the terminal, by hand.
+  `exchangek.cmd` makes `testdata/disks/for81k-exchange.dsk`, `copyoutk.cmd` brings back
+  `vax/for81k-vax.txt` and `vax/for81k.log`; FOR81W's text goes in `vax/for81w.log`.
+  - *The rehearsal* (`internal/console/for81k_test.go`): `TestFor81KProcedure` on VMS's FORRTL
+    over govax, `TestFor81KOnFTNRTL` on FTNRTL (`for81gf.mar` now has FOR$READ_DO and
+    FOR$WRITE_DO). What FORRTL already shows over govax, for the VAX to confirm: DELETE (u'r)
+    sets the associated variable and NEXTREC to r+1, but to r+2 when r is the record just read
+    (READ 4, DELETE 4: 6; round 3's READ 1, DELETE 1: 3), which may come from govax's RMS; an
+    unsigned word key takes a longword from 0 to 65,535 (65,536 and -1 INVKEYSPE) and a word as
+    it stands, a signed one -32,768 to 32,767; an unformatted READ's end of file is found at its
+    first item's call, and FILNOTFOU at the begin call reports the begin call's user PC (FTNRTL:
+    FOR$IO_END's for both); a REWRITE after BACKSPACE rewrites the record before the one gone
+    back to; govax's OTS$CVT_L_TO into no columns writes nothing and returns OTS$_OUTCONERR.
