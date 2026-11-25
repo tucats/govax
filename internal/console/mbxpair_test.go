@@ -8,6 +8,7 @@ import (
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/sched"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -210,6 +211,9 @@ var (
 // is seen waiting (LEF), and its read completing preempts process 2
 // before process 2's $QIOW has returned.
 func TestMailboxPair_readThenWrite(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	p := newMbxPair(t, 16, 64, `
 	clrl	r1
 	movl	#io$_readvblk, r2
@@ -268,6 +272,9 @@ msg:	.ascii	"hello"
 // read completes the write, whose
 // IOSB has the reader's PID.
 func TestMailboxPair_writeThenRead(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	p := newMbxPair(t, 16, 64, mbxTimerWake+`
 	jsb	@#hiber			; until process 2 waits, and the timer
 	clrl	r1
@@ -319,6 +326,9 @@ msg:	.ascii	"abc"
 // message and an end-of-file message, which process 1 reads, each from
 // process 2's PID: the second as SS$_ENDOFFILE.
 func TestMailboxPair_nowAndEOF(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	p := newMbxPair(t, 16, 64, `
 	clrl	r1
 	movl	#io$_readvblk!io$m_now, r2
@@ -422,6 +432,9 @@ delta:	.quad	-100000000		; 10 s: the idle loop jumps there
 // waiting read. With it off ($SETRWM), the write fails at once with
 // SS$_MBFULL in its IOSB, and the message is lost.
 func TestMailboxPair_full(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	t.Run("resource wait", func(t *testing.T) {
 		p := newMbxPair(t, 4, 4, fmt.Sprintf(mbxDrain, ""), fmt.Sprintf(mbxFull, ""))
 
@@ -473,6 +486,9 @@ func TestMailboxPair_full(t *testing.T) {
 // message goes to process 1's next read, not into the cancelled read's
 // buffer.
 func TestMailboxPair_cancel(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	p := newMbxPair(t, 16, 64, `
 	movl	#1, r1
 	movl	#io$_readvblk, r2
@@ -571,6 +587,9 @@ const mbxWriteNow = `
 //     process 1's read makes room, and process 2's AST writes another
 //     message, which process 1's waiting read gets.
 func TestMailboxPair_attention(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	att := "\natt:\t.ascii\t\"att\"\n"
 	readQIOW := strings.Replace(mbxReadNow, "!io$m_now", "", 1)
 

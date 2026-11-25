@@ -70,6 +70,7 @@ func probe50ACompared(text string) string {
 // it writes with VMS 7.3's log line for line, section by section: WAIT,
 // flow, @'s /OUTPUT, OPEN/WRITE's file, SHOW LOGICAL, and odds and ends.
 func TestProbe50AOracle(t *testing.T) {
+	t.Parallel()
 	logText, err := os.ReadFile("../../testdata/dcl50/vax/probe50a.log")
 	if err != nil {
 		t.Skipf("no VMS log: %v", err)
@@ -146,6 +147,7 @@ func TestProbe50AOracle(t *testing.T) {
 // ENDSUBROUTINE, ELSE, and WAIT at command level 0), each command's
 // output and messages compared with VMS 7.3's, as cmd/govax shows them.
 func TestProbe50ATerminal(t *testing.T) {
+	t.Parallel()
 	logText, err := os.ReadFile("../../testdata/dcl50/vax/probe50a-term.log")
 	if err != nil {
 		t.Skipf("no VMS log: %v", err)

@@ -97,6 +97,7 @@ func backupLogListings(t *testing.T) (commands []string, outputs [][]string) {
 // the recovered header), and the errors after the heading. A listing's
 // $STATUS is VMS's %X10000001.
 func TestBackupListOracle(t *testing.T) {
+	t.Parallel()
 	d, c, output := mountBackupSets(t)
 
 	commands, outputs := backupLogListings(t)
@@ -142,6 +143,7 @@ func TestBackupListOracle(t *testing.T) {
 // out by COPY to the host, a record to a line), and nothing on
 // SYS$OUTPUT.
 func TestBackupListFile(t *testing.T) {
+	t.Parallel()
 	d, _, output := mountBackupSets(t)
 
 	for _, tc := range []struct{ command, file, want string }{
@@ -183,6 +185,7 @@ func TestBackupListFile(t *testing.T) {
 // TestBackupListHost: a host save set lists as a volume one does
 // (testdata/backup69/README.md has VMS's listing of pi.bck).
 func TestBackupListHost(t *testing.T) {
+	t.Parallel()
 	d, c, buf := newCommandDispatcher(t)
 	mountFreshContainer(t, c, "DUA0")
 

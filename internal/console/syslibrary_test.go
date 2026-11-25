@@ -10,6 +10,7 @@ import (
 	"github.com/tucats/govax/internal/lbr"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/sysvol"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // The libraries on the system volume (docs/planning/PHASE-87 - system volume.md,
@@ -77,6 +78,9 @@ func readVolume(t *testing.T, c *Console, spec string) []byte {
 // name, and cleans up after itself; the program, as linked before and
 // linked again, then runs against the new version. In both paging modes.
 func TestSystemFTNRTL(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	eachLoader(t, func(t *testing.T, paging bool) {
 		c, run := libraryConsole(t, paging)
 
@@ -162,6 +166,9 @@ NAME:	.ASCID	/Hello from SYS$LIBRARY/
 // built-in library but for its times; with a macro added to STARLET.MAR,
 // the library it builds is the one MACRO uses.
 func TestSystemMacroLibrary(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, run := libraryConsole(t, false)
 
 	const installed = "STARLET.MLB built and installed in SYS$LIBRARY\n"
@@ -246,6 +253,9 @@ const fortranLibraryUser = `      PROGRAM LIBUSE
 // a module added to it there is found, and the program it compiles links
 // and runs against SYS$SHARE:FTNRTL.EXE.
 func TestSystemFortranLibrary(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, run := libraryConsole(t, false)
 
 	writeText(t, c, "[TEST]LIBUSE.FOR", sourceLines(fortranLibraryUser)...)

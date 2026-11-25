@@ -1913,6 +1913,20 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
 - `go build ./...`
 - `go vet ./...`
 - `go test ./...` (as tests are added per phase)
+- `internal/console`'s tests run in parallel (2026-11-25; about a minute,
+  from seven). Every top-level test starts with `t.Parallel()`, or, if it
+  (or a helper it calls) changes what the whole process shares (`t.Chdir`,
+  `t.Setenv`, gopackages' `settings.Set`/`Delete`, `withSettings`,
+  `setSetting`, SET PROMPT or SET EDITOR in a procedure), with
+  `if testproc.Isolate(t) { return }`, which runs it in a child process of
+  its own (`internal/testproc`). A long test is split into subtests that
+  isolate themselves, its top level calling `testproc.Parallel(t)` (as
+  TestFcalcMilestone's and TestDungeonMilestone's modes, and the corpora's
+  shards of 16 programs, `runFortranCorpus`). A costly result several
+  tests read goes through `testproc.Shared` (a VMS round's log,
+  `sharedRoundLog`), which `TestMain` (`main_test.go`, `testproc.Main`)
+  makes work across processes. A test may not rely on another having run
+  first, nor on a directory another left it in: use `testdataDir`.
 
 ## Architecture
 
@@ -2758,6 +2772,13 @@ expect adjustment as phases land):
   library's file held while it's open (an ACP access, `rms.Session.HoldFile`),
   another process's open waiting for it (`corevms.Environment.WaitFor`).
   Strings through `librtl/export.go`.
+- `internal/testproc` — tests in processes of their own (2026-11-25), for
+  tests only: `Isolate` runs a test or subtest in a child test process
+  (the same binary, `-test.run` for that one test) and reports its result,
+  so a test that changes the current directory, the environment, or
+  settings can run beside parallel ones; `Parallel` is `t.Parallel` but in
+  a child; `Shared` computes a value once per `go test` run across its
+  processes (a file under `Main`'s directory, behind `internal/hostlock`).
 - `internal/uaf` — the authorization file (Phase 95): a leaf package
   (standard library, `vmsdef`, `hostlock`, `golang.org/x/crypto/argon2`).
   `File` (accounts and identifiers, each identifier's holders by UIC),

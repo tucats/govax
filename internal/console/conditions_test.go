@@ -49,6 +49,7 @@ func runFixture(t *testing.T, c *Console, name string) func(string) uint32 {
 // handler resignals and its caller's continues, and a subscript range
 // trap.
 func TestConditions_assembledProgram(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 	word := runFixture(t, c, "conditions.asm")
 
@@ -86,6 +87,7 @@ func TestConditions_assembledProgram(t *testing.T) {
 // (docs/planning/PHASE-26.md subtask 31): an access violation no handler takes is
 // reported by the catch-all and ends the image through $EXIT.
 func TestConditionExit_assembledProgram(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 	word := runFixture(t, c, "condition_exit.asm")
 
@@ -115,6 +117,7 @@ func TestConditionExit_assembledProgram(t *testing.T) {
 // primary, secondary, and last-chance vectors set and cleared by
 // $SETEXV.
 func TestExceptionVectors_assembledProgram(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 	word := runFixture(t, c, "exception_vectors.asm")
 
@@ -149,6 +152,7 @@ func TestExceptionVectors_assembledProgram(t *testing.T) {
 // by the catch-all, LIB$ESTABLISH/LIB$REVERT, LIB$MATCH_COND, and a
 // LIB$STOP a handler can't continue.
 func TestSignals_assembledProgram(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 	word := runFixture(t, c, "signals.asm")
 
@@ -190,6 +194,7 @@ func TestSignals_assembledProgram(t *testing.T) {
 // (docs/planning/PHASE-26.md subtask 34): LIB$SIG_TO_RET, and $UNWIND with a depth
 // and a new PC past a LIB$STOP.
 func TestUnwind_assembledProgram(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 	word := runFixture(t, c, "unwind.asm")
 

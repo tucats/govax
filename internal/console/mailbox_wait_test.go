@@ -11,6 +11,7 @@ import (
 // (docs/planning/PHASE-26.md subtask 37): a read attention AST, a writer waiting
 // on a full mailbox for a timer AST to make room, and $SETRWM.
 func TestMailboxWait_assembledProgram(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 	word := runFixture(t, c, "mailbox_wait.asm")
 

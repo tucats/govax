@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/machine"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // docs/planning/PHASE-70 - traceback.md, subtask 10: the oracle. TestTB70Oracle
@@ -145,6 +146,9 @@ func tb70CopySources(t *testing.T, dispatch func(string) string, procedure strin
 // (the copying loader) and on (the mapping one), and holds their logs
 // to VMS's.
 func TestTB70Oracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	for _, paging := range []string{"false", "true"} {
 		t.Run("paging="+paging, func(t *testing.T) {
 			setSetting(t, machine.PagingSetting, paging)

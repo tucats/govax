@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // TestFortranIOSignals checks the I/O conditions a statement with none of
@@ -17,6 +18,9 @@ import (
 // severe, is signaled after the statement's record, and the program goes
 // on (OUTCONERR, run 3's case A), ending with status 1.
 func TestFortranIOSignals(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, c, buf := shareFindConsole(t, false)
 
 	for _, tc := range []struct {
@@ -91,6 +95,9 @@ func TestFortranIOSignals(t *testing.T) {
 // 7.1's FORRTL did (testdata/for81, round 3's FOR81T). From a file, SYS$INPUT's
 // limit is 199 (FOR$_INPRECTOO, 22).
 func TestFortranFormattedInput(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	eachLoader(t, func(t *testing.T, paging bool) {
 		d, c, buf := shareFindConsole(t, paging)
 
@@ -156,6 +163,9 @@ func TestFortranFormattedInput(t *testing.T) {
 // earlier in the list can say how later ones are read (section 8.3.2). And a
 // run-time format's H, read into, isn't copied back (section 8.7).
 func TestFortranVFEInput(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	eachLoader(t, func(t *testing.T, paging bool) {
 		d, c, buf := shareFindConsole(t, paging)
 
@@ -207,6 +217,9 @@ func TestFortranVFEInput(t *testing.T) {
 // probe's cases to VMS's; this runs FORMAT statements in both paging
 // modes.
 func TestFortranIntegerInput(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	eachLoader(t, func(t *testing.T, paging bool) {
 		d, c, buf := shareFindConsole(t, paging)
 
@@ -265,6 +278,9 @@ func TestFortranIntegerInput(t *testing.T) {
 // context's record that runs across four records, the end of the file, which
 // END= and IOSTAT= take, and a value that can't be one, signaled.
 func TestFortranListInput(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	eachLoader(t, func(t *testing.T, paging bool) {
 		d, c, buf := shareFindConsole(t, paging)
 
@@ -360,6 +376,9 @@ func TestFortranListInput(t *testing.T) {
 // (testdata/nml80, Phase 80's subtask 11); then a namelist READ's IOSTAT=,
 // ERR= after a value stored before the error, and END=, unit * included.
 func TestFortranNamelist(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	eachLoader(t, func(t *testing.T, paging bool) {
 		d, c, buf := shareFindConsole(t, paging)
 
@@ -427,6 +446,9 @@ func TestFortranNamelist(t *testing.T) {
 // (INPCONERR, 64, the item zeros), and F of an INTEGER, which stores the
 // F_floating value's bytes and fails with FORVARMIS (61).
 func TestFortranFloatInput(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	eachLoader(t, func(t *testing.T, paging bool) {
 		d, c, buf := shareFindConsole(t, paging)
 
@@ -495,6 +517,9 @@ func TestFortranFloatInput(t *testing.T) {
 // condition's low 16 bits), and an end of file that END= took (FOR number 24,
 // RMS$_EOF, STV 0, as VMS's run gave them).
 func TestFortranErrsns(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	eachLoader(t, func(t *testing.T, paging bool) {
 		d, c, buf := shareFindConsole(t, paging)
 

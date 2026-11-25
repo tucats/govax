@@ -76,6 +76,7 @@ func forthSession(t *testing.T, typed string, files map[string]string) (string, 
 // strings, floating point, and number bases, and the errors that abort a
 // line.
 func TestForth_interpreter(t *testing.T) {
+	t.Parallel()
 	typed := strings.Join([]string{
 		"2 3 + .",
 		"1 2 3 rot . . . cr",
@@ -125,6 +126,7 @@ func TestForth_interpreter(t *testing.T) {
 // what they interrupted, writes output to a file, and exits at the end of
 // the terminal's input.
 func TestForth_files(t *testing.T) {
+	t.Parallel()
 	files := map[string]string{
 		"LIB.FTH":   ": sq dup * ;  ( a comment, which ends at the line's end\n.\" loaded lib\" cr\n",
 		"OUTER.FTH": "input inner\n.\" after inner\" cr\n",
@@ -172,6 +174,7 @@ func TestForth_files(t *testing.T) {
 // halts, without its banner or a prompt. An error in the text ends the run
 // with SS$_ABORT, instead of falling back to the terminal.
 func TestForth_foreignCommand(t *testing.T) {
+	t.Parallel()
 	c, out, exe := forthConsole(t, "", nil)
 	prepareRun(t, c)
 

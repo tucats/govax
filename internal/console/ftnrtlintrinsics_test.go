@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // FTNRTL's Fortran 90 intrinsics called from MACRO (docs/planning/PHASE-108 -
@@ -409,6 +410,9 @@ OUTPUT:	MOVW	#132,LINE
 // TestFTNRTLIntrinsics runs the program in both paging modes and holds each
 // line to its case.
 func TestFTNRTLIntrinsics(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	var want strings.Builder
 
 	for _, c := range ftnrtlCases {

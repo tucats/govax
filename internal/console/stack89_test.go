@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // stack89Dir holds Phase 89's programs of the user stack under recursion
@@ -70,6 +71,9 @@ var stack89Depths = map[bool]int{false: 2, true: 12}
 // page and read back intact, until the next depth doesn't fit, which ends
 // the image with no message and an access violation's status.
 func TestStack89BigFrames(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	eachLoader(t, func(t *testing.T, paging bool) {
 		run := stack89Console(t, paging, "BIGFRAME")
 
@@ -97,6 +101,9 @@ var stack89Levels = map[bool][2]int{false: {80000, 90000}, true: {420000, 440000
 // whose own frame is 800,000 bytes, its condition reported on the pages
 // below it).
 func TestStack89Runaway(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	eachLoader(t, func(t *testing.T, paging bool) {
 		run := stack89Console(t, paging, "RUNAWAY", "SIGNAL")
 

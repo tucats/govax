@@ -10,6 +10,7 @@ import (
 // (docs/planning/PHASE-26.md subtask 40): $ASCTOID, $FAO's !%I, and $IDTOASC,
 // singly and as a listing.
 func TestRights_assembledProgram(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 	word := runFixture(t, c, "rights.asm")
 

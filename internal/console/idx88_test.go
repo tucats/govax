@@ -10,6 +10,7 @@ import (
 
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -64,6 +65,9 @@ func runIdx88(t *testing.T) string {
 // subtask 2). The first case, on a sequential file, is what exercises the
 // program's helpers.
 func TestIdx88Probe(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	out := runIdx88(t)
 
 	// The helpers' case: a record in the common layout, read by RFA, and its block.
@@ -147,6 +151,9 @@ var idx88CreateDifferences = map[int]string{
 // $OPEN and $DISPLAY of VMS's own files are internal/rms's
 // TestIndexedOpenAsVMS, and the record operations TestIdx88Oracle.
 func TestIdx88CreateOracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	data, err := os.ReadFile(filepath.Join("..", "..", "testdata", "idx88", "vax", "idx88-vax.txt"))
 	if err != nil {
 		t.Fatal(err)
@@ -201,6 +208,9 @@ func TestIdx88CreateOracle(t *testing.T) {
 // assembly time (testdata/idx88's first run, whose log has these messages), and to
 // what it takes beside them.
 func TestXABKEYRefusals(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	_, dispatch := wsDispatcher(t)
 	dir := t.TempDir()
 	dsk := filepath.Join(dir, "x.dsk")

@@ -15,6 +15,7 @@ import (
 // follow: a full specification, one without a type (EXE), and a bare name
 // once the default directory is on the volume.
 func TestRun_imageOnVolume(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -84,6 +85,7 @@ func TestRun_imageOnVolume(t *testing.T) {
 // the default directory is on a volume, where the same bare name would
 // otherwise be looked for.
 func TestDispatch_runHost(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 	d := NewDispatcher(c, loadEvaxGrammar(t))
 	mountFreshContainer(t, c, "DUA0")
@@ -121,6 +123,7 @@ func TestDispatch_runHost(t *testing.T) {
 // program that uses $FIND, $UPDATE, $TRUNCATE, and $REWIND on a file on
 // a volume (docs/planning/PHASE-49.md); it returns 999, or the step that failed.
 func TestRun_recordUpdates(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -143,6 +146,7 @@ func TestRun_recordUpdates(t *testing.T) {
 // subtask 9): a file opened with FOP=UFO, mapped as private and global
 // sections, written through memory and back to the file.
 func TestRun_fileSections(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 

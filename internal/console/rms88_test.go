@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // Indexed files end to end (docs/planning/PHASE-88 - keyed index files.md, subtask 14;
@@ -86,6 +87,9 @@ func rms88Check(t *testing.T, d *Dispatcher, buf *bytes.Buffer, file string) {
 // program that doesn't declare its keys reads and writes it; and DCL reads it and
 // makes another from ANALYZE's description of it.
 func TestIndexedPhones(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	eachLoader(t, func(t *testing.T, paging bool) {
 		for _, mode := range optimizerModes {
 			t.Run(mode.name, func(t *testing.T) {
@@ -125,6 +129,9 @@ func TestIndexedPhones(t *testing.T) {
 // levels grow, on a volume with room for them, and has ANALYZE/RMS_FILE/CHECK
 // walk both files it leaves.
 func TestIndexedLoad(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	eachLoader(t, func(t *testing.T, paging bool) {
 		for _, mode := range optimizerModes {
 			t.Run(mode.name, func(t *testing.T) {
@@ -159,6 +166,9 @@ func TestIndexedLoad(t *testing.T) {
 // has no end of file: its buckets are all through its allocation, so a copy that stopped
 // at the header's end would be empty, which RMS can't open (testdata/vms88's rehearsal).
 func TestCopyIndexedNoEndOfFile(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, c, buf := shareFindConsole(t, false)
 
 	fdl := "FILE\n\tORGANIZATION\t\tindexed\nRECORD\n\tFORMAT\t\t\tfixed\n\tSIZE\t\t\t20\n" +

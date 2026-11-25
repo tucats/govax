@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // inquireAnswers are the specifiers TestFor81InquireOracle asks, by the code
@@ -73,6 +75,9 @@ func inquireReport() []string {
 // testdata/fortran/inquire.for has the places of each width (#506) and unit 6
 // once it's connected (#477).
 func TestFor81InquireOracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	text, err := os.ReadFile(filepath.Join("..", "..", "testdata", "for81", "vax", "for81-vax.txt"))
 	if err != nil {
 		t.Fatal(err)

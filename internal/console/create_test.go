@@ -46,6 +46,7 @@ func createdHeader(t *testing.T, d *Dispatcher, dirs ...string) ondisk.FileHeade
 }
 
 func TestCreateDirectory_logLevelsAndExisting(t *testing.T) {
+	t.Parallel()
 	d, out := newCreateTestDispatcher(t)
 
 	lines, err := renameLines(t, d, out, "CREATE/DIRECTORY/LOG [A.B],[C]")
@@ -79,6 +80,7 @@ func TestCreateDirectory_logLevelsAndExisting(t *testing.T) {
 }
 
 func TestCreateDirectory_qualifiers(t *testing.T) {
+	t.Parallel()
 	d, _ := newCreateTestDispatcher(t)
 
 	for _, cmd := range []string{
@@ -112,6 +114,7 @@ func TestCreateDirectory_qualifiers(t *testing.T) {
 }
 
 func TestCreateDirectory_relativeAndLogical(t *testing.T) {
+	t.Parallel()
 	d, out := newCreateTestDispatcher(t)
 
 	for _, cmd := range []string{"CREATE/DIRECTORY [PLAIN]", "SET DEFAULT [PLAIN]", "DEFINE CREDEV DUA0:"} {
@@ -136,6 +139,7 @@ func TestCreateDirectory_relativeAndLogical(t *testing.T) {
 // already shown. A bad /OWNER_UIC or /PROTECTION makes nothing; a bad
 // /VERSION_LIMIT is reported and ignored, and the directory still made.
 func TestCreateDirectory_errors(t *testing.T) {
+	t.Parallel()
 	d, out := newCreateTestDispatcher(t)
 
 	tests := []struct {

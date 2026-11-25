@@ -56,6 +56,7 @@ func wantLines(t *testing.T, what string, got []string, want ...string) {
 // TestRename_logAndList: /LOG reports each file of a list, with its new
 // name and version.
 func TestRename_logAndList(t *testing.T) {
+	t.Parallel()
 	d, out := newRenameTestDispatcher(t)
 
 	lines, err := renameLines(t, d, out, "RENAME/LOG FIRST.TXT,SECOND.TXT *.OLD")
@@ -77,6 +78,7 @@ func TestRename_logAndList(t *testing.T) {
 // TestRename_newVersion: by default a file with no input version gets
 // the next version of its new name; /NONEW_VERSION keeps its own.
 func TestRename_newVersion(t *testing.T) {
+	t.Parallel()
 	d, out := newRenameTestDispatcher(t)
 
 	lines, _ := renameLines(t, d, out, "RENAME/LOG SECOND.TXT FIRST.TXT")
@@ -91,6 +93,7 @@ func TestRename_newVersion(t *testing.T) {
 // TestRename_failureMessages: each kind of failure shows RENAME.B32's
 // message, and the command fails without the console showing it again.
 func TestRename_failureMessages(t *testing.T) {
+	t.Parallel()
 	d, out := newRenameTestDispatcher(t)
 	mountFreshContainer(t, d.Console, "DUA1")
 
@@ -134,6 +137,7 @@ func TestRename_failureMessages(t *testing.T) {
 // TestRename_continuesAfterFailure: a bad item in a list doesn't stop the
 // others.
 func TestRename_continuesAfterFailure(t *testing.T) {
+	t.Parallel()
 	d, out := newRenameTestDispatcher(t)
 
 	lines, err := renameLines(t, d, out, "RENAME/LOG NOPE.TXT,FIRST.TXT *.DAT")

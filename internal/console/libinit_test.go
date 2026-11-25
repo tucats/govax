@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // libinitProgram lists three initialization routines for LIB$INITIALIZE, whose
@@ -45,6 +47,9 @@ COUNT:	.LONG	0
 // 7.1's count, testdata/err113), one calling back to run the rest; under
 // traceback and without it; RUN/NOINIT leaves them out.
 func TestLibInitialize(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, _, buf := dungeonConsole(t, false)
 
 	src := filepath.Join(t.TempDir(), "libinit.mar")
@@ -109,6 +114,9 @@ const libinitUser = `	.TITLE	USEINIT
 // before the program (how VMS calls it is the probe round's question).
 // RUN/NOINIT leaves it out.
 func TestLibInitializeShareable(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, _, buf := dungeonConsole(t, false)
 	dir := t.TempDir()
 
@@ -187,6 +195,9 @@ COUNTER::	.LONG	0
 // Before it govax called VMS's LIBRTL's, LIB$EMODD, with no arguments to read,
 // and faulted at SHARE$LIBRTL+0CE1.
 func TestShareableTransferNotCalled(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, _, buf := dungeonConsole(t, false)
 	dir := t.TempDir()
 

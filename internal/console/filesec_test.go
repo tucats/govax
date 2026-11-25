@@ -12,6 +12,7 @@ import (
 	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // Phase 49's subtask 9: a global section of a file shared by two
@@ -92,6 +93,9 @@ func sectionFileBlocks(t *testing.T, c *console.Console, name string, n uint32) 
 // TestFileSectionPair runs the pair under a short quantum and the
 // default one, and checks the file.
 func TestFileSectionPair(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	for _, quantum := range []string{"7", "20000"} {
 		t.Run(quantum, func(t *testing.T) {
 			c := sectionMachine(t, quantum, "secchild", "secparent")
@@ -127,6 +131,9 @@ func TestFileSectionPair(t *testing.T) {
 // image rundown writes the first's modified page to the file, and not
 // the copy's, and lets the file go.
 func TestFileSectionRundown(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c := sectionMachine(t, longQuantum, "rundown")
 
 	if err := c.Run("DUA0:[000000]RUNDOWN.EXE", machine.RunOptions{}); err != nil {

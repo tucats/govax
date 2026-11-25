@@ -91,6 +91,7 @@ func readVolumeSaveSet(t *testing.T, c *Console, name string) ([]byte, *backup.S
 // which a restore makes anew; and of each directory file its dates,
 // revision count, and contents, which hold file IDs).
 func TestBackupSaveOracle(t *testing.T) {
+	t.Parallel()
 	d, c, output := mountBackupSets(t)
 
 	for _, line := range []string{
@@ -234,6 +235,7 @@ func whereInBlock(block []byte, at int) string {
 // statuses; and that a save set written as a host file reads back,
 // listed and restored, as one on a volume does.
 func TestBackupSaveMessages(t *testing.T) {
+	t.Parallel()
 	d, _, output := mountBackupSets(t)
 
 	if err := d.Dispatch("BACKUP [SETS]B69.BCK/SAVE_SET [*...]"); err != nil {

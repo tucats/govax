@@ -31,6 +31,7 @@ var expectedLib54Differences = map[string]string{
 }
 
 func TestLib54Oracle(t *testing.T) {
+	t.Parallel()
 	src, err := os.ReadFile(filepath.Join(lib54Dir, "lib54.mar"))
 	if err != nil {
 		t.Fatal(err)

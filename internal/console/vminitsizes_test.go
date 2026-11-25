@@ -9,6 +9,7 @@ import (
 	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/respath"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // Phase 67's subtask 8 (docs/planning/PHASE-67 - address space under paging.md):
@@ -38,6 +39,9 @@ func runVaxInit(t *testing.T, config map[string]string) *Console {
 // defaults (P0 19456, P1 5120, S0 16384), leaving nearly every frame
 // free, as SHOW MEMORY shows; a vax.memory.* key still sizes its region.
 func TestVaxInitPagingSizes(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c := runVaxInit(t, map[string]string{machine.PagingSetting: "true"})
 
 	if p0, p1 := c.VMInitSizes(); p0 != 19456 || p1 != 5120 {
@@ -87,6 +91,9 @@ func TestVaxInitPagingSizes(t *testing.T) {
 // TestVaxInitNoPagingSizes: with paging off STARTUP.COM's sizes are as
 // before, P0 16384, P1 8192, S0 8192.
 func TestVaxInitNoPagingSizes(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c := runVaxInit(t, map[string]string{machine.PagingSetting: "false"})
 
 	if p0, p1 := c.VMInitSizes(); p0 != 16384 || p1 != 8192 {

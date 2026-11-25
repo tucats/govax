@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/machine"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // TestScheduler_oneProcessRun runs the FORTH interpreter with the
@@ -13,6 +14,9 @@ import (
 // that the session is the same as without the scheduler, and that the
 // scheduler charged the run's instructions to process 1.
 func TestScheduler_oneProcessRun(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	typed := strings.Join([]string{
 		": sq dup * ; 7 sq .",
 		": count 5 0 do i . loop ; count",

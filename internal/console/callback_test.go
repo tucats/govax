@@ -59,6 +59,7 @@ func testCallback(counts *callbackCounts) corevms.ShimFunc {
 // the routine again, and a callback that a handler unwinds past, after
 // which the routine works again (see the fixture's comment).
 func TestCallback_assembledProgram(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 
 	var counts callbackCounts

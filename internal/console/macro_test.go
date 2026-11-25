@@ -11,6 +11,7 @@ import (
 	"github.com/tucats/govax/internal/dclcmd"
 	"github.com/tucats/govax/internal/obj"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -81,6 +82,9 @@ func dirNames(t *testing.T, dir string) []string {
 // default directory (for a host source, the host's current directory),
 // not beside the source.
 func TestMacro_hostDefaultObjectName(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	cases := []struct{ source, typed, want string }{
 		{"hello.mar", "hello.mar", "hello.obj"},
 		{"HELLO.MAR", "HELLO.MAR", "HELLO.OBJ"},
@@ -129,6 +133,7 @@ func contains(list []string, s string) bool {
 // TestMacro_headers checks the object's module name, language processor
 // (with govax's build), and SRC header (the command line).
 func TestMacro_headers(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	dir := t.TempDir()
 	src := filepath.Join(dir, "small.mar")
@@ -181,6 +186,7 @@ func TestMacro_headers(t *testing.T) {
 // severity an error's (Phase 113, subtask 5; it was once not written, whence
 // the name).
 func TestMacro_errorsWriteNothing(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	dir := t.TempDir()
 	src := filepath.Join(dir, "bad.mar")
@@ -239,6 +245,7 @@ func objectSeverity(t *testing.T, path string) byte {
 // TestMacro_warningsStillWrite checks that a warning is reported and the
 // object is still written.
 func TestMacro_warningsStillWrite(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	dir := t.TempDir()
 	src := filepath.Join(dir, "warn.mar")
@@ -258,6 +265,7 @@ func TestMacro_warningsStillWrite(t *testing.T) {
 }
 
 func TestMacro_noObject(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	dir := t.TempDir()
 	src := filepath.Join(dir, "small.mar")
@@ -276,6 +284,9 @@ func TestMacro_noObject(t *testing.T) {
 // directory, as on VMS (for a host source, the host's current directory),
 // not next to the source; a host path goes where it says.
 func TestMacro_namedObject(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, _ := newTestConsole(t)
 	dir := t.TempDir()
 	t.Chdir(dir) // where default outputs go
@@ -314,6 +325,7 @@ func TestMacro_namedObject(t *testing.T) {
 }
 
 func TestMacro_missingSource(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 
 	err := c.cmd().Macro(dclcmd.MacroOptions{Source: filepath.Join(t.TempDir(), "none.mar")})
@@ -333,6 +345,7 @@ func TestMacro_missingSource(t *testing.T) {
 // in [SRC], and so does /OBJECT= with a bare name. A name with a directory
 // goes where it says.
 func TestMacro_defaultDirectory(t *testing.T) {
+	t.Parallel()
 	d, c, _ := newCommandDispatcher(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -389,6 +402,7 @@ func TestMacro_defaultDirectory(t *testing.T) {
 // from the source's), each assembly makes the next version, and the
 // source's type defaults to MAR.
 func TestMacro_volume(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -441,6 +455,7 @@ func TestMacro_volume(t *testing.T) {
 // TestMacro_hostSourceVolumeObject writes a host source's object onto a
 // volume, and checks a read-only volume is refused.
 func TestMacro_hostSourceVolumeObject(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -471,6 +486,7 @@ func TestMacro_hostSourceVolumeObject(t *testing.T) {
 // TestMacro_include resolves .INCLUDE relative to the source, across host
 // and volume files.
 func TestMacro_include(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -516,6 +532,7 @@ func TestMacro_include(t *testing.T) {
 // TestMacro_fixtureLadder assembles every testdata/mar fixture with the
 // MACRO command and checks each object reads back and passes Check.
 func TestMacro_fixtureLadder(t *testing.T) {
+	t.Parallel()
 	sources, err := filepath.Glob(filepath.Join("..", "..", "testdata", "mar", "*.mar"))
 	if err != nil || len(sources) == 0 {
 		t.Fatalf("no fixtures: %v", err)
@@ -538,6 +555,9 @@ func TestMacro_fixtureLadder(t *testing.T) {
 // TestDispatch_macroViaDCL runs MACRO through the DCL grammar: a quoted
 // host path with /HOST, /OBJECT with and without a value, and /NOOBJECT.
 func TestDispatch_macroViaDCL(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, _ := newTestDispatcher(t)
 	dir := t.TempDir()
 	t.Chdir(dir) // where default outputs go
@@ -595,6 +615,7 @@ func splitSource(text string) [][]byte {
 // /DEBUG=NONE, /NODEBUG, and /DISABLE=TRACEBACK. The source's .ENABLE
 // still has the last word.
 func TestDispatch_macroTraceback(t *testing.T) {
+	t.Parallel()
 	d, _ := newTestDispatcher(t)
 	dir := t.TempDir()
 	src := filepath.Join(dir, "tb.mar")
@@ -660,6 +681,7 @@ func TestDispatch_macroTraceback(t *testing.T) {
 // source correlation record describes: a host file's absolute path, its
 // size as an end of file block and first free byte, and stream-LF.
 func TestMacro_debugSourceFile(t *testing.T) {
+	t.Parallel()
 	d, _ := newTestDispatcher(t)
 	dir := t.TempDir()
 	src := filepath.Join(dir, "dbg.mar")

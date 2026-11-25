@@ -127,6 +127,7 @@ func backup69ChangedByte(damaged, source []byte, offset int) bool {
 // ones VMS read, runs RUN2.COM on govax, and holds its log, reports, and
 // damaged save sets to VMS's.
 func TestBackup69Round2(t *testing.T) {
+	t.Parallel()
 	d, c, buf := backup69Round2Govax(t)
 
 	// The exchange's save sets, made again, are the ones VMS read, but

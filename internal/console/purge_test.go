@@ -12,6 +12,7 @@ import (
 // device is reported as SS_DEVNOTMOUNT, matching Console.Delete's own
 // status for the same underlying condition.
 func TestConsolePurge_notMounted(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 
 	err := c.cmd().Purge("DUB0:*.*", 1, false)
@@ -27,6 +28,7 @@ func TestConsolePurge_notMounted(t *testing.T) {
 // TestConsolePurge_badLimit confirms a /KEEP=0 is PURGE-F-BADVALUE, as VMS 7.1
 // said it (testdata/err113; Phase 113, subtask 13c).
 func TestConsolePurge_badLimit(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -42,6 +44,7 @@ func TestConsolePurge_badLimit(t *testing.T) {
 // PURGE-W-SEARCHFAIL over RMS's status, as DELETE's is (Phase 113, subtask
 // 11; it was CLI_BADFILESPEC with the Go error's words).
 func TestConsolePurge_badFileSpec(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -61,6 +64,7 @@ func TestConsolePurge_badFileSpec(t *testing.T) {
 // leaves only the newest and, without /LOG, says nothing, as VMS's PURGE
 // does.
 func TestConsolePurge_trimsVersionsAndPrintsConfirmation(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -97,6 +101,7 @@ func TestConsolePurge_trimsVersionsAndPrintsConfirmation(t *testing.T) {
 // NOFILPURG, as VMS 7.1's does; PURGE alone says nothing. With one version to
 // delete, PURGE/LOG names it, with no total.
 func TestConsolePurge_logNothingToPurge(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -129,6 +134,7 @@ func TestConsolePurge_logNothingToPurge(t *testing.T) {
 // the DCL grammar (internal/bootdata/files/evax.dcl's purge verb) into the
 // g.Bind("PURGE", ...) closure this subtask added.
 func TestDispatch_purgeViaDCL(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	g := loadEvaxGrammar(t)
 	d := NewDispatcher(c, g)
@@ -164,6 +170,7 @@ func TestDispatch_purgeViaDCL(t *testing.T) {
 // threads through the grammar correctly, overriding the default of 1; /LIMIT,
 // govax's old name, is no longer a qualifier.
 func TestDispatch_purgeExplicitLimit(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	g := loadEvaxGrammar(t)
 	d := NewDispatcher(c, g)
@@ -209,6 +216,7 @@ func TestDispatch_purgeExplicitLimit(t *testing.T) {
 // /prompt=, so there's no sensible default to fall back to other than
 // internal/rms.Session.Purge's own "*.*".
 func TestDispatch_purgeBareDefaultsToStar(t *testing.T) {
+	t.Parallel()
 	d, c := newTestDispatcher(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -225,6 +233,7 @@ func TestDispatch_purgeBareDefaultsToStar(t *testing.T) {
 // abbreviation -- no other verb in this grammar starts with those letters)
 // resolves to the same PURGE verb as the fully spelled-out form.
 func TestDispatch_purgeAbbreviated(t *testing.T) {
+	t.Parallel()
 	d, c := newTestDispatcher(t)
 	mountFreshContainer(t, c, "DUA0")
 

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/backup"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // for88FTNRTLDifferences are the cases whose output on FTNRTL differs from VMS's, by
@@ -20,6 +21,9 @@ var for88FTNRTLDifferences = map[string]string{
 // and holds each one's output, every FAB, RAB, and XABKEY shown to its USEROPEN routine
 // among them, and each file it made, to VMS's run of them on FORRTL.
 func TestFor88OnFTNRTL(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	_, dispatch := wsDispatcher(t)
 	dsk := filepath.Join(t.TempDir(), "for88.dsk")
 
@@ -106,6 +110,9 @@ func TestFor88OnFTNRTL(t *testing.T) {
 // makes the keys it says, and an OPEN of the file holds KEY= to them, each by its
 // IOSTAT (testdata/for88's #125, #133, #139, and #97).
 func TestFortranIndexedOpen(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	_, dispatch := wsDispatcher(t)
 	dsk := filepath.Join(t.TempDir(), "ftn88.dsk")
 
@@ -185,6 +192,9 @@ func TestFortranIndexedOpen(t *testing.T) {
 // INTEGER*2 value on a longword key, READ in sequence after a keyed one, REWRITE, DELETE,
 // UNLOCK, and each statement's IOSTAT where VMS's run has one (testdata/for88).
 func TestFortranIndexedRecords(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	_, dispatch := wsDispatcher(t)
 	dsk := filepath.Join(t.TempDir(), "ftn88.dsk")
 

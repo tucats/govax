@@ -7,6 +7,7 @@ import (
 
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -18,6 +19,9 @@ import (
 // (TestUAF95LoginOracle logs in as the probe's accounts); govax has no
 // SUBMIT, and those lines fail with messages and the procedures go on.
 func TestUAF95Probe(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, buf := scheduledConsole(t, longQuantum, brbSelf)
 	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 	dispatch := func(line string) string {

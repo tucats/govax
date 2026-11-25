@@ -27,6 +27,7 @@ func runFlow(t *testing.T, lines ...string) string {
 // TestGotoLoop: a backward GOTO makes a loop (14.19), and a forward one
 // passes over lines; a label may have a command after it.
 func TestGotoLoop(t *testing.T) {
+	t.Parallel()
 	out := runFlow(t,
 		"$ N = 0",
 		"$ LOOP:",
@@ -45,6 +46,7 @@ func TestGotoLoop(t *testing.T) {
 // processed last, or, when none has been, to the nearest after it
 // (13.2.2's three rules).
 func TestGotoDuplicateLabels(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name  string
 		lines []string
@@ -82,6 +84,7 @@ func TestGotoDuplicateLabels(t *testing.T) {
 // procedure ends, at its end of file, with USGOTO's status marked as
 // shown (VMS 7.3, round 5); an ON action can still take it somewhere.
 func TestGotoMissingLabel(t *testing.T) {
+	t.Parallel()
 	err, out, status := runStatusProcedure(t, "$ GOTO NOWHERE", `$ PRINT "after"`)
 	if strings.Count(out, "%DCL-W-USGOTO") != 1 || strings.Contains(out, "after") ||
 		dclshell.VMSCondition(vmserrors.CLI_USGOTO)|stsInhibitMsg != status || !vmserrors.MessageInhibited(err) {
@@ -106,6 +109,7 @@ func TestGotoMissingLabel(t *testing.T) {
 // TestGotoBlocks: a label inside an IF block the GOTO isn't in isn't a
 // target (14.16.5's example), and going out of a block closes it.
 func TestGotoBlocks(t *testing.T) {
+	t.Parallel()
 	out := runFlow(t,
 		"$ GOTO TEST_1",
 		"$ EXIT",
@@ -158,6 +162,7 @@ func TestGotoBlocks(t *testing.T) {
 // TestLabelsAtTerminal: at command level 0 a label is ignored, with
 // NOLBLS, and GOTO has nothing to search.
 func TestLabelsAtTerminal(t *testing.T) {
+	t.Parallel()
 	d, _, buf := newCommandDispatcher(t)
 
 	if err := d.Dispatch("HERE:"); !hasStatus(err, vmserrors.CLI_NOLBLS) {
@@ -183,6 +188,7 @@ func TestLabelsAtTerminal(t *testing.T) {
 // may carry a command, blocks nest, and the lines of a branch that
 // doesn't run are passed over unread: not substituted, data and all.
 func TestIfBlocks(t *testing.T) {
+	t.Parallel()
 	out := runFlow(t,
 		"$ IF 0",
 		"$ THEN",
@@ -219,6 +225,7 @@ func TestIfBlocks(t *testing.T) {
 // ELSE, and ENDIF out of place are INVIFNEST; IF 1 THEN alone does
 // nothing; blocks nest 15 deep (VMS 7.3, round 5).
 func TestIfBlockErrors(t *testing.T) {
+	t.Parallel()
 	d, _, buf := newCommandDispatcher(t)
 
 	for _, line := range []string{"THEN", "ELSE", "ENDIF"} {
@@ -265,6 +272,7 @@ func TestIfBlockErrors(t *testing.T) {
 
 // TestIfBlocksAtTerminal: blocks work for lines typed at the terminal.
 func TestIfBlocksAtTerminal(t *testing.T) {
+	t.Parallel()
 	d, _, buf := newCommandDispatcher(t)
 
 	for _, line := range []string{"IF 0", "THEN", `PRINT "a"`, "ELSE", `PRINT "b"`, "ENDIF", `PRINT "c"`} {
@@ -281,6 +289,7 @@ func TestIfBlocksAtTerminal(t *testing.T) {
 // TestIfKeepsStatus: IF, THEN, ELSE, and ENDIF leave $STATUS alone, so a
 // block can test the command before it.
 func TestIfKeepsStatus(t *testing.T) {
+	t.Parallel()
 	_, out, status := runStatusProcedure(t,
 		"$ FOOBAR",
 		"$ IF .NOT. $STATUS",
@@ -307,6 +316,7 @@ func TestIfKeepsStatus(t *testing.T) {
 // TestGosub: GOSUB and RETURN, nested, with RETURN's status (14.16.6's
 // GOSUB.COM).
 func TestGosub(t *testing.T) {
+	t.Parallel()
 	out := runFlow(t,
 		"$ GOSUB TEST1",
 		`$ PRINT "back ''$STATUS'"`,
@@ -349,6 +359,7 @@ func TestGosub(t *testing.T) {
 // procedure), GOSUBs too deep (15 run, the 16th refused: VMS 7.3), and
 // GOSUB and RETURN at the terminal.
 func TestGosubErrors(t *testing.T) {
+	t.Parallel()
 	if out := runFlow(t, "$ RETURN", `$ PRINT "after"`); !strings.Contains(out, "%DCL-W-BADRET") || !strings.Contains(out, "after") {
 		t.Errorf("RETURN: %q, want BADRET, and on", out)
 	}
@@ -384,6 +395,7 @@ func TestGosubErrors(t *testing.T) {
 // running the procedure line by line passes over subroutines; EXIT's
 // status is CALL's (14.17).
 func TestCall(t *testing.T) {
+	t.Parallel()
 	err, out, status := runStatusProcedure(t,
 		"$ SHOW_IT: SUBROUTINE",
 		`$     PRINT "''P1' ''P2'"`,
@@ -414,6 +426,7 @@ func TestCall(t *testing.T) {
 // labels are local to the subroutine's level; a SUBROUTINE with no
 // ENDSUBROUTINE; CALL at the terminal.
 func TestCallErrors(t *testing.T) {
+	t.Parallel()
 	out := runFlow(t,
 		"$ CALL BAR",
 		"$ CALL PLAIN",
@@ -471,6 +484,7 @@ func TestCallErrors(t *testing.T) {
 
 // TestCallOutput: CALL/OUTPUT sends the subroutine's output to a file.
 func TestCallOutput(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	log := filepath.Join(dir, "sub.log")
 

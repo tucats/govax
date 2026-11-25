@@ -8,6 +8,7 @@ import (
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/sched"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -145,6 +146,9 @@ func queuedMessages(c *console.Console) int {
 // it in the mailbox; process 1's $GETs take each line, and wait (LEF)
 // for the ones the child hasn't written yet.
 func TestRMSMailbox_childOutput(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, _ := scheduledConsole(t, longQuantum, brbSelf)
 	exe := buildImage(t, c, "outchild", outChild)
 	one := c.RTL
@@ -242,6 +246,9 @@ text:	.ascii	"hello"
 // TestRMSMailbox_null: NL: takes any record and has none to give: the
 // $PUT succeeds and the $GET is RMS$_EOF.
 func TestRMSMailbox_null(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	sym := vmsdef.Symbols
 
 	code, _ := assembleAt(t, rmsSymbols()+fmt.Sprintf(nlProgram, rmsStatus, sym["FAB$M_GET"], sym["FAB$B_FAC"]))

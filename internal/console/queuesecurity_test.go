@@ -82,6 +82,7 @@ func queueSecurityConsole(t *testing.T) (*Console, func(string) string) {
 }
 
 func TestQueueSecurityAsSystem(t *testing.T) {
+	t.Parallel()
 	c, run := queueSecurityConsole(t)
 
 	// Each step is a command and VMS's output, but that the VAX named
@@ -163,6 +164,7 @@ BAT98_D object of class QUEUE
 // SS$_NOPRIV alone (bat98p_a_bat98w.log); and BAT98, the owner of
 // BAT98_D, may change it (state B's case 23).
 func TestQueueSecurityRefused(t *testing.T) {
+	t.Parallel()
 	c, run := queueSecurityConsole(t)
 
 	privilege := func(name string) uint64 { return 1 << vmsdef.Symbols["PRV$V_"+name] }

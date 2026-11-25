@@ -14,6 +14,7 @@ import (
 	"github.com/tucats/govax/internal/paging"
 	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vm"
 )
 
@@ -103,6 +104,9 @@ fail:	brb	fail
 // section's pages reached its file, including those on the modified list
 // and those soft-faulted back with clean PTEs.
 func TestDeleteTransitionPages(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	setSetting(t, machine.PagingSetting, "true")
 	setSetting(t, "vax.sysgen.pql_dwsdefault", "30")
 
@@ -311,6 +315,9 @@ func TestDeleteTransitionPages(t *testing.T) {
 // transition, then removes the process: every frame it was given goes
 // back, none stays tied to it, its S0 pool pages' too.
 func TestDeleteProcessTransitionPages(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	setSetting(t, machine.PagingSetting, "true")
 
 	c, _ := scheduledConsole(t, longQuantum, brbSelf)

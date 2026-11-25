@@ -14,6 +14,7 @@ import (
 // SYS$SYSTEM:AUTHORIZE, and a foreign command; each leaves AUTHORIZE's
 // $STATUS, and what they did is in the System's authorization file.
 func TestAuthorizeFromDCL(t *testing.T) {
+	t.Parallel()
 	d, c, buf := newCommandDispatcher(t)
 	proc := writeProcedure(t, t.TempDir(), "auth.com",
 		"$ SET NOON",
@@ -82,6 +83,7 @@ done
 // TestAuthorizeNeedsAccess: a process that isn't in the system category
 // and lacks SYSPRV gets NAOFIL, as VMS 7.1 told the probe's UAF95.
 func TestAuthorizeNeedsAccess(t *testing.T) {
+	t.Parallel()
 	d, c, buf := newCommandDispatcher(t)
 	c.RTL.Process.UIC = uint32(uaf.NewUIC(0o200, 5))
 	c.RTL.Process.CurrentPrivileges = 0
@@ -97,6 +99,7 @@ func TestAuthorizeNeedsAccess(t *testing.T) {
 // the default directory, a volume's here, and an identifier granted to an
 // account's UIC is among the rights its login gives (Decision 11).
 func TestAuthorizeListAndRights(t *testing.T) {
+	t.Parallel()
 	d, c, buf := newCommandDispatcher(t)
 	mountFreshContainer(t, c, "DUA1:")
 
@@ -139,6 +142,7 @@ Identifier                         Value           Attributes
 // without a system volume), as one command and in a session, where its
 // prompts read the procedure's data lines and Return goes back to UAF>.
 func TestAuthorizeHelp(t *testing.T) {
+	t.Parallel()
 	d, _, buf := newCommandDispatcher(t)
 
 	mustDispatch(t, d, "AUTHORIZE HELP SHOW /BRIEF")
@@ -164,6 +168,7 @@ func TestAuthorizeHelp(t *testing.T) {
 // TestHelpAuthAbbreviated: HELP AUTH is AUTHORIZE's topic alone, since the
 // topic that told who wrote govax is GOVAX now, with its credits.
 func TestHelpAuthAbbreviated(t *testing.T) {
+	t.Parallel()
 	d, _, buf := newCommandDispatcher(t)
 
 	mustDispatch(t, d, "HELP/NOPROMPT AUTH")

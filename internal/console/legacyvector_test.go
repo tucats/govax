@@ -43,6 +43,7 @@ s0buf:	.blkw	7
 
 // TestLegacyVectorService runs a service through the old S0 vector.
 func TestLegacyVectorService(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 
 	path := filepath.Join(t.TempDir(), "legacy.asm")

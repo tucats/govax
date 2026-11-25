@@ -60,6 +60,7 @@ func newTestContainer(t *testing.T, label string) string {
 // an operator would expect a bare MOUNT command to just work without a
 // separate DEFINE/DEVICE ceremony first.
 func TestConsoleMount_autoCreatesDevice(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	path := newTestContainer(t, "TESTVOL")
 
@@ -87,6 +88,7 @@ func TestConsoleMount_autoCreatesDevice(t *testing.T) {
 // own doc comment), it never overwrites one an operator already set up
 // with its own DEVTYPE/qualifiers.
 func TestConsoleMount_doesNotRedefineExistingDevice(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	path := newTestContainer(t, "TESTVOL")
 
@@ -112,6 +114,7 @@ func TestConsoleMount_doesNotRedefineExistingDevice(t *testing.T) {
 // an already-mounted device's volume), and that the original mount is
 // left completely undisturbed.
 func TestConsoleMount_alreadyMounted(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	path := newTestContainer(t, "TESTVOL")
 
@@ -140,6 +143,7 @@ func TestConsoleMount_alreadyMounted(t *testing.T) {
 // after the underlying mount has actually succeeded, so a failed MOUNT
 // never leaves a phantom disk device pointing at nothing.
 func TestConsoleMount_badContainer(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 
 	missing := filepath.Join(t.TempDir(), "does-not-exist.dsk")
@@ -163,6 +167,7 @@ func TestConsoleMount_badContainer(t *testing.T) {
 // auto-created device record itself in place -- real VMS's own DISMOUNT
 // makes a device unmounted, not undefined.
 func TestConsoleDismount(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	path := newTestContainer(t, "TESTVOL")
 
@@ -187,6 +192,7 @@ func TestConsoleDismount(t *testing.T) {
 // nothing mounted fails with the real SS_DEVNOTMOUNT status rather than a
 // silent no-op or a generic error.
 func TestConsoleDismount_notMounted(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 
 	err := c.cmd().Dismount("DUA0")
@@ -203,6 +209,7 @@ func TestConsoleDismount_notMounted(t *testing.T) {
 // name for a later Mount, the same MOUNT/DISMOUNT/MOUNT cycle a real VMS
 // operator swapping media would perform.
 func TestConsoleMountThenRemount(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	path := newTestContainer(t, "TESTVOL")
 
@@ -231,6 +238,7 @@ func TestConsoleMountThenRemount(t *testing.T) {
 // ONLY)" instead -- all three read straight from internal/rms.MountTable,
 // not from any field on the internal/io.Device record itself.
 func TestShowDevices_mountedVolumeLine(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	path := newTestContainer(t, "TESTVOL")
 
@@ -292,6 +300,7 @@ func TestShowDevices_mountedVolumeLine(t *testing.T) {
 // disk header only makes sense for the device class MOUNT actually
 // targets; a terminal gets its own layout (showRecordDeviceFull).
 func TestShowDevices_mountedVolumeLineOnlyForDisks(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 
 	c.cmd().DefineDevice("TTA0", iodev.DeviceOptions{DevClass: iodev.DeviceClassTT})
@@ -335,6 +344,7 @@ func statValue(t *testing.T, out, label string) int {
 // sibling ods2 module's volume.Stats) -- so creating a real file through
 // the ordinary COPY path must move both numbers.
 func TestShowDevices_liveStatsReflectARealFile(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -400,6 +410,7 @@ func TestShowDevices_liveStatsReflectARealFile(t *testing.T) {
 // path here would fail to open under its now-upcased spelling on any
 // case-sensitive filesystem.
 func TestDispatch_mountAndDismountViaDCL(t *testing.T) {
+	t.Parallel()
 	d, c := newTestDispatcher(t)
 	path := newTestContainer(t, "TESTVOL")
 
@@ -434,6 +445,7 @@ func TestDispatch_mountAndDismountViaDCL(t *testing.T) {
 // dispatch-level counterpart to TestParse_mountNowrite (which only checks
 // grammar-level parsing, never calls Console.Mount at all).
 func TestDispatch_mountNowriteViaDCL(t *testing.T) {
+	t.Parallel()
 	d, c := newTestDispatcher(t)
 	path := newTestContainer(t, "TESTVOL")
 
@@ -451,6 +463,7 @@ func TestDispatch_mountNowriteViaDCL(t *testing.T) {
 // Console.Dismount's SS_DEVNOTMOUNT error rather than being swallowed
 // somewhere in the grammar-dispatch plumbing.
 func TestDispatch_dismountNotMountedViaDCL(t *testing.T) {
+	t.Parallel()
 	d, _ := newTestDispatcher(t)
 
 	err := d.Dispatch("DISMOUNT DUA0")
@@ -468,6 +481,7 @@ func TestDispatch_dismountNotMountedViaDCL(t *testing.T) {
 // command named a logical one, and says nothing when the console isn't
 // verbose.
 func TestDispatch_mountMessage(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	d := NewDispatcher(c, loadEvaxGrammar(t))
 
@@ -504,6 +518,7 @@ func TestDispatch_mountMessage(t *testing.T) {
 // the MOUNTED message, even with the console verbose, and that a failed
 // MOUNT/NOLOG still reports its error.
 func TestDispatch_mountNolog(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	d := NewDispatcher(c, loadEvaxGrammar(t))
 
@@ -533,6 +548,7 @@ func TestDispatch_mountNolog(t *testing.T) {
 // block reads and writes since the mount, so writing a file makes it
 // grow; with nothing mounted it's the device record's own count.
 func TestShowDevices_operationsCompleted(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	path := newTestContainer(t, "TESTVOL")
 

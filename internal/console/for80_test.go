@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // The Phase 80 probe (docs/planning/PHASE-80 - FORTRAN formatted IO.md, subtask 2):
@@ -37,6 +38,9 @@ func copyFor80(t *testing.T, dispatch func(string) string) {
 // TestFor80Assembles: every program assembles without a message, so the volume
 // the VAX runs them from needs no second try.
 func TestFor80Assembles(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	_, dispatch := wsDispatcher(t)
 	dsk := filepath.Join(t.TempDir(), "for80.dsk")
 
@@ -57,6 +61,9 @@ func TestFor80Assembles(t *testing.T) {
 // runs over govax's LIBRTL here, so this says nothing of what's right: VMS's run
 // does.
 func TestFor80RunsOnFORRTL(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	disk, file := findFORRTL(t)
 	_, dispatch := wsDispatcher(t)
 	dsk := filepath.Join(t.TempDir(), "for80.dsk")
@@ -178,6 +185,9 @@ func for80MessageLine(line string) bool {
 // the FOR texts are vmsdef's (forMessages), and $PUTMSG's walk of FORRTL's
 // signal arrays is govax's.
 func TestFor80Messages(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	disk, file := findFORRTL(t)
 	_, dispatch := wsDispatcher(t)
 	dsk := filepath.Join(t.TempDir(), "for80.dsk")
@@ -221,6 +231,9 @@ func TestFor80Messages(t *testing.T) {
 // INVTEXREC with the record number, RMS's EOF), and the image's status. The
 // user PC is each image's own, so its value isn't compared.
 func TestFor80FTNRTLMessages(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	_, dispatch := wsDispatcher(t)
 	dsk := filepath.Join(t.TempDir(), "for80.dsk")
 
@@ -334,6 +347,9 @@ func for80MessageLines(out string) []string {
 // holds FTNRTL to. (FORRTL gave VMS's output over govax in every case of round
 // 1's editing sections.) With FOR80C_WRITE set it rewrites the file.
 func TestFor80Round3(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	disk, file := findFORRTL(t)
 	c, dispatch := wsDispatcher(t)
 	dsk := filepath.Join(t.TempDir(), "for80.dsk")

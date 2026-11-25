@@ -12,6 +12,7 @@ import (
 	"github.com/tucats/govax/internal/paging"
 	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/sched"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vm"
 )
 
@@ -197,6 +198,9 @@ func checkNoChildFrames(t *testing.T, c *console.Console, pid uint32) {
 // runs to its end (its G^ call says hello), and the process's deletion
 // leaves no section, frame, or hold on the file behind.
 func TestMappedCreatedImage(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, _, name, out := mappedImageConsole(t, "1")
 	one := c.RTL
 
@@ -246,6 +250,9 @@ func TestMappedCreatedImage(t *testing.T) {
 // only its own; after the second the subprocess holds nothing of the
 // image while it is still there, and the file is free once it has gone.
 func TestMappedSpawnedImage(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, d, name, out := mappedImageConsole(t, "1")
 
 	proc := filepath.Join(t.TempDir(), "twice.com")
@@ -329,6 +336,9 @@ func TestMappedSpawnedImage(t *testing.T) {
 // files are TestMilestone's, no process is left, and the volume, its
 // image files no longer held, dismounts and verifies.
 func TestMilestone_paging(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	for _, how := range []struct{ name, mode, want string }{
 		{"creprc", "CREPRC", "$CREPRC"},
 		{"spawn", "SPAWN", "LIB$SPAWN"},

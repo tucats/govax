@@ -38,6 +38,7 @@ var sec93SecurityDifferences = map[int]string{
 }
 
 func TestSec93SecurityOracle(t *testing.T) {
+	t.Parallel()
 	c, run := sec93Console(t)
 	c.RTL.NodeName = "SIMVAX"
 	image := sec93Build(t, c)

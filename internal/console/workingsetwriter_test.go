@@ -12,6 +12,7 @@ import (
 	"github.com/tucats/govax/internal/paging"
 	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vm"
 )
 
@@ -113,6 +114,9 @@ fail:	brb	fail
 // and the writer's thresholds at 10 and 2, and checks at each checkpoint
 // where the section's pages are and what its file holds.
 func TestModifiedPageWriter(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	setSetting(t, machine.PagingSetting, "true")
 	setSetting(t, "vax.sysgen.pql_dwsdefault", "30")
 	setSetting(t, "vax.sysgen.mpw_hilimit", "10")

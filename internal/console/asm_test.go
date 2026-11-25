@@ -14,6 +14,7 @@ import (
 // confirming ASM's deposit-into-live-memory and symbol-table-merge (so
 // "test" resolves by name) both work end-to-end.
 func TestAssemble_xorDepositsAndIsCallable(t *testing.T) {
+	t.Parallel()
 	c := newRunnableConsole(t)
 
 	_, hasEntry, err := c.Assemble(asmFixturePath(t, "xor.asm"))
@@ -49,6 +50,7 @@ func TestAssemble_xorDepositsAndIsCallable(t *testing.T) {
 // (no entry) assembled second must report hasEntry=false, not a stale
 // leftover from movq.asm.
 func TestAssemble_persistentSessionSharesSymbolsAcrossFiles(t *testing.T) {
+	t.Parallel()
 	c := newRunnableConsole(t)
 
 	_, hasEntry1, err := c.Assemble(asmFixturePath(t, "movq.asm"))
@@ -86,6 +88,7 @@ func TestAssemble_persistentSessionSharesSymbolsAcrossFiles(t *testing.T) {
 // mask word as ".ENTRY MAIN,^M<>" rather than misdecoding it as an
 // instruction.
 func TestAssemble_helloEntrySymbolAndMask(t *testing.T) {
+	t.Parallel()
 	c := newRunnableConsole(t)
 
 	_, _, err := c.Assemble(asmFixturePath(t, "hello.asm"))
@@ -133,6 +136,7 @@ func TestAssemble_helloEntrySymbolAndMask(t *testing.T) {
 // so the test does no device setup at all: it expects hello.asm's "Hello
 // world" print and its delay loop to run to completion, not hit the cap.
 func TestAssemble_kernelThenHelloRunsBounded(t *testing.T) {
+	t.Parallel()
 	c := newRunnableConsole(t)
 	c.ResetAsmSession() // start from a clean session explicitly, for clarity
 	out := &bytes.Buffer{}

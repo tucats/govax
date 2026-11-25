@@ -10,6 +10,7 @@ import (
 	"github.com/tucats/govax/internal/dclcmd"
 	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/respath"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -73,6 +74,9 @@ func bootOnSystemVolume(t *testing.T, path string, paging bool, pageFile string)
 // volume at the first start, and used again, not made again, by the next
 // session; SHOW MEMORY and SHOW MEMORY/FILES name it.
 func TestSystemPageFile(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	path := filepath.Join(t.TempDir(), "govax-system.dsk")
 
 	c, buf, dispatch := bootOnSystemVolume(t, path, true, "")
@@ -118,6 +122,9 @@ func TestSystemPageFile(t *testing.T) {
 
 // TestSystemPageFilePagingOff: with paging off, nothing is made.
 func TestSystemPageFilePagingOff(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, buf, dispatch := bootOnSystemVolume(t, filepath.Join(t.TempDir(), "govax-system.dsk"), false, "")
 
 	if c.RTL.PageFile() != nil || c.RTL.OpenPageFile() != nil {
@@ -133,6 +140,9 @@ func TestSystemPageFilePagingOff(t *testing.T) {
 // mounted read-only, and has no page file: none installed, none opened at
 // the pager's need, no message about it, and SHOW MEMORY says why.
 func TestSystemPageFileReadOnly(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	path := filepath.Join(t.TempDir(), "govax-system.dsk")
 
 	// The first session holds the volume.
@@ -170,6 +180,9 @@ func TestSystemPageFileReadOnly(t *testing.T) {
 // TestSystemPageFileConfigured: a page file vax.sysgen.paging.file names
 // is used in place of the system volume's.
 func TestSystemPageFileConfigured(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	host := filepath.Join(t.TempDir(), "pagefile.sys")
 
 	c, _, _ := bootOnSystemVolume(t, filepath.Join(t.TempDir(), "govax-system.dsk"), true, `"`+host+`"`)

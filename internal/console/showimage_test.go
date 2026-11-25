@@ -7,6 +7,7 @@ import (
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
 	"github.com/tucats/govax/internal/machine"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // The debugger's SHOW IMAGE/FULL shows how an image's sections are laid
@@ -22,6 +23,9 @@ import (
 // set, the array's pages are valid and in transition on the modified
 // list, all backed by the page file.
 func TestShowImageFull_mapped(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, d, name, out := mappedImageConsole(t, "1")
 
 	if err := d.Dispatch("RUN/DEBUG " + name); err != nil {
@@ -82,6 +86,9 @@ func TestShowImageFull_mapped(t *testing.T) {
 // TestShowImageFull_copied: with paging off the image is copied: every
 // page is valid, with no backing store.
 func TestShowImageFull_copied(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	setSetting(t, machine.PagingSetting, "false")
 
 	c, out := scheduledConsole(t, longQuantum, brbSelf)

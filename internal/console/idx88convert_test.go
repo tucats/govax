@@ -12,6 +12,7 @@ import (
 	"github.com/tucats/govax/internal/backup"
 	"github.com/tucats/govax/internal/isam"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // TestIdx88CConvertOracle holds CONVERT (Phase 88's subtask 10c) to VMS 7.1's run
@@ -27,6 +28,9 @@ import (
 // without /LOG, which is govax's own, and C12A.SEQ: the records VMS could still
 // read past a damaged free offset (X05), where govax's reader stops at the bucket.
 func TestIdx88CConvertOracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	vax := filepath.Join("..", "..", "testdata", "idx88", "vax")
 
 	text, err := os.ReadFile(filepath.Join(vax, "idx88c.log"))

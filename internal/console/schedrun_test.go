@@ -13,6 +13,7 @@ import (
 	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/sched"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // Phase 44's subtask 7: only process 1's outcomes end the console's run.
@@ -76,6 +77,9 @@ loop:	incl	@#^X600
 // calls $EXIT); process 2 stops and is never scheduled again. Both with
 // the console's own run loop and the debugger's.
 func TestSchedulerRun_otherImageEnds(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	for _, tt := range []struct {
 		name     string
 		program  string
@@ -131,6 +135,9 @@ func TestSchedulerRun_otherImageEnds(t *testing.T) {
 // mode, where HALT is allowed) stops the machine and the console's run,
 // and the stop names the process.
 func TestSchedulerRun_haltInOtherProcess(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	haltCode, _ := assembleAt(t, "\thalt\n")
 
 	c, out := scheduledConsole(t, longQuantum, counter())
@@ -180,6 +187,9 @@ func debuggedPair(t *testing.T, bp uint32) (*console.Console, *debugger.Debugger
 // (process 1, back at the breakpoint it was stopped at, must not stop
 // again before running it).
 func TestSchedulerDebug_breakpointsAreProcessOnes(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	for _, tt := range []struct {
 		name   string
 		bp     uint32
@@ -224,6 +234,9 @@ func TestSchedulerDebug_breakpointsAreProcessOnes(t *testing.T) {
 // TestSchedulerDebug_stepFreezes: a STEP runs process 1 alone, however
 // many quanta it takes; GO lets process 2 run again.
 func TestSchedulerDebug_stepFreezes(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, db, two := debuggedPair(t, codeAddr+6)
 	one := c.RTL
 
@@ -262,6 +275,9 @@ func TestSchedulerDebug_stepFreezes(t *testing.T) {
 // before its next instruction must be made for it, not for the process
 // it replaced (or a stop is missed, and the same address comes twice).
 func TestSchedulerDebug_everyInstruction(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, db, two := debuggedPair(t, codeAddr)
 	db.AddBreakpoint(codeAddr + 6)
 
@@ -315,6 +331,9 @@ func stopInProcessTwo(t *testing.T, c *console.Console, two *corevms.Environment
 // CPU (and so the console's EXAMINE) is process 2's at the prompt, and
 // the next run gives the CPU back to process 1 first.
 func TestSchedulerStop_inProcessTwo(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, out := scheduledConsole(t, "5", counter())
 	one := c.RTL
 	two := handBuiltProcess(t, c, counter())
@@ -381,6 +400,9 @@ func TestSchedulerStop_inProcessTwo(t *testing.T) {
 // TestSchedulerStop_debuggerExit: under the debugger, a stop in process 2
 // opens the session in process 2, and EXIT returns the CPU to process 1.
 func TestSchedulerStop_debuggerExit(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, _ := scheduledConsole(t, "5", counter())
 	two := handBuiltProcess(t, c, counter())
 	db := debugger.Install(c, consoletest.DebugGrammar(t))
@@ -408,6 +430,9 @@ func TestSchedulerStop_debuggerExit(t *testing.T) {
 // CPU still goes back to it (for the console's commands), it stays
 // waiting, and process 2 runs on when the program resumes.
 func TestSchedulerStop_processOneWaiting(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	code, _ := assembleAt(t, hiberCount)
 
 	c, _ := scheduledConsole(t, "5", code)

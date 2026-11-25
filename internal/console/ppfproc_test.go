@@ -7,6 +7,7 @@ import (
 
 	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -94,6 +95,7 @@ func checkpoints(t *testing.T, d *Dispatcher, c *Console, at string) [][2]proced
 // an entry of its own; the names are put back as each level ends, and
 // the files closed.
 func TestProcedureFiles_names(t *testing.T) {
+	t.Parallel()
 	d, c, buf := newCommandDispatcher(t)
 	dir := t.TempDir()
 
@@ -182,6 +184,7 @@ func TestProcedureFiles_names(t *testing.T) {
 // file; the log is a VFC print file with the procedure's output, and an
 // image's records (here TYPE SYS$INPUT's data lines) go there too.
 func TestProcedureFiles_volume(t *testing.T) {
+	t.Parallel()
 	d, c, buf := newCommandDispatcher(t)
 	dir := t.TempDir()
 
@@ -225,6 +228,7 @@ func TestProcedureFiles_volume(t *testing.T) {
 // new process 1, which takes over DCL's procedure files: an image's
 // SYS$INPUT after it is still the procedure's data lines.
 func TestProcedureFiles_vminit(t *testing.T) {
+	t.Parallel()
 	d, c, buf := newCommandDispatcher(t)
 
 	proc := writeProcedure(t, t.TempDir(), "init.com",
@@ -269,6 +273,9 @@ func TestProcedureFiles_vminit(t *testing.T) {
 // becomes an entry of the new process 1's, its name defined again, so
 // WRITE and CLOSE after it reach it.
 func TestProcedureFiles_vminitOpen(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, c, buf := newCommandDispatcher(t)
 	t.Chdir(t.TempDir())
 

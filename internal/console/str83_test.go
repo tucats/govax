@@ -24,6 +24,7 @@ var expectedStr83Differences = map[string]string{
 }
 
 func TestStr83Oracle(t *testing.T) {
+	t.Parallel()
 	dir := filepath.Join("..", "..", "testdata", "str83")
 
 	src, err := os.ReadFile(filepath.Join(dir, "str83.mar"))

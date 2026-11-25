@@ -26,6 +26,7 @@ func jsbProgram(handler string) string {
 // handler shows with its dump, the JSB's return address in START; the condition being an error, the JSB returns, its R0
 // SS$_UNSUPPORTED, with the stack and the other registers as they were.
 func TestLibrtlMissingJSBEntry(t *testing.T) {
+	t.Parallel()
 	r0, out := runMacroProgram(t, jsbProgram(""))
 
 	if r0 != 0xE4A { // SS$_UNSUPPORTED
@@ -46,6 +47,7 @@ func TestLibrtlMissingJSBEntry(t *testing.T) {
 // condition (a JSB routine has no frame, so the search starts at its
 // caller's), and continuing it returns from the JSB.
 func TestLibrtlMissingJSBEntryContinued(t *testing.T) {
+	t.Parallel()
 	r0, out := runMacroProgram(t, jsbProgram("\t.ENTRY\tHANDLER,^M<>\n\tMOVL\t#1,R0\n\tRET\n")) // SS$_CONTINUE
 
 	if r0 != 0xE4A {
@@ -62,6 +64,7 @@ func TestLibrtlMissingJSBEntryContinued(t *testing.T) {
 // through LIB$AB_EBC_ASC gives the EBCDIC the manual's table shows and
 // the text again. The program ends with 1 when all three match.
 func TestLibrtlDataTables(t *testing.T) {
+	t.Parallel()
 	r0, out := runMacroProgram(t, "\t.PSECT\tDATA,NOEXE,WRT,LONG\n"+
 		"SRC:\t.ASCII\t/Az09a{/\nUP:\t.ASCII\t/AZ09A{/\n"+
 		"EBC:\t.BYTE\t^XC1,^XA9,^XF0,^XF9,^X81,^XC0\n"+
@@ -91,6 +94,7 @@ func TestLibrtlDataTables(t *testing.T) {
 // a character with no EBCDIC equivalent gives LIB$_INVCHA. It ends with
 // 1 when all of that held.
 func TestLibrtlTranslate(t *testing.T) {
+	t.Parallel()
 	r0, out := runMacroProgram(t, "\t.PSECT\tDATA,NOEXE,WRT,LONG\n"+
 		"SRC:\t.ASCID\t/GOVAX/\nEBC:\t.ASCID\t/...../\nBACK:\t.ASCID\t/...../\n"+
 		"WANT:\t.BYTE\t^XC7,^XD6,^XE5,^XC1,^XE7\n"+

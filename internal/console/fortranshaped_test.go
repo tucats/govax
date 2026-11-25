@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -80,6 +81,9 @@ TEXT:	.BLKB	8
 `
 
 func TestFortranShapedFromMACRO(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, c, buf := shareFindConsole(t, false)
 
 	for name, text := range map[string]string{"SHOWV.FOR": ftnShapedRoutine, "SHAPEM.MAR": ftnShapedCaller} {

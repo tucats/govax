@@ -7,6 +7,7 @@ import (
 
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -79,6 +80,9 @@ const returnedSub = "%DCL-S-RETURNED, control returned to process SYSTEM_1"
 // subprocess's ATTACH ends; when it logs out, process 1's ATTACH ends.
 // Ctrl/Y's setting is the attached process's throughout.
 func TestAttach_backAndForth(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, dispatch := attachConsole(t, strings.Join([]string{
 		"SET NOCONTROL=Y",
 		"ATTACH SYSTEM",
@@ -122,6 +126,9 @@ func TestAttach_backAndForth(t *testing.T) {
 // PID no process has, SS$_NONEXPR; a name and /IDENTIFICATION both, or
 // neither, is the command's error. $STATUS is each status.
 func TestAttach_refused(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, dispatch := attachConsole(t, "")
 
 	if got := dispatch("SPAWN/NOWAIT/PROCESS=BESIDE WAIT 00:00:30"); got != "%DCL-S-SPAWNED, process BESIDE spawned" {
@@ -160,6 +167,9 @@ func TestAttach_refused(t *testing.T) {
 // process 1's ATTACH gives it back, LIB$ATTACH returns SS$_NORMAL, and
 // the image goes on.
 func TestLibAttach_image(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, dispatch := attachConsole(t, "ATT\nLOGOUT\n")
 
 	if got, want := dispatch("SPAWN"), spawnedOne+"$ attaching|"+returnedOne; got != want {
@@ -181,6 +191,9 @@ func TestLibAttach_image(t *testing.T) {
 // middle one logs out, its subprocess goes with it, and the terminal
 // comes back to process 1.
 func TestAttach_nested(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, dispatch := attachConsole(t, strings.Join([]string{
 		"SPAWN/PROCESS=INNER",
 		"ATTACH SYSTEM",
@@ -209,6 +222,9 @@ func TestAttach_nested(t *testing.T) {
 // TestAttach_pause: ATTACH typed at LIB$PAUSE's prompt in process 1
 // ends the paused image first (without its exit handler), then runs.
 func TestAttach_pause(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, dispatch := attachConsole(t, "ATTACH SYSTEM\nATTACH SYSTEM_1\nLOGOUT\n")
 
 	if image := buildImage(t, c, "pause", pauseSource); dispatch("PAUSE :== $"+image) != "" {

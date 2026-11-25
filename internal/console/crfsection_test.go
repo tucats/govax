@@ -9,6 +9,7 @@ import (
 	"github.com/tucats/govax/internal/console/consoletest"
 	"github.com/tucats/govax/internal/paging"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -133,6 +134,9 @@ func checkPagesFileUnchanged(t *testing.T, c *console.Console, pagesFile rms.Fil
 // that the section's pages are charged at mapping, go to the page file
 // once modified, and come back from it.
 func TestCopyOnRefSectionPaging(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	pageFileSettings(t)
 
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
@@ -323,6 +327,9 @@ func TestCopyOnRefSectionPaging(t *testing.T) {
 // is charged, the pages read back with their new values, and the file is
 // untouched, as before Phase 65.
 func TestCopyOnRefSectionPagingOff(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
 	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 	env := c.ProcessOne()
@@ -433,6 +440,9 @@ name:	.ascid	/CRFSEC/
 // having mapped (and charged) the pages before, and that a global
 // copy-on-reference page's fault isn't charged again.
 func TestCopyOnRefSectionQuota(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	pageFileSettings(t)
 
 	c, out := scheduledConsole(t, longQuantum, brbSelf)

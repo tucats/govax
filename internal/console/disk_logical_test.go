@@ -15,6 +15,7 @@ import (
 // block written logically and read back physically, the privilege check,
 // and a block past the end of the volume.
 func TestDiskLogical_assembledProgram(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 
 	image := filepath.Join(t.TempDir(), "logical.dsk")

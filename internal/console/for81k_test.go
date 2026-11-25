@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // Round 3b of testdata/for81 (docs/planning/PHASE-113 - Fortran errata.md,
@@ -122,18 +124,42 @@ func checkFor81K(t *testing.T, out string, differences map[string]string) {
 	compareFor81G(t, for88Cases(out), string(text), differences, 28)
 }
 
-func TestFor81KProcedure(t *testing.T) { checkFor81K(t, runFor81K(t, true), for81KDifferences) }
+func TestFor81KProcedure(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 
-func TestFor81KOnFTNRTL(t *testing.T) { checkFor81K(t, runFor81K(t, false), for81KFTNRTLDifferences) }
+	checkFor81K(t, runFor81K(t, true), for81KDifferences)
+}
+
+func TestFor81KOnFTNRTL(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
+
+	checkFor81K(t, runFor81K(t, false), for81KFTNRTLDifferences)
+}
 
 // FOR81M (Phase 113's probe round 2, testdata/err113's README) asks the
 // associated variable after FIND, WRITE, or READ, then DELETE by number.
 // TestFor81MOnFTNRTL holds FTNRTL to VMS 7.1's run, vax/for81m-vax.txt, and
 // TestFor81MProcedure VMS's FORRTL over govax (or skips without FORRTL.EXE on a
 // local volume).
-func TestFor81MOnFTNRTL(t *testing.T) { checkFor81M(t, runFor81Program(t, "FOR81M", false)) }
+func TestFor81MOnFTNRTL(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 
-func TestFor81MProcedure(t *testing.T) { checkFor81M(t, runFor81Program(t, "FOR81M", true)) }
+	checkFor81M(t, runFor81Program(t, "FOR81M", false))
+}
+
+func TestFor81MProcedure(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
+
+	checkFor81M(t, runFor81Program(t, "FOR81M", true))
+}
 
 func checkFor81M(t *testing.T, out string) {
 	t.Helper()

@@ -39,6 +39,7 @@ func fatEndOfFile(fat []byte) (uint32, uint16) {
 // access, its first block overwritten with shorter text, and its end of
 // file set to the byte by an attribute list on deaccess, as RMS does.
 func TestDiskAttributes_assembledProgram(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 

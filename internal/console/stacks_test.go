@@ -25,6 +25,7 @@ func s0Protection(t *testing.T, c *Console, va uint32) vm.Protection {
 // STARTUP.COM's sizes, and checks MODE-STACKS.md's layout and protections,
 // the stack pointers, and the PCB page.
 func TestBuildStacks(t *testing.T) {
+	t.Parallel()
 	c := bootedConsole(t)
 	sys := c.RTL.System
 	free := sys.S0Pool().FreePages()
@@ -98,6 +99,7 @@ func TestBuildStacks(t *testing.T) {
 // TestProcessOneStacksAndPCB: process 1 adopts VMINIT's stacks, and gets
 // a PCB page the first time one is needed, and the same one after.
 func TestProcessOneStacksAndPCB(t *testing.T) {
+	t.Parallel()
 	c := bootedConsole(t)
 	st := c.RTL.Stacks
 
@@ -118,6 +120,7 @@ func TestProcessOneStacksAndPCB(t *testing.T) {
 // TestInitialPCB: a new process's first PCB holds its stacks and address
 // space, round-trips through memory, and has no AST pending.
 func TestInitialPCB(t *testing.T) {
+	t.Parallel()
 	c := bootedConsole(t)
 	sys := c.RTL.System
 

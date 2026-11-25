@@ -10,6 +10,7 @@ import (
 
 	"github.com/tucats/govax/internal/fortran/sysdef"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -73,6 +74,9 @@ var fortranLibrarySetup = []string{
 // TestFortranLibrary is INCLUDE '(module)' and 'lib(module)', + and /LIBRARY
 // through the command's grammar, to a program that runs.
 func TestFortranLibrary(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, buf := fortranLibraryConsole(t, fortranLibraryFiles)
 
 	out := fortranLibraryRun(t, d, buf, append(fortranLibrarySetup,
@@ -104,6 +108,9 @@ func TestFortranLibrary(t *testing.T) {
 // TestFortranLibraryLogical checks the order of the search: /LIBRARY's, then
 // FORT$LIBRARY's.
 func TestFortranLibraryLogical(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, buf := fortranLibraryConsole(t, map[string]string{
 		"TWO.FOR":   "      INCLUDE '(WHICH)'\n      PRINT *, WHICH\n      END\n",
 		"WHICH.TXT": fortranLibraryFiles["WHICH.TXT"],
@@ -130,6 +137,9 @@ func TestFortranLibraryLogical(t *testing.T) {
 // TestFortranLibrarySysDef finds FORSYSDEF.TLB through SYS$LIBRARY, last, and a
 // library of VMS's own making.
 func TestFortranLibrarySysDef(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, buf := fortranLibraryConsole(t, map[string]string{
 		"V.FOR": "      INCLUDE '(TXA)'\n      PRINT *, A\n      END\n",
 	})
@@ -159,6 +169,9 @@ const builtinSSDEF = "      INCLUDE '($ssdef)'\n      PRINT *, SS$_ABORT\n      
 // TestFortranBuiltinModules finds a module built into govax: in any case, with
 // no lines in the MACRO file but the comments naming it.
 func TestFortranBuiltinModules(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, buf := fortranLibraryConsole(t, map[string]string{"B.FOR": builtinSSDEF})
 
 	out := fortranLibraryRun(t, d, buf, "FORTRAN B", "MACRO B", "LINK B", "RUN B")
@@ -180,6 +193,9 @@ func TestFortranBuiltinModules(t *testing.T) {
 // TestFortranBuiltinModulesLast checks that a library of any kind comes before
 // the built-in modules, and that 'lib(module)' doesn't reach them.
 func TestFortranBuiltinModulesLast(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, buf := fortranLibraryConsole(t, map[string]string{
 		"B.FOR":     builtinSSDEF,
 		"C.FOR":     "      INCLUDE 'MINE($IODEF)'\n      END\n",
@@ -216,6 +232,9 @@ func TestFortranBuiltinModulesLast(t *testing.T) {
 // TestFortranBuiltinLibrary reads the built-in modules as the text library
 // mkforsysdef writes, with LIBRARY and as FORTRAN's own /LIBRARY.
 func TestFortranBuiltinLibrary(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, buf := fortranLibraryConsole(t, map[string]string{"B.FOR": builtinSSDEF})
 
 	data, err := sysdef.Library(time.Date(2026, time.November, 1, 12, 0, 0, 0, time.UTC))
@@ -260,6 +279,9 @@ func TestFortranBuiltinLibrary(t *testing.T) {
 // TestFortranServiceNames checks $SYSSRVNAM's cost: the .EXTRN of a unit that
 // includes it names only the service it calls.
 func TestFortranServiceNames(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, buf := fortranLibraryConsole(t, map[string]string{
 		"S.FOR": "      INCLUDE '($SYSSRVNAM)'\n      INTEGER*4 T(2), I\n      I = SYS$GETTIM(T)\n      END\n",
 	})
@@ -273,6 +295,9 @@ func TestFortranServiceNames(t *testing.T) {
 
 // TestFortranLibraryErrors checks a library or module that can't be used.
 func TestFortranLibraryErrors(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, buf := fortranLibraryConsole(t, map[string]string{
 		"M.FOR":   "      INCLUDE '(NOSUCH)'\n      END\n",
 		"N.FOR":   "      INCLUDE 'THE(NOSUCH)'\n      END\n",
@@ -314,6 +339,9 @@ func TestFortranLibraryErrors(t *testing.T) {
 
 // TestLibraryTextLog checks /LOG's facility, which the rest of LIBRARY shares.
 func TestLibraryTextLog(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, buf := fortranLibraryConsole(t, map[string]string{"A.TXT": "X\n"})
 
 	out := fortranLibraryRun(t, d, buf, "LIBRARY/CREATE/TEXT/LOG L A")

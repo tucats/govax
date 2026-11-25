@@ -7,6 +7,7 @@ import (
 	"github.com/tucats/govax/internal/console/consoletest"
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/paging"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -239,6 +240,9 @@ func pfTouch(t *testing.T, c *console.Console, first uint32, i int, want, add ui
 // TestPageFileGlobalSection runs pfGlobalSource with a 30-page working
 // set, the writer's thresholds at 10 and 2, and a host page file.
 func TestPageFileGlobalSection(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	pageFileSettings(t)
 
 	c, out := scheduledConsole(t, longQuantum, brbSelf)

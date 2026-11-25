@@ -6,6 +6,7 @@ import (
 	"github.com/tucats/gopackages/app-cli/settings"
 
 	"github.com/tucats/govax/internal/dclshell"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // TestSetPrompt checks SET PROMPT="text": the prompt and the
@@ -13,6 +14,9 @@ import (
 // the default; and a name that only abbreviates PROMPT is still a symbol
 // assignment.
 func TestSetPrompt(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	saved, had := settings.Get(dclshell.PromptSetting), settings.Exists(dclshell.PromptSetting)
 
 	t.Cleanup(func() {

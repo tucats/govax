@@ -18,6 +18,7 @@ const queueData = "\t.PSECT\tDATA,NOEXE,WRT,QUAD\n" +
 // LIB$BBSSI, and LIB$BBCCI through their stubs. Each check that fails
 // returns its own number; all passing returns 1.
 func TestLibrtlQueues(t *testing.T) {
+	t.Parallel()
 	r0, out := runMacroProgram(t, queueData+
 		"\t.PSECT\tCODE,NOWRT,EXE\n"+
 		"\t.ENTRY\tSTART,^M<>\n"+
@@ -54,6 +55,7 @@ func TestLibrtlQueues(t *testing.T) {
 // signals SS$_ROPRAND, the reserved operand fault the instruction would
 // take; no handler takes it, and the image ends with it.
 func TestLibrtlQueueReservedOperand(t *testing.T) {
+	t.Parallel()
 	r0, out := runMacroProgram(t, queueData+
 		"\t.PSECT\tCODE,NOWRT,EXE\n"+
 		"\t.ENTRY\tSTART,^M<>\n"+

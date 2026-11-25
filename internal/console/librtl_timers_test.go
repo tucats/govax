@@ -15,6 +15,7 @@ import (
 // zeroes the handle. The times vary with the run, so the line is matched
 // by its form.
 func TestLibrtlTimers(t *testing.T) {
+	t.Parallel()
 	r0, out := runMacroProgram(t, "\t.PSECT\tDATA,NOEXE,WRT,LONG\n"+
 		"HANDLE:\t.LONG\t0\nCODE:\t.LONG\t5\nFAULTS:\t.LONG\t0\nBEFORE:\t.LONG\t0\nRANGE:\t.BLKL\t2\n"+
 		"OUT:\t.LONG\t^X020E0000,0\n"+

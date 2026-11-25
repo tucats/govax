@@ -12,6 +12,7 @@ import (
 // LIB$PUT_OUTPUT. The jackets' scratch buffers are in their own frames:
 // the caller's SP is the same after each call (docs/planning/PHASE-55, subtask 2).
 func TestLibrtlJackets(t *testing.T) {
+	t.Parallel()
 	r0, out := runMacroProgram(t, "\t.PSECT\tDATA,NOEXE,WRT,LONG\n"+
 		"OUT:\t.LONG\t^X020E0000,0\n"+ // a dynamic string, empty
 		"CTRL:\t.ASCID\t/!UL jacket!%S, !AS/\n"+
@@ -49,6 +50,7 @@ func TestLibrtlJackets(t *testing.T) {
 // program checks against JPI$K_INTERACTIVE, and LIB$GETDVI asks about
 // a mailbox by the channel $CREMBX assigned it.
 func TestLibrtlItemRoutines(t *testing.T) {
+	t.Parallel()
 	code := func(name string) string { return fmt.Sprintf("%d", vmsdef.Symbols[name]) }
 
 	r0, out := runMacroProgram(t, "\t.PSECT\tDATA,NOEXE,WRT,LONG\n"+

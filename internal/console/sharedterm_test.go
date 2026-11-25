@@ -8,6 +8,7 @@ import (
 
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/sched"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -63,6 +64,9 @@ const ttAssign = `
 // LEF, while process 2 counts; CTRL/C runs process 2's CTRL/C AST, not
 // stopping the machine; the line typed completes process 1's read.
 func TestSharedTerminal(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	one, _ := assembleAt(t, mbxSymbols()+ttAssign+`
 	clrl	r1			; efn
 	movl	#IO$_READVBLK, r2
@@ -156,6 +160,9 @@ ttnam:	.ascid	"TTA0:"
 // working, counting until its IOSB is written; the line typed then
 // completes the read, and the program sees it.
 func TestPendingTerminalRead(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	one, _ := assembleAt(t, mbxSymbols()+ttAssign+`
 	movl	#4, r1			; efn
 	movl	#IO$_READVBLK, r2

@@ -40,6 +40,7 @@ func piRun(t *testing.T, command string) (string, uint32) {
 
 // TestPi_default prints pi's first 100 places, the default.
 func TestPi_default(t *testing.T) {
+	t.Parallel()
 	got, r0 := piRun(t, "")
 
 	if r0 != vmsdef.Symbols["SS$_NORMAL"] {
@@ -57,6 +58,7 @@ func TestPi_default(t *testing.T) {
 // TestPi_count prints the count of places the command line gives, which
 // may be surrounded by blanks, and ends a partial line and group.
 func TestPi_count(t *testing.T) {
+	t.Parallel()
 	got, _ := piRun(t, "  63 ")
 
 	want := "3.1415926535 8979323846 2643383279 5028841971 6939937510\n" +
@@ -70,6 +72,7 @@ func TestPi_count(t *testing.T) {
 // TestPi_badCount reports a command line that isn't a count from 1 to
 // 100000, and returns SS$_BADPARAM with its message inhibited.
 func TestPi_badCount(t *testing.T) {
+	t.Parallel()
 	const inhibit = 0x10000000
 
 	for _, command := range []string{"0", "abc", "12x", "1 2", "100001"} {

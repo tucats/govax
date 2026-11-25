@@ -25,6 +25,7 @@ const charsData = "\t.PSECT\tDATA,NOEXE,WRT,LONG\n" +
 // LIB$MOVC3, LIB$MOVC5, LIB$MOVTC, and LIB$MOVTUC through their stubs.
 // Each check that fails returns its own number; all passing returns 1.
 func TestLibrtlChars(t *testing.T) {
+	t.Parallel()
 	r0, out := runMacroProgram(t, charsData+
 		"\t.PSECT\tCODE,NOWRT,EXE\n"+
 		"\t.ENTRY\tSTART,^M<>\n"+

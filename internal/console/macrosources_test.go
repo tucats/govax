@@ -9,6 +9,7 @@ import (
 
 	"github.com/tucats/govax/internal/obj"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -43,6 +44,9 @@ func macroObjectText(t *testing.T, c *Console, loc rms.FileLocation) string {
 // of its own, a + joining files into one, a later name taking its defaults from the
 // name before it, and a file's error not stopping the next.
 func TestMacroListVolume(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, c, buf := shareFindConsole(t, false)
 
 	write := func(name, text string) {
@@ -158,6 +162,9 @@ func TestMacroListVolume(t *testing.T) {
 // TestMacroListHost: the same on host files, each name quoted, where a comma inside
 // the quotes is part of the name.
 func TestMacroListHost(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, c, buf := shareFindConsole(t, false)
 	dir := t.TempDir()
 	t.Chdir(dir) // where default outputs go

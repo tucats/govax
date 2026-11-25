@@ -12,6 +12,7 @@ import (
 	"github.com/tucats/govax/internal/lbr"
 	"github.com/tucats/govax/internal/link"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 const libMacros = `; Test macros.
@@ -69,6 +70,9 @@ func moduleText(t *testing.T, l *lbr.Library, name string) string {
 // TestLibrary_macroHost creates a macro library on the host, then inserts,
 // replaces, deletes, extracts, and lists.
 func TestLibrary_macroHost(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, out := newTestConsole(t)
 	dir := t.TempDir()
 	t.Chdir(dir) // where default outputs go
@@ -184,6 +188,7 @@ const (
 // TestLibrary_objectLink puts an object module in a library, lists it,
 // and links a program that gets its subroutine from the library.
 func TestLibrary_objectLink(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 	out := c.Out.(*bytes.Buffer)
 	dir := t.TempDir()
@@ -247,6 +252,7 @@ func TestLibrary_objectLink(t *testing.T) {
 // rewrites it at its own version, /CREATE makes a new version, and the
 // listing can go to a file there.
 func TestLibrary_volume(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -297,6 +303,7 @@ func TestLibrary_volume(t *testing.T) {
 // TestLibrary_errorsLeaveLibrary checks that a failed LIBRARY doesn't
 // change the library.
 func TestLibrary_errorsLeaveLibrary(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	dir := t.TempDir()
 	src := filepath.Join(dir, "macros.mar")
@@ -331,6 +338,7 @@ func TestLibrary_errorsLeaveLibrary(t *testing.T) {
 
 // TestDispatch_libraryViaDCL runs LIBRARY through the DCL grammar.
 func TestDispatch_libraryViaDCL(t *testing.T) {
+	t.Parallel()
 	d, c := newTestDispatcher(t)
 	dir := t.TempDir()
 	src := filepath.Join(dir, "macros.mar")

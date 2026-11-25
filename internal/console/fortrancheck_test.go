@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -539,6 +540,9 @@ type checkProgram struct {
 // TestFortranCheck compiles and runs each of checkPrograms, with the check and without,
 // under both optimizer settings.
 func TestFortranCheck(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	runCheckPrograms(t, checkPrograms)
 }
 
@@ -589,6 +593,9 @@ func runCheckPrograms(t *testing.T, programs []checkProgram) {
 // TestFortranCheckQualifier is the command's side of /CHECK: its forms, its refusal of a
 // keyword that isn't one, and OPTIONS's, and the warning of a constant subscript.
 func TestFortranCheckQualifier(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, c, buf := shareFindConsole(t, false)
 
 	source := func(name, text string) {
@@ -706,6 +713,9 @@ func TestFortranCheckQualifier(t *testing.T) {
 // TestFortranWarningsQualifier is /WARNINGS at the command: what's said, the keywords
 // refused, and the status, which follows what's shown.
 func TestFortranWarningsQualifier(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, c, buf := shareFindConsole(t, false)
 
 	if _, err := c.ContainerSession.CreateRecordFile(rms.FileLocation{Name: "DUA1:[000000]WQUAL.FOR"},
@@ -760,6 +770,9 @@ func TestFortranWarningsQualifier(t *testing.T) {
 // that a program flagged still ends with a good status, and that a keyword that isn't one
 // is refused.
 func TestFortranStandardQualifier(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, c, buf := shareFindConsole(t, false)
 
 	if _, err := c.ContainerSession.CreateRecordFile(rms.FileLocation{Name: "DUA1:[000000]STDQ.FOR"},
@@ -808,6 +821,9 @@ func TestFortranStandardQualifier(t *testing.T) {
 // TestFortranObjectQualifier runs /OBJECT through the command: where its files go, that a
 // program built with it runs, and when nothing is assembled.
 func TestFortranObjectQualifier(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, c, buf := shareFindConsole(t, false)
 
 	source := func(name, text string) {
@@ -915,6 +931,9 @@ func TestFortranObjectQualifier(t *testing.T) {
 
 // TestFortranF77Qualifier runs /[NO]F77 through the command: a DO of no trips.
 func TestFortranF77Qualifier(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, c, buf := shareFindConsole(t, false)
 
 	if _, err := c.ContainerSession.CreateRecordFile(rms.FileLocation{Name: "DUA1:[000000]F77Q.FOR"},
@@ -948,6 +967,9 @@ func TestFortranF77Qualifier(t *testing.T) {
 // subroutine calling itself is RECURSIVE's error without it, and with it compiles
 // with nothing to say (docs/planning/PHASE-89 - reentrant FORTRAN.md, subtasks 2 and 4).
 func TestFortranRecursiveQualifier(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, c, buf := shareFindConsole(t, false)
 
 	if _, err := c.ContainerSession.CreateRecordFile(rms.FileLocation{Name: "DUA1:[000000]RECQ.FOR"},

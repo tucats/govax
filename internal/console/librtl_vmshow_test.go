@@ -14,6 +14,7 @@ import (
 // that status), and verifies the zone. It ends with 1, or the number of
 // the check that failed.
 func TestLibrtlVMZoneDebugging(t *testing.T) {
+	t.Parallel()
 	r0, out := runMacroProgram(t, `	.PSECT	DATA,NOEXE,WRT,LONG
 CTX:	.LONG	0
 ZONE:	.LONG	0

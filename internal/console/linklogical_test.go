@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/dclcmd"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // TestLinkOptionsByLogicalName links with an options file named by a logical
@@ -13,6 +14,9 @@ import (
 // takes it): first in the list, and after a host file, where the name was taken
 // as a file beside that one.
 func TestLinkOptionsByLogicalName(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c := newBootableConsole(t)
 	d := NewDispatcher(c, loadEvaxGrammar(t))
 	dir := t.TempDir()

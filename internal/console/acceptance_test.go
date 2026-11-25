@@ -28,6 +28,7 @@ import (
 // state throughout, the way none of the per-command tests (which each
 // build their own fresh fixture) do.
 func TestPhase23Acceptance_fullOperatorSession(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	g := loadEvaxGrammar(t)
 	d := NewDispatcher(c, g)

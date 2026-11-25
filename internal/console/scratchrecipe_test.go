@@ -11,6 +11,7 @@ import (
 
 	"github.com/tucats/govax/internal/bootdata"
 	"github.com/tucats/govax/internal/dclcmd"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // TestScratchRecipe runs the scratch volume as govax supplies it
@@ -21,6 +22,9 @@ import (
 // nothing. Each account can write its own directory and not another's,
 // and a subprocess sees the same SYS$SCRATCH.
 func TestScratchRecipe(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	for _, key := range dclcmd.RAMDiskKeys() {
 		old, had := settings.Get(key), settings.Exists(key)
 

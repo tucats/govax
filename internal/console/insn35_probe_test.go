@@ -139,6 +139,7 @@ func runInsn35Probe(t *testing.T, name string) []insn35Record {
 // TestInsn35ProbesRun builds and runs each probe and checks it wrote one
 // record per case, in order, each with its case's name.
 func TestInsn35ProbesRun(t *testing.T) {
+	t.Parallel()
 	for _, name := range insn35Probes {
 		t.Run(name, func(t *testing.T) {
 			source, err := os.ReadFile(filepath.Join("..", "..", "testdata", "insn35", strings.ToLower(name)+".mar"))
@@ -230,6 +231,7 @@ func vaxInsn35Records(t *testing.T) (map[string][]insn35Record, map[string]strin
 // probe VMS assembled is the one in the repository, so subtask 14's
 // comparison compares like with like.
 func TestInsn35VAXRun(t *testing.T) {
+	t.Parallel()
 	records, sources := vaxInsn35Records(t)
 
 	for _, name := range insn35Probes {
@@ -291,6 +293,7 @@ const pslFPD = 1 << 27
 // and LINK lay the image out as VMS's did), and the destination bytes.
 // The fields insn35Masks lists are skipped, with their reasons.
 func TestInsn35Oracle(t *testing.T) {
+	t.Parallel()
 	vms, sources := vaxInsn35Records(t)
 
 	for _, name := range insn35Probes {

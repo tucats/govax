@@ -2,6 +2,8 @@ package console
 
 import "testing"
 
+import "github.com/tucats/govax/internal/testproc"
+
 // pointerCheckPrograms are /CHECK=POINTERS's programs (docs/planning/PHASE-110 -
 // Fortran 90 compiler usability.md, subtask 6), run as checkPrograms are. A
 // pointer's or an allocatable array's test is in the expression that reaches
@@ -215,5 +217,8 @@ var pointerCheckPrograms = []checkProgram{
 // TestFortranCheckPointers compiles and runs each of pointerCheckPrograms, with the
 // check and without, under both optimizer settings.
 func TestFortranCheckPointers(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	runCheckPrograms(t, pointerCheckPrograms)
 }

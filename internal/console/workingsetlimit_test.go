@@ -8,6 +8,7 @@ import (
 	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/paging"
 	"github.com/tucats/govax/internal/registers"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // Phase 63's subtask 4 (docs/planning/PHASE-63 - working sets.md): with paging on,
@@ -69,6 +70,9 @@ touch:	moval	buf,r2
 // TestAdjwslWorkingSet runs adjwslSource with a 60-page working set and
 // checks the working set at each checkpoint and after the image's exit.
 func TestAdjwslWorkingSet(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	setSetting(t, machine.PagingSetting, "true")
 	setSetting(t, "vax.sysgen.pql_dwsdefault", "60")
 

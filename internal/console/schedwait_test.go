@@ -11,6 +11,7 @@ import (
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/sched"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -90,6 +91,9 @@ loop:	incl	@#^X600			; count this turn
 // other and hibernating ($WAKE/$HIBER). Every switch is a wait, and a
 // hibernating process is in the HIB state until it's woken.
 func TestSchedulerWait_wakeHiber(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	code, _ := assembleAt(t, pingPongHiber)
 
 	c, _ := scheduledConsole(t, longQuantum, code)
@@ -146,6 +150,9 @@ name:	.ascid	"PINGPONG"
 // common event flag cluster. A process waiting for a common flag is in
 // the CEF state until the other sets it.
 func TestSchedulerWait_commonFlags(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	codeOne, _ := assembleAt(t, "give = 65\ntake = 64\n"+pingPongCEF)
 	codeTwo, _ := assembleAt(t, "give = 64\ntake = 65\n"+pingPongCEF)
 
@@ -200,6 +207,9 @@ delta:	.quad	-100000			; 10ms, as a delta time
 // the AST, finds the wakeup the AST routine left. Process 1 counts all
 // the while and never waits.
 func TestSchedulerWait_astWakesWaiter(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	code, _ := assembleAt(t, astWakes)
 
 	c, _ := scheduledConsole(t, "500", counter())
@@ -309,6 +319,9 @@ func waitedMS(t *testing.T, c *console.Console, env *corevms.Environment) (float
 // on time, after a few dozen instructions instead of the thousands that
 // two seconds of spinning would take.
 func TestSchedulerIdle_timersInOrder(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, out := scheduledConsole(t, longQuantum, timerProgram(t, 2000))
 	one := c.RTL
 	two := handBuiltProcess(t, c, timerProgram(t, 1000))
@@ -340,6 +353,9 @@ func TestSchedulerIdle_timersInOrder(t *testing.T) {
 // than the wait: the scheduler is called when the timer is due, not only
 // at quantum ends.
 func TestSchedulerIdle_timerWhileBusy(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, _ := scheduledConsole(t, longQuantum, counter())
 	two := handBuiltProcess(t, c, timerProgram(t, 10))
 
@@ -357,6 +373,9 @@ func TestSchedulerIdle_timerWhileBusy(t *testing.T) {
 // TestSchedulerIdle_hardwareClock: with the host's clock, idling sleeps
 // until the timer is due.
 func TestSchedulerIdle_hardwareClock(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	setSetting(t, "vax.hardware.clock", "true")
 
 	c, _ := scheduledConsole(t, longQuantum, timerProgram(t, 40))
@@ -382,6 +401,9 @@ func TestSchedulerIdle_hardwareClock(t *testing.T) {
 // due, the processes retry their waits, as a lone waiting process always
 // has, and the trace says so once.
 func TestSchedulerIdle_noTimer(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	code, _ := assembleAt(t, "sleep:	calls	#0, @#sys$hiber\n	brb	sleep\n")
 
 	c, out := scheduledConsole(t, longQuantum, code)
@@ -437,6 +459,9 @@ loop:	calls	#0, @#sys$hiber
 // the waker's next instruction; one woken at a lower priority (even with
 // its boost) waits for the CPU.
 func TestSchedulerPriority_wakePreempts(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	tests := []struct {
 		name    string
 		base    int
@@ -522,6 +547,9 @@ spin:	brb	spin
 // below a computable process's gives it the CPU at the next instruction
 // boundary, and gets it back only when that process waits.
 func TestSchedulerPriority_setpriLowers(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	code, _ := assembleAt(t, lowerSelf)
 
 	c, _ := scheduledConsole(t, longQuantum, code)

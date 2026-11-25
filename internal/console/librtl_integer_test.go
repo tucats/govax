@@ -21,6 +21,7 @@ const integerData = "\t.PSECT\tDATA,NOEXE,WRT,LONG\n" +
 // LIB$ADAWI through their stubs. Each check that fails returns its own
 // number; all passing returns 1.
 func TestLibrtlIntegers(t *testing.T) {
+	t.Parallel()
 	r0, out := runMacroProgram(t, integerData+
 		"\t.PSECT\tCODE,NOWRT,EXE\n"+
 		"\t.ENTRY\tSTART,^M<>\n"+
@@ -65,6 +66,7 @@ func TestLibrtlIntegers(t *testing.T) {
 // SS$_ROPRAND, the reserved operand fault the instruction would take; no
 // handler takes it, and the image ends with it.
 func TestLibrtlAdawiOddSum(t *testing.T) {
+	t.Parallel()
 	r0, out := runMacroProgram(t, integerData+
 		"\t.PSECT\tCODE,NOWRT,EXE\n"+
 		"\t.ENTRY\tSTART,^M<>\n"+

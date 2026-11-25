@@ -37,6 +37,7 @@ func normalizeAnalysis(text string) string {
 }
 
 func TestAnalyze_hostFile(t *testing.T) {
+	t.Parallel()
 	d, _, buf := newCommandDispatcher(t)
 	out := filepath.Join(t.TempDir(), "hello.anl")
 
@@ -70,6 +71,7 @@ func TestAnalyze_hostFile(t *testing.T) {
 }
 
 func TestAnalyze_console(t *testing.T) {
+	t.Parallel()
 	d, _, buf := newCommandDispatcher(t)
 
 	// The record-type qualifiers may come before or after /OBJECT.
@@ -103,6 +105,7 @@ func TestAnalyze_console(t *testing.T) {
 }
 
 func TestAnalyze_volume(t *testing.T) {
+	t.Parallel()
 	d, c, _ := newCommandDispatcher(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -147,6 +150,7 @@ func TestAnalyze_volume(t *testing.T) {
 }
 
 func TestAnalyze_errors(t *testing.T) {
+	t.Parallel()
 	d, _, buf := newCommandDispatcher(t)
 
 	if err := d.Dispatch("ANALYZE"); !errors.Is(err, vmserrors.New(vmserrors.CLI_MISSINGPARAMETER)) {
@@ -169,6 +173,7 @@ func TestAnalyze_errors(t *testing.T) {
 }
 
 func TestAnalyze_library(t *testing.T) {
+	t.Parallel()
 	d, c, buf := newCommandDispatcher(t)
 	lib := filepath.Join(t.TempDir(), "mods.olb")
 

@@ -358,6 +358,7 @@ func compareMTH77(got, want string) (float64, bool) {
 // TestMTH77Runs: the probe runs to its end on govax, one line per case, whatever VMS
 // has to say. That's what's needed before a VAX is asked to run it.
 func TestMTH77Runs(t *testing.T) {
+	t.Parallel()
 	r0, out := runMTH77(t)
 	if r0 != 1 {
 		t.Errorf("the program's status = %#x, want 1", r0)
@@ -384,6 +385,7 @@ func TestMTH77Runs(t *testing.T) {
 }
 
 func TestMTH77Oracle(t *testing.T) {
+	t.Parallel()
 	want, err := os.ReadFile(filepath.Join(mth77Dir, "vax", "mth77-vax.txt"))
 	if errors.Is(err, os.ErrNotExist) {
 		t.Skip("no VMS run yet (vax/mth77-vax.txt)")

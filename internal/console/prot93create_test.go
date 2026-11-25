@@ -82,6 +82,7 @@ func prot93CreateAllowed(command string, want []string) bool {
 // TestCreateProfilesOracle replays the probe's "PROFILES OF NEW FILES"
 // section as SYSTEM.
 func TestCreateProfilesOracle(t *testing.T) {
+	t.Parallel()
 	_, run := prot93SetConsole(t)
 
 	for _, line := range prot93ProfileSetup {
@@ -178,6 +179,7 @@ func TestCreateProfilesOracle(t *testing.T) {
 // (the DCL Dictionary); BACKUP's /PROTECTION is merged into the save
 // set's; and the refusals of bad values.
 func TestCreateOwnerAndProtection(t *testing.T) {
+	t.Parallel()
 	c, run := prot93SetConsole(t)
 	p := c.RTL.Process
 

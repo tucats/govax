@@ -154,6 +154,7 @@ var jobDifferences = map[string]string{}
 // set to number from there; the run's times are masked, and a time the
 // procedure computed (LATER) is govax's in the commands that use it.
 func TestJobCommandsOracle(t *testing.T) {
+	t.Parallel()
 	c, dispatch := jobConsole(t)
 
 	for _, s := range logSteps(sectionLines(t, bat98Log, "QUEUES", "JOBS ON A STOPPED QUEUE")) {
@@ -219,6 +220,7 @@ func TestJobCommandsOracle(t *testing.T) {
 // 4, 7 to 14, 29, and 30 (testdata/bat98/bat98p.com); the entry numbers
 // are the VAX's.
 func TestJobCommandsMatrix(t *testing.T) {
+	t.Parallel()
 	cases := []struct{ number, commands string }{
 		{"4", "SHOW ENTRY/FULL 'H'"},
 		{"7", "IF F$TYPE($ENTRY) .NES. \"\" THEN DELETE/SYMBOL/LOCAL $ENTRY|" +

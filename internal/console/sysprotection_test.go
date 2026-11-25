@@ -54,6 +54,7 @@ func checkSystemProfiles(t *testing.T, c *Console) {
 // TestSystemVolumeProtection checks a new system volume's profiles, and
 // that DIRECTORY/SECURITY shows them as VMS words them.
 func TestSystemVolumeProtection(t *testing.T) {
+	t.Parallel()
 	c, buf, r := mountTestSystemVolume(t, dclcmd.SystemVolume{File: filepath.Join(t.TempDir(), "sys.dsk")})
 	if !r.Mounted || !r.Created {
 		t.Fatalf("result = %+v; output:\n%s", r, buf)
@@ -77,6 +78,7 @@ func TestSystemVolumeProtection(t *testing.T) {
 // the creator's default: corrected once at the next start; a protection
 // the user then changes is kept at the start after.
 func TestSystemVolumeProtectionCorrected(t *testing.T) {
+	t.Parallel()
 	path := filepath.Join(t.TempDir(), "sys.dsk")
 
 	first, _, _ := mountTestSystemVolume(t, dclcmd.SystemVolume{File: path})
@@ -160,6 +162,7 @@ func setVolumeProfile(t *testing.T, c *Console, spec string, p sysvol.Profile) {
 // privilege sees it: it can read the system's files (SYLOGIN.COM, which
 // it must to run it at login) but not delete, change, or add to them.
 func TestSystemVolumeAsUser(t *testing.T) {
+	t.Parallel()
 	c, buf, r := mountTestSystemVolume(t, dclcmd.SystemVolume{File: filepath.Join(t.TempDir(), "sys.dsk")})
 	if !r.Mounted {
 		t.Fatalf("result = %+v; output:\n%s", r, buf)

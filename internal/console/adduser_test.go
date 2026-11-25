@@ -43,6 +43,7 @@ func addUserConsole(t *testing.T) (*Console, *Dispatcher, *bytes.Buffer) {
 // LOGIN.COM, may read the system volume's files but not change them, and
 // may write in its home; and ADDUSER refuses it at once.
 func TestAddUser(t *testing.T) {
+	t.Parallel()
 	c, d, buf := addUserConsole(t)
 
 	c.In = strings.NewReader(strings.Join([]string{
@@ -159,6 +160,7 @@ func TestAddUser(t *testing.T) {
 // LOGIN.COM left alone; passwords that differ are asked for again; and a
 // username already in use is asked for again.
 func TestAddUserExistingHome(t *testing.T) {
+	t.Parallel()
 	c, d, buf := addUserConsole(t)
 
 	mustDispatch(t, d, "CREATE/DIRECTORY DUA1:[USERS.JONES]")
@@ -219,6 +221,7 @@ func TestAddUserExistingHome(t *testing.T) {
 // reads of the terminal (INQUIRE, READ SYS$COMMAND) turn the host's echo
 // off through TerminalEcho and back on after; with /ECHO they don't.
 func TestTerminalNoEcho(t *testing.T) {
+	t.Parallel()
 	c := bootedConsole(t)
 	d := NewDispatcher(c, loadEvaxGrammar(t))
 

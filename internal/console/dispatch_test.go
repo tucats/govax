@@ -57,6 +57,7 @@ func newTestDispatcher(t *testing.T) (*Dispatcher, *Console) {
 // qualifier) reach Console.Run -- real VMS image activation (Phase 13),
 // not plain CPU execution (that's EXEC/GO/G, see TestDispatch_stepAndGo).
 func TestDispatch_runActivatesImage(t *testing.T) {
+	t.Parallel()
 	c := newRunnableConsole(t)
 	g := loadEvaxGrammar(t)
 	d := NewDispatcher(c, g)
@@ -82,6 +83,7 @@ func TestDispatch_runActivatesImage(t *testing.T) {
 }
 
 func TestDispatch_showViaDCL(t *testing.T) {
+	t.Parallel()
 	d, _ := newTestDispatcher(t)
 
 	if err := d.Console.ShowRegisters(); err != nil {
@@ -94,6 +96,7 @@ func TestDispatch_showViaDCL(t *testing.T) {
 }
 
 func TestDispatch_showRegisterShortcut(t *testing.T) {
+	t.Parallel()
 	d, c := newTestDispatcher(t)
 	c.CPU.SetGPR(registers.R2, 0x55)
 
@@ -103,6 +106,7 @@ func TestDispatch_showRegisterShortcut(t *testing.T) {
 }
 
 func TestDispatch_initializeMemoryViaDCL(t *testing.T) {
+	t.Parallel()
 	d, c := newTestDispatcher(t)
 	if err := d.Dispatch("INITIALIZE/MEMORY/P0=20/P1=20/S0=0/KSP=2/ESP=2/SSP=2/ISP=2"); err != nil {
 		t.Fatalf("Dispatch(INITIALIZE/MEMORY): %v", err)
@@ -114,6 +118,7 @@ func TestDispatch_initializeMemoryViaDCL(t *testing.T) {
 }
 
 func TestDispatch_exitStopsRunning(t *testing.T) {
+	t.Parallel()
 	d, c := newTestDispatcher(t)
 	if err := d.Dispatch("EXIT"); err != nil {
 		t.Fatalf("Dispatch(EXIT): %v", err)
@@ -125,6 +130,7 @@ func TestDispatch_exitStopsRunning(t *testing.T) {
 }
 
 func TestDispatch_unboundShowSubformErrors(t *testing.T) {
+	t.Parallel()
 	d, _ := newTestDispatcher(t)
 	// SHOW ASSEMBLER_FLAGS remains unbound -- it needs SET ASSEMBLER's flag
 	// set, not yet implemented (docs/planning/PHASE-16.md sub-phase 1c). SHOW DEBUG,
@@ -137,6 +143,7 @@ func TestDispatch_unboundShowSubformErrors(t *testing.T) {
 }
 
 func TestDispatch_debugDCLTrace(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	g := loadEvaxGrammar(t)
 	d := NewDispatcher(c, g)
@@ -152,6 +159,7 @@ func TestDispatch_debugDCLTrace(t *testing.T) {
 }
 
 func TestDispatch_setTraceAndShowTrace(t *testing.T) {
+	t.Parallel()
 	d, c := newTestDispatcher(t)
 
 	c.SetTrace(true)
@@ -172,6 +180,7 @@ func TestDispatch_setTraceAndShowTrace(t *testing.T) {
 }
 
 func TestDispatch_setDebugAndShowDebug(t *testing.T) {
+	t.Parallel()
 	d, c := newTestDispatcher(t)
 
 	if err := d.Dispatch("SET DEBUG VM,NOUSERHALT"); err != nil {
@@ -192,6 +201,7 @@ func TestDispatch_setDebugAndShowDebug(t *testing.T) {
 }
 
 func TestDispatch_setVerbose(t *testing.T) {
+	t.Parallel()
 	d, c := newTestDispatcher(t)
 
 	if err := d.Dispatch("SET NOVERBOSE"); err != nil {
@@ -212,6 +222,7 @@ func TestDispatch_setVerbose(t *testing.T) {
 }
 
 func TestDispatch_setRadixKeywords(t *testing.T) {
+	t.Parallel()
 	d, c := newTestDispatcher(t)
 
 	if err := d.Dispatch("SET RADIX DEC"); err != nil {
@@ -264,6 +275,7 @@ func TestDispatch_setRadixKeywords(t *testing.T) {
 // TestDispatch_clearInterrupt: CLEAR INTERRUPT/ALL's work (the debugger's
 // CANCEL INTERRUPT/ALL now) empties the interrupt queue.
 func TestDispatch_clearInterrupt(t *testing.T) {
+	t.Parallel()
 	_, c := newTestDispatcher(t)
 
 	psl := c.CPU.PSL()
@@ -288,6 +300,7 @@ func TestDispatch_clearInterrupt(t *testing.T) {
 // TestDispatchASM_bareEntersInteractiveMode (asm_repl_test.go) for its
 // current behavior.
 func TestDispatch_notImplementedCommand(t *testing.T) {
+	t.Parallel()
 	d, _ := newTestDispatcher(t)
 	if err := d.Dispatch("ROM"); err == nil {
 		t.Error("expected an error for ROM")
@@ -295,6 +308,7 @@ func TestDispatch_notImplementedCommand(t *testing.T) {
 }
 
 func TestDispatch_saveLoadROMRequiresQualifier(t *testing.T) {
+	t.Parallel()
 	d, _ := newTestDispatcher(t)
 	if err := d.Dispatch("SAVE foo.vax"); err == nil {
 		t.Error("expected an error for plain SAVE without /ROM or /NVRAM")
@@ -302,6 +316,7 @@ func TestDispatch_saveLoadROMRequiresQualifier(t *testing.T) {
 }
 
 func TestDispatch_help(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	g := loadEvaxGrammar(t)
 
@@ -318,6 +333,7 @@ func TestDispatch_help(t *testing.T) {
 // 512 bytes), now reached via the DCL grammar instead of dispatch.go's old
 // fixedCommands entry.
 func TestDispatch_initializeVax(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	g := loadEvaxGrammar(t)
 	d := NewDispatcher(c, g)
@@ -341,6 +357,7 @@ func TestDispatch_initializeVax(t *testing.T) {
 // fixedCommands entry (removed by this subtask; see dispatch.go's own
 // bindGrammar comment on INITIALIZE_VAX).
 func TestDispatch_initAbbreviatesInitializeVax(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	g := loadEvaxGrammar(t)
 	d := NewDispatcher(c, g)
@@ -359,6 +376,7 @@ func TestDispatch_initAbbreviatesInitializeVax(t *testing.T) {
 // even though PAGES carries no formal /prompt= in the grammar (see
 // evax.dcl's own comment on initialize_vax).
 func TestDispatch_initializeVaxNeedsPages(t *testing.T) {
+	t.Parallel()
 	d, _ := newTestDispatcher(t)
 
 	err := d.Dispatch("INITIALIZE/VAX")
@@ -372,6 +390,7 @@ func TestDispatch_initializeVaxNeedsPages(t *testing.T) {
 // per docs/planning/PHASE-23.md, neither qualifier is a default, so there is no
 // meaningful do-nothing form of this verb.
 func TestDispatch_initializeBareErrors(t *testing.T) {
+	t.Parallel()
 	d, _ := newTestDispatcher(t)
 
 	if err := d.Dispatch("INITIALIZE"); err == nil {
@@ -380,6 +399,7 @@ func TestDispatch_initializeBareErrors(t *testing.T) {
 }
 
 func TestDispatch_emptyLineIsNoop(t *testing.T) {
+	t.Parallel()
 	d, _ := newTestDispatcher(t)
 	if err := d.Dispatch("   "); err != nil {
 		t.Fatalf("Dispatch(blank): %v", err)
@@ -396,6 +416,7 @@ func TestDispatch_emptyLineIsNoop(t *testing.T) {
 // an unreachable SHOW INSTRUCTIONS syntax) went in Phase 113, subtask 11,
 // and INITIALIZE and START alone are INSFPRM.
 func TestNoCommandWithoutHandler(t *testing.T) {
+	t.Parallel()
 	d, _ := newTestDispatcher(t)
 
 	if unhandled := d.Grammar.Unhandled(); len(unhandled) > 0 {

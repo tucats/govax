@@ -6,6 +6,8 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // priv94WalkProcedure is PRIV94D.COM's WALK subroutine as a procedure of
@@ -116,6 +118,9 @@ func priv94SeeMask(line string, out []string) []string {
 // process to everyone (VMS's SHOW is installed with WORLD); the rest follow
 // $GETJPI's rule, so SYSTEM, in group 1, needs WORLD for both.
 func TestPriv94See(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	for _, run := range []struct {
 		id   priv94Identity
 		file string
@@ -137,6 +142,9 @@ func TestPriv94See(t *testing.T) {
 // $SETPRI is asked, and done with it. Each line of F$GETJPI's PRI and PRIB
 // is compared by PRIB alone: the current priority is the scheduler's.
 func TestPriv94Priority(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	mask := func(line string, out []string) []string {
 		if !strings.Contains(line, `"PRIB")`) {
 			return out

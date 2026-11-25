@@ -13,6 +13,7 @@ import (
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -27,6 +28,9 @@ import (
 // The differences expected are the Prolog 1 and 2 files VMS made, which
 // govax refuses (the author's answer 1): CREATE/FDL says RMS$_PLV.
 func TestIdx88CCreateOracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	vax := filepath.Join("..", "..", "testdata", "idx88", "vax")
 
 	text, err := os.ReadFile(filepath.Join(vax, "idx88c.log"))
@@ -365,6 +369,9 @@ func compareFDLFile(t *testing.T, vms, govax *backup.File) {
 // anywhere on the line, an FDL file in a directory that isn't there, and a
 // file to make in one.
 func TestCreateFDLForms(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	_, c := runIdx88C(t)
 
 	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))

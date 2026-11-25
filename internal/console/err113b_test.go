@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmsimage"
 )
 
@@ -100,6 +101,9 @@ func runErr113B(t *testing.T, qualifiers, start string) string {
 }
 
 func TestErr113BProcedure(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	if testing.Short() {
 		t.Skip("the round's procedure fills a volume with files")
 	}
@@ -217,6 +221,9 @@ var err113BDifferences = map[string][]err113Difference{
 // image is based where it was linked (LINK-I-BASDUERRS), with no fixups of
 // its own addresses.
 func TestErr113BLink(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, _, buf := shareFindConsole(t, false)
 	dir, err := filepath.Abs(filepath.Join("..", "..", "testdata", "err113"))
 	if err != nil {
@@ -254,6 +261,9 @@ func TestErr113BLink(t *testing.T) {
 // records of 110 bytes, though the two total 505 to 520 (link's
 // withDSTFixups).
 func TestErr113BDSTBlocks(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, _, _ := shareFindConsole(t, false)
 	dir, err := filepath.Abs(filepath.Join("..", "..", "testdata", "err113"))
 	if err != nil {

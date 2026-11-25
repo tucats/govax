@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // TestHelp90DebuggerOracle runs part F of testdata/help90 (HELP90F.COM's
@@ -15,6 +17,9 @@ import (
 // (vax/round1b/dbgh.dlg) line for line: what each HELP shows, and, by the
 // empty commands left after each, how many prompts it read answers for.
 func TestHelp90DebuggerOracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	dir := filepath.Join("..", "..", "testdata", "help90")
 
 	com := strings.Join([]string{

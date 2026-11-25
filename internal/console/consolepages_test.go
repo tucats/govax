@@ -7,6 +7,7 @@ import (
 
 	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/registers"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vm"
 )
 
@@ -20,6 +21,9 @@ import (
 // nonexistent), WriteBytes does the same, ASM creates its program's
 // pages, and a write below P1's low end is still refused.
 func TestConsolePagesPagingOn(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	withSettings(t, map[string]string{machine.PagingSetting: "true"})
 
 	c := newServiceConsole(t)
@@ -95,6 +99,9 @@ func TestConsolePagesPagingOn(t *testing.T) {
 // TestConsolePagesPagingOff: with paging off every page of the tables
 // exists, and DEPOSIT leaves the length registers alone.
 func TestConsolePagesPagingOff(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	withSettings(t, map[string]string{machine.PagingSetting: "false"})
 
 	c := newServiceConsole(t)

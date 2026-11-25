@@ -9,6 +9,7 @@ import (
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
 	"github.com/tucats/govax/internal/cpu"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/uaf"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -161,6 +162,9 @@ func probeSection(t *testing.T, log, heading string) []string {
 // privileges; the LGICMD's warning goes on and its error ends it, with
 // VMS's messages, and the login goes on.
 func TestUAF95LoginOracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	for _, tc := range []struct{ user, log string }{
 		{"UAF95", "uaf95i_uaf95_interactive.log"},
 		{"UAF95L", "uaf95i_uaf95l_interactive.log"},
@@ -203,6 +207,9 @@ func TestUAF95LoginOracle(t *testing.T) {
 // can't be read, goes on without a message, SYLOGIN then running at
 // level 1; with no SYS$SYLOGIN only the account's runs.
 func TestLoginProceduresSkipped(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	s := newLoginSession(t)
 
 	// UAF95's LOGIN.COM unreadable to it.
@@ -250,6 +257,9 @@ func (k *ctrlYReader) Read(p []byte) (int, error) {
 // procedure (the User's Manual, 13.7.1), and the login goes on to the
 // prompt.
 func TestLoginProceduresControlY(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	for _, tc := range []struct{ typed, want string }{
 		{"y\nCONTINUE\n", `UAF95_ORDER == "SYLOGIN WENT ON,LOGIN"`},
 		{"y\nEXIT\n", "UNDSYM"},

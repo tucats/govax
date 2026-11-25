@@ -27,6 +27,7 @@ func newCommandDispatcher(t *testing.T) (*Dispatcher, *Console, *bytes.Buffer) {
 // TestCommands_print checks PRINT's and ECHO's lists of strings and
 // expressions, now read by the grammar (docs/planning/PHASE-37.md).
 func TestCommands_print(t *testing.T) {
+	t.Parallel()
 	d, _, buf := newCommandDispatcher(t)
 
 	cases := []struct{ line, want string }{
@@ -62,6 +63,7 @@ func TestCommands_print(t *testing.T) {
 }
 
 func TestCommands_helpAliases(t *testing.T) {
+	t.Parallel()
 	d, _, buf := newCommandDispatcher(t)
 
 	for _, line := range []string{"HELP/NOPROMPT", "HEL/NOPROMPT"} {
@@ -78,6 +80,7 @@ func TestCommands_helpAliases(t *testing.T) {
 }
 
 func TestCommands_time(t *testing.T) {
+	t.Parallel()
 	d, c, buf := newCommandDispatcher(t)
 
 	if err := d.Dispatch("TIME SET RADIX 8"); err != nil {
@@ -104,6 +107,7 @@ func TestCommands_time(t *testing.T) {
 }
 
 func TestCommands_ifErrors(t *testing.T) {
+	t.Parallel()
 	d, _, _ := newCommandDispatcher(t)
 
 	if err := d.Dispatch(ifTOKEN); !errors.Is(err, vmserrors.New(vmserrors.CLI_INSFPRM)) {
@@ -120,6 +124,7 @@ func TestCommands_ifErrors(t *testing.T) {
 }
 
 func TestCommands_notImplemented(t *testing.T) {
+	t.Parallel()
 	d, _, _ := newCommandDispatcher(t)
 
 	for _, line := range []string{"ROM"} {
@@ -132,6 +137,7 @@ func TestCommands_notImplemented(t *testing.T) {
 // TestCommands_removed: the console's BOOT, TEST, ZERO, QUIT, VMINIT
 // (INITIALIZE/MEMORY now), and CLEAR are gone (2026-11-08).
 func TestCommands_removed(t *testing.T) {
+	t.Parallel()
 	d, _, _ := newCommandDispatcher(t)
 
 	for _, line := range []string{"BOOT", "TEST X", "ZERO", "QUIT", "VMINIT", "CLEAR MEMORY", "CLEAR STRINGS", "SHOW STRING_POOL"} {
@@ -147,6 +153,7 @@ func TestCommands_removed(t *testing.T) {
 // checks the debugger has them). The console's CALL is DCL's, which calls
 // a procedure's subroutine (dclcall.go), and has no /STEP.
 func TestCommands_goIsNotConsole(t *testing.T) {
+	t.Parallel()
 	g := loadEvaxGrammar(t)
 
 	for _, line := range []string{"G", "GO 200", "EXEC", "EXECUTE .", "CALL/STEP A"} {
@@ -159,6 +166,7 @@ func TestCommands_goIsNotConsole(t *testing.T) {
 // TestCommands_asmOnlyBeforeKernel checks that the console's ASM works
 // until the microkernel is in place and then says it is unrecognized.
 func TestCommands_asmOnlyBeforeKernel(t *testing.T) {
+	t.Parallel()
 	c := newRunnableConsole(t)
 	d := NewDispatcher(c, loadEvaxGrammar(t))
 
@@ -192,6 +200,7 @@ func TestCommands_asmOnlyBeforeKernel(t *testing.T) {
 // TestCommands_saveLoad checks SAVE's and LOAD's qualifiers, /NOERROR
 // among them (which LoadROM used to recognize as its file name).
 func TestCommands_saveLoad(t *testing.T) {
+	t.Parallel()
 	d, c, _ := newCommandDispatcher(t)
 	dir := t.TempDir()
 
@@ -239,6 +248,7 @@ func TestCommands_saveLoad(t *testing.T) {
 // (docs/planning/PHASE-50 - DCL command procedures.md), and RunCommandLine, which
 // took over INCLUDE/COMMAND_LINE.
 func TestCommands_at(t *testing.T) {
+	t.Parallel()
 	d, c, _ := newCommandDispatcher(t)
 
 	path := filepath.Join(t.TempDir(), "cmds.com")
@@ -292,6 +302,7 @@ func TestCommands_at(t *testing.T) {
 // sub-forms' values. SET has no name=value form: DCL's assignments
 // replaced it (docs/planning/PHASE-50).
 func TestCommands_set(t *testing.T) {
+	t.Parallel()
 	d, c, _ := newCommandDispatcher(t)
 
 	steps := []string{

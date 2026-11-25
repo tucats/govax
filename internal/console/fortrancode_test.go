@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // The FORTRAN code generator (docs/planning/PHASE-75 - FORTRAN first light.md,
@@ -189,6 +190,9 @@ var ftnCodeRun = []string{
 }
 
 func TestFortranCodeRuns(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	eachLoader(t, func(t *testing.T, paging bool) {
 		d, c, buf := shareFindConsole(t, paging)
 

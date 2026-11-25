@@ -12,6 +12,7 @@ import (
 	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/respath"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -137,6 +138,9 @@ func shareFindRunMain(t *testing.T, d *Dispatcher, c *Console, buf *bytes.Buffer
 // ways VMS 7.1 found it, and not found, in both paging modes (the
 // copying and the mapping loader).
 func TestFindShareableImageAtRun(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	for _, paging := range []bool{false, true} {
 		t.Run(map[bool]string{false: "copying", true: "mapping"}[paging], func(t *testing.T) {
 			d, c, buf := shareFindConsole(t, paging)
@@ -217,6 +221,9 @@ func TestFindShareableImageAtRun(t *testing.T) {
 // is defined (question 1's answer); a user's image that is nowhere is
 // an ImageNotFoundError with the specification RMS tried.
 func TestFindShareableImageEmulated(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, c, _ := shareFindConsole(t, false)
 
 	for _, name := range []string{"LIBRTL", "librtl", "MTHRTL", "DECC$SHR"} {
@@ -270,6 +277,9 @@ func absPath(t *testing.T, path string) string {
 // reads a file even for an image govax's shims stand for, and is told
 // when there's none (openSharedImage then uses govax's own tables).
 func TestLinkImageLocator(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, c, _ := shareFindConsole(t, false)
 
 	shareFindRun(t, d, "CREATE/DIRECTORY DUA2:[SYSLIB]")

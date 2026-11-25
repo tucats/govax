@@ -40,6 +40,7 @@ var str113Manual = map[string][]string{
 }
 
 func TestStr113Probe(t *testing.T) {
+	t.Parallel()
 	dir := filepath.Join("..", "..", "testdata", "str113")
 
 	src, err := os.ReadFile(filepath.Join(dir, "str113.mar"))

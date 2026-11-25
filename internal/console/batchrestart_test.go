@@ -11,6 +11,7 @@ import (
 
 	"github.com/tucats/govax/internal/bootdata"
 	"github.com/tucats/govax/internal/jobqueue"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // A session's end and the next session's start (docs/planning/PHASE-98 -
@@ -73,6 +74,9 @@ func terminalSection(t *testing.T, after, from string) string {
 // BOOTN and ends while both run; the second finds them as VMS 7.1 did after
 // its boot, starts the queue, and BOOTR's restart writes VMS's log.
 func TestBatchRestartAcrossSessions(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	if testing.Short() {
 		t.Skip("runs batch jobs")
 	}
@@ -164,6 +168,9 @@ func TestBatchRestartAcrossSessions(t *testing.T) {
 // to run the manager ends them as VMS's boot did, whatever the order of
 // its queues, and leaves waiting jobs as they were.
 func TestBatchRecoverAfterCrash(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	if testing.Short() {
 		t.Skip("runs batch jobs")
 	}
@@ -241,6 +248,9 @@ func TestBatchRecoverAfterCrash(t *testing.T) {
 // another sharing its database may show the queues but change nothing
 // (Decision 4): JBC$_QMANNOTSTARTED, its manager not started there.
 func TestBatchSecondSession(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	if testing.Short() {
 		t.Skip("runs batch jobs")
 	}
@@ -282,6 +292,9 @@ func TestBatchSecondSession(t *testing.T) {
 // SUBMIT without /QUEUE runs a job. Run again, as at the next start, they
 // find SYS$BATCH and don't make it again.
 func TestSystartupBatchBlock(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	if testing.Short() {
 		t.Skip("runs batch jobs")
 	}

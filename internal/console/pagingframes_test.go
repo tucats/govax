@@ -8,6 +8,7 @@ import (
 	"github.com/tucats/govax/internal/console/consoletest"
 	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/registers"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // pagedImageSource touches eight pages of its own data, creates four
@@ -42,6 +43,9 @@ msg:	.ascid	/paged image done/
 // program runs as it does without it, and the database is sound
 // afterward, its count of claimed frames the memory's.
 func TestPagingFrames(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	setSetting(t, "vax.sysgen.paging.enable", "true")
 
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
@@ -92,6 +96,9 @@ func TestPagingFrames(t *testing.T) {
 // rundown takes the user stack too, so none is left tied to a process
 // page either.
 func TestPagingFileSections(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	setSetting(t, "vax.sysgen.paging.enable", "true")
 
 	for _, image := range []string{"SECPARENT", "RUNDOWN"} {

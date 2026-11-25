@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/tucats/gopackages/app-cli/settings"
+
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // TestLibrtlMisc: a program calls the miscellaneous routines through
@@ -16,6 +18,9 @@ import (
 // LIB$GET_USERS_LANGUAGE, with no SYS$LANGUAGE, vax.language, or host
 // locale, is ENGLISH and LIB$_ENGLUSED.
 func TestLibrtlMisc(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	for _, v := range []string{"LC_ALL", "LC_MESSAGES", "LANG"} {
 		t.Setenv(v, "")
 	}

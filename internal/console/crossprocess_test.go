@@ -10,6 +10,7 @@ import (
 	iodev "github.com/tucats/govax/internal/io"
 	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/sched"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // Phase 45's subtask 9: the process-control services on other
@@ -51,6 +52,9 @@ imagetext: .ascii "%[2]s"
 `
 
 func TestCross_suspendedChild(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, _ := scheduledConsole(t, longQuantum, brbSelf)
 	one := c.RTL
 	exe := buildImage(t, c, "sleeper", sleeperSource)
@@ -125,6 +129,9 @@ func TestCross_suspendedChild(t *testing.T) {
 
 // TestNullDevice_defined: STARTUP.COM defines the null device, NLA0:.
 func TestNullDevice_defined(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, _ := scheduledConsole(t, longQuantum, brbSelf)
 
 	d, found := c.Devices.Find("NLA0:")
@@ -137,6 +144,9 @@ func TestNullDevice_defined(t *testing.T) {
 // system gives it (docs/planning/PHASE-45.md, probe 2), with govax's own counts, and
 // the name taken with or without its colon.
 func TestShowDeviceFull_nla0(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, _ := scheduledConsole(t, longQuantum, brbSelf)
 	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
@@ -183,6 +193,9 @@ name:	.ascid	/SHOWBOX/
 // owner UIC [1,4] as [SYSTEM], and the protection as VMS shows it, the
 // mailbox's from its $CREMBX promsk.
 func TestShowDeviceFull_terminalAndMailbox(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, _ := scheduledConsole(t, longQuantum, brbSelf)
 	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 

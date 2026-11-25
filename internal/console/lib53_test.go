@@ -35,6 +35,7 @@ func runLib53(t *testing.T) string {
 }
 
 func TestLib53Oracle(t *testing.T) {
+	t.Parallel()
 	got := runLib53(t)
 
 	want, err := os.ReadFile(filepath.Join(lib53Dir, "vax", "lib53-vax.txt"))

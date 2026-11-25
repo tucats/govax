@@ -7,6 +7,7 @@ import (
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/paging"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // Phase 66's subtask 5 (docs/planning/PHASE-66 - mapped image activation.md):
@@ -86,6 +87,9 @@ func checkImageReset(t *testing.T, c *console.Console, volume string) {
 // TestMappedImageReset: an image that runs to its end leaves nothing
 // behind, and the page file quota it was charged is all back.
 func TestMappedImageReset(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, d, name, _ := mappedImageConsole(t, "")
 
 	// The harness's own code (scheduledConsole's spin loop) is a P0 page
@@ -109,6 +113,9 @@ func TestMappedImageReset(t *testing.T) {
 // modified list) and never resumed is run down when the next RUN starts
 // (EndAbandonedImage), with the same result as an image that exits.
 func TestMappedImageResetAbandoned(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, d, name, _ := mappedImageConsole(t, "")
 
 	startMappedImage(t, c, d, name)
@@ -134,6 +141,9 @@ func TestMappedImageResetAbandoned(t *testing.T) {
 // same image runs again from its file, with only its own sections, and
 // its end leaves nothing behind.
 func TestMappedImageResetDebugger(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, d, name, out := mappedImageConsole(t, "")
 	env := c.ProcessOne()
 

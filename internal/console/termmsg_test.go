@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/console"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -103,6 +104,9 @@ func accField(msg []byte, name string) uint64 {
 // message, from the child's PID, with its final status (its image
 // returned 3) and its owner, process 1.
 func TestTerminationMessage(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	for _, tt := range []struct {
 		name   string
 		baspri func(one uint32) uint32
@@ -153,6 +157,9 @@ func TestTerminationMessage(t *testing.T) {
 // found ends at once, and its creator learns why only from the
 // termination message: RMS$_FNF.
 func TestTerminationMessage_startupFails(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, _ := scheduledConsole(t, longQuantum, brbSelf)
 	one := c.RTL
 

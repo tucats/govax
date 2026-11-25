@@ -20,6 +20,7 @@ func romFixturePath(t *testing.T) string {
 }
 
 func TestLoadROM_realFixture(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	if err := c.LoadROM(romFixturePath(t), false); err != nil {
 		t.Fatalf("LoadROM: %v", err)
@@ -46,6 +47,7 @@ func TestLoadROM_realFixture(t *testing.T) {
 }
 
 func TestSaveROM_roundTripsRealFixtureContent(t *testing.T) {
+	t.Parallel()
 	// xdefault.rom's own page layout turns out to include two 512-byte
 	// entries at addresses that aren't 512-aligned (3328 and 68864 —
 	// confirmed by hand-parsing the file's raw (addr,count) entries), so
@@ -85,6 +87,7 @@ func TestSaveROM_roundTripsRealFixtureContent(t *testing.T) {
 }
 
 func TestSaveLoadROM_synthetic(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	c.Engine.Memory().ROMBase = 0x20040000
 	c.Engine.Memory().ROMEnd = 0x20040000 + 3*512 - 1
@@ -117,6 +120,7 @@ func TestSaveLoadROM_synthetic(t *testing.T) {
 }
 
 func TestLoadROM_rejectsWrongMagic(t *testing.T) {
+	t.Parallel()
 	path := filepath.Join(t.TempDir(), "notrom.bin")
 	if err := os.WriteFile(path, []byte("not a rom image at all!"), 0o644); err != nil {
 		t.Fatalf("WriteFile: %v", err)
@@ -129,6 +133,7 @@ func TestLoadROM_rejectsWrongMagic(t *testing.T) {
 }
 
 func TestSaveLoadNVRAM_roundTrip(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	c.Engine.Memory().NVRAMBase = 0x20140400
 	c.Engine.Memory().NVRAM = []byte{1, 2, 3, 4, 5, 6, 7, 8}
@@ -155,6 +160,7 @@ func TestSaveLoadNVRAM_roundTrip(t *testing.T) {
 }
 
 func TestSaveROM_errorsWithNoImage(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	if err := c.SaveROM(filepath.Join(t.TempDir(), "x.rom")); err == nil {
 		t.Error("expected an error saving with no ROM loaded")

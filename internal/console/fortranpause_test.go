@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // TestFortranPause runs a program with PAUSE statements (Phase 79,
@@ -14,6 +15,9 @@ import (
 // status SS$_NORMAL; so does the end of the terminal's input. A command
 // typed at the pause runs with the program suspended.
 func TestFortranPause(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	eachLoader(t, func(t *testing.T, paging bool) {
 		d, c, buf := shareFindConsole(t, paging)
 

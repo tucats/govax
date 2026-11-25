@@ -10,6 +10,7 @@ import (
 
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -139,6 +140,9 @@ func lib57RunHistory(t *testing.T, text string) string {
 // by section; before the VMS run, it shows govax's. Either way, the
 // programs must assemble and link, and every section run.
 func TestLib57Oracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	got := runLib57(t)
 
 	for _, bad := range []string{"[000000]LIB57.MAR", "[000000]LIB57B.MAR", "activate DUA1:[000000]LIB57"} {

@@ -11,6 +11,7 @@ import (
 // dispatcher: a procedure's parameter, an alias whose value has
 // apostrophes, and an &SYMBOL whose value keeps its case.
 func TestDispatch_substitution(t *testing.T) {
+	t.Parallel()
 	d, _, buf := newCommandDispatcher(t)
 	dir := t.TempDir()
 

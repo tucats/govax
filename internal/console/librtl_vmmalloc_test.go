@@ -9,6 +9,7 @@ import "testing"
 // frees both, a second free answering 0 where the first answers 1
 // (docs/planning/PHASE-59, subtasks 8 and 10).
 func TestLibrtlVMMalloc(t *testing.T) {
+	t.Parallel()
 	r0, out := runMacroProgram(t, "\t.PSECT\tDATA,NOEXE,WRT,LONG\n"+
 		"A:\t.LONG\t0\nB:\t.LONG\t0\nC:\t.LONG\t0\nF:\t.LONG\t0\n"+
 		"OUT:\t.LONG\t^X020E0000,0\n"+

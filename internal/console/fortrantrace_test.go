@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // tracedSource is a program whose third routine stops with a fatal condition, so
@@ -35,6 +36,9 @@ const tracedSource = `C     A traceback names each routine's FORTRAN line.
 // /DEBUG and linked without it, the object has no line table a LINK keeps, so the
 // column is empty, as it was before.
 func TestFortranTracebackLines(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, c, buf := shareFindConsole(t, false)
 
 	if _, err := c.ContainerSession.CreateRecordFile(rms.FileLocation{Name: "DUA1:[000000]TRACED.FOR"},

@@ -6,6 +6,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // fcalcDebugMasks are what a change to fcalc or the compiler moves in the
@@ -31,6 +33,9 @@ var fcalcDebugMasks = []struct {
 // fcalcd.out, fcalcDebugMasks applied to both; FCALCD_WRITE=1 writes them
 // instead.
 func TestFcalcDebugger(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	dir := filepath.Join("..", "..", "testdata", "fcalc")
 	fcalcSources := filepath.Join("..", "fcalc", "src")
 

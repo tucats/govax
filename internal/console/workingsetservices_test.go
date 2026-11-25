@@ -8,6 +8,7 @@ import (
 	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/paging"
 	"github.com/tucats/govax/internal/registers"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -89,6 +90,9 @@ touch:	movl	r3,(r2)
 // set (MINWSCNT 20, so 10 pages can be locked in it) and checks the
 // working set at each checkpoint and after the image's exit.
 func TestWorkingSetServices(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	setSetting(t, machine.PagingSetting, "true")
 	setSetting(t, "vax.sysgen.pql_dwsdefault", "30")
 

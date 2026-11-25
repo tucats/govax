@@ -28,6 +28,7 @@ var link68Vax = filepath.Join("..", "..", "testdata", "link68", "vax")
 // object file. LINK's status is VMS's, for a clean link and for one with
 // warnings.
 func TestLinkShareable(t *testing.T) {
+	t.Parallel()
 	d, c, buf := newCommandDispatcher(t)
 	dir := t.TempDir()
 
@@ -196,6 +197,7 @@ func link68Table(t *testing.T, path string, at uint32) []byte {
 // ISDs name LIBRTL, which SHR1 uses; and its cells for SHR1 are in
 // descending name order.
 func TestLinkShareableUsingAnother(t *testing.T) {
+	t.Parallel()
 	d, c, buf := newCommandDispatcher(t)
 	dir := t.TempDir()
 
@@ -261,6 +263,7 @@ func TestLinkShareableUsingAnother(t *testing.T) {
 // reference synopsis, the symbols by value, and the image synopsis's
 // SHAREABLE line. /FULL with /BRIEF is DCL's CONFLICT, and links nothing.
 func TestLinkShareableFullMap(t *testing.T) {
+	t.Parallel()
 	d, c, buf := newCommandDispatcher(t)
 	dir := t.TempDir()
 
@@ -330,6 +333,7 @@ func TestLinkShareableFullMap(t *testing.T) {
 // global section names, idents, match controls, and pages, is VMS's but
 // for its name, time, and linker ID, and so is its shareable image list.
 func TestLinkAgainstGovaxShareableImages(t *testing.T) {
+	t.Parallel()
 	d, c, buf := newCommandDispatcher(t)
 	mountFreshContainer(t, c, "DUA1:")
 	dir := t.TempDir()

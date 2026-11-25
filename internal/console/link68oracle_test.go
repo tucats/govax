@@ -14,6 +14,7 @@ import (
 	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/obj"
 	"github.com/tucats/govax/internal/respath"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmserrors"
 	"github.com/tucats/govax/internal/vmsimage"
 )
@@ -151,6 +152,9 @@ func link68CopyOut(t *testing.T, d *Dispatcher) string {
 // TestLink68Oracle runs LINK68.COM on govax, in both paging modes, and
 // holds the log and every file it makes to VMS's.
 func TestLink68Oracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	eachLoader(t, func(t *testing.T, paging bool) {
 		d, buf := link68Govax(t, paging)
 
@@ -577,6 +581,7 @@ var link68Messages = regexp.MustCompile(`^There (were|was) (no|\d+) (errors|erro
 
 // TestLink68MaskLog checks the log's masks on lines of VMS's.
 func TestLink68MaskLog(t *testing.T) {
+	t.Parallel()
 	got := link68MaskLog("MAIN1: SHR1_ORIGIN 00023A00, MAIN1 00000400\r\n" +
 		"MAIN3: SHR3_GET() 00300200, G^SHR3_DATA 00300200 holds 00003333\n" +
 		"MAIN3: SHR3_GET() 00023800, G^SHR3_DATA 00023800 holds 00003333\n" +

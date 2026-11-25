@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/dclcmd"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // The Phase 56 oracle (docs/planning/PHASE-56, subtask 8): testdata/lib56's
@@ -162,6 +163,9 @@ func runLib56(t *testing.T) (uint32, string) {
 }
 
 func TestLib56Oracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	r0, out := runLib56(t)
 	if r0 != 1 {
 		t.Errorf("the program's status = %#x, want 1", r0)

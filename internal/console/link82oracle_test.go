@@ -11,6 +11,7 @@ import (
 	"github.com/tucats/govax/internal/bootdata"
 	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/respath"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -61,6 +62,9 @@ var link82Status = regexp.MustCompile(`^  \$STATUS == `)
 
 // TestLink82Oracle runs the probe in both paging modes.
 func TestLink82Oracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	eachLoader(t, func(t *testing.T, paging bool) {
 		if paging {
 			withSettings(t, map[string]string{machine.PagingSetting: "true"})

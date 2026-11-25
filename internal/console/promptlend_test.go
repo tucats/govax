@@ -7,6 +7,7 @@ import (
 
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // Phase 51, subtask 4: the other processes run while the prompt waits
@@ -60,6 +61,9 @@ func awaitLine(t *testing.T, c *console.Console, d time.Duration) time.Duration 
 // on while the prompt waits, finishing its procedure and logging out
 // before the line is typed.
 func TestLendWhileReading_wait(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, out, dispatch := promptConsole(t)
 	dir := t.TempDir()
 
@@ -96,6 +100,9 @@ func TestLendWhileReading_wait(t *testing.T) {
 // the prompt waits, and the line typed ends the lending at once; the
 // subprocess goes on with the next lending.
 func TestLendWhileReading_busy(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, out, dispatch := promptConsole(t)
 	dir := t.TempDir()
 
@@ -133,6 +140,9 @@ func TestLendWhileReading_busy(t *testing.T) {
 // TestLendWhileReading_alone: with no other process, the prompt just
 // waits for the line; a line already typed ends it at once.
 func TestLendWhileReading_alone(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, _, _ := promptConsole(t)
 
 	if took := awaitLine(t, c, 50*time.Millisecond); took < 50*time.Millisecond {

@@ -11,6 +11,7 @@ import (
 	"github.com/tucats/govax/internal/dclcmd"
 	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vmserrors"
@@ -97,6 +98,7 @@ func runImageCommand(t *testing.T, c *Console, path, command string, maxSteps in
 // TestLink_macroLinkRun assembles, links, and runs the self-contained
 // fixtures: each main routine returns 1.
 func TestLink_macroLinkRun(t *testing.T) {
+	t.Parallel()
 	for _, name := range []string{"psects", "entry"} {
 		t.Run(name, func(t *testing.T) {
 			c := newBootableConsole(t)
@@ -130,6 +132,7 @@ func TestLink_macroLinkRun(t *testing.T) {
 // from a data psect through a relocated reference, and whose code is in
 // a second module.
 func TestLink_runsRelocatedCode(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 	dir := t.TempDir()
 
@@ -158,6 +161,7 @@ func TestLink_runsRelocatedCode(t *testing.T) {
 // to LIB$PUT_OUTPUT resolves, through govax's own symbol source, to
 // LIBRTL's routine, which RUN reaches through the shim for its offset.
 func TestLink_hello(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 	out := &bytes.Buffer{}
 	c.Out = out
@@ -182,6 +186,7 @@ func TestLink_hello(t *testing.T) {
 // UW, its read-only CODE psect UR (so not even kernel mode may write it).
 // A second activation must be able to load over the read-only pages.
 func TestLink_helloPageProtection(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 	dir := t.TempDir()
 	assembleFixture(t, c, "hello", dir)
@@ -256,6 +261,7 @@ func TestLink_helloPageProtection(t *testing.T) {
 // TestLink_systemService links a general mode call to a system service,
 // which resolves to its address in the P1 vector: absolute mode.
 func TestLink_systemService(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 	dir := t.TempDir()
 
@@ -288,6 +294,7 @@ func TestLink_systemService(t *testing.T) {
 
 // TestLink_imageHeaderNames checks the name and linker ID in the header.
 func TestLink_imageHeaderNames(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	dir := t.TempDir()
 	obj := assembleFixture(t, c, "entry", dir)
@@ -324,6 +331,7 @@ func TestLink_imageHeaderNames(t *testing.T) {
 // TestLink_severalObjects links two modules: one with code and the
 // transfer address, one with only data.
 func TestLink_severalObjects(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 	dir := t.TempDir()
 	entry := assembleFixture(t, c, "entry", dir)
@@ -340,6 +348,7 @@ func TestLink_severalObjects(t *testing.T) {
 }
 
 func TestLink_errors(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	dir := t.TempDir()
 
@@ -377,6 +386,7 @@ func TestLink_errors(t *testing.T) {
 // TestLink_noTraceback checks /NOTRACEBACK: the user transfer address is
 // the first.
 func TestLink_noTraceback(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	dir := t.TempDir()
 	obj := assembleFixture(t, c, "entry", dir)
@@ -403,6 +413,7 @@ func TestLink_noTraceback(t *testing.T) {
 // TestLink_volume links objects on a mounted volume into an image there,
 // with real LINK's file attributes, and reads it back.
 func TestLink_volume(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -440,6 +451,9 @@ func TestLink_volume(t *testing.T) {
 // TestDispatch_linkViaDCL runs LINK through the DCL grammar: a list of
 // quoted objects, /EXECUTABLE=, and /NOTRACEBACK.
 func TestDispatch_linkViaDCL(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, c := newTestDispatcher(t)
 	dir := t.TempDir()
 	t.Chdir(dir) // where default outputs go
@@ -496,6 +510,9 @@ func TestDispatch_linkViaDCL(t *testing.T) {
 // on a mounted volume, as a text file naming itself and the image with
 // its version.
 func TestLink_map(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, _ := newTestConsole(t)
 	dir := t.TempDir()
 	t.Chdir(dir) // where default outputs go
@@ -587,6 +604,7 @@ func vmsdefP1Address(name string) (uint32, bool) {
 // /DEBUG=file, a user-written debugger module, is refused; and RUN runs
 // the image, since govax has no debugger to start.
 func TestDispatch_linkDebug(t *testing.T) {
+	t.Parallel()
 	d, _ := newTestDispatcher(t)
 	dir := t.TempDir()
 	object := filepath.Join(dir, "entry.obj")

@@ -20,6 +20,7 @@ var (
 const vaPrvprt = 0x8020
 
 func TestSetprt(t *testing.T) {
+	t.Parallel()
 	c := newServiceConsole(t)
 
 	// Two ordinary P0 pages (UW since VMINIT), made user read-only.
@@ -67,6 +68,7 @@ func TestSetprt(t *testing.T) {
 }
 
 func TestSetprt_errors(t *testing.T) {
+	t.Parallel()
 	c := newServiceConsole(t)
 
 	cases := []struct {
@@ -110,6 +112,7 @@ func TestSetprt_errors(t *testing.T) {
 }
 
 func TestLockServices(t *testing.T) {
+	t.Parallel()
 	c := newServiceConsole(t)
 
 	putRange(t, c, vaInadr, vaPages, vaPages+0x200)
@@ -173,6 +176,7 @@ func TestLockServices(t *testing.T) {
 // (docs/planning/PHASE-26.md subtask 36): a page made read-only, written (an
 // access violation), made writable again, then locked and unlocked.
 func TestPageProt_assembledProgram(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 	word := runFixture(t, c, "pageprot.asm")
 
@@ -204,6 +208,7 @@ func TestPageProt_assembledProgram(t *testing.T) {
 // A): a lock is SS$_WASSET if any page was locked already, an unlock
 // SS$_WASSET only if every page was.
 func TestLockStatuses(t *testing.T) {
+	t.Parallel()
 	c := newServiceConsole(t)
 
 	steps := []struct {
@@ -234,6 +239,7 @@ func TestLockStatuses(t *testing.T) {
 // counting pages locked in memory; a page already locked in memory can
 // still be locked in the working set, and a lock in memory has no limit.
 func TestLkwsetFull(t *testing.T) {
+	t.Parallel()
 	c := newServiceConsole(t)
 	p := c.RTL.Process
 	p.WSLimit = p.MinWSCount + 2
@@ -276,6 +282,7 @@ func TestLkwsetFull(t *testing.T) {
 // mapped read-only it still can't, as VMS 7.1 answered (testdata/pg63,
 // round 2, E11): the section counts, not the mapping.
 func TestLkwsetWritableGlobalPage(t *testing.T) {
+	t.Parallel()
 	c := newServiceConsole(t)
 
 	if got := crmpsc(t, c, "WSLOCK", pageFile, secPages, secPages+0x200, 2, 0); got != ssCreated {
@@ -312,6 +319,7 @@ func TestLkwsetWritableGlobalPage(t *testing.T) {
 // and P1 (all of it included), SS$_NOPRIV for a range into system space,
 // SS$_ACCVIO for an inadr it can't read.
 func TestPurgwsPagingOff(t *testing.T) {
+	t.Parallel()
 	c := newServiceConsole(t)
 
 	if err := storeLong(c, vaPages, 1); err != nil {

@@ -9,6 +9,7 @@ import (
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -216,6 +217,9 @@ func checkTagged(t *testing.T, recs [][]byte, tags []byte, n int) {
 // one write-shared file, records of varying length so that they cross
 // block boundaries anywhere.
 func TestStress_threeAppenders(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	const n = 150
 
 	sym := vmsdef.Symbols
@@ -325,6 +329,9 @@ keep:	incl	r6
 // one directory at once; each ends with the versions it kept, each
 // holding its record.
 func TestStress_createAndErase(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	const turns = 40
 
 	sym := vmsdef.Symbols
@@ -359,6 +366,9 @@ func TestStress_createAndErase(t *testing.T) {
 // TestStress_extendTogether: three processes each write a file of their
 // own, unshared, at once: their extensions interleave on the volume.
 func TestStress_extendTogether(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	const n = 200
 
 	sym := vmsdef.Symbols

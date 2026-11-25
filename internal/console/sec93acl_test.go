@@ -67,6 +67,7 @@ var sec93Masks = []struct {
 }
 
 func TestSec93ACLOracle(t *testing.T) {
+	t.Parallel()
 	c, run := sec93Console(t)
 
 	image := sec93Build(t, c)
@@ -408,6 +409,7 @@ func sec93Build(t *testing.T, c *Console) string {
 // and 176 ($CHANGE_ACL) are held to round 3b's reports, and 259 ($CHKPRO,
 // a system service) and 304 ($CHECK_ACCESS) to round 3's.
 func TestSec93VMSImage(t *testing.T) {
+	t.Parallel()
 	_, run := sec93Console(t)
 
 	image, err := filepath.Abs(filepath.Join(sec93Dir, "vax", "round3", "sec93.exe"))

@@ -6,6 +6,8 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // hostNOPRIV is the message of a command with no protection refusal of
@@ -22,6 +24,9 @@ const hostNOPRIV = "%SYSTEM-F-NOPRIV, insufficient privilege or object protectio
 // alone. EXE$OPEN is corevms's TestExeOpenHostAccess. SAVE/NVRAM asks
 // as SAVE/ROM does, but this console has no NVRAM to save.
 func TestHostPathsNeedSYSPRV(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	for _, pass := range []struct {
 		name        string
 		key, sysprv bool

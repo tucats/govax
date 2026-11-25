@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // The Fortran 90 program's VMS round (docs/planning/PHASE-111 - Fortran 90 milestone.md,
@@ -85,6 +86,9 @@ var fcalcVariantsF90R = []string{"FCALC", "FCALCN", "FCALCR", "FCALCC"}
 // with no message, prints each script's name.out but for f90rFcalcDifferences, writes
 // the files testdata/fcalc/expected holds, and runs ONESHOT.COM as oneshot.out says.
 func TestF90RProcedure(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	log := sharedRoundLog(t, "f90r", runF90R)
 	sections := ftn86Sections(log)
 
@@ -102,8 +106,8 @@ func TestF90RProcedure(t *testing.T) {
 
 	var sources []string
 
-	for _, pattern := range []string{"testdata/fortran90/*.f90", "testdata/fortran90/modules/*"} {
-		found, err := filepath.Glob(filepath.FromSlash(pattern))
+	for _, pattern := range []string{"fortran90/*.f90", "fortran90/modules/*"} {
+		found, err := filepath.Glob(filepath.Join(testdataDir, filepath.FromSlash(pattern)))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -171,8 +175,9 @@ func TestF90RProcedure(t *testing.T) {
 func checkF90RFcalc(t *testing.T, sections map[string]string) {
 	t.Helper()
 
-	// runVMSRound has made the repository root the working directory.
-	fcalcDirectory := filepath.Join("testdata", "fcalc")
+	// The log may come from another test's run (sharedRoundLog), so this
+	// test may not be where runVMSRound left its directory.
+	fcalcDirectory := filepath.Join(testdataDir, "fcalc")
 
 	scripts, err := filepath.Glob(filepath.Join(fcalcDirectory, "*.in"))
 	if err != nil || len(scripts) == 0 {
@@ -267,7 +272,7 @@ var f90rAwaitingVMS = []string{}
 func f90rVerifiedData(t *testing.T, text string) string {
 	t.Helper()
 
-	procedure, err := os.ReadFile(filepath.Join("..", "..", "testdata", "fcalc", "oneshot.com"))
+	procedure, err := os.ReadFile(filepath.Join(testdataDir, "fcalc", "oneshot.com"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -296,7 +301,10 @@ func f90rVerifiedData(t *testing.T, text string) string {
 // built there from its sources, on a real VAX's instruction set and VMS's own LIBRTL,
 // MTHRTL, and RMS.
 func TestF90ROracle(t *testing.T) {
-	vms, err := os.ReadFile(filepath.Join("..", "..", "testdata", "f90r", "vax", "f90r.log"))
+	if testproc.Isolate(t) {
+		return
+	}
+	vms, err := os.ReadFile(filepath.Join(testdataDir, "f90r", "vax", "f90r.log"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -384,7 +392,10 @@ var f90rObjectDifferences = map[string]string{
 //
 // f90rObjectDifferences are the objects that still differ, with why.
 func TestF90RObjects(t *testing.T) {
-	dir := filepath.Join("..", "..", "testdata", "f90r", "vax", "fcalc")
+	if testproc.Isolate(t) {
+		return
+	}
+	dir := filepath.Join(testdataDir, "f90r", "vax", "fcalc")
 
 	sources, err := filepath.Glob(filepath.Join(dir, "*.mar"))
 	if err != nil || len(sources) == 0 {

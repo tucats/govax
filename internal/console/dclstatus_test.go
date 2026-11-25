@@ -24,6 +24,7 @@ var statusBadParameter = dclshell.VMSCondition(vmserrors.CLI_BADPARAMETER)
 // by each command; SHOW SYMBOL, CONTINUE, and a false IF leave them as
 // they were (the User's Manual, 13.15).
 func TestStatusSymbols(t *testing.T) {
+	t.Parallel()
 	d, c, buf := newCommandDispatcher(t)
 
 	show := func(name string) string {
@@ -103,6 +104,7 @@ func runStatusProcedure(t *testing.T, lines ...string) (error, string, uint32) {
 // failure not marked as shown; the default error action passes the
 // error's status, marked as shown.
 func TestProcedureStatus(t *testing.T) {
+	t.Parallel()
 	err, out, status := runStatusProcedure(t, "$ FOOBAR")
 	if status != statusIvverb || !vmserrors.MessageInhibited(err) || strings.Count(out, "IVVERB") != 1 {
 		t.Errorf("end of file after a warning: %v, $STATUS %08X, output %q; want IVVERB's status, shown once", err, status, out)
@@ -139,6 +141,7 @@ func TestProcedureStatus(t *testing.T) {
 // acts on and worse, its command run once and the default back after it,
 // and only at its own command level.
 func TestOnCommand(t *testing.T) {
+	t.Parallel()
 	// ON WARNING THEN EXIT ends on a warning, with its status.
 	_, out, status := runStatusProcedure(t, "$ ON WARNING THEN EXIT", "$ FOOBAR", `$ PRINT "after"`)
 	if strings.Contains(out, "after") || status != statusIvverb|stsInhibitMsg {
@@ -178,6 +181,7 @@ func TestOnCommand(t *testing.T) {
 // setting $STATUS; SET ON turns the checking back on (the User's Manual,
 // 13.10).
 func TestSetNoOn(t *testing.T) {
+	t.Parallel()
 	err, out, status := runStatusProcedure(t, "$ SET NOON", "$ SET BOGUS", `$ PRINT "one"`, "$ SET BOGUS",
 		"$ X = $STATUS", "$ SET ON", "$ SET BOGUS", `$ PRINT "two"`)
 

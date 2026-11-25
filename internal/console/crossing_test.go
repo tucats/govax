@@ -9,6 +9,7 @@ import "testing"
 // faults, so the handler moves the signal array's PC past the instruction
 // before it continues.
 func TestBPTAndCustomerOpcodeSignal(t *testing.T) {
+	t.Parallel()
 	r0, out := runMacroProgram(t, `	$SSDEF
 	.PSECT	DATA,WRT,NOEXE
 BREAK:	.ASCID	/SS$_BREAK/
@@ -57,6 +58,7 @@ DONE:	.ASCID	/done/
 // argument list the program can't read returns SS$_ACCVIO, as VMS's change
 // mode dispatcher returns it, rather than faulting; the program goes on.
 func TestServiceArgumentListOutOfReach(t *testing.T) {
+	t.Parallel()
 	r0, out := runMacroProgram(t, `	.PSECT	CODE,NOWRT,EXE
 	.ENTRY	START,^M<>
 	CALLG	@#4,G^SYS$GETTIM	; page 0 has no access

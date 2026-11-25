@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // TestFor80Oracle holds FTNRTL to VMS's FORTRAN run-time library
@@ -28,6 +29,9 @@ import (
 // how many were compared. expectedFor80Differences lists the cases that
 // are known to differ, with the reason.
 func TestFor80Oracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	vms := readFor80VMS(t)
 
 	d, c, buf := shareFindConsole(t, false)
@@ -285,6 +289,9 @@ func splitFor80Cases(t *testing.T, records [][]byte) map[int]for80Case {
 // (FOR$_ENDDURREA, 24) isn't compared. A case whose IOSTAT is 2,
 // FOR$_NOTIMP, waits for its subtask, as in TestFor80Oracle.
 func TestFor80InputOracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	vms := readFor80VMSInput(t)
 
 	d, c, buf := shareFindConsole(t, false)
@@ -578,6 +585,9 @@ func splitFor80InputCases(out string) map[int]for80Case {
 // FORRTL.EXE over govax (TestFor80Round3). Its cases are numbered from 2000
 // here.
 func TestFor80InternalOracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	vms := readFor80Stored(t, "for80-vax.txt")
 	for n, c := range readFor80Stored(t, "for80c-forrtl.txt") {
 		vms[n+2000] = c

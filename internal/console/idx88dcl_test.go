@@ -10,6 +10,7 @@ import (
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -68,6 +69,9 @@ func runIdx88D(t *testing.T) (log, terminal string) {
 // and make its files, and the procedure must run through every section to its
 // end. IDX88D_LOG=file keeps govax's log in the file.
 func TestIdx88DProbe(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	log, _ := runIdx88D(t)
 
 	if out := os.Getenv("IDX88D_LOG"); out != "" {
@@ -95,6 +99,9 @@ func TestIdx88DProbe(t *testing.T) {
 // the author's session: both are compared from the first command after SET
 // VERIFY.
 func TestIdx88DOracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	text, err := os.ReadFile(filepath.Join("..", "..", "testdata", "idx88", "vax", "idx88d.log"))
 	if err != nil {
 		t.Skipf("no VMS log: %v", err)

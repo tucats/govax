@@ -82,6 +82,7 @@ func step(t testing.TB, c *console.Console, n int) {
 }
 
 func TestHandSwitchTwoProcesses(t *testing.T) {
+	t.Parallel()
 	var out bytes.Buffer
 
 	c := console.New(&out)

@@ -8,6 +8,7 @@ import (
 
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -32,6 +33,9 @@ var bat98Files = []struct{ name, dir string }{
 // lines (symbols, labels, substitution) are right. BAT98_DUMP names a
 // file to write SYSTEM's log to, for reading.
 func TestBat98Probe(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	if testing.Short() {
 		t.Skip("the probe's whole run is long")
 	}

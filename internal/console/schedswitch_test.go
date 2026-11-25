@@ -17,6 +17,7 @@ import (
 	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/respath"
 	"github.com/tucats/govax/internal/sched"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -184,6 +185,9 @@ func countOf(t *testing.T, c *console.Console, env *corevms.Environment) uint32 
 // quantum booting (STARTUP.COM runs the microkernel), and keeps the rest
 // for its first turn.
 func TestScheduler_roundRobin(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	const quantum = 100
 
 	c, out := scheduledConsole(t, "100", counter())
@@ -266,6 +270,9 @@ func TestScheduler_roundRobin(t *testing.T) {
 // 2 runs for process 2. Process 2 names itself with $SETPRN; process 1's
 // name stays as it was.
 func TestScheduler_servicesReachCurrent(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	const (
 		descAddr = dataAddr + 0x10 // a string descriptor for "TWO"
 		textAddr = dataAddr + 0x20 // "TWO"

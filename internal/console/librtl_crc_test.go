@@ -7,6 +7,7 @@ import "testing"
 // 0, and "DOVE" and "HOSE", whose CRCs are the same (^X74DB). Each check
 // that fails returns its own number; all passing returns 1.
 func TestLibrtlCrc(t *testing.T) {
+	t.Parallel()
 	r0, out := runMacroProgram(t, "\t.PSECT\tDATA,NOEXE,WRT,LONG\n"+
 		"POLY:\t.LONG\t^O120001\nZERO:\t.LONG\t0\nTABLE:\t.BLKL\t16\n"+
 		"DOVE:\t.ASCID\t/DOVE/\nHOSE:\t.ASCID\t/HOSE/\n"+

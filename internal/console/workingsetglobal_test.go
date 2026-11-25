@@ -5,6 +5,7 @@ import (
 
 	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/paging"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // Phase 63's subtask 3 (docs/planning/PHASE-63 - working sets.md), with paging
@@ -16,6 +17,9 @@ import (
 // their PTEs holding their global page table indexes again, and come
 // back with their contents; and they leave it when they're unmapped.
 func TestWorkingSetGlobalPages(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	withSettings(t, map[string]string{machine.PagingSetting: "true", "vax.sysgen.pql_dwsdefault": "30"})
 
 	c := newServiceConsole(t)

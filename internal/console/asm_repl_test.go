@@ -26,6 +26,7 @@ func newRunnableDispatcher(t *testing.T) (*Dispatcher, *Console) {
 // erroring out, and that DISASM/EXAMINE-style commands are rejected as
 // assembly statements while it's active.
 func TestDispatchASM_bareEntersInteractiveMode(t *testing.T) {
+	t.Parallel()
 	d, c := newRunnableDispatcher(t)
 
 	if c.InAssemblerMode() {
@@ -66,6 +67,7 @@ func TestDispatchASM_bareEntersInteractiveMode(t *testing.T) {
 // immediately (the label is resolvable mid-session), and "END <name>"
 // auto-invokes CALL __ENTRY exactly like the batch ASM <file> form does.
 func TestDispatchASM_depositsAndAutoCallsEntry(t *testing.T) {
+	t.Parallel()
 	d, c := newRunnableDispatcher(t)
 
 	for _, line := range []string{
@@ -102,6 +104,7 @@ func TestDispatchASM_depositsAndAutoCallsEntry(t *testing.T) {
 // vax.console.deposit register (see docs/planning/PHASE-19.md's design notes) -- and
 // that DepositAddr is kept in sync afterward.
 func TestDispatchASM_depositAddrIntegration(t *testing.T) {
+	t.Parallel()
 	d, c := newRunnableDispatcher(t)
 
 	c.DepositAddr = 0x4000
@@ -155,6 +158,7 @@ func TestDispatchASM_depositAddrIntegration(t *testing.T) {
 // forms, matching machine.go's own doc comment on why "ASM <file>" reuses
 // one Assembler across calls.
 func TestDispatchASM_sharedSessionWithBatchFile(t *testing.T) {
+	t.Parallel()
 	d, c := newRunnableDispatcher(t)
 
 	if _, _, err := c.Assemble(asmFixturePath(t, "xor.asm")); err != nil {

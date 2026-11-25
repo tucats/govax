@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // directCase is one of testdata/for81's cases on direct access, DEFINE FILE, and
@@ -371,6 +372,9 @@ func directWant(t *testing.T, dc directCase, events []directEvent) string {
 // statement's IOSTAT, the bytes each read returned, the associated variable,
 // INQUIRE's NEXTREC and RECL, and the records left in the files.
 func TestFor81DirectOracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	runs := map[string]string{}
 
 	for _, run := range []string{"for81-vax.txt", "for81f-vax.txt"} {
@@ -434,6 +438,9 @@ func TestFor81DirectOracle(t *testing.T) {
 // status only where RMS reported it, as testdata/for81's #567 to #570 showed of
 // the conditions.
 func TestFortranDirectSignals(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, c, buf := shareFindConsole(t, false)
 
 	direct := "OPEN (10, FILE='P.DAT', STATUS='UNKNOWN', ACCESS='DIRECT', RECL=1"

@@ -34,6 +34,7 @@ func runInputProcedure(t *testing.T, lines ...string) string {
 // TestProcedureInput_data: what reads a procedure's data lines, and what
 // becomes of those nothing reads (dclinput.go).
 func TestProcedureInput_data(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name  string
 		lines []string
@@ -140,6 +141,7 @@ func TestProcedureInput_data(t *testing.T) {
 // its own data lines, and the outer procedure's input is its own again
 // when it returns; a data line after the @ is a command, @ being DCL's.
 func TestProcedureInput_nested(t *testing.T) {
+	t.Parallel()
 	d, _, buf := newCommandDispatcher(t)
 	dir := t.TempDir()
 
@@ -160,6 +162,7 @@ func TestProcedureInput_nested(t *testing.T) {
 // what is typed, to the end of the input; DECK is IVVALU, and EOD does
 // nothing, leaving $STATUS as it was (VMS 7.3, testdata/dcl50's I3).
 func TestProcedureInput_terminal(t *testing.T) {
+	t.Parallel()
 	d, c, buf := newCommandDispatcher(t)
 	c.In = strings.NewReader("typed one\ntyped two\n")
 
@@ -192,6 +195,7 @@ func TestProcedureInput_terminal(t *testing.T) {
 // TestIsInputStream: SYS$INPUT by name and through logical names, and
 // names that lead elsewhere.
 func TestIsInputStream(t *testing.T) {
+	t.Parallel()
 	d, c, _ := newCommandDispatcher(t)
 
 	for _, line := range []string{

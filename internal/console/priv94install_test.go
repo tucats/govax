@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/console"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // priv94NamedSection reads the section headed exactly heading ("########
@@ -70,6 +71,9 @@ func priv94InstallMask(line string, out []string) []string {
 // whose LIST is then NOKFEFND, and runs it plain again. PRIV94I prints the
 // four masks and whether $CRELNM in the system table worked.
 func TestPriv94Install(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	build := func(install bool) func(*console.Console, func(string) string) map[string]string {
 		return func(_ *console.Console, dispatch func(string) string) map[string]string {
 			buildPriv94(t, dispatch, []string{"PRIV94I", "PRIV94H"})

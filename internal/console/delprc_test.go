@@ -7,6 +7,7 @@ import (
 
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/corevms"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // Phase 45's subtask 8: $DELPRC of another process, whose deletion runs
@@ -119,6 +120,9 @@ func wantGone(t *testing.T, c *console.Console, env *corevms.Environment) {
 // as it gets the CPU, before anything of its own runs; then process 1
 // runs on.
 func TestDelprc_hibernatingChild(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, _ := scheduledConsole(t, longQuantum, brbSelf)
 	one := c.RTL
 	exe := buildImage(t, c, "sleeper", sleeperSource)
@@ -146,6 +150,9 @@ func TestDelprc_hibernatingChild(t *testing.T) {
 // deletes the grandchild first: the child's deletion marks it and
 // waits, and goes on when the grandchild has gone.
 func TestDelprc_subprocessFirst(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, _ := scheduledConsole(t, longQuantum, brbSelf)
 	one := c.RTL
 	pri := one.Process.BasePriority + 2
@@ -183,6 +190,9 @@ func TestDelprc_subprocessFirst(t *testing.T) {
 // the grandchild and waits, and the grandchild, deleted first, ends with
 // SS$_ABORT; the child then ends with its image's status.
 func TestDeleteProcess_ownerImageExit(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, _ := scheduledConsole(t, longQuantum, brbSelf)
 	one := c.RTL
 	pri := one.Process.BasePriority + 2

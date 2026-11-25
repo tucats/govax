@@ -9,6 +9,7 @@ import (
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -79,6 +80,9 @@ func runIdx88C(t *testing.T) (string, *console.Console) {
 // section to its end. Until govax has the utilities their commands fail, and
 // what follows from them. IDX88C_LOG=file keeps govax's log in the file.
 func TestIdx88CProbe(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	log, _ := runIdx88C(t)
 
 	if out := os.Getenv("IDX88C_LOG"); out != "" {

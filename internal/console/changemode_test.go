@@ -11,6 +11,7 @@ import (
 // declared by $DCLCMH, the CHMU goes to it in user mode, the code on top of
 // the stack, which the handler pops before its REI.
 func TestChangeModeToUser(t *testing.T) {
+	t.Parallel()
 	r0, out := runMacroProgram(t, `	$SSDEF
 	.PSECT	DATA,WRT,NOEXE
 CODE:	.LONG	0
@@ -72,6 +73,7 @@ CMHAND:	MOVL	(SP)+,CODE		; the change mode code
 // SS$_WASCLR, then SS$_WASSET. A service run in the caller's mode ($FAO)
 // signals nothing.
 func TestSystemServiceFailureExceptions(t *testing.T) {
+	t.Parallel()
 	r0, out := runMacroProgram(t, `	$SSDEF
 	.PSECT	DATA,WRT,NOEXE
 STATUS:	.LONG	0
@@ -131,6 +133,7 @@ DONE:	.ASCID	/done/
 // TestSystemServiceFailureUnhandled: SS$_SSFAIL is severe, so with no
 // handler to take it the catch-all shows its message and ends the image.
 func TestSystemServiceFailureUnhandled(t *testing.T) {
+	t.Parallel()
 	r0, out := runMacroProgram(t, `	.PSECT	DATA,WRT,NOEXE
 NOTREACHED: .ASCID /not reached/
 	.PSECT	CODE,NOWRT,EXE

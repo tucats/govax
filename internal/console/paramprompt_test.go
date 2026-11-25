@@ -21,6 +21,7 @@ import (
 // isn't prompted for: its missing parameter is DCL's warning INSFPRM,
 // and the procedure goes on (VMS's console, on simh).
 func TestParameterPrompt(t *testing.T) {
+	t.Parallel()
 	var out bytes.Buffer
 
 	c := console.New(&out)

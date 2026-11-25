@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // The Phase 71 oracle (docs/planning/PHASE-71 - process-permanent files.md,
@@ -145,6 +147,9 @@ func comparePPF71(t *testing.T, name string, got, want []string) {
 // masks above and ppfMasks (the entries' numbers, the strings' lengths,
 // STVs, ALQ, channels, and the disk's DEVCHAR).
 func TestPPF71Oracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	_, dispatch := wsDispatcher(t)
 	dir := t.TempDir()
 	dsk := filepath.Join(dir, "ppf71.dsk")
@@ -199,6 +204,9 @@ func TestPPF71Oracle(t *testing.T) {
 // same masks. PPF71_ALIAS and PPF71_DCLCOPY are defined as the procedure,
 // run first on the VAX, left them.
 func TestPPF71Terminal(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, dispatch := wsDispatcher(t)
 	dir := t.TempDir()
 	dsk := filepath.Join(dir, "ppf71.dsk")

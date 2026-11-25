@@ -14,6 +14,7 @@ import (
 	"github.com/tucats/govax/internal/console/consoletest"
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/jobqueue"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/uaf"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -282,6 +283,9 @@ var batchMasks = []struct {
 	{regexp.MustCompile(`\d{1,2}-[A-Z]{3}-\d{4} \d\d:\d\d(:\d\d\.\d\d)?`), "<TIME>"},
 	{regexp.MustCompile(`(?m)^(  (?:Buffered I/O count|Direct I/O count|Page faults):) +\d+ +(Peak working set size|Peak page file size|Mounted volumes): +\d+$`), "$1 <N> $2 <N>"},
 	{regexp.MustCompile(`(?m)^  Charged CPU time: .*$`), "  Charged CPU time: <CPU>"},
+
+	// BAT98L3's run, shortened by shorter.
+	{regexp.MustCompile(`/PARAM=\("BAT98L3","1[25]"\)`), `/PARAM=("BAT98L3","15")`},
 }
 
 // maskBatch applies batchMasks to s.
@@ -363,8 +367,19 @@ func runSteps(t *testing.T, dispatch func(string) string, steps []probeStep, dif
 // shorter is a probe command with its waits shortened: WAIT 0:0:5, and a
 // job held /AFTER="+0:00:15" or "+0:00:20", wait a second at most here (the times
 // shown are masked).
+//
+// And THE JOB LIMIT's BAT98L3 runs 12 seconds, not 15. On the VAX it had
+// ended and gone by the time SYNCHRONIZE asked for it, after L1's and L2's
+// (NOSUCHENT, case 216): it ended while an earlier SYNCHRONIZE waited, which
+// in govax forgets it (corevms's jobEnd). Started a moment after L1 and L2
+// and running as long, it ends within milliseconds of them, before or after
+// that SYNCHRONIZE completes as the host's load decides (the console's tests
+// run in parallel). Three seconds sooner, it always ends while SYNCHRONIZE
+// waits for L1.
 func shorter(command string) string {
 	command = strings.ReplaceAll(command, "WAIT 0:0:5", "WAIT 0:0:0.25")
+
+	command = strings.ReplaceAll(command, "/PARAMETERS=(BAT98L3,15)", "/PARAMETERS=(BAT98L3,12)")
 
 	command = strings.ReplaceAll(command, `/AFTER="+0:00:15"`, `/AFTER="+0:00:01"`)
 
@@ -390,6 +405,9 @@ func await(dispatch func(string) string, name string) string {
 // with each severity, parameters, /NOTIFY, and /CPUTIME, each
 // SYNCHRONIZEd, its log listed and typed.
 func TestBatchRunningJobsOracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	if testing.Short() {
 		t.Skip("runs batch jobs")
 	}
@@ -457,6 +475,9 @@ var endingsDifferences = map[string]string{
 // STOP of the process; a queue paused (its job suspended), stopped with
 // /NEXT, and reset; SET ENTRY of an executing job.
 func TestBatchEndingsOracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	if testing.Short() {
 		t.Skip("runs batch jobs")
 	}
@@ -499,6 +520,9 @@ var laterDifferences = map[string]string{
 // whose subroutine searches directories in a loop, is
 // TestBatchLogFilesOracle's).
 func TestBatchLaterSectionsOracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	if testing.Short() {
 		t.Skip("runs batch jobs")
 	}
@@ -629,6 +653,9 @@ func dropEntries(out string, entries ...string) string {
 // printed "LOGS FOUND: ..." for each; here each job is SYNCHRONIZEd and
 // the file looked for where VMS found it, and nowhere else.
 func TestBatchLogFilesOracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	if testing.Short() {
 		t.Skip("runs batch jobs")
 	}
@@ -722,6 +749,9 @@ var jobViewItems = []string{
 // disks), jobViewItems, its name and master, and the rights identifier
 // BATCH.
 func TestBatchJobViewOracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	if testing.Short() {
 		t.Skip("runs batch jobs")
 	}

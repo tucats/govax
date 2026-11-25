@@ -11,6 +11,7 @@ import (
 
 	"github.com/tucats/govax/internal/dclcmd"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmserrors"
 	"github.com/tucats/govax/internal/vmsimage"
 )
@@ -31,6 +32,9 @@ var listingDate = regexp.MustCompile(`[ \d]\d-[A-Z]{3}-\d{4} \d\d:\d\d:\d\d`)
 // both programs run as VMS's did. MAIN1L is linked from another default
 // directory, so SHR1.EXE is found beside the library.
 func TestShareableImageLibrary(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, c, buf := shareFindConsole(t, false)
 	dir := t.TempDir()
 
@@ -220,6 +224,7 @@ func checkProgramHeader(t *testing.T, c *Console, name string) {
 // the image into the link without a search; /USERLIBRARY=NONE and a
 // keyword that isn't a table are checked too.
 func TestShareableImageLibraryHost(t *testing.T) {
+	t.Parallel()
 	d, c, buf := newCommandDispatcher(t)
 	dir := t.TempDir()
 

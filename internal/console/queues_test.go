@@ -134,6 +134,7 @@ var queueDifferences = map[string]string{
 // as the UIC; and SHOW QUEUE/MANAGER/FULL's master file is govax's host
 // file (Decision 3).
 func TestQueueCommandsOracle(t *testing.T) {
+	t.Parallel()
 	c, run := queueConsole(t)
 
 	cases := probeCases(t, filepath.Join("..", "..", "testdata", "bat98", "vax", "bat98.log"),
@@ -214,6 +215,7 @@ func passCases(t *testing.T, log, pass string) map[string]string {
 // (F$GETQUI of the queue's protection and owner, which BAT98 and BAT98W
 // may not see), 17 to 22, 25 to 28, and 31 (testdata/bat98/bat98p.com).
 func TestQueueCommandsMatrix(t *testing.T) {
+	t.Parallel()
 	commands := map[string]string{
 		"5":  `WRITE SYS$OUTPUT "  GETQUI PROTECTION ", F$GETQUI("DISPLAY_QUEUE","PROTECTION","BAT98_P")`,
 		"6":  `WRITE SYS$OUTPUT "  GETQUI OWNER ", F$GETQUI("DISPLAY_QUEUE","OWNER_UIC","BAT98_P")`,

@@ -8,6 +8,7 @@ import (
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/paging"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -221,6 +222,9 @@ func checkGlobalCopies(t *testing.T, r *gblPagingRun, vas []uint32, label string
 // each PTE's copy of its page as it's made, leaves the working set, goes
 // to the page file, and comes back.
 func TestGlobalCopyOnRefPaging(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	pageFileSettings(t)
 
 	// One page a fault, so that each copy is made by its own fault: read
@@ -376,6 +380,9 @@ func TestGlobalCopyOnRefPaging(t *testing.T) {
 // off: each range still gets copies of its own, the section goes with its
 // last reference, and the file is untouched.
 func TestGlobalCopyOnRefPagingOff(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	r := startGlobalCRF(t)
 	c := r.c
 

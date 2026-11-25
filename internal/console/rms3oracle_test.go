@@ -260,6 +260,7 @@ func diffRecords(vms, govax []probeRecord) []string {
 // TestRMS3Oracle runs each probe under govax against the VAX run's
 // container and compares what it wrote with what VMS wrote.
 func TestRMS3Oracle(t *testing.T) {
+	t.Parallel()
 	if _, err := os.Stat(rms3VAXDisk); err != nil {
 		t.Skip("no VAX run's container (" + rms3VAXDisk + ")")
 	}

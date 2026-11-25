@@ -8,6 +8,7 @@ import (
 
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -177,6 +178,9 @@ func replayPriv94DCLMasked(t *testing.T, id priv94Identity, sections []priv94DCL
 // /PERMANENT needs one of them and that PRIV94N, authorized for neither,
 // can't enable them.
 func TestPriv94Terminal(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	for _, run := range []struct {
 		id   priv94Identity
 		file string

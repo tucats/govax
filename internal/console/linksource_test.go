@@ -13,6 +13,7 @@ import (
 	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -37,6 +38,7 @@ func vmsLibFile(t *testing.T, name string) []byte {
 // image's global symbol table: a real image calls the routine at that
 // offset, and RUN connects the call to the shim registered for it.
 func TestShimOffsetsMatchCapturedImages(t *testing.T) {
+	t.Parallel()
 	checked := 0
 
 	for _, e := range machine.ShimTable {
@@ -65,6 +67,7 @@ func TestShimOffsetsMatchCapturedImages(t *testing.T) {
 // once the tables have places (vmsdef's ImageSymbols, regenerated from
 // LIBRTL.EXE since Phase 68's subtask 7 added them).
 func TestCapturedLIBRTLMatchesImage(t *testing.T) {
+	t.Parallel()
 	src, name, err := link.ReadShareableImage(vmsLibFile(t, "librtl.exe"))
 	if err != nil {
 		t.Fatal(err)
@@ -97,6 +100,7 @@ func TestCapturedLIBRTLMatchesImage(t *testing.T) {
 // own P1 vector, which LINK's own tables use and RUN implements. One
 // spare slot differs (docs/DEVIATIONS.md).
 func TestLibrarySymbolsMatchP1Vector(t *testing.T) {
+	t.Parallel()
 	checked := 0
 
 	for _, e := range vmsdef.P1VectorTable {
@@ -123,6 +127,7 @@ func TestLibrarySymbolsMatchP1Vector(t *testing.T) {
 // tables define both, so neither is undefined. With the VMS libraries
 // present, the image is the one they give.
 func TestLink_capturedRoutineWithoutLibraries(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 	out := &bytes.Buffer{}
 	c.Out = out
@@ -214,6 +219,9 @@ func sameImage(a, b []byte) bool {
 // and LIBRTL.EXE in the host library directory. The image is the one
 // govax's own tables give (/NOSYSLIB), and it runs.
 func TestLink_libraryDirectory(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	vmsLibFile(t, "imagelib.olb")
 	vmsLibFile(t, "starlet.olb")
 	vmsLibFile(t, "librtl.exe")
@@ -247,6 +255,9 @@ func TestLink_libraryDirectory(t *testing.T) {
 // LIB$PUT_OUTPUT's offset comes from its shim; a routine in an image with
 // no file and no shim is an error naming the image.
 func TestLink_libraryMissingImage(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	dir := t.TempDir()
 	t.Chdir(dir) // where default outputs go
 	if err := os.WriteFile(filepath.Join(dir, "IMAGELIB.OLB"), vmsLibFile(t, "imagelib.olb"), 0o644); err != nil {
@@ -277,6 +288,7 @@ func TestLink_libraryMissingImage(t *testing.T) {
 // TestLink_libraryLogicalNames finds IMAGELIB.OLB and LIBRTL.EXE through
 // SYS$LIBRARY and SYS$SHARE on a mounted volume, not the host directory.
 func TestLink_libraryLogicalNames(t *testing.T) {
+	t.Parallel()
 	imagelib := vmsLibFile(t, "imagelib.olb")
 	librtl := vmsLibFile(t, "librtl.exe")
 

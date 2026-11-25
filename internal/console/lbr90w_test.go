@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/backup"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // lbr90wCases is how many cases LBR90W.MAR has, each run as an image of its
@@ -52,6 +53,9 @@ var lbr90wLibraries = []string{
 // naming a directory, govax's libraries are written there, to compare by
 // hand.
 func TestLBR90WOracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	dir := filepath.Join("..", "..", "testdata", "help90")
 	want := lbr90wVMSCases(t, filepath.Join(dir, "vax", "round3", "help90w.log"))
 	vmsLibraries := lbr90wSaveSet(t, filepath.Join(dir, "vax", "round3", "h90w.bck"))

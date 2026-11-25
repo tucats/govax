@@ -9,6 +9,7 @@ import (
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
 	"github.com/tucats/govax/internal/machine"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // Phase 64's subtask 7 (docs/planning/PHASE-64 - page file.md): reporting. With
@@ -18,6 +19,9 @@ import (
 // PAGEFILE_FREE are the page file's size and free blocks, and its
 // MPW_WRTCLUSTER and PQL_MPGFLQUOTA the parameters.
 func TestPageFileReporting(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	pagefile := filepath.Join(t.TempDir(), "pagefile.sys")
 
 	setSetting(t, machine.PagingSetting, "true")

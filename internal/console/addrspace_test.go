@@ -33,6 +33,7 @@ func bootedConsole(t *testing.T) *Console {
 // TestProcessOneAdoptsVMInitTables: after VMINIT, process 1's address
 // space is VMINIT's tables, which the pool doesn't own.
 func TestProcessOneAdoptsVMInitTables(t *testing.T) {
+	t.Parallel()
 	c := bootedConsole(t)
 	s := c.RTL.Space
 
@@ -54,6 +55,7 @@ func TestProcessOneAdoptsVMInitTables(t *testing.T) {
 // physical pages (read-only), its P0 page 0 is a guard, and teardown
 // gives every page back.
 func TestBuildAddressSpace(t *testing.T) {
+	t.Parallel()
 	c := bootedConsole(t)
 	sys := c.RTL.System
 	one := c.RTL.Space.AddressSpace
@@ -175,6 +177,7 @@ func TestBuildAddressSpace(t *testing.T) {
 // TestBuildAddressSpaceErrors: sizes out of range and an exhausted pool
 // are errors that leave nothing allocated.
 func TestBuildAddressSpaceErrors(t *testing.T) {
+	t.Parallel()
 	c := bootedConsole(t)
 	sys := c.RTL.System
 	free := sys.S0Pool().FreePages()
@@ -199,6 +202,7 @@ func TestBuildAddressSpaceErrors(t *testing.T) {
 // TestRemoveProcessTearsDownSpace: removing a process from the table
 // gives back its address space's pages.
 func TestRemoveProcessTearsDownSpace(t *testing.T) {
+	t.Parallel()
 	c := bootedConsole(t)
 	sys := c.RTL.System
 

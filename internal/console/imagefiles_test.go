@@ -8,6 +8,7 @@ import (
 	"github.com/tucats/govax/internal/console/consoletest"
 	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // A process 1 image's files are closed when the image ends, as RMS's
@@ -99,6 +100,9 @@ func startSpinner(t *testing.T, c *console.Console, d *console.Dispatcher) {
 
 // TestImageExit_closesFiles: an image that returns has its files closed.
 func TestImageExit_closesFiles(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, d := writerConsole(t)
 
 	runImage(t, d, buildImage(t, c, "writer", writerSource))
@@ -109,6 +113,9 @@ func TestImageExit_closesFiles(t *testing.T) {
 // resumed is run down when RUN starts the next one. (The next one is
 // only loaded, /NOEXECUTE, so that its own exit doesn't close the file.)
 func TestAbandonedImage_nextRun(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, d := writerConsole(t)
 	startSpinner(t, c, d)
 
@@ -128,6 +135,9 @@ func TestAbandonedImage_nextRun(t *testing.T) {
 // files. (ZERO is a kernel-mode command, and the spinner stopped in user
 // mode.)
 func TestAbandonedImage_zero(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, d := writerConsole(t)
 	startSpinner(t, c, d)
 
@@ -143,6 +153,9 @@ func TestAbandonedImage_zero(t *testing.T) {
 // TestAbandonedImage_endSession: govax's exit closes process 1's files
 // before it dismounts the volumes.
 func TestAbandonedImage_endSession(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, d := writerConsole(t)
 	startSpinner(t, c, d)
 

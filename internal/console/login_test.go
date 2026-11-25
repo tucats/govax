@@ -10,6 +10,7 @@ import (
 // account through INITIALIZE/MEMORY, which makes a new System and a new
 // process 1, and no second login is recorded.
 func TestLogInSurvivesVMInit(t *testing.T) {
+	t.Parallel()
 	c := bootedConsole(t)
 	d := NewDispatcher(c, loadEvaxGrammar(t))
 

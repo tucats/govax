@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/sched"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -53,6 +54,9 @@ msg:	.ascii	"hi"
 // give it the CPU. It runs at its base priority plus 1: the boost less
 // the one the scheduler takes off when it chooses a boosted process. Its read has the message, from process 2's PID.
 func TestIOCompletion_preempts(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	const (
 		chanAddr = dataAddr + 0x10 // the channel (a word)
 		iosb     = dataAddr + 0x18 // the read's I/O status block

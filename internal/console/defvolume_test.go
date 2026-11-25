@@ -12,6 +12,7 @@ import (
 // TestMountDefaultVolume_noFile confirms an unset container file does
 // nothing at all: no mount, no message, no default.
 func TestMountDefaultVolume_noFile(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	before := c.ContainerSession.DefaultString()
 
@@ -35,6 +36,7 @@ func TestMountDefaultVolume_noFile(t *testing.T) {
 // writable on the default device, given the default directory, and made
 // the default.
 func TestMountDefaultVolume_creates(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	c.Verbose = true
 
@@ -75,6 +77,7 @@ func TestMountDefaultVolume_creates(t *testing.T) {
 // mounted as it is, its label checked when one is configured, and a
 // configured directory that isn't on it falls back to the MFD.
 func TestMountDefaultVolume_existing(t *testing.T) {
+	t.Parallel()
 	path := filepath.Join(t.TempDir(), "old.dsk")
 
 	setup, _ := newTestConsole(t)
@@ -127,6 +130,7 @@ func TestMountDefaultVolume_existing(t *testing.T) {
 // TestMountDefaultVolume_readOnly confirms a container the host won't let
 // govax write is mounted read-only, and says so.
 func TestMountDefaultVolume_readOnly(t *testing.T) {
+	t.Parallel()
 	if os.Geteuid() == 0 {
 		t.Skip("root can write a read-only file")
 	}
@@ -162,6 +166,7 @@ func TestMountDefaultVolume_readOnly(t *testing.T) {
 // TestMountDefaultVolume_quiet confirms a console that isn't verbose (a
 // one-shot command) shows no informational messages.
 func TestMountDefaultVolume_quiet(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	c.Verbose = false
 
@@ -181,6 +186,7 @@ func TestMountDefaultVolume_quiet(t *testing.T) {
 // TestMountDefaultVolume_badType confirms an unknown device type is a
 // warning, and nothing is created.
 func TestMountDefaultVolume_badType(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	path := filepath.Join(t.TempDir(), "x.dsk")
 

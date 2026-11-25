@@ -12,6 +12,7 @@ import (
 	"github.com/tucats/govax/internal/console/consoletest"
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -176,6 +177,9 @@ func writeCommands(t *testing.T, lines ...string) string {
 // LOGOUT writes the job's report. The process ends with the last
 // command's status.
 func TestCLI_commandFile(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
 
 	child := buildChildImage(t, c)
@@ -237,6 +241,9 @@ func TestCLI_commandFile(t *testing.T) {
 // the terminal it shares with process 1, prompting with "$ ", until the
 // end of the input; EXIT's status becomes the final status.
 func TestCLI_terminal(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
 
 	child := buildChildImage(t, c)
@@ -261,6 +268,9 @@ func TestCLI_terminal(t *testing.T) {
 // TestCLI_missingInput: a SYS$INPUT that isn't there leaves the CLI
 // nothing to run: the process logs out at once with RMS$_FNF.
 func TestCLI_missingInput(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, _ := scheduledConsole(t, longQuantum, brbSelf)
 
 	cli := loginout(t, c, filepath.Join(t.TempDir(), "nosuch.com"))
@@ -276,6 +286,9 @@ func TestCLI_missingInput(t *testing.T) {
 // status is CLI$_IMAGEFNF with STS$M_INHIB_MSG, as on VMS
 // (testdata/mp/probe4, step 4).
 func TestCLI_runMissingImage(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
 
 	child := buildChildImage(t, c)
@@ -311,6 +324,9 @@ func TestCLI_runMissingImage(t *testing.T) {
 // no translation ends with SHOW$_NOTRAN (step 10); a spawned
 // subprocess's LOGOUT says so in one line (step 9).
 func TestCLI_probe5Answers(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
 	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 

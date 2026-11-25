@@ -39,6 +39,7 @@ func createdFileAttributes(t *testing.T, d *Dispatcher, name string) ondisk.RecA
 // data lines, variable-length records with carriage-return carriage
 // control, and /LOG names it with its version.
 func TestCreateFile_volume(t *testing.T) {
+	t.Parallel()
 	d, out := newCreateTestDispatcher(t)
 	proc := writeProcedure(t, t.TempDir(), "create.com",
 		"$ CREATE/LOG NOTES.TXT", "first line", "", "  third", "$ TYPE NOTES.TXT",
@@ -65,6 +66,7 @@ func TestCreateFile_volume(t *testing.T) {
 // ending with the host's line ending; with no data lines, the file is
 // still made, empty.
 func TestCreateFile_host(t *testing.T) {
+	t.Parallel()
 	d, _, out := newCommandDispatcher(t)
 	dir := t.TempDir()
 	text, empty := filepath.Join(dir, "text.txt"), filepath.Join(dir, "empty.txt")
@@ -98,6 +100,7 @@ func TestCreateFile_host(t *testing.T) {
 // TestCreateFile_terminal: at the terminal, CREATE reads what is typed to
 // the end of the input (Ctrl/Z).
 func TestCreateFile_terminal(t *testing.T) {
+	t.Parallel()
 	d, c, _ := newCommandDispatcher(t)
 	c.In = strings.NewReader("typed one\ntyped two\n")
 	path := filepath.Join(t.TempDir(), "typed.txt")

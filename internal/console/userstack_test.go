@@ -6,6 +6,7 @@ import (
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/registers"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmsdef"
 )
@@ -56,6 +57,9 @@ func stackPagesCharged(env *corevms.Environment, addr uint32) int {
 // violations; and the pages a new space has above UserStackTop, up to the
 // P1 vector, don't exist.
 func TestStackExpansion(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	withSettings(t, map[string]string{machine.PagingSetting: "true"})
 
 	c := newServiceConsole(t)
@@ -122,6 +126,9 @@ func TestStackExpansion(t *testing.T) {
 // paging file quota can't cover is the length violation it would have
 // been, with the pages the quota did cover kept.
 func TestStackExpansionQuota(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	withSettings(t, map[string]string{machine.PagingSetting: "true"})
 
 	c := newServiceConsole(t)
@@ -149,6 +156,9 @@ func TestStackExpansionQuota(t *testing.T) {
 // creates the pages down to the new stack pointer; past the quota it's
 // SS$_EXQUOTA, the stack pointer unchanged, the pages created kept.
 func TestAdjstkExpands(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	withSettings(t, map[string]string{machine.PagingSetting: "true"})
 
 	c := newServiceConsole(t)
@@ -194,6 +204,9 @@ func TestAdjstkExpands(t *testing.T) {
 // called the image; with the pointer at UserStackTop, all of it, its
 // charges refunded.
 func TestStackRundown(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	withSettings(t, map[string]string{machine.PagingSetting: "true"})
 
 	c := newServiceConsole(t)
@@ -231,6 +244,9 @@ func TestStackRundown(t *testing.T) {
 // TestUserStackPagingOff: with paging off nothing expands or is deleted:
 // the stack's reserve is part of P1's table from the start.
 func TestUserStackPagingOff(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	withSettings(t, map[string]string{machine.PagingSetting: "false"})
 
 	c := newServiceConsole(t)

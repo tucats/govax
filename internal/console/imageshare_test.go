@@ -8,6 +8,7 @@ import (
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
 	"github.com/tucats/govax/internal/machine"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vm"
 )
 
@@ -161,6 +162,9 @@ func toSharedCheckpoint2(t *testing.T, c *console.Console) {
 // reads the image's contents; and at the image's end its section is gone
 // with the main image's.
 func TestMappedSharedImage(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, d, main := sharedImageConsole(t, true)
 	env := c.ProcessOne()
 
@@ -210,6 +214,9 @@ func TestMappedSharedImage(t *testing.T) {
 // TestCopiedSharedImage: with paging off, the same shareable image is
 // copied, and the main image reads the same contents.
 func TestCopiedSharedImage(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, d, main := sharedImageConsole(t, false)
 
 	shr := runSharedImage(t, c, d, main)

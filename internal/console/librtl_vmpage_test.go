@@ -9,6 +9,7 @@ import "testing"
 // which is LIB$_BADBLOADR. It ends with 1 when all of that held, or the
 // number of the check that failed.
 func TestLibrtlVMPages(t *testing.T) {
+	t.Parallel()
 	r0, _ := runMacroProgram(t, "\t.PSECT\tDATA,NOEXE,WRT,LONG\n"+
 		"COUNT:\t.LONG\t3\nONE:\t.LONG\t1\nADDR:\t.LONG\t0\nMID:\t.LONG\t0\n"+
 		"\t.PSECT\tCODE,NOWRT,EXE\n"+

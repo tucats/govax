@@ -13,6 +13,7 @@ import (
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
 	"github.com/tucats/govax/internal/dclcmd"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -56,6 +57,9 @@ func trimLines(text string) string {
 // owner, SHOW DEVICE in both forms with the memory lines, F$GETDVI, and a
 // FORTRAN program writing a file there.
 func TestRAMDisk(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, dispatch := ramDiskConsole(t)
 
 	login := filepath.Join(t.TempDir(), "login.com")
@@ -181,6 +185,7 @@ func TestRAMDisk(t *testing.T) {
 // is empty, the command dropped by Ctrl/Z, and in a procedure not at all
 // (INSFPRM). A RAM disk needs no file, so isn't asked for one.
 func TestMountPrompt(t *testing.T) {
+	t.Parallel()
 	var out bytes.Buffer
 
 	c := console.New(&out)

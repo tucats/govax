@@ -16,6 +16,7 @@ import (
 // the embedded files (internal/rms/hostfile.go). With no type, /MACRO
 // supplies it, and an upper-case name finds the lower-case embedded file.
 func TestLibrary_listEmbeddedFallback(t *testing.T) {
+	t.Parallel()
 	c := New(&bytes.Buffer{})
 	c.Paths = respath.New(nil, bootdata.FS)
 	out := c.Out.(*bytes.Buffer)

@@ -9,6 +9,7 @@ import "testing"
 // (LIB$_BADBLOADR). It ends with 1 when all of that held, or the number
 // of the check that failed, or the failing status.
 func TestLibrtlVMZones(t *testing.T) {
+	t.Parallel()
 	r0, _ := runMacroProgram(t, "\t.PSECT\tDATA,NOEXE,WRT,LONG\n"+
 		"ZONE:\t.LONG\t0\nALG:\t.LONG\t4\nSIZE24:\t.LONG\t24\nFLAGS:\t.LONG\t4\n"+
 		"TEN:\t.LONG\t10\nTHIRTY:\t.LONG\t30\nADDR:\t.LONG\t0\n"+

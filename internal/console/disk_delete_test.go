@@ -15,6 +15,7 @@ import (
 // deaccess, KEEP.TXT renamed by entering a new name and removing the old,
 // and OLD.TXT deleted.
 func TestDiskDelete_assembledProgram(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 

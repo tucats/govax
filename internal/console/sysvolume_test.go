@@ -44,6 +44,7 @@ func mountTestSystemVolume(t *testing.T, v dclcmd.SystemVolume) (*Console, *byte
 // every file of internal/sysvol's table on it with the contents govax
 // carries, and the manifest.
 func TestSystemVolumeCreated(t *testing.T) {
+	t.Parallel()
 	start := time.Now()
 	path := filepath.Join(t.TempDir(), "profile", "govax-system.dsk")
 
@@ -129,6 +130,7 @@ func TestSystemVolumeCreated(t *testing.T) {
 // TestSystemVolumeReused checks a later start: the container found and
 // mounted as it is, refreshed, and nothing written again.
 func TestSystemVolumeReused(t *testing.T) {
+	t.Parallel()
 	path := filepath.Join(t.TempDir(), "govax-system.dsk")
 
 	first, _, r := mountTestSystemVolume(t, dclcmd.SystemVolume{File: path})
@@ -164,6 +166,7 @@ func TestSystemVolumeReused(t *testing.T) {
 // TestSystemVolumeShared checks a second session: a container another
 // session holds is mounted read-only, and said to be.
 func TestSystemVolumeShared(t *testing.T) {
+	t.Parallel()
 	path := filepath.Join(t.TempDir(), "govax-system.dsk")
 
 	_, _, r := mountTestSystemVolume(t, dclcmd.SystemVolume{File: path})
@@ -201,6 +204,7 @@ func TestSystemVolumeShared(t *testing.T) {
 // TestSystemVolumeLockReleased checks that a dismounted system volume's
 // lock goes, so the next session can write it.
 func TestSystemVolumeLockReleased(t *testing.T) {
+	t.Parallel()
 	path := filepath.Join(t.TempDir(), "govax-system.dsk")
 
 	c, _, _ := mountTestSystemVolume(t, dclcmd.SystemVolume{File: path})
@@ -228,6 +232,7 @@ func TestSystemVolumeLockReleased(t *testing.T) {
 // TestSystemVolumeInitialize checks --system-initialize: the old
 // container kept as FILE.old, a new one made, and said so.
 func TestSystemVolumeInitialize(t *testing.T) {
+	t.Parallel()
 	path := filepath.Join(t.TempDir(), "govax-system.dsk")
 
 	first, _, _ := mountTestSystemVolume(t, dclcmd.SystemVolume{File: path})
@@ -278,6 +283,7 @@ func TestSystemVolumeInitialize(t *testing.T) {
 // doesn't know, a device already mounted, a container that isn't a
 // system volume.
 func TestSystemVolumeNotUsed(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 
 	_, buf, r := mountTestSystemVolume(t, dclcmd.SystemVolume{File: "NONE"})
@@ -323,6 +329,7 @@ func TestSystemVolumeNotUsed(t *testing.T) {
 // TestSystemVolumeDismountRefused checks that DISMOUNT leaves the system
 // volume mounted, and says why.
 func TestSystemVolumeDismountRefused(t *testing.T) {
+	t.Parallel()
 	c, buf, _ := mountTestSystemVolume(t, dclcmd.SystemVolume{File: filepath.Join(t.TempDir(), "sys.dsk")})
 	buf.Reset()
 
@@ -343,6 +350,7 @@ func TestSystemVolumeDismountRefused(t *testing.T) {
 // TestResolveUnit checks the next-free-unit rule: a controller alone is
 // its lowest unit with nothing mounted, and anything else is as given.
 func TestResolveUnit(t *testing.T) {
+	t.Parallel()
 	c, buf, _ := mountTestSystemVolume(t, dclcmd.SystemVolume{File: filepath.Join(t.TempDir(), "sys.dsk")})
 
 	if err := c.cmd().DefineLogicalName("LNM$PROCESS_TABLE", "DSK", []string{"DUA2:"}, lnm.Supervisor, 0, false); err != nil {
@@ -370,6 +378,7 @@ func TestResolveUnit(t *testing.T) {
 // device is the next unit after the system volume's, and that naming
 // the system volume's device for it is refused.
 func TestDefaultVolumeBesideSystem(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 
 	c, buf, _ := mountTestSystemVolume(t, dclcmd.SystemVolume{File: filepath.Join(dir, "sys.dsk")})
@@ -399,6 +408,7 @@ func TestDefaultVolumeBesideSystem(t *testing.T) {
 // rule: MOUNT DUA "file" mounts on the lowest DUA unit with nothing on
 // it, after the system volume's, and says which.
 func TestMountCommandNextUnit(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 
 	c, buf, _ := mountTestSystemVolume(t, dclcmd.SystemVolume{File: filepath.Join(dir, "sys.dsk")})

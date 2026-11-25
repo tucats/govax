@@ -11,6 +11,7 @@ import (
 	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/respath"
 	"github.com/tucats/govax/internal/security"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -251,6 +252,9 @@ func prot93SearchStart(lines []string) []string {
 // and with all four; the accounts' passes without privileges and with
 // each privilege alone) and holds each case's report to VMS's.
 func TestProt93ProgramOracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, run := prot93Console(t, "prot93-exchange.dsk", false)
 
 	var runs []prot93Run
@@ -422,6 +426,9 @@ func prot93Console(t *testing.T, disk string, paging bool) (*Console, func(strin
 // it: RUN's messages and status are VMS's (prot93u_prot93b.log's B0), in
 // both paging modes (each loader reads the image its own way).
 func TestProt93ActivationOracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	for _, paging := range []bool{false, true} {
 		t.Run(fmt.Sprintf("paging=%v", paging), func(t *testing.T) { prot93Activation(t, paging) })
 	}

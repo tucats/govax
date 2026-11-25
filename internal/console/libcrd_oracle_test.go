@@ -136,6 +136,7 @@ func runLibcrdProbe(t *testing.T) *Console {
 }
 
 func TestLibCreateDirOracle(t *testing.T) {
+	t.Parallel()
 	source, err := os.ReadFile(filepath.Join("..", "..", "testdata", "credir", "libcrd.mar"))
 	if err != nil {
 		t.Fatal(err)

@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // spawnHostError runs line, which must fail, and returns its message.
@@ -22,6 +24,9 @@ func spawnHostError(t *testing.T, d *Dispatcher, line string) string {
 // TestSpawnHostOutput: the program runs with its words as they were typed,
 // quotes keeping one together, and its output is DCL's.
 func TestSpawnHostOutput(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, _, buf := shareFindConsole(t, false)
 
 	shareFindRun(t, d, `SPAWN/HOST echo Hello "two  words"`)
@@ -34,6 +39,9 @@ func TestSpawnHostOutput(t *testing.T) {
 // TestSpawnHostEnvironment: /SYMBOLS and /LOGICAL_NAMES pass names with "$"
 // made "_", and only when they're given.
 func TestSpawnHostEnvironment(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, _, buf := shareFindConsole(t, false)
 
 	shareFindRun(t, d, `DEFINE PARTS$DATA DUA1:[PARTS]`)
@@ -61,6 +69,9 @@ func TestSpawnHostEnvironment(t *testing.T) {
 
 // TestSpawnHostFiles: /INPUT and /OUTPUT are host files and volume files.
 func TestSpawnHostFiles(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, c, _ := shareFindConsole(t, false)
 	shareFindRun(t, d, "SET DEFAULT DUA1:[000000]")
 
@@ -90,6 +101,9 @@ func TestSpawnHostFiles(t *testing.T) {
 
 // TestSpawnHostRefusals: what can't be asked of a host program.
 func TestSpawnHostRefusals(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, _, _ := shareFindConsole(t, false)
 
 	for _, line := range []string{`SPAWN/HOST/PROCESS=X true`, `SPAWN/HOST/PROMPT=X true`, `SPAWN/HOST`} {
@@ -114,6 +128,9 @@ func TestSpawnHostRefusals(t *testing.T) {
 // TestSpawnHostNoWait: SPAWN returns at once, and the output and the volume
 // file come at a later poll.
 func TestSpawnHostNoWait(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, c, buf := shareFindConsole(t, false)
 	shareFindRun(t, d, "SET DEFAULT DUA1:[000000]")
 	buf.Reset()
@@ -140,6 +157,9 @@ func TestSpawnHostNoWait(t *testing.T) {
 // TestSpawnHostNoWaitEnds: a program still running when govax ends is ended,
 // and what it wrote to a volume file is saved.
 func TestSpawnHostNoWaitEnds(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, c, _ := shareFindConsole(t, false)
 	shareFindRun(t, d, "SET DEFAULT DUA1:[000000]")
 

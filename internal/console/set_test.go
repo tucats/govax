@@ -9,6 +9,7 @@ import (
 )
 
 func TestSetPSLField_bit(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	if err := c.SetPSLField("T", 1); err != nil {
 		t.Fatalf("SetPSLField: %v", err)
@@ -28,6 +29,7 @@ func TestSetPSLField_bit(t *testing.T) {
 }
 
 func TestSetPSLField_ipl(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	if err := c.SetPSLField("IPL", 15); err != nil {
 		t.Fatalf("SetPSLField: %v", err)
@@ -43,6 +45,7 @@ func TestSetPSLField_ipl(t *testing.T) {
 }
 
 func TestSetPSLField_curModSwitchesStack(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	c.CPU.SetPR(registers.KSP, 0x1000)
 	c.CPU.SetPR(registers.ESP, 0x2000)
@@ -62,6 +65,7 @@ func TestSetPSLField_curModSwitchesStack(t *testing.T) {
 }
 
 func TestSetMode(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	c.CPU.SetPR(registers.USP, 0x3000)
 
@@ -87,6 +91,7 @@ func TestSetMode(t *testing.T) {
 }
 
 func TestSetVM_requiresKernelMode(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	psl := c.CPU.PSL()
 	psl.SetCurMod(registers.User)
@@ -98,6 +103,7 @@ func TestSetVM_requiresKernelMode(t *testing.T) {
 }
 
 func TestSetVM(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	if err := c.SetVM(true); err != nil {
 		t.Fatalf("SetVM(true): %v", err)
@@ -117,6 +123,7 @@ func TestSetVM(t *testing.T) {
 }
 
 func TestSetBase(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	if err := c.SetBase(0x4000); err != nil {
 		t.Fatalf("SetBase: %v", err)
@@ -128,6 +135,7 @@ func TestSetBase(t *testing.T) {
 }
 
 func TestSetVerboseVerifyNoVerbose(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	if !c.Verbose {
 		t.Fatal("expected Verbose true by default (initialization.c's own CONSOLE_VERBOSE default)")
@@ -164,6 +172,7 @@ func TestSetVerboseVerifyNoVerbose(t *testing.T) {
 }
 
 func TestSetQuantum(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	buf.Reset()
 
@@ -192,6 +201,7 @@ func TestSetQuantum(t *testing.T) {
 }
 
 func TestSetPTE_roundTrip(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	if err := c.VMInit(20, 20, 0, 2, 2, 2, 2, 8); err != nil {
 		t.Fatalf("VMInit: %v", err)
@@ -221,6 +231,7 @@ func TestSetPTE_roundTrip(t *testing.T) {
 }
 
 func TestSetPTE_badField(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	if err := c.VMInit(20, 20, 0, 2, 2, 2, 2, 8); err != nil {
 		t.Fatalf("VMInit: %v", err)
@@ -232,6 +243,7 @@ func TestSetPTE_badField(t *testing.T) {
 }
 
 func TestSetRadix(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	if err := c.SetRadix(8); err != nil {
 		t.Fatalf("SetRadix: %v", err)
@@ -247,6 +259,7 @@ func TestSetRadix(t *testing.T) {
 }
 
 func TestSetDebug_defaultFlags(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	if got := c.CPU.Debug(); got != registers.DebugDefault {
 		t.Errorf("Debug() = %#x, want DebugDefault (%#x)", got, registers.DebugDefault)
@@ -254,6 +267,7 @@ func TestSetDebug_defaultFlags(t *testing.T) {
 }
 
 func TestSetDebug_setAndClear(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	if err := c.SetDebug([]string{"VM", "RMS"}); err != nil {
 		t.Fatalf("SetDebug: %v", err)
@@ -282,6 +296,7 @@ func TestSetDebug_setAndClear(t *testing.T) {
 }
 
 func TestSetDebug_bareSetsNativeDebugger(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	if err := c.SetDebug(nil); err != nil {
 		t.Fatalf("SetDebug: %v", err)
@@ -293,6 +308,7 @@ func TestSetDebug_bareSetsNativeDebugger(t *testing.T) {
 }
 
 func TestSetDebug_invalidFlag(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	if err := c.SetDebug([]string{"BOGUS"}); err == nil {
 		t.Error("expected an error for an invalid SET DEBUG flag")
@@ -300,6 +316,7 @@ func TestSetDebug_invalidFlag(t *testing.T) {
 }
 
 func TestSetTrace(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	if c.Trace {
 		t.Error("Trace = true, want false by default")
@@ -319,6 +336,7 @@ func TestSetTrace(t *testing.T) {
 }
 
 func TestShowRegisters(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	c.CPU.SetGPR(registers.R3, 0x11223344)
 	buf.Reset()
@@ -333,6 +351,7 @@ func TestShowRegisters(t *testing.T) {
 }
 
 func TestShowPSL(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	buf.Reset()
 
@@ -346,6 +365,7 @@ func TestShowPSL(t *testing.T) {
 }
 
 func TestShowMemory(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	buf.Reset()
 
@@ -364,6 +384,7 @@ func TestShowMemory(t *testing.T) {
 }
 
 func TestShowMemory_afterVMInit(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	if err := c.VMInit(20, 20, 0, 2, 2, 2, 2, 8); err != nil {
 		t.Fatalf("VMInit: %v", err)
@@ -392,6 +413,7 @@ func TestShowMemory_afterVMInit(t *testing.T) {
 }
 
 func TestShowSymbols(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	c.Symbols.Set("MYSYM", 0xABCD, machine.SymbolUser)
 	buf.Reset()
@@ -406,6 +428,7 @@ func TestShowSymbols(t *testing.T) {
 }
 
 func TestShowRadix(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	buf.Reset()
 
@@ -419,6 +442,7 @@ func TestShowRadix(t *testing.T) {
 }
 
 func TestShowStack(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	c.CPU.SetPR(registers.ESP, 0x99887766)
 	buf.Reset()
@@ -433,6 +457,7 @@ func TestShowStack(t *testing.T) {
 }
 
 func TestShowCPU(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	c.CPU.SetPR(registers.SBR, 0x11223344)
 	c.DepositAddr = 0x00000200

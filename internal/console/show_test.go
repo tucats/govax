@@ -57,6 +57,7 @@ func newShowRunnableDispatcher(t *testing.T) (*Dispatcher, *Console, *bytes.Buff
 }
 
 func TestShowMode(t *testing.T) {
+	t.Parallel()
 	d, _, buf := newShowDispatcher(t)
 
 	if err := d.Console.ShowMode(); err != nil {
@@ -69,6 +70,7 @@ func TestShowMode(t *testing.T) {
 }
 
 func TestShowNVRAM_none(t *testing.T) {
+	t.Parallel()
 	d, _, buf := newShowDispatcher(t)
 
 	if err := d.Dispatch("SHOW NVRAM"); err != nil {
@@ -81,6 +83,7 @@ func TestShowNVRAM_none(t *testing.T) {
 }
 
 func TestShowROM_loaded(t *testing.T) {
+	t.Parallel()
 	d, c, buf := newShowDispatcher(t)
 
 	if err := c.LoadROM(romFixturePath(t), false); err != nil {
@@ -100,6 +103,7 @@ func TestShowROM_loaded(t *testing.T) {
 }
 
 func TestShowShim(t *testing.T) {
+	t.Parallel()
 	d, c, buf := newShowRunnableDispatcher(t)
 
 	if err := d.Console.ShowShim(); err != nil {
@@ -144,6 +148,7 @@ func TestShowShim(t *testing.T) {
 // PAGE's read-only tracevm-style report (LookupPTE never demand-pages)
 // shows it invalid until something actually accesses it.
 func TestShowPage_beforeFirstTouch(t *testing.T) {
+	t.Parallel()
 	d, _, buf := newShowRunnableDispatcher(t)
 
 	if err := d.Console.ShowPage("200", false); err != nil {
@@ -161,6 +166,7 @@ func TestShowPage_beforeFirstTouch(t *testing.T) {
 }
 
 func TestShowPage(t *testing.T) {
+	t.Parallel()
 	d, c, buf := newShowRunnableDispatcher(t)
 
 	// Touch the page first, so Translate's demand paging assigns it a real
@@ -184,6 +190,7 @@ func TestShowPage(t *testing.T) {
 }
 
 func TestShowSCB(t *testing.T) {
+	t.Parallel()
 	d, c, buf := newShowDispatcher(t)
 
 	const scbBase = 0x4000
@@ -217,6 +224,7 @@ func TestShowSCB(t *testing.T) {
 }
 
 func TestShowCallFrames(t *testing.T) {
+	t.Parallel()
 	d, c, buf := newShowDispatcher(t)
 
 	const (
@@ -270,6 +278,7 @@ func TestShowCallFrames(t *testing.T) {
 }
 
 func TestShowCallFrames_noFrames(t *testing.T) {
+	t.Parallel()
 	d, _, _ := newShowDispatcher(t)
 
 	if err := d.Console.ShowCalls("", machine.SymbolicDefault()); err == nil {
@@ -278,6 +287,7 @@ func TestShowCallFrames_noFrames(t *testing.T) {
 }
 
 func TestShowRegions(t *testing.T) {
+	t.Parallel()
 	d, c, buf := newShowDispatcher(t)
 
 	c.RTL.RegionSize[0] = 0x1000
@@ -297,6 +307,7 @@ func TestShowRegions(t *testing.T) {
 }
 
 func TestShowSharePrefix(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		prefix string
 		want   string
@@ -321,6 +332,7 @@ func TestShowSharePrefix(t *testing.T) {
 }
 
 func TestShowImages(t *testing.T) {
+	t.Parallel()
 	d, c, buf := newShowDispatcher(t)
 
 	if err := d.Console.ShowImages(false); err != nil {
@@ -345,6 +357,7 @@ func TestShowImages(t *testing.T) {
 }
 
 func TestShowClock(t *testing.T) {
+	t.Parallel()
 	d, c, buf := newShowDispatcher(t)
 
 	if err := d.Console.ShowClock(); err != nil {
@@ -368,6 +381,7 @@ func TestShowClock(t *testing.T) {
 }
 
 func TestShowDebug(t *testing.T) {
+	t.Parallel()
 	d, _, buf := newShowDispatcher(t)
 
 	if err := d.Dispatch("SHOW DEBUG"); err != nil {
@@ -392,6 +406,7 @@ func TestShowDebug(t *testing.T) {
 }
 
 func TestShowTrace(t *testing.T) {
+	t.Parallel()
 	d, c, buf := newShowDispatcher(t)
 
 	if err := d.Console.ShowTrace(); err != nil {
@@ -424,6 +439,7 @@ func TestShowTrace(t *testing.T) {
 }
 
 func TestShowFault(t *testing.T) {
+	t.Parallel()
 	d, c, buf := newShowDispatcher(t)
 
 	if err := d.Console.ShowFault(); err != nil {
@@ -453,6 +469,7 @@ func TestShowFault(t *testing.T) {
 }
 
 func TestShowTB(t *testing.T) {
+	t.Parallel()
 	d, _, buf := newShowDispatcher(t)
 
 	if err := d.Console.ShowTB(); err != nil {
@@ -475,6 +492,7 @@ func TestShowTB(t *testing.T) {
 // access first (MAPEN must be on), so SHOW TB has a real translation-
 // buffer slot to dump — matching dump_tb()'s own per-slot output line.
 func TestShowTB_dumpsPopulatedEntry(t *testing.T) {
+	t.Parallel()
 	d, c, buf := newShowRunnableDispatcher(t)
 
 	if _, err := c.Mem.LoadLongword(c.CPU, 0x200); err != nil {
@@ -494,6 +512,7 @@ func TestShowTB_dumpsPopulatedEntry(t *testing.T) {
 }
 
 func TestShowBase_matchesDepositCursor(t *testing.T) {
+	t.Parallel()
 	d, c, buf := newShowDispatcher(t)
 
 	if err := c.Deposit("", 0x5678, machine.SizeLongword, 0x11223344); err != nil {
@@ -512,6 +531,7 @@ func TestShowBase_matchesDepositCursor(t *testing.T) {
 }
 
 func TestShowStack_bareDumpsLiveMemory(t *testing.T) {
+	t.Parallel()
 	d, c, buf := newShowDispatcher(t)
 
 	c.CPU.SetGPR(registers.SP, 0x8000)
@@ -540,6 +560,7 @@ func TestShowStack_bareDumpsLiveMemory(t *testing.T) {
 // made SHOW P1LR unparseable — the grammar rejected the keyword before
 // parsing ever reached ShowRegisterOrPrivReg's fallback.
 func TestShowP1LR(t *testing.T) {
+	t.Parallel()
 	d, c, buf := newShowDispatcher(t)
 
 	c.CPU.SetPR(registers.P1LR, 0x1234)
@@ -554,6 +575,7 @@ func TestShowP1LR(t *testing.T) {
 }
 
 func TestShowStack_namedModeReadsSavedPointer(t *testing.T) {
+	t.Parallel()
 	d, c, buf := newShowDispatcher(t)
 
 	c.CPU.SetPR(registers.ESP, 0x9000)

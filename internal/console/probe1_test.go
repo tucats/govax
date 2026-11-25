@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/machine"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // Phase 45's probe 1 (testdata/mp/probe1): the program that VMS 7.3 is
@@ -17,6 +18,9 @@ import (
 // shape of its report. (The VMS run's report, once made, is compared
 // by hand: this test is for the program.)
 func TestProbe1(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
 
 	read := func(path string) string {

@@ -8,6 +8,7 @@ import (
 
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -19,6 +20,9 @@ import (
 // for line, section by section: statuses and ON, flow, the lexical
 // functions, and a subprocess's DCL.
 func TestProbe50TOracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	logText, err := os.ReadFile("../../testdata/dcl50/vax/probe50t.log")
 	if err != nil {
 		t.Skipf("no VMS log: %v", err)

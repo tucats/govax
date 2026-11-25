@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmsimage"
 )
 
@@ -121,6 +122,9 @@ func vms93Sections(log string) map[string]string {
 const vms93Files = 24
 
 func TestVMS93Procedure(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	log, image := runVMS93(t)
 	sections := vms93Sections(log)
 

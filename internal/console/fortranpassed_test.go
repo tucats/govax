@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // Intrinsic functions' names passed as actual arguments (docs/planning/PHASE-78 -
@@ -192,6 +193,9 @@ var ftnPassedRun = []string{
 }
 
 func TestFortranPassedIntrinsics(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	eachLoader(t, func(t *testing.T, paging bool) {
 		d, c, buf := shareFindConsole(t, paging)
 

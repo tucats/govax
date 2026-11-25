@@ -15,6 +15,7 @@ import (
 // kernel stack 4 bytes off, so every later $CMKRNL faulted
 // (docs/planning/PHASE-94 - privileges.md, subtask 2's rehearsal).
 func TestInnerModeConditionSearch(t *testing.T) {
+	t.Parallel()
 	r0, out := runMacroProgram(t, `	.PSECT	DATA,WRT,NOEXE,LONG
 CALLED:	.LONG	0
 	.PSECT	CODE,NOWRT,EXE

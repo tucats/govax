@@ -12,6 +12,7 @@ import (
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -66,6 +67,9 @@ var expectedAnalyzeReports = map[string]bool{
 // from VMS's save set where the VAX's were, and holds its report, /CHECK, and /FDL to
 // VMS's, line for line.
 func TestIdx88ReportsOracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	vax := filepath.Join("..", "..", "testdata", "idx88", "vax")
 
 	names, err := filepath.Glob(filepath.Join(vax, "anl", "*.fdl"))
@@ -210,6 +214,9 @@ var expectedAnalyzeDifferences = map[string]bool{
 // log: each organization and format, the four reports, their outputs and statuses,
 // the damaged files of C12.
 func TestIdx88CAnalyzeOracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	text, err := os.ReadFile(filepath.Join("..", "..", "testdata", "idx88", "vax", "idx88c.log"))
 	if err != nil {
 		t.Skipf("no VMS log: %v", err)
@@ -242,6 +249,9 @@ func TestIdx88CAnalyzeOracle(t *testing.T) {
 // TestAnalyzeRMSForms is what VMS's logs don't show: /OUTPUT's default names, by the
 // manual, a host file, and qualifiers VMS has that govax doesn't.
 func TestAnalyzeRMSForms(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	_, c := runIdx88C(t)
 
 	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))

@@ -50,6 +50,7 @@ done:	pushaq	endmsg
 // procedure's data lines as its input, up to the next "$" line (its end
 // of file); the data an image leaves unread is skipped, with SKPDAT.
 func TestProcedureInput_image(t *testing.T) {
+	t.Parallel()
 	var out bytes.Buffer
 
 	c := console.New(&out)

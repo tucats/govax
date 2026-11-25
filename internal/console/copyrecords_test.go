@@ -6,11 +6,15 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // TestCopyRecordFormats makes each kind of file from a host file (rms/copyformat.go),
 // and has DIRECTORY/FULL say what it is and RMS's reader give its records back.
 func TestCopyRecordFormats(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, c, buf := shareFindConsole(t, false)
 	dir := t.TempDir()
 
@@ -112,6 +116,9 @@ func TestCopyRecordFormats(t *testing.T) {
 
 // TestDCLContinuation: a command typed on several lines, as in a procedure.
 func TestDCLContinuation(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, _, buf := shareFindConsole(t, false)
 
 	shareFindRun(t, d, "A = 1 + -")

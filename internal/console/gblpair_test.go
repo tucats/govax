@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/corevms"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -60,6 +61,9 @@ secnam:	.ascid	"COUNTER"
 // in the one counter, seen at both addresses; process 2's deletion takes
 // its mappings away, leaving process 1's.
 func TestGlobalSectionPair_spinlock(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	flags := vmsdef.LibrarySymbols["SEC$M_GBL"] | vmsdef.LibrarySymbols["SEC$M_PAGFIL"] |
 		vmsdef.LibrarySymbols["SEC$M_WRT"]
 

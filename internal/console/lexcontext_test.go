@@ -9,12 +9,16 @@ import (
 
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // TestLexicalContext_subprocess: F$CONTEXT selects among several
 // processes (Phase 51): a subprocess by its owner's PID and by its name,
 // and process 1 alone by NEQ.
 func TestLexicalContext_subprocess(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
 	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 

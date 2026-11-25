@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // buildFortranProgram writes lines as DUA1:[000000]name.FOR and compiles,
@@ -43,6 +44,9 @@ func buildFortranProgram(t *testing.T, d *Dispatcher, c *Console, buf *bytes.Buf
 // The test's terminal doesn't echo, so a reply doesn't show after its
 // prompt: what follows the prompt is the program's next record.
 func TestFortranTerminal(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	eachLoader(t, func(t *testing.T, paging bool) {
 		d, c, buf := shareFindConsole(t, paging)
 
@@ -113,6 +117,9 @@ func TestFortranTerminal(t *testing.T) {
 // a line of its own. A + record after a $ record continues its line on
 // both, and a 1 is a form feed.
 func TestFortranTerminalControl(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, c, buf := shareFindConsole(t, false)
 
 	formats := []string{
@@ -187,6 +194,9 @@ func TestFortranTerminalControl(t *testing.T) {
 // with RMS$_FAC (testdata/for80, round 2), which FTNRTL keeps for any
 // SYS$OUTPUT but a terminal.
 func TestFortranReadOutputFile(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, c, buf := shareFindConsole(t, false)
 
 	buildFortranProgram(t, d, c, buf, "RDOUT", []string{
@@ -221,6 +231,9 @@ func TestFortranReadOutputFile(t *testing.T) {
 // $OPEN, not the $CREATE a first WRITE does, which would make a new, empty version of it.
 // ACCEPT reaches SYS$INPUT too, and FOR005 is unit 5's own name for it.
 func TestFortranReadInputFile(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, c, buf := shareFindConsole(t, false)
 
 	source := "      PROGRAM RDIN\n" +
@@ -282,6 +295,9 @@ func TestFortranReadInputFile(t *testing.T) {
 // FORTRAN's READ does, with no prompt: not the terminal, whose next lines are the console's
 // commands. Each image starts the file again, and without the name it reads what it did.
 func TestLibGetInputFile(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, c, buf := shareFindConsole(t, false)
 
 	source := "      PROGRAM GETIN\n" +
@@ -347,6 +363,9 @@ func TestLibGetInputFile(t *testing.T) {
 // (133 characters), which RMS reports as RMS$_TNS and the READ as ERRDURREA (39),
 // and the rest of the line is the next READ's, as on VMS 7.1.
 func TestFortranTerminalLongLine(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, c, buf := shareFindConsole(t, false)
 
 	buildFortranProgram(t, d, c, buf, "LONGLN", []string{

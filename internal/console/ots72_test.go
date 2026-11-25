@@ -36,6 +36,7 @@ var expectedOTS72Differences = map[string]string{
 }
 
 func TestOTS72Oracle(t *testing.T) {
+	t.Parallel()
 	src, err := os.ReadFile(filepath.Join(ots72Dir, "ots72.mar"))
 	if err != nil {
 		t.Fatal(err)

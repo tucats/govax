@@ -35,6 +35,7 @@ func newSecondProcess(t *testing.T, c *Console) *corevms.Environment {
 // IMAGE$INIT driver is in a page of its own, while process 1's P0, ICB
 // list, symbols, and driver are untouched.
 func TestActivateImageInAnotherProcess(t *testing.T) {
+	t.Parallel()
 	c := bootedConsole(t)
 
 	if err := c.EnsureShims(); err != nil {
@@ -149,6 +150,7 @@ func TestActivateImageInAnotherProcess(t *testing.T) {
 // TestProcessOneImagesSurviveInit: process 1's image state is the
 // console's, so an image list survives an INIT, as it always has.
 func TestProcessOneImagesSurviveInit(t *testing.T) {
+	t.Parallel()
 	c := bootedConsole(t)
 	c.ImageState(nil).ICBList = []*machine.ICB{{Name: "<MAIN>"}}
 
@@ -168,6 +170,7 @@ func TestProcessOneImagesSurviveInit(t *testing.T) {
 // TestOtherImagesDroppedWithSystem: a new System (INIT) forgets other
 // processes' image state.
 func TestOtherImagesDroppedWithSystem(t *testing.T) {
+	t.Parallel()
 	c := bootedConsole(t)
 	env := newSecondProcess(t, c)
 	c.ImageState(env).ICBList = []*machine.ICB{{Name: "<MAIN>"}}

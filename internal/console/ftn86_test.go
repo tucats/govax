@@ -13,6 +13,7 @@ import (
 	"github.com/tucats/govax/internal/bootdata"
 	"github.com/tucats/govax/internal/respath"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmsimage"
 )
 
@@ -120,26 +121,18 @@ func runVMSRound(t *testing.T, round string, size uint32, label string, space rm
 	return ftn86Log(t, d, label+".LOG"), c, d
 }
 
-// roundLogs keeps each VMS round's log on govax once it has run, for the tests
-// that read only the log (sharedRoundLog), so a round's procedure runs once per
-// test binary, not once per test.
-var roundLogs = map[string]string{}
-
-// sharedRoundLog is run's log, from roundLogs if an earlier test of this binary
-// ran it. A run that failed its test leaves nothing, and is run again.
+// sharedRoundLog is run's log, kept by testproc.Shared once a test has run it,
+// for the tests that read only the log, so a round's procedure runs once in a
+// whole go test run, not once per test (each test being in a process of its
+// own). A run that failed its test leaves nothing, and is run again.
 func sharedRoundLog(t *testing.T, round string, run func(*testing.T) (string, *Console, *Dispatcher)) string {
 	t.Helper()
 
-	if log, ok := roundLogs[round]; ok {
-		return log
-	}
+	return testproc.Shared(t, "round-"+round, func() (string, bool) {
+		log, _, _ := run(t)
 
-	log, _, _ := run(t)
-	if !t.Failed() {
-		roundLogs[round] = log
-	}
-
-	return log
+		return log, !t.Failed()
+	})
 }
 
 // ftn86Log is a log as COPY brings it to the host, as VMS's was: its records by their
@@ -178,6 +171,9 @@ func ftn86Sections(log string) map[string]string {
 // compared if recursiveDifferences lists it, since what it prints there may be the same by
 // chance (TestFortranPrograms').
 func TestFTN86Procedure(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	log := sharedRoundLog(t, "ftn86", runFTN86)
 	sections := ftn86Sections(log)
 
@@ -193,8 +189,8 @@ func TestFTN86Procedure(t *testing.T) {
 
 	var sources []string
 
-	for _, pattern := range []string{"testdata/fortran/*.for", "testdata/opt84/kernels/*.for", "testdata/fortran/modules/*"} {
-		found, err := filepath.Glob(filepath.FromSlash(pattern))
+	for _, pattern := range []string{"fortran/*.for", "opt84/kernels/*.for", "fortran/modules/*"} {
+		found, err := filepath.Glob(filepath.Join(testdataDir, filepath.FromSlash(pattern)))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -351,7 +347,10 @@ var ftn86Frame = regexp.MustCompile(`^ +[0-9A-F]{8}  [0-9A-F]{8}$`)
 // made, assembled and linked by VMS's MACRO and LINK against an FTNRTL built there from its
 // sources, on a real VAX's instruction set and VMS's own LIBRTL, MTHRTL, and RMS.
 func TestFTN86Oracle(t *testing.T) {
-	vms, err := os.ReadFile(filepath.Join("..", "..", "testdata", "ftn86", "vax", "ftn86.log"))
+	if testproc.Isolate(t) {
+		return
+	}
+	vms, err := os.ReadFile(filepath.Join(testdataDir, "ftn86", "vax", "ftn86.log"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -444,9 +443,12 @@ var ftn86DungeonSHA = map[string]string{
 // TestFTN86Dungeon runs FTN86D.COM on govax and holds what it prints to VMS's digests. It
 // needs the kit, through the link README.md gives, and skips without it.
 func TestFTN86Dungeon(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	dungeonSources(t)
 
-	kit := filepath.Join("..", "..", "testdata", "disks", "dungeon-3.2A", "dungeon.f")
+	kit := filepath.Join(testdataDir, "disks", "dungeon-3.2A", "dungeon.f")
 	if _, err := os.Stat(kit); err != nil {
 		t.Skipf("no link to the kit: %v", err)
 	}
@@ -492,7 +494,10 @@ func TestFTN86Dungeon(t *testing.T) {
 // blocks but for its header and what starts with the debug symbol table (the link's time and
 // the linker's name, whose length moves what follows).
 func TestFTN86Objects(t *testing.T) {
-	dir := filepath.Join("..", "..", "testdata", "ftn86", "vax")
+	if testproc.Isolate(t) {
+		return
+	}
+	dir := filepath.Join(testdataDir, "ftn86", "vax")
 
 	sources, err := filepath.Glob(filepath.Join(dir, "mar", "*.mar"))
 	if err != nil || len(sources) == 0 {

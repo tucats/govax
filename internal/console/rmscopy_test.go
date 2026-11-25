@@ -16,6 +16,7 @@ import (
 // the RMS service macros (docs/planning/PHASE-32.md, subtask 7), as it does on
 // VMS (testdata/mar/macros/vax/macros.log).
 func TestRMSCopy_govaxStarlet(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 	d := NewDispatcher(c, loadEvaxGrammar(t))
 	c.HostLibrary = t.TempDir()

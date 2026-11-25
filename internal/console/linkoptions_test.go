@@ -10,6 +10,7 @@ import (
 
 	"github.com/tucats/govax/internal/dclcmd"
 	"github.com/tucats/govax/internal/link"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -36,6 +37,9 @@ func linkMap(t *testing.T, c *Console, dir string, opts dclcmd.LinkOptions) stri
 // uses. The image has the options' name, ident, and stack, and returns
 // the symbol's value plus one.
 func TestLink_optionsFile(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c := newBootableConsole(t)
 	dir := t.TempDir()
 	t.Chdir(dir) // where default outputs go
@@ -90,6 +94,9 @@ func TestLink_optionsFile(t *testing.T) {
 // the map shows the clusters' addresses. Two clusters with one base are
 // real LINK's CONFMEM, and no image.
 func TestLink_clusters(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c := newBootableConsole(t)
 	dir := t.TempDir()
 	t.Chdir(dir) // where default outputs go
@@ -150,6 +157,7 @@ func TestLink_clusters(t *testing.T) {
 
 // TestLink_inputErrors checks what an input file can't be.
 func TestLink_inputErrors(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	dir := t.TempDir()
 	obj := assembleFixture(t, c, "entry", dir)
@@ -183,6 +191,9 @@ func TestLink_inputErrors(t *testing.T) {
 // an options file with /SHAREABLE. Each image is the one govax's own
 // tables give.
 func TestLink_userLibraries(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	vmsLibFile(t, "starlet.olb")
 	vmsLibFile(t, "imagelib.olb")
 	vmsLibFile(t, "librtl.exe")
@@ -252,6 +263,9 @@ func TestLink_userLibraries(t *testing.T) {
 // TestDispatch_linkPositionalQualifiers runs LINK through DCL with an
 // options file named by a positional /OPTIONS.
 func TestDispatch_linkPositionalQualifiers(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, c := newTestDispatcher(t)
 	dir := t.TempDir()
 	t.Chdir(dir) // where default outputs go
@@ -279,6 +293,7 @@ func TestDispatch_linkPositionalQualifiers(t *testing.T) {
 // one with no transfer address: real LINK's warnings are printed, and the
 // images are written.
 func TestLink_warnings(t *testing.T) {
+	t.Parallel()
 	c, out := newTestConsole(t)
 	dir := t.TempDir()
 
@@ -317,6 +332,7 @@ func TestLink_warnings(t *testing.T) {
 // longword a .ADDRESS fixup fills in. With no LIBRTL.EXE, the fixup
 // reaches govax's shim, and the message is printed.
 func TestRun_addressFixup(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 	out := &bytes.Buffer{}
 	c.Out = out

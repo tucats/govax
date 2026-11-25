@@ -9,6 +9,7 @@ import (
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
 	"github.com/tucats/govax/internal/corevms"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // Phase 45's subtask 12: STOP, and the deletion of every other process
@@ -18,6 +19,9 @@ import (
 // STOP/IDENTIFICATION=pid (and /ID, an abbreviation), delete the
 // process; process 1 and a process that isn't there are refused.
 func TestStop(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, _ := scheduledConsole(t, longQuantum, counter())
 	c.RTL.Process.Name = "SYSTEM"
 
@@ -62,6 +66,9 @@ func TestStop(t *testing.T) {
 // TestStop_subprocesses: stopping an owner deletes its subprocesses, and
 // INIT deletes all that are left.
 func TestStop_subprocessesAndInit(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, _ := scheduledConsole(t, longQuantum, counter())
 	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 

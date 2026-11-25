@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/uaf"
 )
 
@@ -15,6 +16,9 @@ import (
 // SYS$NODE_ identifier), and its quota report shows a limit where it
 // doesn't charge the quota (quotaDifferences).
 func TestShowProcessRightsAndQuotas(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	s := newLoginSession(t)
 
 	err := s.c.RTL.System.UpdateAuthorization(func(f *uaf.File) error {

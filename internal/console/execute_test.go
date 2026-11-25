@@ -32,6 +32,7 @@ func loadProgram(t *testing.T, c *Console, addr uint32, bytes ...byte) {
 // the two-part effect main.go's main() relies on (via Console.Running) to
 // exit the whole program instead of just returning to the "VAX>" prompt.
 func TestExecute_xfcQuitEmulatorStopsConsole(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	loadProgram(t, c, 0x200, 0xFC, 0x78) // XFC #XFC$QUIT_EMULATION
 
@@ -50,6 +51,7 @@ func TestExecute_xfcQuitEmulatorStopsConsole(t *testing.T) {
 }
 
 func TestExecute_runsUntilHalt(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	loadProgram(t, c, 0x200, opNop, opNop, opNop, opHalt)
 
@@ -79,6 +81,7 @@ func movR0Program(t *testing.T, c *Console, addr uint32) {
 }
 
 func TestExecute_tracesWhenTraceEnabled(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	movR0Program(t, c, 0x200)
 	c.Trace = true
@@ -95,6 +98,7 @@ func TestExecute_tracesWhenTraceEnabled(t *testing.T) {
 }
 
 func TestExecute_noTraceByDefault(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	movR0Program(t, c, 0x200)
 
@@ -109,6 +113,7 @@ func TestExecute_noTraceByDefault(t *testing.T) {
 }
 
 func TestExecute_debugRegistersChangeDump(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	movR0Program(t, c, 0x200)
 	c.Trace = true
@@ -125,6 +130,7 @@ func TestExecute_debugRegistersChangeDump(t *testing.T) {
 }
 
 func TestExecute_noRegisterDumpWhenDebugRegistersClear(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	movR0Program(t, c, 0x200)
 	c.Trace = true
@@ -141,6 +147,7 @@ func TestExecute_noRegisterDumpWhenDebugRegistersClear(t *testing.T) {
 }
 
 func TestExecute_debugFullDisasmOperandDump(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	movR0Program(t, c, 0x200)
 	c.Trace = true
@@ -162,6 +169,7 @@ func TestExecute_debugFullDisasmOperandDump(t *testing.T) {
 }
 
 func TestCall_returnsCleanlyThroughSentinelFrame(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 
 	// Procedure at 0x200: empty entry mask, CALLS a nested procedure at
@@ -180,6 +188,7 @@ func TestCall_returnsCleanlyThroughSentinelFrame(t *testing.T) {
 }
 
 func TestCall_tracesWhenTraceEnabled(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	loadProgram(t, c, 0x200,
 		0x00, 0x00, // entry mask: no registers saved
@@ -203,6 +212,7 @@ func TestCall_tracesWhenTraceEnabled(t *testing.T) {
 // itself) must not hang Execute when a limit is configured -- it should stop
 // cleanly, reporting the limit rather than propagating an error.
 func TestExecute_stopsAtInstructionLimit(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	loadProgram(t, c, 0x200,
 		opNop,
@@ -224,6 +234,7 @@ func TestExecute_stopsAtInstructionLimit(t *testing.T) {
 // call gets its own full instruction budget rather than inheriting the
 // first call's exhaustion (Engine.BeginRun's own contract).
 func TestExecute_beginRunGivesEachCommandAFreshBudget(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	loadProgram(t, c, 0x200, opNop, 0x11, 0xFD)
 	c.Engine.SetLimits(3, 0)
@@ -254,6 +265,7 @@ func TestExecute_beginRunGivesEachCommandAFreshBudget(t *testing.T) {
 // BeginRun, and the run then ended at the instruction limit instead.)
 // The instruction limit is a safety net against a hang.
 func TestExecute_stopsOnAttention(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	loadProgram(t, c, 0x200,
 		opNop,
@@ -298,6 +310,7 @@ func TestExecute_stopsOnAttention(t *testing.T) {
 }
 
 func TestExecute_requiresInit(t *testing.T) {
+	t.Parallel()
 	c := New(&strings.Builder{})
 	if err := c.Execute(nil); err == nil {
 		t.Error("expected error before Init")
@@ -309,6 +322,7 @@ func TestExecute_requiresInit(t *testing.T) {
 // TestExecute_stopsOnAttention's own end-to-end (if inherently
 // timing-dependent) coverage above.
 func TestReportStopReason_attention(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 
 	if err := c.ReportStop(cpu.ErrAttention); err != nil {

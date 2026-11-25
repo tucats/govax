@@ -7,6 +7,7 @@ import (
 
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/corevms"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // Phase 44's subtask 11: determinism. In quantum-clock mode a run with
@@ -139,6 +140,9 @@ func allDone(t *testing.T, c *console.Console, procs []*corevms.Environment) boo
 // TestDeterminism_sameRunSameTrace: the workload run twice interleaves
 // its three processes identically, instruction for instruction.
 func TestDeterminism_sameRunSameTrace(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	first := runWorkload(t, 7)
 	second := runWorkload(t, 7)
 
@@ -171,6 +175,9 @@ func TestDeterminism_sameRunSameTrace(t *testing.T) {
 // TestDeterminism_quantaAgree: with very different quanta the processes
 // interleave differently, but the workload's outcome is the same.
 func TestDeterminism_quantaAgree(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	want := [3]uint32{pingPongRounds, pingPongRounds, 20}
 
 	var traces [][]uint32

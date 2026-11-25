@@ -61,6 +61,7 @@ func mountFreshRMSVolume(t *testing.T, c *Console) {
 // this test only has to confirm the program actually reached that success
 // path, via R0.
 func TestRMSRoundTrip_assembledProgram(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 
 	mountFreshRMSVolume(t, c)
@@ -100,6 +101,7 @@ func TestRMSRoundTrip_assembledProgram(t *testing.T) {
 // running it is safe (matches p1_init()'s real, naturally idempotent
 // set_symbol_direct calls).
 func TestRMSRoundTrip_afterKernelAlreadyP1VectoredIsIdempotent(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 
 	mountFreshRMSVolume(t, c)
@@ -137,6 +139,7 @@ func TestRMSRoundTrip_afterKernelAlreadyP1VectoredIsIdempotent(t *testing.T) {
 // the old one is gone (RMS$_FNF), and renaming another file onto the new
 // name is refused (RMS$_ENT). R0 = 1 means every check passed.
 func TestRMSRename_assembledProgram(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 
 	mountFreshRMSVolume(t, c)

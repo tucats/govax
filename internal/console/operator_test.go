@@ -12,6 +12,7 @@ import (
 // (docs/planning/PHASE-26.md subtask 39): an operator request with a reply
 // mailbox, the reply read from it, and a broadcast.
 func TestOperator_assembledProgram(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 	word := runFixture(t, c, "operator.asm")
 

@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // fortranQueues is a FORTRAN program that works the batch queues through
@@ -90,6 +92,9 @@ C     Every queue, its name and job limit.
 // modules' names are the services' codes, and the queue it made is the
 // manager's.
 func TestFortranQueues(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	_, dispatch := batchConsole(t)
 
 	src := filepath.Join(t.TempDir(), "queues.for")

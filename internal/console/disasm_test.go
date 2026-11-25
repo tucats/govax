@@ -7,6 +7,7 @@ import (
 )
 
 func TestDisassemble_singleInstruction(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 
 	// CLRL R3: 0xD4 0x53.
@@ -36,6 +37,7 @@ func TestDisassemble_singleInstruction(t *testing.T) {
 // Assemble merges the SymEntry flag into Console.Symbols (asm.go), and
 // Disassemble/decodeInstruction (disasm.go) consult it by PC.
 func TestDisassemble_entryMask(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 
 	c.Symbols.SetEntry("MAIN", 0x1000, machine.SymbolUser)
@@ -71,6 +73,7 @@ func TestDisassemble_entryMask(t *testing.T) {
 }
 
 func TestDisassemble_range(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 
 	// CLRL R3 (2 bytes) followed by RET (1 byte).

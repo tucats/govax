@@ -15,6 +15,7 @@ import (
 // given its end of file with the disk's $QIO functions, then entered in
 // the directory under a second name.
 func TestDiskCreate_assembledProgram(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 

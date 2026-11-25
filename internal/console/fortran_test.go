@@ -10,6 +10,7 @@ import (
 
 	"github.com/tucats/govax/internal/dclcmd"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -81,6 +82,9 @@ func checkMACRO(t *testing.T, c *Console, buf interface {
 // type defaults to FOR. The module is named for the program, whatever
 // the file's name.
 func TestFortran_host(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	cases := []struct{ source, typed, want, module string }{
 		{"squares.for", "squares.for", "squares.mar", "SQUARES"},
 		{"SQUARES.FOR", "SQUARES.FOR", "SQUARES.MAR", "SQUARES"},
@@ -118,6 +122,9 @@ func TestFortran_host(t *testing.T) {
 
 // TestFortran_header checks the header's version, source, and command.
 func TestFortran_header(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	saved := dclcmd.BuildVersion
 	dclcmd.BuildVersion = "1.0-200"
 
@@ -145,6 +152,7 @@ func TestFortran_header(t *testing.T) {
 // file goes to the default directory, each compilation makes its next version,
 // /MACRO= names it, and a host MACRO file can come from a volume source.
 func TestFortran_volume(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -193,6 +201,7 @@ func TestFortran_volume(t *testing.T) {
 // TestFortran_noMacro checks /NOMACRO: the source is compiled, nothing
 // written.
 func TestFortran_noMacro(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	dir := t.TempDir()
 	src := filepath.Join(dir, "squares.for")
@@ -210,6 +219,9 @@ func TestFortran_noMacro(t *testing.T) {
 // TestFortran_failures checks a missing source, a volume not mounted, and
 // a host .MAR source that would be its own MACRO file.
 func TestFortran_failures(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, _ := newTestConsole(t)
 	dir := t.TempDir()
 	t.Chdir(dir) // where default outputs go
@@ -246,6 +258,9 @@ func TestFortran_failures(t *testing.T) {
 // of sources (each compiled, a failure shown and the others still
 // compiled), $STATUS, and the abbreviation FOR.
 func TestDispatch_fortran(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, c, buf := newCommandDispatcher(t)
 	dir := t.TempDir()
 	t.Chdir(dir) // where default outputs go
@@ -296,6 +311,9 @@ func TestDispatch_fortran(t *testing.T) {
 // beside the file that includes them, with the default type FOR, nested,
 // their lines in the MACRO file; and a missing one's fatal message.
 func TestFortran_include(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, buf := newTestConsole(t)
 	dir := t.TempDir()
 	t.Chdir(dir) // where default outputs go
@@ -357,6 +375,7 @@ func TestFortran_include(t *testing.T) {
 // TestFortran_includeVolume checks INCLUDE files on a volume: a bare name
 // on the including file's device and directory, and a full specification.
 func TestFortran_includeVolume(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -397,6 +416,9 @@ func TestFortran_includeVolume(t *testing.T) {
 // structure of 5 bytes packed is 8 aligned, and the MACRO file's storage map says
 // so. A value that isn't one stops the command before it reads a source.
 func TestDispatch_fortranAlign(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, _, buf := newCommandDispatcher(t)
 	dir := t.TempDir()
 	t.Chdir(dir) // where default outputs go
@@ -456,6 +478,9 @@ func TestDispatch_fortranAlign(t *testing.T) {
 // TestDispatch_fortranSource runs FORTRAN through DCL on sources with
 // layout errors and with /CONTINUATIONS.
 func TestDispatch_fortranSource(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, _, buf := newCommandDispatcher(t)
 	dir := t.TempDir()
 	t.Chdir(dir) // where default outputs go
@@ -525,6 +550,9 @@ func TestDispatch_fortranSource(t *testing.T) {
 // name and /LIST='s, on the host and a volume, written after errors too, and /SHOW's
 // mistakes and its message without /LIST.
 func TestFortran_list(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, c, buf := newCommandDispatcher(t)
 	dir := t.TempDir()
 	t.Chdir(dir) // where default outputs go
@@ -645,6 +673,7 @@ func TestFortran_list(t *testing.T) {
 // TestFortran_listVolume writes the listing beside a source on a volume, and to the
 // name /LIST= gives, which takes the type LIS as the MACRO file's takes MAR.
 func TestFortran_listVolume(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -681,6 +710,9 @@ func TestFortran_listVolume(t *testing.T) {
 // written to /MODULE's directory, found there by /MODULE_PATH, and MODNOTFOUND
 // without either.
 func TestDispatch_fortranModules(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, _, buf := newCommandDispatcher(t)
 	dir := t.TempDir()
 	t.Chdir(dir)

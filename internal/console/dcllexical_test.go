@@ -79,6 +79,7 @@ func lexConsole(t *testing.T) *Console {
 // TestLexicalEnvironment: F$ENVIRONMENT's items, at the terminal and in a
 // procedure, and F$VERIFY.
 func TestLexicalEnvironment(t *testing.T) {
+	t.Parallel()
 	c := lexConsole(t)
 
 	checkLexical(t, c, []lexCase{
@@ -133,6 +134,7 @@ func TestLexicalEnvironment(t *testing.T) {
 // there isn't; the items written as text (corevms's item forms, VPROT
 // and ACPTYPE as VMS 7.1 wrote them: testdata/lib55's LIB55.LOG).
 func TestLexicalGetDVI(t *testing.T) {
+	t.Parallel()
 	c := lexConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -155,6 +157,7 @@ func TestLexicalGetDVI(t *testing.T) {
 // TestLexicalVolumeFiles: F$PARSE and F$SEARCH on a mounted volume
 // (15.4.2's examples).
 func TestLexicalVolumeFiles(t *testing.T) {
+	t.Parallel()
 	c := lexConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -203,6 +206,7 @@ func TestLexicalVolumeFiles(t *testing.T) {
 
 // TestLexicalFAO: F$FAO, with 15.6.3's columns and $FAO's directives.
 func TestLexicalFAO(t *testing.T) {
+	t.Parallel()
 	checkLexical(t, lexConsole(t), []lexCase{
 		{text: `F$FAO("!16AS !12AS", "MARCHESAND", "2CA0049C")`, want: "MARCHESAND       2CA0049C    "},
 		{text: `F$FAO("Found !UL file!%S", 3)`, want: "Found 3 files"},
@@ -224,6 +228,7 @@ func TestLexicalFAO(t *testing.T) {
 // TestLexicalProcess: F$PROCESS, F$USER, F$PID, F$GETJPI, F$GETSYI,
 // F$PRIVILEGE, and F$SETPRV, against the console's process.
 func TestLexicalProcess(t *testing.T) {
+	t.Parallel()
 	c := lexConsole(t)
 	env := c.RTL
 	pid := fmt.Sprintf("%08X", env.Process.PID)
@@ -281,6 +286,7 @@ func TestLexicalProcess(t *testing.T) {
 // TestLexicalTime: F$TIME and F$CVTIME, at a fixed time: Friday, 9
 // October 2026, 14:23:45.12.
 func TestLexicalTime(t *testing.T) {
+	t.Parallel()
 	c := lexConsole(t)
 	now := vmsdef.Time(time.Date(2026, 10, 9, 14, 23, 45, 120_000_000, time.UTC))
 	c.RTL.Clock = func() uint64 { return now }
@@ -331,6 +337,7 @@ func TestLexicalTime(t *testing.T) {
 // examples), against the rights database govax builds: the process's
 // own UIC identifier and the environmental ones.
 func TestLexicalIdentifier(t *testing.T) {
+	t.Parallel()
 	c := lexConsole(t)
 	env := c.RTL
 	uic := fmt.Sprint(int32(env.Process.UIC))
@@ -352,6 +359,7 @@ func TestLexicalIdentifier(t *testing.T) {
 // TestLexicalDevice: F$DEVICE through the devices, by name, class, and
 // type, each stream keeping its place, and "" after the last.
 func TestLexicalDevice(t *testing.T) {
+	t.Parallel()
 	c := lexConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 	mountFreshContainer(t, c, "DUA1")
@@ -383,6 +391,7 @@ func TestLexicalDevice(t *testing.T) {
 // order, whatever order they were defined in, unit numbers compared as
 // numbers.
 func TestLexicalDeviceOrder(t *testing.T) {
+	t.Parallel()
 	c := lexConsole(t)
 
 	for _, name := range []string{"XXB0", "XXA10", "XXA2"} {
@@ -402,6 +411,7 @@ func TestLexicalDeviceOrder(t *testing.T) {
 // TestLexicalFileAttributes: F$FILE_ATTRIBUTES's items for a file on a
 // mounted volume, a directory, and a host file, and its failures.
 func TestLexicalFileAttributes(t *testing.T) {
+	t.Parallel()
 	c := lexConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -486,6 +496,7 @@ func fidOf(t *testing.T, c *Console, spec string) string {
 // returns; the symbol is a PROCESS_CONTEXT until F$PID's "" or CANCEL;
 // a context F$PID has used is frozen.
 func TestLexicalContext(t *testing.T) {
+	t.Parallel()
 	c := lexConsole(t)
 	env := c.RTL
 	pid := fmt.Sprintf("%08X", env.Process.PID)

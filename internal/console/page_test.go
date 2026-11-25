@@ -9,6 +9,7 @@ import (
 	"github.com/tucats/gopackages/app-cli/settings"
 
 	"github.com/tucats/govax/internal/dclcmd"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // numberedLines is n lines of text, "line 1" through "line n".
@@ -37,6 +38,7 @@ func pagedConsole(t *testing.T, height, width int, replies string) (*Console, *b
 // TestPage_returnShowsEveryScreen: RETURN at each prompt shows the whole
 // text, each screen holding height-1 lines and the prompt.
 func TestPage_returnShowsEveryScreen(t *testing.T) {
+	t.Parallel()
 	c, buf := pagedConsole(t, 5, 0, "\n\n\n")
 	c.cmd().Page(numberedLines(10))
 
@@ -50,6 +52,7 @@ func TestPage_returnShowsEveryScreen(t *testing.T) {
 
 // TestPage_textEndsDisplay: anything typed before RETURN stops the display.
 func TestPage_textEndsDisplay(t *testing.T) {
+	t.Parallel()
 	c, buf := pagedConsole(t, 5, 0, "q\n\n")
 	c.cmd().Page(numberedLines(10))
 
@@ -61,6 +64,7 @@ func TestPage_textEndsDisplay(t *testing.T) {
 
 // TestPage_endOfInputEndsDisplay: no input at the prompt ends the display.
 func TestPage_endOfInputEndsDisplay(t *testing.T) {
+	t.Parallel()
 	c, buf := pagedConsole(t, 5, 0, "")
 	c.cmd().Page(numberedLines(10))
 
@@ -71,6 +75,7 @@ func TestPage_endOfInputEndsDisplay(t *testing.T) {
 
 // TestPage_fitsOneScreen: text that fits on a screen gets no prompt.
 func TestPage_fitsOneScreen(t *testing.T) {
+	t.Parallel()
 	c, buf := pagedConsole(t, 24, 0, "")
 	c.cmd().Page("one\ntwo")
 
@@ -82,6 +87,7 @@ func TestPage_fitsOneScreen(t *testing.T) {
 // TestPage_longLinesWrap: with the width known, a line longer than the
 // screen is wide counts as the rows it wraps onto.
 func TestPage_longLinesWrap(t *testing.T) {
+	t.Parallel()
 	c, buf := pagedConsole(t, 5, 10, "\n")
 	c.cmd().Page("short\n" + strings.Repeat("x", 25) + "\nafter\n")
 
@@ -96,6 +102,9 @@ func TestPage_longLinesWrap(t *testing.T) {
 // TestScreenSize_setting: with no terminal, vax.console.lines gives the
 // height, and 24 with it unset.
 func TestScreenSize_setting(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	old, had := settings.Get(dclcmd.ConsoleLinesSetting), settings.Exists(dclcmd.ConsoleLinesSetting)
 
 	t.Cleanup(func() {
@@ -123,6 +132,7 @@ func TestScreenSize_setting(t *testing.T) {
 
 // TestDispatch_typePage: TYPE/PAGE through the grammar pages the file.
 func TestDispatch_typePage(t *testing.T) {
+	t.Parallel()
 	d, c := newTestDispatcher(t)
 
 	var buf bytes.Buffer

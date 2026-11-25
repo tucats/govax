@@ -10,6 +10,7 @@ import (
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
 	"github.com/tucats/govax/internal/corevms"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -69,6 +70,9 @@ var hostCommands = []hostCommand{
 // host; again after SET PROCESS/PRIVILEGES=SYSPRV, refused by nothing;
 // and with the key off, without SYSPRV, as before.
 func TestHostFileCommands(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	for _, pass := range []struct {
 		name         string
 		key, sysprv  bool

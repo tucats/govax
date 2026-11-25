@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // relativeCases are testdata/for81's cases on relative files and the
@@ -93,6 +95,9 @@ func madeFile(name string) []string {
 // (testdata/for81, rounds 1 and 2): each statement's IOSTAT, the bytes each
 // read returned, and INQUIRE's OPENED, NEXTREC, and RECL.
 func TestFor81RelativeFortranOracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	runs := map[string]string{}
 
 	for _, run := range []string{"for81-vax.txt", "for81f-vax.txt"} {

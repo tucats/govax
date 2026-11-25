@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/machine"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // Phase 45's subtask 13: testdata/mp/crechild.mar, a MACRO program that
@@ -17,6 +18,9 @@ import (
 // TestCreChild runs CRECHILD.EXE, giving it CHILD.EXE on its command
 // line, and checks everything it prints.
 func TestCreChild(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
 
 	read := func(name string) string {

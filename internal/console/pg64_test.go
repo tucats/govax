@@ -9,6 +9,7 @@ import (
 
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/machine"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // Phase 64's probe (testdata/pg64, README.md): govax runs the program's
@@ -148,6 +149,9 @@ func pagfilcnt(t *testing.T, dispatch func(string) string) int {
 // the image's rundown deletes the stack, that page with it. (VMS's DCL
 // runs on its own supervisor-mode stack.)
 func TestPG64Oracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	_, dispatch := pg64Console(t)
 
 	run := func(part, image string) []string {
@@ -258,6 +262,9 @@ func pg64Used(line string) (string, int, bool) {
 // through the rest, is VMS's within two clusters (VMS writes
 // asynchronously, and its working set has fewer dynamic pages).
 func TestPG64WriterRound2(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	_, dispatch := pg64Console(t)
 
 	dispatch("DEFINE PG64_PART X")

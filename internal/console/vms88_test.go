@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // Phase 88's VMS round (docs/planning/PHASE-88 - keyed index files.md, subtask 15;
@@ -68,6 +70,9 @@ func runVMS88(t *testing.T) (string, *Dispatcher) {
 // TestVMS88Procedure is the rehearsal: the procedure reaches its end, each file's walks
 // agree before and after the changes, and the programs print testdata/rms88's output.
 func TestVMS88Procedure(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	log, d := runVMS88(t)
 	sections := ftn86Sections(log)
 

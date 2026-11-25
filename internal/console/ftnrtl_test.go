@@ -9,6 +9,7 @@ import (
 
 	"github.com/tucats/govax/internal/ftnrtl"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -65,6 +66,9 @@ const ftnStopper = `	.TITLE	FTNSTOP
 const ftnCallerRun = "FTNRTL V1.0  \nversion ok\nEND OF RUN\n  $STATUS == \"%X00000001\"\n"
 
 func TestFTNRTL(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	eachLoader(t, func(t *testing.T, paging bool) {
 		d, c, buf := shareFindConsole(t, paging)
 		s := c.ContainerSession
@@ -357,6 +361,9 @@ func ftnListerLine(r string) string {
 // record's carriage control becomes its fixed control (01 8D, a line),
 // not data.
 func TestFTNRTLListOutput(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	eachLoader(t, func(t *testing.T, paging bool) {
 		d, c, buf := shareFindConsole(t, paging)
 		s := c.ContainerSession

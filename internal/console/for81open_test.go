@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // TestFor81OpenOracle holds FTNRTL's OPEN to VMS's FORRTL (Decision 1 of
@@ -20,6 +21,9 @@ import (
 // returned in vax/for81-vax.txt. Relative and indexed files wait for their
 // subtasks, and USEROPEN too.
 func TestFor81OpenOracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	text, err := os.ReadFile(filepath.Join("..", "..", "testdata", "for81", "vax", "for81-vax.txt"))
 	if err != nil {
 		t.Fatal(err)

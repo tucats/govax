@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // readMacro is a MACRO file's lines on DUA1, but for the two header comments that
@@ -42,6 +43,9 @@ func macroLines(t *testing.T, c *Console, loc rms.FileLocation) []string {
 // TestFortranOptimizeQualifier checks /[NO]OPTIMIZE: the default is /OPTIMIZE,
 // whose header says it ran, and /NOOPTIMIZE's file doesn't mention the optimizer.
 func TestFortranOptimizeQualifier(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, c, buf := shareFindConsole(t, false)
 
 	if _, err := c.ContainerSession.CreateRecordFile(rms.FileLocation{Name: "DUA1:[000000]OPTQ.FOR"},
@@ -92,6 +96,9 @@ var dungeonModules = []string{"dungeon", "game", "gdt", "objects", "parser", "ro
 // game's random numbers are the same each run. What it prints is only compared
 // between the builds, never kept; Phase 86's test checks the game itself.
 func TestFortranDungeonBothWays(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	dir := dungeonSource()
 	if _, err := os.Stat(filepath.Join(dir, "dungeon.f")); err != nil {
 		t.Skipf("no DUNGEON source: %v", err)

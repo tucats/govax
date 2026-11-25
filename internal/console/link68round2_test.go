@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -49,6 +50,9 @@ var link68Round2Files = map[string]string{
 
 // TestLink68Round2 runs RUN2.COM on govax, in both paging modes.
 func TestLink68Round2(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	eachLoader(t, func(t *testing.T, paging bool) {
 		d, buf := link68Govax(t, paging)
 

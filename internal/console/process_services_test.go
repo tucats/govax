@@ -21,6 +21,7 @@ import (
 // leaves 1 in R0 only if all of them worked; this test then checks the
 // emulated process and device state they left behind.
 func TestProcessServices_assembledProgram(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 	tta0 := c.cmd().DefineDevice("TTA0", iodev.DeviceOptions{DevClass: iodev.DeviceClassTT})
 
@@ -71,6 +72,7 @@ func TestProcessServices_assembledProgram(t *testing.T) {
 // wait re-executes the service's XFC each step, the timer interrupt is
 // taken in between, and its handler's $SETEF ends the wait.
 func TestEventFlagWait_timerInterrupt(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 
 	addr, hasEntry, err := c.Assemble(asmFixturePath(t, "wait_timer.asm"))
@@ -100,6 +102,7 @@ func TestEventFlagWait_timerInterrupt(t *testing.T) {
 // the program in the wait (PC on the service's XFC) for as many steps as
 // it's given; setting the flag from outside then lets it finish.
 func TestEventFlagWait_blocksUntilSet(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 
 	addr, _, err := c.Assemble(asmFixturePath(t, "wait_timer.asm"))
@@ -170,6 +173,7 @@ func continueBounded(c *Console, maxSteps int) (err error, hitCap bool) {
 // lasts until the engine's system time (one millisecond per interval-
 // clock tick, deterministic in quantum mode) has advanced 50ms.
 func TestTimerServices_assembledProgram(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 
 	addr, hasEntry, err := c.Assemble(asmFixturePath(t, "timer_services.asm"))
@@ -207,6 +211,7 @@ func TestTimerServices_assembledProgram(t *testing.T) {
 // and cancels it. Each $HIBER that must sleep re-executes its XFC until
 // the engine's system time reaches the next wakeup.
 func TestHibernate_assembledProgram(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 
 	addr, hasEntry, err := c.Assemble(asmFixturePath(t, "hibernate.asm"))
@@ -248,6 +253,7 @@ func TestHibernate_assembledProgram(t *testing.T) {
 // should and left R0, R1, and R2 as they were. This test also checks the
 // routine saw five arguments and that no AST is left queued or active.
 func TestASTDelivery_assembledProgram(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 
 	addr, hasEntry, err := c.Assemble(asmFixturePath(t, "ast_delivery.asm"))
@@ -291,6 +297,7 @@ func TestASTDelivery_assembledProgram(t *testing.T) {
 // (ending a $HIBER through the AST routine's $WAKE, cancelled by $CANTIM,
 // and interrupting a loop that calls no services) and from $GETJPIW.
 func TestTimerAST_assembledProgram(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 
 	addr, hasEntry, err := c.Assemble(asmFixturePath(t, "timer_ast.asm"))
@@ -342,6 +349,7 @@ func TestTimerAST_assembledProgram(t *testing.T) {
 // typed line; its output must show the prompt, the carriage-controlled
 // greeting, and the name read back.
 func TestTerminalQIO_assembledProgram(t *testing.T) {
+	t.Parallel()
 	var out bytes.Buffer
 
 	c := New(&out)
@@ -399,6 +407,7 @@ func TestTerminalQIO_assembledProgram(t *testing.T) {
 // on a shared event flag (its IOSB is still 0 at 10ms) and returns only
 // when the stand-in request's AST writes the IOSB, at 30ms.
 func TestSynch_assembledProgram(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 
 	addr, hasEntry, err := c.Assemble(asmFixturePath(t, "synch.asm"))
@@ -441,6 +450,7 @@ func TestSynch_assembledProgram(t *testing.T) {
 // others newest first and then ends the image, returning to the console
 // with the exit status in R0.
 func TestExitHandlers_assembledProgram(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 
 	addr, hasEntry, err := c.Assemble(asmFixturePath(t, "exit_handlers.asm"))
@@ -509,6 +519,7 @@ func TestExitHandlers_assembledProgram(t *testing.T) {
 // acceptance test: testdata/asm/numtim.asm converts an absolute and a
 // delta time with $BINTIM, then breaks each down with $NUMTIM.
 func TestNumtim_assembledProgram(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 
 	addr, hasEntry, err := c.Assemble(asmFixturePath(t, "numtim.asm"))
@@ -564,6 +575,7 @@ func TestNumtim_assembledProgram(t *testing.T) {
 // and state items normally, with ASTs disabled, from inside an AST
 // routine, and with a timer AST outstanding.
 func TestJPIASTState_assembledProgram(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 
 	addr, hasEntry, err := c.Assemble(asmFixturePath(t, "jpi_ast_state.asm"))
@@ -626,6 +638,7 @@ func TestJPIASTState_assembledProgram(t *testing.T) {
 // AST is delivered by switching into kernel mode (with memory protection
 // on, on the kernel stack), wakes the process, and returns to user mode.
 func TestModeSwitchAST_assembledProgram(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 
 	addr, hasEntry, err := c.Assemble(asmFixturePath(t, "mode_switch_ast.asm"))
@@ -694,6 +707,7 @@ func TestModeSwitchAST_assembledProgram(t *testing.T) {
 // version and node name, then walks the cluster with a wildcard scan,
 // finding one node.
 func TestGetsyi_assembledProgram(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 
 	addr, hasEntry, err := c.Assemble(asmFixturePath(t, "getsyi.asm"))
@@ -750,6 +764,7 @@ func TestGetsyi_assembledProgram(t *testing.T) {
 // call) and $FAOL (parameters in a list), and writes each result to the
 // terminal with $QIOW.
 func TestFAO_assembledProgram(t *testing.T) {
+	t.Parallel()
 	var out bytes.Buffer
 
 	c := New(&out)
@@ -793,6 +808,7 @@ func TestFAO_assembledProgram(t *testing.T) {
 // and writes message vectors with $PUTMSG, one through an action routine
 // that lets only the first line be written.
 func TestPutmsg_assembledProgram(t *testing.T) {
+	t.Parallel()
 	var out bytes.Buffer
 
 	c := New(&out)
@@ -846,6 +862,7 @@ func TestPutmsg_assembledProgram(t *testing.T) {
 // executing a privileged MFPR) and executive mode ($CMEXEC), and gets
 // each routine's status back.
 func TestCmkrnl_assembledProgram(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 
 	addr, hasEntry, err := c.Assemble(asmFixturePath(t, "cmkrnl.asm"))
@@ -905,6 +922,7 @@ func TestCmkrnl_assembledProgram(t *testing.T) {
 // program reaches a spin loop; instead of stopping the machine, each
 // key is delivered as the program's AST.
 func TestCtrlCAST_assembledProgram(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 	c.cmd().DefineDevice("TTA0", iodev.DeviceOptions{DevClass: iodev.DeviceClassTT})
 
@@ -975,6 +993,7 @@ func TestCtrlCAST_assembledProgram(t *testing.T) {
 
 // TestAttentionKeys_matchRTL: the engine's attention keys are the RTL's.
 func TestAttentionKeys_matchRTL(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 
 	var _ cpu.AttentionHandler = c.Machine
@@ -993,6 +1012,7 @@ func TestAttentionKeys_matchRTL(t *testing.T) {
 // test: testdata/asm/getdvi.asm asks $GETDVIW about its terminal channel
 // and $GETDVI (then $SYNCH) about SYS$OUTPUT.
 func TestGetdvi_assembledProgram(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 	c.cmd().DefineDevice("TTA0", iodev.DeviceOptions{DevClass: iodev.DeviceClassTT})
 
@@ -1061,6 +1081,7 @@ func TestGetdvi_assembledProgram(t *testing.T) {
 // a mailbox, the second read waiting in $QIOW until a timer AST writes
 // its message, then deletes the mailbox by deassigning its channels.
 func TestMailbox_assembledProgram(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 
 	addr, hasEntry, err := c.Assemble(asmFixturePath(t, "mailbox.asm"))
@@ -1124,6 +1145,7 @@ func TestMailbox_assembledProgram(t *testing.T) {
 // sets its priority, and forces its own exit, which runs its exit
 // handler and ends the image before the code after $FORCEX.
 func TestProcessControl_assembledProgram(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 
 	addr, hasEntry, err := c.Assemble(asmFixturePath(t, "process_control.asm"))

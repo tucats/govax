@@ -8,6 +8,7 @@ import (
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/registers"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // deepStackSource stops at checkpoint 1 with the stack activation made,
@@ -42,6 +43,9 @@ l:	cmpl	r10,r6
 // time, each page charged; and its rundown deletes the stack and gives
 // every charge back.
 func TestUserStackImage(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	setSetting(t, machine.PagingSetting, "true")
 
 	c, _ := scheduledConsole(t, longQuantum, brbSelf)

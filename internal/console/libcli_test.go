@@ -9,6 +9,7 @@ import (
 
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // Phase 57: the LIB$ CLI routines reach the DCL of the process whose
@@ -73,6 +74,9 @@ doomed:	.ascid	/DOOMED/
 // console's DCL, defines a local and a global one, and deletes a local
 // one; DCL sees each change once the image has ended.
 func TestLibCLI_symbols(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
 	image := buildImage(t, c, "symbols", symbolsSource)
 
@@ -111,6 +115,9 @@ func TestLibCLI_symbols(t *testing.T) {
 // DCL's symbols, not process 1's: GREETING is the subprocess's local
 // symbol (table-type-indicator 1), and FROM_IMAGE is defined there.
 func TestLibCLI_subprocessSymbols(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
 	image := buildImage(t, c, "symbols", symbolsSource)
 
@@ -168,6 +175,9 @@ doomed:	.ascid	/DOOMED/
 // LIB$SET_LOGICAL and LIB$DELETE_LOGICAL are supervisor-mode names in
 // LNM$PROCESS, so the changes outlast the image.
 func TestLibCLI_logicals(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
 	image := buildImage(t, c, "logicals", logicalsSource)
 
@@ -236,6 +246,9 @@ out:	.word	0
 // the terminal (SYS$COMMAND), while LIB$GET_INPUT reads the procedure's
 // data line (SYS$INPUT).
 func TestLibCLI_getCommand(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
 	image := buildImage(t, c, "command", commandSource)
 	proc := writeCommands(t,
@@ -302,6 +315,9 @@ out:	.word	0
 // there for a later image of the same process, DCL commands between; a
 // subprocess's common area is its own, empty when it starts.
 func TestLibCLI_common(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
 	put := buildImage(t, c, "putcommon", putCommonSource)
 	get := buildImage(t, c, "getcommon", getCommonSource)
@@ -410,6 +426,9 @@ func chainConsole(t *testing.T) (*console.Console, *bytes.Buffer, *console.Dispa
 // TestLibCLI_doCommand: LIB$DO_COMMAND's command runs once the image's
 // exit handler has, its status $STATUS; a chained image may chain again.
 func TestLibCLI_doCommand(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, out, d := chainConsole(t)
 
 	for _, line := range []string{
@@ -446,6 +465,9 @@ func TestLibCLI_doCommand(t *testing.T) {
 // the procedure's level: the local symbol it defines is gone once the
 // procedure ends.
 func TestLibCLI_doCommandLevel(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, out, d := chainConsole(t)
 
 	proc := writeCommands(t,
@@ -471,6 +493,9 @@ func TestLibCLI_doCommandLevel(t *testing.T) {
 // area carrying text to it, and with no command text of its own; one
 // that isn't there fails as RUN of it would.
 func TestLibCLI_runProgram(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, out, d := chainConsole(t)
 	put := buildImage(t, c, "putcommon", putCommonSource)
 	get := buildImage(t, c, "getcommon", getCommonSource)
@@ -494,6 +519,9 @@ func TestLibCLI_runProgram(t *testing.T) {
 // TestLibCLI_subprocessChain: a subprocess's image chains a command to
 // its own DCL.
 func TestLibCLI_subprocessChain(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, out, _ := chainConsole(t)
 	docmd, _ := c.DCLSymbol("DOCMD")
 
@@ -538,6 +566,9 @@ text:	.ascid	/SHOW SYMBOL CHAINED/
 // a command, which DCL runs once the debugger's EXIT ends the session
 // (the image's exit leaves the session open, as VMS's debugger does).
 func TestLibCLI_chainUnderDebugger(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, out, d := chainConsole(t)
 	consoletest.InstallDebugger(t, c, d)
 	image := buildImage(t, c, "fixedchain", fixedChainSource)
@@ -625,6 +656,9 @@ func controlConsole(t *testing.T) (*console.Console, *bytes.Buffer, *console.Dis
 // turns Ctrl/Y back on. Disabling Ctrl/Y leaves the procedure's ON
 // CONTROL_Y, unlike SET NOCONTROL=Y (VMS V7.1, testdata/lib57).
 func TestLibCLI_controlKeys(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, out, d, _, _ := controlConsole(t)
 
 	for _, line := range []string{
@@ -669,6 +703,9 @@ func TestLibCLI_controlKeys(t *testing.T) {
 // TestLibCLI_subprocessControlKeys: a subprocess's image changes its own
 // DCL's setting, not process 1's.
 func TestLibCLI_subprocessControlKeys(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, out, _, disable, _ := controlConsole(t)
 
 	commands := writeCommands(t,

@@ -6,6 +6,7 @@ import "testing"
 // paging mode (docs/planning/PHASE-62 - VMS paging.md, Decision 1), and the System
 // INITIALIZE/MEMORY builds gets it.
 func TestVMInitPagingQualifier(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	d := NewDispatcher(c, loadEvaxGrammar(t))
 

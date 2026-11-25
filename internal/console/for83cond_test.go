@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/tucats/govax/internal/testproc"
 )
 
 const for83CondDir = "../../testdata/for83/"
@@ -146,6 +148,9 @@ var for83FaultInRoutine = map[int]bool{32: true, 33: true, 39: true, 97: true, 1
 // TestFor83ConditionOracle runs part C, LIBRTL's condition routines, as
 // FOR83.COM does and holds each case to VMS's run.
 func TestFor83ConditionOracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	_, dispatch := wsDispatcher(t)
 
 	got := for83RunPart(t, dispatch, "FOR83C", 109, "")
@@ -200,6 +205,9 @@ var for83PC = regexp.MustCompile(`pc=\+\w+|user PC \w+`)
 // requirement. vax/for83e-forrtl.txt is that run; with FOR83E_WRITE set the test
 // writes it instead.
 func TestFor83ContinueOnFORRTL(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	disk, file := findFORRTL(t)
 	_, dispatch := wsDispatcher(t)
 
@@ -230,6 +238,9 @@ func TestFor83ContinueOnFORRTL(t *testing.T) {
 // govax, what's left of a statement a handler unwound from. vax/for83g-forrtl.txt
 // is that run; with FOR83G_WRITE set the test writes it instead.
 func TestFor83GoneOnFORRTL(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	disk, file := findFORRTL(t)
 	_, dispatch := wsDispatcher(t)
 
@@ -265,6 +276,9 @@ var for83GoneSameFrame = map[int]bool{2: true, 7: true}
 // TestFor83GoneOnFTNRTL runs for83y.for, the third round as FORTRAN, and holds
 // FTNRTL to FORRTL's run of it.
 func TestFor83GoneOnFTNRTL(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	_, dispatch := wsDispatcher(t)
 
 	got := for83Cases(for83RunFortran(t, dispatch, "FOR83Y", 9))
@@ -298,6 +312,9 @@ func TestFor83GoneOnFTNRTL(t *testing.T) {
 // of its statements that ASTs aren't held off for, by tracing itself: what timers
 // can only sample. An AST's statement mustn't change an interrupted one's.
 func TestFor83ASTEverywhere(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	_, dispatch := wsDispatcher(t)
 
 	dir := t.TempDir()
@@ -372,6 +389,9 @@ func for83PartBMask(text string) []string {
 // RMS, LIBRTL, and DCL, and holds it to VMS's whole run, so a difference is
 // govax's.
 func TestFor83PartBOnFORRTL(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	disk, file := findFORRTL(t)
 	_, dispatch := wsDispatcher(t)
 
@@ -450,6 +470,9 @@ func for83Compared(c for83Case) string {
 // TestFor83PartBOnFTNRTL runs for83x.for, part B's cases as FORTRAN, and holds
 // FTNRTL to VMS's run of them.
 func TestFor83PartBOnFTNRTL(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	_, dispatch := wsDispatcher(t)
 
 	got := for83Cases(for83RunFortran(t, dispatch, "FOR83X", 64))

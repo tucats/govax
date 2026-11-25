@@ -8,6 +8,7 @@ import (
 // TestEvaluateDebugNames: the expression evaluator finds names and lines
 // in a loaded image's debug symbol table, after the console's own.
 func TestEvaluateDebugNames(t *testing.T) {
+	t.Parallel()
 	c, _ := runStepped(t, dbgImagePath(t, "dbgdis.exe"))
 
 	cases := []struct {

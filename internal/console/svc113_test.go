@@ -85,6 +85,7 @@ var svc113Manual = map[string][]string{
 }
 
 func TestSvc113Probe(t *testing.T) {
+	t.Parallel()
 	dir := filepath.Join("..", "..", "testdata", "svc113")
 
 	src, err := os.ReadFile(filepath.Join(dir, "svc113.mar"))

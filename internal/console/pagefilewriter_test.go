@@ -10,6 +10,7 @@ import (
 	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/paging"
 	"github.com/tucats/govax/internal/registers"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vm"
 )
 
@@ -88,6 +89,9 @@ buf:	.blkb	512*80
 // host page file, and checks at each checkpoint where the array's pages
 // are and what the page file holds.
 func TestPageFileWriter(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	pagefile := filepath.Join(t.TempDir(), "pagefile.sys")
 
 	setSetting(t, machine.PagingSetting, "true")
@@ -300,6 +304,9 @@ func TestPageFileWriter(t *testing.T) {
 // demand-zero pages stay on the modified list, as before the page file,
 // and nothing is opened.
 func TestPageFileWriterNoFile(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	setSetting(t, machine.PagingSetting, "true")
 	setSetting(t, "vax.sysgen.pql_dwsdefault", "30")
 	setSetting(t, "vax.sysgen.mpw_hilimit", "10")

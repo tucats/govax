@@ -101,6 +101,7 @@ var (
 )
 
 func TestCretvaDeltva(t *testing.T) {
+	t.Parallel()
 	c := newServiceConsole(t)
 
 	// Three pages, addresses given high to low, in executive mode's name.
@@ -159,6 +160,7 @@ func TestCretvaDeltva(t *testing.T) {
 }
 
 func TestCretvaDeltva_errors(t *testing.T) {
+	t.Parallel()
 	c := newServiceConsole(t)
 
 	// A system-region page.
@@ -197,6 +199,7 @@ func TestCretvaDeltva_errors(t *testing.T) {
 // TestDeltva_owner checks that user mode can't delete a kernel page, and
 // can delete its own.
 func TestDeltva_owner(t *testing.T) {
+	t.Parallel()
 	c := newServiceConsole(t)
 
 	putRange(t, c, vaInadr, vaPages, vaPages+0x200)
@@ -224,6 +227,7 @@ func TestDeltva_owner(t *testing.T) {
 }
 
 func TestCntreg(t *testing.T) {
+	t.Parallel()
 	c := newServiceConsole(t)
 	c.RTL.RegionSize[0] = vaPages + 0x600
 
@@ -269,6 +273,7 @@ func TestCntreg(t *testing.T) {
 // (docs/planning/PHASE-26.md subtask 35): pages created, used, deleted (an access
 // violation caught by the program's handler), and created again empty.
 func TestVASpace_assembledProgram(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 	word := runFixture(t, c, "vaspace.asm")
 

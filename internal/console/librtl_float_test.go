@@ -22,6 +22,7 @@ func floatCheck(n int, x, operands string) string {
 // the routine takes any degree, as VMS's does. Each check that fails
 // returns its own number; all passing returns 1.
 func TestLibrtlFloating(t *testing.T) {
+	t.Parallel()
 	var data, code strings.Builder
 
 	data.WriteString("\t.PSECT\tDATA,NOEXE,WRT,QUAD\nDEG4:\t.WORD\t4\nDEG32:\t.WORD\t32\nONES:\n\t.REPT\t33\n\t.F_FLOATING\t1.0\n\t.ENDR\nONE:\t.F_FLOATING\t1.0\nWANT33:\t.F_FLOATING\t33.0\nEXT:\t.WORD\t0\nINT:\t.LONG\t0\n")

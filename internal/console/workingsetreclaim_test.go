@@ -10,6 +10,7 @@ import (
 	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/paging"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // Phase 63's subtask 8 (docs/planning/PHASE-63 - working sets.md): when the free
@@ -124,6 +125,9 @@ fail:	brb	fail
 // only the reclaimer writes; its low limit is 0, so the reclaimer writes
 // every page it can.
 func TestReclaimer(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	for _, on := range []bool{true, false} {
 		name := "off"
 		if on {

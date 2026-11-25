@@ -10,6 +10,7 @@ import (
 
 	"github.com/tucats/govax/internal/dclcmd"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -65,6 +66,9 @@ func copyFixture(t *testing.T, from, dir string) string {
 }
 
 func TestAnalyzeImage_hostFile(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, _, buf := newCommandDispatcher(t)
 	dir := t.TempDir()
 	exe := copyFixture(t, imageFixtureExe, dir)
@@ -107,6 +111,7 @@ func TestAnalyzeImage_hostFile(t *testing.T) {
 }
 
 func TestAnalyzeImage_header(t *testing.T) {
+	t.Parallel()
 	d, _, buf := newCommandDispatcher(t)
 
 	for _, tt := range []struct {
@@ -138,6 +143,7 @@ func TestAnalyzeImage_header(t *testing.T) {
 }
 
 func TestAnalyzeImage_volume(t *testing.T) {
+	t.Parallel()
 	d, c, _ := newCommandDispatcher(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -190,6 +196,7 @@ func TestAnalyzeImage_volume(t *testing.T) {
 // linked it from, and checks govax's analysis of govax's image against
 // VMS's analysis of VMS's, all but the times.
 func TestAnalyzeImage_linked(t *testing.T) {
+	t.Parallel()
 	d, _, buf := newCommandDispatcher(t)
 	exe := filepath.Join(t.TempDir(), "extern.exe")
 
@@ -221,6 +228,7 @@ func TestAnalyzeImage_linked(t *testing.T) {
 }
 
 func TestAnalyzeImage_errors(t *testing.T) {
+	t.Parallel()
 	d, _, buf := newCommandDispatcher(t)
 	dir := t.TempDir()
 

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/jobqueue"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // $GETQUI (docs/planning/PHASE-98 - batch queues.md, subtask 9), held to
@@ -63,6 +64,9 @@ func bat98qOutput(lines []string) []string {
 // 59 cases, $SNDJBC's and $GETQUI's, are held to VMS's line for line, the
 // times masked.
 func TestGetquiOracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	if testing.Short() {
 		t.Skip("runs a program on a booted machine")
 	}

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // MTHRTL, VMS's mathematics library (docs/planning/PHASE-77 - MTHRTL.md): LINK
@@ -31,6 +32,9 @@ NEXT:	.ASCID	/RANDOM RETURNED/
 `
 
 func TestMTHRTLLinks(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	eachLoader(t, func(t *testing.T, paging bool) {
 		d, c, buf := shareFindConsole(t, paging)
 

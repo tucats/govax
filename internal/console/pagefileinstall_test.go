@@ -2,6 +2,8 @@ package console_test
 
 import (
 	"testing"
+
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // Phase 64's subtask 8 (docs/planning/PHASE-64 - page file.md): the page file is
@@ -12,6 +14,9 @@ import (
 // file opened at the pager's first need.
 
 func TestPageFileInstalledAtStartup(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	pageFileSettings(t)
 	setSetting(t, "vax.sysgen.paging.file", "DUA1:[000000]PAGEFILE.SYS")
 	setSetting(t, "vax.sysgen.paging.size", "200")
@@ -47,6 +52,9 @@ func TestPageFileInstalledAtStartup(t *testing.T) {
 }
 
 func TestPageFileDeferred(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	pageFileSettings(t)
 	setSetting(t, "vax.sysgen.paging.defer", "true")
 

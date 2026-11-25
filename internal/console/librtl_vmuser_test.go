@@ -13,6 +13,7 @@ import "testing"
 // all of that held, or the number of the check that failed, or the
 // failing status.
 func TestLibrtlUserZone(t *testing.T) {
+	t.Parallel()
 	r0, _ := runMacroProgram(t, `	.PSECT	DATA,NOEXE,WRT,LONG
 REAL:	.LONG	0
 USER:	.LONG	0
@@ -129,6 +130,7 @@ RESETS:	.LONG	0
 // all of that held, or the number of the check that failed, or the
 // failing status.
 func TestLibrtlZonePageRoutines(t *testing.T) {
+	t.Parallel()
 	r0, _ := runMacroProgram(t, `	.PSECT	DATA,NOEXE,WRT,LONG
 ZONE:	.LONG	0
 INIT:	.LONG	1

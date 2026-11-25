@@ -75,6 +75,7 @@ var (
 // of FORRTL's, each FOR$ name its FTN$, and holds them to VMS's run; then checks
 // that what the mask took out agrees with $ASCTIM's date in this run.
 func TestFor83PartAOnFTNRTL(t *testing.T) {
+	t.Parallel()
 	src, err := os.ReadFile(for83SystemDir + "for83.mar")
 	if err != nil {
 		t.Fatal(err)

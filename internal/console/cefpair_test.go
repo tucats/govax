@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/sched"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -36,6 +37,9 @@ cefnam:	.ascid	"SHARED"
 // (not enough), and then a $GETJPIW completing with flag 68 sets that,
 // and process 1 goes on at once: not only $SETEF reports a common flag.
 func TestCommonFlagPair_handshake(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	one, _ := assembleAt(t, mbxSymbols()+cefStart+`
 	jsb	@#wake
 	pushl	#65

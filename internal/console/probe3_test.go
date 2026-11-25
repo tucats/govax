@@ -7,12 +7,16 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/machine"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // Phase 46's probe 3 (testdata/mp/probe3), run under govax: the program
 // VMS is also asked to run. Its report is in the -v output, for the
 // side-by-side with the VMS log.
 func TestProbe3(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
 
 	read := func(path string) string {

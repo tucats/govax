@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/console"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // tb70Dir holds Phase 70's probe of traceback (README.md): its sources,
@@ -164,6 +165,9 @@ var tb70DumpDifferences = map[string]string{
 // and matches VMS's output, dumps and all, but for the PCs outside the
 // image (tb70Masked) and tb70DumpDifferences.
 func TestTB70Traceback(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	_, dispatch := tb70Console(t)
 
 	for _, image := range []string{"TB70", "TB70D"} {
@@ -193,6 +197,9 @@ func TestTB70Traceback(t *testing.T) {
 // condition" dumps (excmsgMatch's rules), but for the PCs outside the
 // image (tb70Masked) and tb70DumpDifferences, X aside.
 func TestTB70ImproperlyHandled(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	_, dispatch := tb70Console(t)
 
 	type run struct {
@@ -421,6 +428,9 @@ func excmsgValueMatches(name, got, want string, loose bool) bool {
 // TYPE shows each file (excmsgMatch's rules for the "improperly
 // handled" dump, tb70Masked's for PCs outside the image).
 func TestTB70Output(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	for _, r := range []struct{ file, from, to, define string }{
 		{"tb70.log", "$ DEFINE TB70_PART A", "$ DIRECTORY/SIZE=ALL/DATE", "TB70_PART"},
 		{"tb70b.log", "$ DEFINE TB70B_PART N", "$ DIRECTORY/SIZE=ALL TB70B*.*", "TB70B_PART"},
@@ -503,6 +513,9 @@ func tb70LogCommands(t *testing.T, file, from, to string) []tb70Command {
 // as LIB$PUT_OUTPUT opens an existing file at its end (the LIB$ manual; VMS
 // 7.1's STR113.TXT, testdata/err113; Phase 113, subtask 13c).
 func TestTB70OutputSameFile(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	_, dispatch := tb70Console(t)
 
 	dispatch("DEFINE/NOLOG TB70_PART A")

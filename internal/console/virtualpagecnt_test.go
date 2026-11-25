@@ -5,6 +5,7 @@ import (
 
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/machine"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // newStackTopPage is UserStackTop's P1 page number, where a new space's P1
@@ -16,6 +17,9 @@ const newStackTopPage = (corevms.UserStackTop - 0x40000000) / 512
 // process 1's does, and SYI$_VIRTUALPAGECNT reports it; unset, it's
 // VMINIT's /P0 plus /P1.
 func TestVirtualPageCount(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	setSetting(t, machine.PagingSetting, "true")
 
 	code, _ := assembleAt(t, createChild)

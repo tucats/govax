@@ -9,6 +9,7 @@ import (
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -76,6 +77,9 @@ func sharedFAB(t *testing.T, c *console.Console, env *corevms.Environment) {
 // there, each process's in its own order, interleaved with the other's,
 // and the volume's bitmap agrees with its headers.
 func TestSharedFile_twoAppenders(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	const perProcess = 60
 
 	sym := vmsdef.Symbols

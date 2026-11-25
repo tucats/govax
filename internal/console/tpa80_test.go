@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // The Phase 80 probe of LIB$TPARSE, LIB$TABLE_PARSE, and $FILESCAN
@@ -83,6 +85,9 @@ func withoutExpected(lines []string) []string {
 
 // TestTPA80Oracle holds the probe's output to VMS's.
 func TestTPA80Oracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	got := runTPA80(t)
 
 	if path := os.Getenv("TPA80_OUT"); path != "" {
@@ -170,6 +175,9 @@ var tpa80Cases = []struct{ name, want string }{
 
 // TestTPA80Manual holds the cases to the manuals, with or without VMS's run.
 func TestTPA80Manual(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	blocks := map[string]string{}
 
 	var name string

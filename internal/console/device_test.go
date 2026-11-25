@@ -8,6 +8,7 @@ import (
 )
 
 func TestConsoleDefineAndShowDevices(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 
 	c.cmd().DefineDevice("DKA0", iodev.DeviceOptions{
@@ -52,6 +53,7 @@ func TestConsoleDefineAndShowDevices(t *testing.T) {
 }
 
 func TestDispatch_defineAndShowDeviceViaDCL(t *testing.T) {
+	t.Parallel()
 	d, c := newTestDispatcher(t)
 
 	if err := d.Dispatch(`DEFINE/DEVICE DKA0 /DEVCLASS=DISK /CYLINDERS=1024 /VOLNAME="SYSTEM"`); err != nil {
@@ -77,6 +79,7 @@ func TestDispatch_defineAndShowDeviceViaDCL(t *testing.T) {
 // $ALLOC has allocated, and that image rundown releases a user-mode
 // allocation (docs/planning/PHASE-26.md).
 func TestShowDevices_allocated(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 
 	disk := c.cmd().DefineDevice("DKA0", iodev.DeviceOptions{DevClass: iodev.DeviceClassDisk})
@@ -113,6 +116,7 @@ func TestShowDevices_allocated(t *testing.T) {
 // shows every DU device, and a name no device begins with is
 // %SYSTEM-W-NOSUCHDEV.
 func TestShowDevices_prefix(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 
 	for _, name := range []string{"DUA0", "DUA1", "DKA0"} {
@@ -143,6 +147,7 @@ func TestShowDevices_prefix(t *testing.T) {
 // and a line per device; a disk with a volume mounted is "Mounted", with
 // its label and free blocks.
 func TestShowDevices_briefLayout(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	path := newTestContainer(t, "TESTVOL")
 

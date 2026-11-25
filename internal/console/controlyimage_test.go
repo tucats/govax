@@ -41,6 +41,7 @@ forever: brb	forever
 // the image is forced to exit and the command runs (13.12.1). The image
 // is run down either way, and no ATTENTION message is shown.
 func TestControlY_image(t *testing.T) {
+	t.Parallel()
 	var out bytes.Buffer
 
 	c := console.New(&out)

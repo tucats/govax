@@ -11,6 +11,7 @@ import (
 
 	"github.com/tucats/govax/internal/obj"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // Phase 113's probe round (docs/planning/PHASE-113 - Fortran errata.md, subtask
@@ -94,6 +95,9 @@ func runErr113(t *testing.T) (string, string) {
 }
 
 func TestErr113Procedure(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	if testing.Short() {
 		t.Skip("the round's procedure makes some 3,000 files")
 	}
@@ -320,8 +324,11 @@ func mac113Dump(t *testing.T, records [][]byte) []string {
 // headings and mac113Allowed; the A+B objects record for record, but for
 // their header records and the source files' dates.
 func TestErr113Macro(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, c, buf := shareFindConsole(t, false)
-	dir := filepath.Join("..", "..", "testdata", "err113")
+	dir := filepath.Join(testdataDir, "err113")
 
 	shareFindRun(t, d, "CREATE/DIRECTORY DUA1:[ERR113]")
 	shareFindRun(t, d, "SET DEFAULT DUA1:[ERR113]")

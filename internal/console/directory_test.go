@@ -48,6 +48,7 @@ func mountClusteredContainer(t *testing.T, c *Console, device string, cluster ui
 // stream, matching Console.ShowDefault's own "rms computes, console
 // prints" split.
 func TestConsoleDirectory_printsListing(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -74,6 +75,7 @@ func TestConsoleDirectory_printsListing(t *testing.T) {
 // directory.go's own doc comment for why this case is told apart from a
 // merely malformed file specification.
 func TestConsoleDirectory_notMounted(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 
 	err := c.cmd().Directory("DUB0:*.*;*", rms.DirectoryOptions{})
@@ -90,6 +92,7 @@ func TestConsoleDirectory_notMounted(t *testing.T) {
 // is reported as CLI_BADFILESPEC, matching Console.SetDefault's own status
 // for the same underlying condition.
 func TestConsoleDirectory_badFileSpec(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 
 	err := c.cmd().Directory("DUA0:[UNTERMINATED", rms.DirectoryOptions{})
@@ -109,6 +112,7 @@ func TestConsoleDirectory_badFileSpec(t *testing.T) {
 // added, confirming a bare DIRECTORY (SPEC omitted entirely) reaches
 // Console.Directory and prints the current default directory's listing.
 func TestDispatch_directoryViaDCL(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	g := loadEvaxGrammar(t)
 	d := NewDispatcher(c, g)
@@ -133,6 +137,7 @@ func TestDispatch_directoryViaDCL(t *testing.T) {
 // file, to DIRECTORY.LIS (the DCL Dictionary). testdata/link68's
 // LINK68.COM writes its FILES.LST so.
 func TestDispatch_directoryOutput(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	d := NewDispatcher(c, loadEvaxGrammar(t))
 
@@ -173,6 +178,7 @@ func TestDispatch_directoryOutput(t *testing.T) {
 // resolves to the same DIRECTORY verb as the fully spelled-out form, the
 // same DCL prefix-matching mechanism INIT/INITIALIZE already relies on.
 func TestDispatch_directoryAbbreviated(t *testing.T) {
+	t.Parallel()
 	d, c := newTestDispatcher(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -190,6 +196,7 @@ func TestDispatch_directoryAbbreviated(t *testing.T) {
 // correctly: r.String("SPEC") reaches Console.Directory as the narrowing
 // pattern, and r.Present("SIZE") turns on DirectoryOptions.Size.
 func TestDispatch_directoryWithSpecAndQualifiers(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	g := loadEvaxGrammar(t)
 	d := NewDispatcher(c, g)
@@ -209,6 +216,7 @@ func TestDispatch_directoryWithSpecAndQualifiers(t *testing.T) {
 // each file's n newest versions, and that the value is required and must
 // be at least 1.
 func TestDispatch_directoryVersions(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	d := NewDispatcher(c, loadEvaxGrammar(t))
 
@@ -279,6 +287,7 @@ func TestDispatch_directoryVersions(t *testing.T) {
 // nothing, as VMS 7.3 laid them out (testdata/dcl50, testdata/mar's
 // logs; Phase 51).
 func TestDirectory_layouts(t *testing.T) {
+	t.Parallel()
 	d, c, buf := newCommandDispatcher(t)
 	mountFreshContainer(t, c, "DUA0")
 

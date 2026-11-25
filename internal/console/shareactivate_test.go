@@ -10,6 +10,7 @@ import (
 
 	"github.com/tucats/govax/internal/dclcmd"
 	"github.com/tucats/govax/internal/machine"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -111,6 +112,9 @@ func eachLoader(t *testing.T, test func(t *testing.T, paging bool)) {
 // SHR4 and its ALWAYS relink (R9), MAIN6 (R10), EXE1 (R11), MAIN1A
 // against SHR1A and its relink (R6), and RUN of SHR1 itself (E7).
 func TestActivateVMSShareableImages(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	eachLoader(t, func(t *testing.T, paging bool) {
 		d, _, buf := shareActivateConsole(t, paging,
 			"main2", "shr2", "main3", "shr3", "main3p", "shr3p", "main4", "shr4",
@@ -251,6 +255,9 @@ func relinkProcedure(t *testing.T, dir string) string {
 // against the shareable images it made, as TestActivateVMSShareableImages
 // runs VMS's: their output is VMS's.
 func TestActivateGovaxShareableImages(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	eachLoader(t, func(t *testing.T, paging bool) {
 		d, c, buf, _ := govaxShareConsole(t, paging)
 
@@ -297,6 +304,9 @@ func TestActivateGovaxShareableImages(t *testing.T) {
 // after each, and MAIN1N (linked against EQUAL,1,1001) where VMS ran it:
 // the match controls must agree, and the linked-with one decides.
 func TestActivateIdentMatch(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	eachLoader(t, func(t *testing.T, paging bool) {
 		d, _, buf, dir := govaxShareConsole(t, paging)
 		relink := relinkProcedure(t, dir)
@@ -348,6 +358,9 @@ func TestActivateIdentMatch(t *testing.T) {
 // section's page UREW, by its change-protection list (SHR6.ANI). (That
 // the fixup was right is MAIN6's run, in the tests above.)
 func TestActivateProtectionChanges(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	eachLoader(t, func(t *testing.T, paging bool) {
 		d, c, _, _ := govaxShareConsole(t, paging)
 		shareFindRun(t, d, "RUN/NOEXECUTE MAIN6")

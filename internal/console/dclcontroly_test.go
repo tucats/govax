@@ -74,6 +74,7 @@ func runControlY(t *testing.T, typed string, lines []string, innerLines ...strin
 // $STATUS as it was. ON ERROR THEN STOP does the same (the DCL
 // Dictionary's STOP example 4; VMS 7.3, testdata/dcl50's round 5).
 func TestStopProcedures(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name   string
 		inner  []string
@@ -124,6 +125,7 @@ func TestStopProcedures(t *testing.T) {
 // to a cleanup (Figure 13-2's FILES.COM), or a command after which the
 // procedure goes on, staying in effect for the next Ctrl/Y (PRIV.COM).
 func TestControlY_onControlY(t *testing.T) {
+	t.Parallel()
 	out, _, err := runControlY(t, "abc\n", []string{
 		"$ ON CONTROL_Y THEN GOTO CLEAN_UP",
 		"$ INQUIRE X",
@@ -152,6 +154,7 @@ func TestControlY_onControlY(t *testing.T) {
 // $STATUS, marked as shown. With no ON CONTROL_Y at any level, the
 // Ctrl/Y level is read at any depth (Y11).
 func TestControlY_nested(t *testing.T) {
+	t.Parallel()
 	out, _, err := runControlY(t, "abc\n", []string{
 		"$ ON CONTROL_Y THEN GOTO CLEAN_UP",
 		"$ @INNER.COM",
@@ -181,6 +184,7 @@ func TestControlY_nested(t *testing.T) {
 // and STOP end it, a command that runs an image ends it and then runs at
 // level 0, and Ctrl/Z (the end of the input) is EXIT.
 func TestControlY_level(t *testing.T) {
+	t.Parallel()
 	lines := []string{"$ X = 1", "$ INQUIRE Y", `$ PRINT "after ''X'"`}
 
 	for _, tc := range []struct {
@@ -211,6 +215,7 @@ func TestControlY_level(t *testing.T) {
 // reports it; SET NOCONTROL=Y cancels the level's ON CONTROL_Y, and with
 // it in effect a Ctrl/Y does nothing in a procedure.
 func TestSetControl(t *testing.T) {
+	t.Parallel()
 	out, c, err := runControlY(t, "abc\n", []string{
 		`$ PRINT "''F$ENVIRONMENT("CONTROL")'/''F$ENVIRONMENT("NOCONTROL")'"`,
 		"$ ON CONTROL_Y THEN GOTO CLEAN_UP",
@@ -242,6 +247,7 @@ func TestSetControl(t *testing.T) {
 // Ctrl/Y ends the wait at once, and the Ctrl/Y level follows (VMS 7.3's
 // Y3, testdata/dcl50's round 5); a time that can't be read is IVDTIME.
 func TestWait(t *testing.T) {
+	t.Parallel()
 	d, c, buf := newCommandDispatcher(t)
 	c.In = strings.NewReader("CONTINUE\n")
 

@@ -12,6 +12,7 @@ import (
 	"github.com/tucats/govax/internal/console/consoletest"
 	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -191,6 +192,9 @@ func verifyMilestoneVolume(t *testing.T, c *console.Console, path string) {
 
 // TestMilestone runs the milestone both ways, under each quantum.
 func TestMilestone(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	for _, how := range []struct{ name, mode, want string }{
 		{"creprc", "CREPRC", "$CREPRC"},
 		{"spawn", "SPAWN", "LIB$SPAWN"},
@@ -226,6 +230,9 @@ func TestMilestone(t *testing.T) {
 // and LIB$SPAWN both fail with SS$_UNSUPPORTED, which the parent reports
 // before it ends with that status; no other process is made.
 func TestMilestone_schedulerOff(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	for _, mode := range []string{"CREPRC", "SPAWN"} {
 		t.Run(mode, func(t *testing.T) {
 			c, out, _ := milestoneMachine(t, longQuantum)
@@ -259,6 +266,7 @@ func TestMilestone_schedulerOff(t *testing.T) {
 // terminal, as $CREPRC's caller gave it none), so they're left out of
 // that comparison; in govax the console's output is both.
 func TestMilestone_vmsLog(t *testing.T) {
+	t.Parallel()
 	data, err := os.ReadFile(filepath.Join("..", "..", "testdata", "mp", "vax", "milestone.log"))
 	if err != nil {
 		t.Fatal(err)

@@ -8,6 +8,7 @@ import (
 
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -140,6 +141,9 @@ func checkPriv94Run(t *testing.T, text string, n int, want []string, allowed str
 // parts K and R, and the end (parts H and Z), with no condition reaching a
 // case's handler. TestPriv94Oracle holds the cases' answers to VMS's.
 func TestPriv94Probe(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	text := runPriv94(t, []string{"PRIV94", "PRIV94H", "PRIV94I"}, []string{"FH", "", "K", "R", "HZ"})
 
 	checkPriv94Run(t, text, 289, []string{
@@ -156,6 +160,9 @@ func TestPriv94Probe(t *testing.T) {
 // TestPriv94BProbe rehearses round 2's program, PRIV94B, the same way: its
 // fixtures, every default part, and its end.
 func TestPriv94BProbe(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	text := runPriv94(t, []string{"PRIV94B"}, []string{"F", "", "Z"})
 
 	checkPriv94Run(t, text, 40, []string{

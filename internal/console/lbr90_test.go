@@ -6,6 +6,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // TestLBR90Oracle runs part E of testdata/help90 (LBR90.MAR, docs/planning/PHASE-90 -
@@ -16,6 +18,9 @@ import (
 // (vax/round1b/help90.log, from "#1" to the end of the run) line for line,
 // but for what lbr90Masked says differs.
 func TestLBR90Oracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	dir := filepath.Join("..", "..", "testdata", "help90")
 
 	want := lbr90Part(t, filepath.Join(dir, "vax", "round1b", "help90.log"))

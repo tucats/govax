@@ -9,6 +9,7 @@ import (
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
 	"github.com/tucats/govax/internal/machine"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -24,6 +25,9 @@ import (
 // symbols and command level are as they were. A command that works the
 // machine itself is process 1's.
 func TestSpawnDCL(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
 	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
@@ -107,6 +111,9 @@ func TestSpawnDCL(t *testing.T) {
 // SPAWN's status is its final status; with /NOWAIT the spawning DCL goes
 // on at once, and the new process runs beside it.
 func TestSpawnDCL_nested(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
 	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
@@ -206,6 +213,9 @@ func TestSpawnDCL_nested(t *testing.T) {
 // process 1's (Phase 52: while a subprocess's DCL ran, its own state was
 // where process 1's was kept, and a SPAWN there copied process 1's).
 func TestSpawnDCL_nestedInherits(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
 	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
@@ -244,6 +254,9 @@ func TestSpawnDCL_nestedInherits(t *testing.T) {
 // is running an image deletes it, and its interpreter, waiting for the
 // image, is unwound; process 1 goes on as before.
 func TestSpawnDCL_stopWhileRunning(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
 	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 

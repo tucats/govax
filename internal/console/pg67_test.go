@@ -9,6 +9,7 @@ import (
 
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/machine"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // Phase 67's probe (testdata/pg67, README.md): govax runs VMS V7.1's own
@@ -130,6 +131,9 @@ func pg67Console(t *testing.T) (*console.Console, func(string) string) {
 // each run FREP0VA is empty, and FREP1VA, FREPTECNT, and PAGFILCNT are
 // as after the first.
 func TestPG67Oracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, dispatch := pg67Console(t)
 	env := c.ProcessOne()
 

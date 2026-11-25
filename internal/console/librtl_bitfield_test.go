@@ -27,6 +27,7 @@ func check(n int, operands string) string {
 // LIB$FFC through their stubs. Each check that fails returns its own
 // number; all passing returns 1.
 func TestLibrtlBitFields(t *testing.T) {
+	t.Parallel()
 	r0, out := runMacroProgram(t, bitFieldData+
 		"\t.PSECT\tCODE,NOWRT,EXE\n"+
 		"\t.ENTRY\tSTART,^M<>\n"+
@@ -62,6 +63,7 @@ func TestLibrtlBitFields(t *testing.T) {
 // the reserved operand fault the instruction would take; no handler
 // takes it, and the image ends with it.
 func TestLibrtlBitFieldReservedOperand(t *testing.T) {
+	t.Parallel()
 	r0, out := runMacroProgram(t, bitFieldData+
 		"\t.PSECT\tCODE,NOWRT,EXE\n"+
 		"\t.ENTRY\tSTART,^M<>\n"+

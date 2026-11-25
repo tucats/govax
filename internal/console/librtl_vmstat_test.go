@@ -9,6 +9,7 @@ import "testing"
 // returns its user argument, SHOW_VM's status then (docs/planning/PHASE-59,
 // subtask 7). The program prints the figure and both statuses.
 func TestLibrtlVMStatistics(t *testing.T) {
+	t.Parallel()
 	r0, out := runMacroProgram(t, "\t.PSECT\tDATA,NOEXE,WRT,LONG\n"+
 		"BIG:\t.LONG\t100\nSMALL:\t.LONG\t20\nTHREE:\t.LONG\t3\nONE:\t.LONG\t1\n"+
 		"A:\t.LONG\t0\nB:\t.LONG\t0\nBYTES:\t.LONG\t0\nS:\t.BLKL\t2\n"+

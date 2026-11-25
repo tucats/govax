@@ -9,6 +9,7 @@ import (
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/registers"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vm"
 )
 
@@ -70,6 +71,9 @@ func faultMask(t *testing.T, c *Console, addr uint32, access vm.AccessType) byte
 // a page past P0's end is a length violation, one $CRETVA skipped over a
 // protection violation; and image rundown leaves P0 empty.
 func TestCreatedSpace(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	withSettings(t, map[string]string{machine.PagingSetting: "true"})
 
 	c := newServiceConsole(t)
@@ -192,6 +196,9 @@ func TestCreatedSpace(t *testing.T) {
 // no P0 pages, and creating its pages changes its address space and its
 // hardware PCB, not the CPU's registers.
 func TestCreatedSpaceOtherProcess(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	withSettings(t, map[string]string{machine.PagingSetting: "true"})
 
 	c := newServiceConsole(t)
@@ -252,6 +259,9 @@ func TestCreatedSpaceOtherProcess(t *testing.T) {
 // TestCreatedSpacePagingOff: with paging off the regions are their whole
 // tables, and the services leave the length registers alone.
 func TestCreatedSpacePagingOff(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	withSettings(t, map[string]string{machine.PagingSetting: "false"})
 
 	c := newServiceConsole(t)

@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // lbr90xCases is how many cases LBR90X.MAR has (round 3b, subtask 11d).
@@ -42,6 +43,9 @@ var lbr90xTimes = regexp.MustCompile(`^  (now|elapsed) .*`)
 // then X14, waits to open it, then the preallocation cases' libraries and
 // WX, block for block.
 func TestLBR90XOracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	dir := filepath.Join("..", "..", "testdata", "help90")
 	logPath := filepath.Join(dir, "vax", "round3b", "help90x.log")
 	want := lbrVMSCases(t, logPath, "$ LBR90X ", lbr90xCases-1)

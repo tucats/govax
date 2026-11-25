@@ -119,6 +119,7 @@ func prot93Unshown(line string) bool {
 
 // TestSetSecurityOracle replays the probe's sections as SYSTEM.
 func TestSetSecurityOracle(t *testing.T) {
+	t.Parallel()
 	_, run := prot93SetConsole(t)
 
 	log := prot93Log(t, "prot93.log")
@@ -206,6 +207,7 @@ func prot93MaskTimes(lines []string) []string {
 // form with that form's messages; its own file it may give its own UIC
 // again but not another's.
 func TestSetSecurityIdentities(t *testing.T) {
+	t.Parallel()
 	c, run := prot93SetConsole(t)
 	p := c.RTL.Process
 

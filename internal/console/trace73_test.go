@@ -21,6 +21,7 @@ import (
 // Registers and frames that hold stack addresses differ from VMS's run
 // (vax/ots72t-vax.txt); what the self-test computes doesn't.
 func TestTrace73SelfTest(t *testing.T) {
+	t.Parallel()
 	src, err := os.ReadFile(filepath.Join(ots72Dir, "ots72t.mar"))
 	if err != nil {
 		t.Fatal(err)
@@ -102,6 +103,7 @@ func lineStarting(lines []string, prefix string) string {
 // SS$_TBIT. Tracing begins with the second instruction after the
 // BISPSW: the first NOP runs, and the trace comes before the second.
 func TestTrace73Unhandled(t *testing.T) {
+	t.Parallel()
 	r0, out := runMacroProgram(t, "\t.PSECT\tCODE,NOWRT,EXE\n"+
 		"\t.ENTRY\tSTART,^M<>\n"+
 		"\tBISPSW\t#^X10\n"+

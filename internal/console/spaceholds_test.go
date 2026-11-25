@@ -6,6 +6,7 @@ import (
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/registers"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmsdef"
 )
@@ -29,6 +30,9 @@ func freePTEs(c *Console) uint32 {
 // SS$_VASFULL; and the paging file quota stops a creation partway in
 // either.
 func TestCreationNeedsRoom(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	withSettings(t, map[string]string{machine.PagingSetting: "true"})
 
 	c := newServiceConsole(t)

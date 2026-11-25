@@ -9,6 +9,7 @@ import (
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
 	"github.com/tucats/govax/internal/corevms"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -18,6 +19,9 @@ import (
 // hold SYSPRV, and allowed once it turns SYSPRV on; with the key off, as
 // before, it is allowed without it.
 func TestHostFileNeedsSYSPRV(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	dir := t.TempDir()
 	path := filepath.Join(dir, "notes.txt")
 

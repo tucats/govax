@@ -10,6 +10,7 @@ import (
 
 	"github.com/tucats/govax/internal/dclcmd"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -49,6 +50,9 @@ func lineWith(lines []string, s string) string {
 // what the heading and the closing lines show: the source's absolute path
 // and modification time, the command line, and the object's records.
 func TestMacro_listHost(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, _ := newTestConsole(t)
 	dir := t.TempDir()
 	t.Chdir(dir) // where default outputs go
@@ -102,6 +106,9 @@ func TestMacro_listHost(t *testing.T) {
 // source and gets the type LIS, and a host path goes where it says. No
 // /LIST writes no listing.
 func TestMacro_listNamed(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, _ := newTestConsole(t)
 	dir := t.TempDir()
 	t.Chdir(dir) // where default outputs go
@@ -138,6 +145,9 @@ func TestMacro_listNamed(t *testing.T) {
 // TestMacro_listAfterErrors checks the listing is written when assembly
 // fails, as the object is (an error's), and the command still fails.
 func TestMacro_listAfterErrors(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, _ := newTestConsole(t)
 	dir := t.TempDir()
 	t.Chdir(dir) // where default outputs go
@@ -167,6 +177,7 @@ func TestMacro_listAfterErrors(t *testing.T) {
 // with the heading showing the source's full specification and its
 // header's revision date, and a named listing elsewhere on the volume.
 func TestMacro_listVolume(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -208,6 +219,9 @@ func TestMacro_listVolume(t *testing.T) {
 // TestMacro_listLibraryNames checks the library statistics name a
 // /LIBRARY library by the file it was read from.
 func TestMacro_listLibraryNames(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, _ := newTestConsole(t)
 	dir := t.TempDir()
 	t.Chdir(dir) // where default outputs go
@@ -236,6 +250,9 @@ func TestMacro_listLibraryNames(t *testing.T) {
 // TestDispatch_macroList checks MACRO's /LIST, /LIST=, and /NOLIST
 // through the DCL grammar.
 func TestDispatch_macroList(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, _ := newTestDispatcher(t)
 	dir := t.TempDir()
 	t.Chdir(dir) // where default outputs go
@@ -275,6 +292,9 @@ func TestDispatch_macroList(t *testing.T) {
 // symbols and macros by default, the kinds named, none with
 // /NOCROSS_REFERENCE, and an unknown kind refused.
 func TestDispatch_macroCrossReference(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, _ := newTestDispatcher(t)
 	dir := t.TempDir()
 	t.Chdir(dir) // where default outputs go
@@ -321,6 +341,9 @@ func TestDispatch_macroCrossReference(t *testing.T) {
 }
 
 func TestDispatch_macroShow(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, _ := newTestDispatcher(t)
 	dir := t.TempDir()
 	t.Chdir(dir) // where default outputs go

@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // Phase 113's FORRTL round (docs/planning/PHASE-113 - Fortran errata.md, subtask
@@ -106,6 +108,9 @@ func runFor81G(t *testing.T, onFORRTL bool) (out string, files map[string]string
 }
 
 func TestFor81GProcedure(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	out, files := runFor81G(t, true)
 
 	if path := os.Getenv("FOR81G_WRITE"); path != "" {
@@ -150,6 +155,9 @@ func TestFor81GProcedure(t *testing.T) {
 // TestFor81GOnFTNRTL runs round 3's cases on FTNRTL, by for88f.mar's and
 // for81gf.mar's FOR$ names, and holds each to VMS's run of them on FORRTL.
 func TestFor81GOnFTNRTL(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	out, _ := runFor81G(t, false)
 
 	if path := os.Getenv("FOR81G_WRITE"); path != "" {

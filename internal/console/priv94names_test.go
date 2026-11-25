@@ -9,6 +9,7 @@ import (
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
 	"github.com/tucats/govax/internal/registers"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -63,6 +64,9 @@ func priv94Holders(t *testing.T, file string) func(*console.Console, func(string
 // process, and fixture tables and modes, under no privilege, SYSNAM, GRPNAM,
 // and SYSPRV; and STOP of the holders with none.
 func TestPriv94Names(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	for _, run := range []struct {
 		id   priv94Identity
 		file string
@@ -84,6 +88,9 @@ func TestPriv94Names(t *testing.T) {
 // one open to everyone and one closed to the group and the world, under no
 // privilege, SYSPRV, SYSNAM, GRPNAM, and READALL.
 func TestPriv94Tables(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	fixtures := func(_ *console.Console, dispatch func(string) string) map[string]string {
 		for _, line := range []string{
 			"CREATE/NAME_TABLE/PARENT_TABLE=LNM$SYSTEM_DIRECTORY/PROTECTION=(S:RWCD,O:RWCD,G:RWCD,W:RWCD) PRIV94_DO",
@@ -116,6 +123,9 @@ func TestPriv94Tables(t *testing.T) {
 // (the phase doc's Decision 10), for PRIV94, who holds neither until it
 // enables them.
 func TestVolumeCommandPrivileges(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, buf := scheduledConsole(t, longQuantum, brbSelf)
 	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 	dispatch := func(line string) string {
@@ -158,6 +168,9 @@ func TestVolumeCommandPrivileges(t *testing.T) {
 // privileges, writes the system table by its protection (the system
 // category), and PRIV94 is refused by it and then asked for SYSNAM.
 func TestPrivilegeTraceOfTables(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, buf := scheduledConsole(t, longQuantum, brbSelf)
 	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 

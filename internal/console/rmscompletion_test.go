@@ -10,6 +10,7 @@ import "testing"
 // $CONNECT, and $PUT to the terminal call their success routines, the
 // $PUT's after the record it wrote.
 func TestRMSCompletionRoutines(t *testing.T) {
+	t.Parallel()
 	r0, out := runMacroProgram(t, `	$FABDEF
 	.PSECT	DATA,WRT,NOEXE
 NOFAB:	$FAB	FNM=<NOSUCH_FILE_HERE.DAT>

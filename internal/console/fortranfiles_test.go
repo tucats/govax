@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // fortranBuild compiles, assembles, and links a program of these lines on the
@@ -33,6 +34,9 @@ func fortranBuild(t *testing.T, d *Dispatcher, c *Console, buf *bytes.Buffer, na
 // ordinary file and a unit with no OPEN, with their records, and removing
 // DISPOSE='DELETE' and STATUS='SCRATCH' files.
 func TestFortranFiles(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, c, buf := shareFindConsole(t, false)
 
 	fortranBuild(t, d, c, buf, "EXITS", []string{
@@ -77,6 +81,9 @@ func TestFortranFiles(t *testing.T) {
 // #371 and #373; the name's text is unconfirmed, the probe showing only the
 // signal array's size).
 func TestFortranOpenSignals(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, c, buf := shareFindConsole(t, false)
 
 	for _, tc := range []struct {
@@ -128,6 +135,9 @@ func TestFortranOpenSignals(t *testing.T) {
 // does (testdata/for83's part B: "unit 13 still works" shows as "nit 13 still
 // works", and "*" as an empty line).
 func TestTypeFortranCarriageControl(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, c, buf := shareFindConsole(t, false)
 
 	fortranBuild(t, d, c, buf, "TYPEFTN", []string{

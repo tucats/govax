@@ -19,6 +19,7 @@ import (
 // TestHelpTopics: HELP finds each of these topics, by the whole words or
 // their abbreviations, and its text says what's expected.
 func TestHelpTopics(t *testing.T) {
+	t.Parallel()
 	lib := consoletest.HelpLibrary(t, bootdata.HelpLibrary)
 
 	cases := []struct {
@@ -118,6 +119,7 @@ func TestHelpTopics(t *testing.T) {
 // TestEveryVerbHasHelp: each verb of the console's grammar has a level-1
 // topic of HELPLIB.HLB (Decision 10). An alias shares its verb's topic.
 func TestEveryVerbHasHelp(t *testing.T) {
+	t.Parallel()
 	lib := consoletest.HelpLibrary(t, bootdata.HelpLibrary)
 
 	names, alias := consoletest.ConsoleGrammar(t).Verbs()
@@ -137,6 +139,7 @@ func TestEveryVerbHasHelp(t *testing.T) {
 // Qualifiers topic) or a "/NAME" key somewhere in the verb's module
 // (Decision 10; Phase 90's subtask 8 rewrote every verb's help so).
 func TestEveryQualifierHasHelp(t *testing.T) {
+	t.Parallel()
 	lib := consoletest.HelpLibrary(t, bootdata.HelpLibrary)
 	g := consoletest.ConsoleGrammar(t)
 
@@ -224,6 +227,7 @@ func qualifierKeyed(keys []string, q string) bool {
 // it's attached to, as VMS's HELP does: HELP DELETE/SYMBOL is HELP DELETE
 // /SYMBOL.
 func TestCmdHelp_qualifierWithoutSpace(t *testing.T) {
+	t.Parallel()
 	var buf strings.Builder
 
 	c := console.New(&buf)

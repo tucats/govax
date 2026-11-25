@@ -12,6 +12,7 @@ import (
 // TestDefaultRunInits: RUN calls the images' LIB$INITIALIZE unless /NOINIT
 // says not to (Phase 113, subtask 6: no SET DEBUG switch turns it off now).
 func TestDefaultRunInits(t *testing.T) {
+	t.Parallel()
 	c := newRunnableConsole(t)
 	if !c.DefaultRunInits() {
 		t.Error("DefaultRunInits() = false, want true")
@@ -22,6 +23,7 @@ func TestDefaultRunInits(t *testing.T) {
 // grammar reads them (docs/planning/PHASE-37.md): /INIT and /NOINIT override the
 // default, and the qualifiers combine.
 func TestRunOptions_defaultAndOverride(t *testing.T) {
+	t.Parallel()
 	g := loadEvaxGrammar(t)
 
 	cases := []struct {
@@ -53,6 +55,7 @@ func TestRunOptions_defaultAndOverride(t *testing.T) {
 }
 
 func TestRun_debugImagesTrace(t *testing.T) {
+	t.Parallel()
 	c := newRunnableConsole(t)
 	c.CPU.SetDebug(registers.DebugImages)
 

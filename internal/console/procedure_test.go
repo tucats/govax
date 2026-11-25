@@ -9,6 +9,7 @@ import (
 
 	"github.com/tucats/govax/internal/dclshell"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -29,6 +30,7 @@ func writeProcedure(t *testing.T, dir, name string, lines ...string) string {
 // TestProcedure_parameters: P1 to P8 are the procedure's local symbols,
 // "" for those not given (User's Manual, 12.14's SHOW SYMBOL example).
 func TestProcedure_parameters(t *testing.T) {
+	t.Parallel()
 	d, _, buf := newCommandDispatcher(t)
 	proc := writeProcedure(t, t.TempDir(), "params.com", "$ SHOW SYMBOL/LOCAL/ALL")
 
@@ -56,6 +58,7 @@ func TestProcedure_parameters(t *testing.T) {
 // its global ones stay; it sees the levels outside it; and a nested
 // procedure's P1 is its own (User's Manual, 12.10 and 14.4).
 func TestProcedure_symbolScope(t *testing.T) {
+	t.Parallel()
 	d, c, buf := newCommandDispatcher(t)
 	dir := t.TempDir()
 
@@ -117,6 +120,7 @@ func TestProcedure_symbolScope(t *testing.T) {
 // above goes on; at the terminal it ends govax. LOGOUT ends govax from
 // inside a procedure.
 func TestProcedure_exit(t *testing.T) {
+	t.Parallel()
 	d, c, buf := newCommandDispatcher(t)
 	dir := t.TempDir()
 
@@ -155,6 +159,7 @@ func TestProcedure_exit(t *testing.T) {
 // the procedure, and the procedures that called it, with its message shown
 // once; a warning is shown and the procedure goes on (User's Manual, 13.8).
 func TestProcedure_errorEndsProcedure(t *testing.T) {
+	t.Parallel()
 	d, c, buf := newCommandDispatcher(t)
 	dir := t.TempDir()
 
@@ -193,6 +198,7 @@ func TestProcedure_errorEndsProcedure(t *testing.T) {
 // nothing reads are skipped, with one SKPDAT warning for each run of them,
 // and the procedure goes on (User's Manual, 13.3 and 13.8).
 func TestProcedure_dataLines(t *testing.T) {
+	t.Parallel()
 	d, _, buf := newCommandDispatcher(t)
 	proc := writeProcedure(t, t.TempDir(), "data.com",
 		`$ PRINT "a"`, "1993", "", "1994", `$ PRINT "b"`, "1995")
@@ -214,6 +220,7 @@ func TestProcedure_dataLines(t *testing.T) {
 // Manual, 13.6.4); the console's output is the terminal again after it.
 // NL: discards the output.
 func TestProcedure_output(t *testing.T) {
+	t.Parallel()
 	d, _, buf := newCommandDispatcher(t)
 	dir := t.TempDir()
 
@@ -256,6 +263,7 @@ func TestProcedure_output(t *testing.T) {
 // TestProcedure_volume: a procedure on a mounted volume, found through
 // SET DEFAULT with .COM by default, its /OUTPUT file on the volume too.
 func TestProcedure_volume(t *testing.T) {
+	t.Parallel()
 	d, c, buf := newCommandDispatcher(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -305,6 +313,9 @@ func TestProcedure_volume(t *testing.T) {
 // a name DCL uppercased is found in lowercase; a missing one is DCL's
 // OPENIN with RMS$_FNF.
 func TestProcedure_hostNames(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, c, _ := newCommandDispatcher(t)
 	dir := t.TempDir()
 	t.Chdir(dir)
@@ -330,6 +341,7 @@ func TestProcedure_hostNames(t *testing.T) {
 // a warning, CLI_STKOVF, and each level goes on (VMS 7.3's run of
 // testdata/dcl50).
 func TestProcedure_depth(t *testing.T) {
+	t.Parallel()
 	d, c, buf := newCommandDispatcher(t)
 	dir := t.TempDir()
 	path := filepath.Join(dir, "self.com")

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/security"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // Phase 93's subtask 9 (docs/planning/PHASE-93 - file protection.md): the
@@ -143,6 +144,9 @@ var prot93UtilDifferences = map[string]string{
 
 // TestProt93UtilitiesOracle replays Part B as each identity.
 func TestProt93UtilitiesOracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, run := prot93Console(t, "prot93-exchange.dsk", false)
 	p := c.RTL.Process
 

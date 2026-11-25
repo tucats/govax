@@ -129,6 +129,7 @@ func for83Mask(lines []string) []string {
 // holds what it writes to VMS's log: the listings, messages, statuses, and what
 // /EXTRACT wrote.
 func TestFor83LibraryOracle(t *testing.T) {
+	t.Parallel()
 	d, c, buf := newCommandDispatcher(t)
 
 	// Each library LIBRARY/CREATE makes takes 100 blocks, as VMS's did, more

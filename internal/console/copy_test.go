@@ -17,6 +17,7 @@ import (
 // onto a new file on the same volume, and a single confirmation line is
 // printed.
 func TestConsoleCopy_volumeToVolume(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -65,6 +66,7 @@ func TestConsoleCopy_volumeToVolume(t *testing.T) {
 // itself never reads Quiet (rms.CopyOptions' own doc comment), so this is
 // purely Console.Copy's own printCopyResult gating.
 func TestConsoleCopy_quiet(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -92,6 +94,7 @@ func TestConsoleCopy_quiet(t *testing.T) {
 // line before its usual "%COPY-S-COPIED" confirmation when opts.Verbose is
 // set.
 func TestConsoleCopy_verbose(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -126,6 +129,7 @@ func TestConsoleCopy_verbose(t *testing.T) {
 // matching Session.Copy's own CopyTested result never actually creating
 // anything.
 func TestConsoleCopy_test(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -159,6 +163,7 @@ func TestConsoleCopy_test(t *testing.T) {
 // SOURCE direction: a plain host file's content lands on the mounted
 // volume under the given destination name.
 func TestConsoleCopy_fromHost(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -184,6 +189,7 @@ func TestConsoleCopy_fromHost(t *testing.T) {
 // DESTINATION direction: a volume file's content lands on the host
 // filesystem at the given path.
 func TestConsoleCopy_toHost(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -218,6 +224,7 @@ func TestConsoleCopy_toHost(t *testing.T) {
 // device is reported as SS_DEVNOTMOUNT, matching Console.Type/Console.
 // Delete's own translation for the same underlying condition.
 func TestConsoleCopy_notMounted(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 
 	err := c.cmd().Copy("DUB0:FOO.TXT", false, "BAR.TXT", false, rms.CopyOptions{})
@@ -234,6 +241,7 @@ func TestConsoleCopy_notMounted(t *testing.T) {
 // is reported as DELETE and TYPE report theirs: COPY-E-SEARCHFAIL with the
 // name expanded, over RMS-E-FNF.
 func TestConsoleCopy_notFound(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -256,6 +264,7 @@ func TestConsoleCopy_notFound(t *testing.T) {
 // more than one file is reported as CLI_AMBIGUOUS, the same status
 // Console.Type already uses for its own single-match restriction.
 func TestConsoleCopy_ambiguous(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -284,6 +293,7 @@ func TestConsoleCopy_ambiguous(t *testing.T) {
 // TestConsoleCopy_hostToHostRejected confirms /HOST on both SOURCE and
 // DESTINATION at once is reported as CLI_BADQUALIFIERCOMBO.
 func TestConsoleCopy_hostToHostRejected(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 
 	dir := t.TempDir()
@@ -308,6 +318,7 @@ func TestConsoleCopy_hostToHostRejected(t *testing.T) {
 // input's SEARCHFAIL, an output's OPENOUT (Phase 113, subtask 11; it was
 // CLI_BADFILESPEC with the Go error's words).
 func TestConsoleCopy_badFileSpec(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -338,6 +349,7 @@ func TestConsoleCopy_badFileSpec(t *testing.T) {
 // (internal/bootdata/files/evax.dcl's copy verb) into the g.Bind("COPY",
 // ...) closure this subtask added.
 func TestDispatch_copyViaDCL(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	g := loadEvaxGrammar(t)
 	d := NewDispatcher(c, g)
@@ -370,6 +382,7 @@ func TestDispatch_copyViaDCL(t *testing.T) {
 // space ("COPY foo.txt/HOST BAR.TXT") -- docs/planning/PHASE-23.md's own first
 // COPY example.
 func TestDispatch_copyHostToContainerAttachedNoSpace(t *testing.T) {
+	t.Parallel()
 	d, c := newTestDispatcher(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -410,6 +423,7 @@ func TestDispatch_copyHostToContainerAttachedNoSpace(t *testing.T) {
 // in the design doc), with /HOST trailing it space-separated rather than
 // attached directly -- "COPY "/tmp/.../foo.txt" /HOST BAR.TXT".
 func TestDispatch_copyHostToContainerQuoted(t *testing.T) {
+	t.Parallel()
 	d, c := newTestDispatcher(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -442,6 +456,7 @@ func TestDispatch_copyHostToContainerQuoted(t *testing.T) {
 // space-separated, exactly like the design doc's own quoted SOURCE
 // example but applied to DESTINATION instead.
 func TestDispatch_copyContainerToHostTrailingQualifier(t *testing.T) {
+	t.Parallel()
 	d, c := newTestDispatcher(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -476,6 +491,7 @@ func TestDispatch_copyContainerToHostTrailingQualifier(t *testing.T) {
 // nothing typed after it fails as a missing required argument, matching
 // the grammar's own /prompt= on both SOURCE and DESTINATION.
 func TestDispatch_copyRequiresBothParameters(t *testing.T) {
+	t.Parallel()
 	d, _ := newTestDispatcher(t)
 
 	if err := d.Dispatch("COPY"); err == nil {
@@ -490,6 +506,7 @@ func TestDispatch_copyRequiresBothParameters(t *testing.T) {
 // line, the same behavior TestConsoleCopy_quiet already confirms directly
 // against Console.Copy.
 func TestDispatch_copyQuietSuppressesConfirmation(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	g := loadEvaxGrammar(t)
 	d := NewDispatcher(c, g)
@@ -530,6 +547,7 @@ func TestDispatch_copyQuietSuppressesConfirmation(t *testing.T) {
 // elsewhere in this grammar, confirmed here as COPY's own wiring rather
 // than relying solely on that generic mechanism's own engine-level tests.
 func TestDispatch_copyCrlfAndLfDisallowed(t *testing.T) {
+	t.Parallel()
 	d, c := newTestDispatcher(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -553,6 +571,7 @@ func TestDispatch_copyCrlfAndLfDisallowed(t *testing.T) {
 // behavior at all -- see rms.CopyOptions' and dispatch.go's own doc
 // comments for why it's read only to be explicitly discarded.
 func TestDispatch_copyVfcAcceptedButIgnored(t *testing.T) {
+	t.Parallel()
 	d, c := newTestDispatcher(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -581,6 +600,7 @@ func TestDispatch_copyVfcAcceptedButIgnored(t *testing.T) {
 // backup save sets.md, side finding 1: COPY wrote "./pi.bck" onto the
 // default volume as a file of that name).
 func TestDispatch_copyHostPathWithoutHost(t *testing.T) {
+	t.Parallel()
 	d, c := newTestDispatcher(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -636,6 +656,7 @@ func TestDispatch_copyHostPathWithoutHost(t *testing.T) {
 // subtask 11). VMS 7.1 showed RMS$_FUL with no STV, and CREATE's file made and
 // then WRITEERR (testdata/err113's FULL; subtask 13c).
 func TestConsoleCopy_deviceFull(t *testing.T) {
+	t.Parallel()
 	d, c, _ := newCommandDispatcher(t)
 	mountFreshContainerSized(t, c, "DUA0", 400)
 
@@ -669,6 +690,7 @@ func TestConsoleCopy_deviceFull(t *testing.T) {
 // enough fails at its open as one on a full volume does, leaving no file, where
 // plain COPY makes the file in pieces.
 func TestConsoleCopy_contiguous(t *testing.T) {
+	t.Parallel()
 	d, c, buf := newCommandDispatcher(t)
 	mountFreshContainerSized(t, c, "DUA0", 400)
 

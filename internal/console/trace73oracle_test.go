@@ -5,6 +5,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // Phase 73's probe of the trace trap (testdata/trace73, docs/planning/PHASE-73 -
@@ -68,6 +70,9 @@ func trace73Console(t *testing.T) func(string) string {
 // without traceback (TRACE73NT, its dump by excmsgMatch's rules) and with
 // /DEBUG's lines (TRACE73D run /NODEBUG).
 func TestTrace73Oracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	dispatch := trace73Console(t)
 
 	type run struct {

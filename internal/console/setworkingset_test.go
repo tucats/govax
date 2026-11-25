@@ -7,6 +7,7 @@ import (
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
 	"github.com/tucats/govax/internal/machine"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -40,6 +41,9 @@ func wsDispatcher(t *testing.T) (*console.Console, func(string) string) {
 // the message for a value cut back, /NOADJUST, and F$GETJPI's view of the
 // result, in process 1 and in a subprocess, which has values of its own.
 func TestSetWorkingSet(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, dispatch := wsDispatcher(t)
 	p := c.ProcessOne().Process
 
@@ -92,6 +96,9 @@ func TestSetWorkingSet(t *testing.T) {
 // TestSetWorkingSetPaging: with paging on, the working set list follows
 // the default SET WORKING_SET gives it.
 func TestSetWorkingSetPaging(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	setSetting(t, machine.PagingSetting, "true")
 	setSetting(t, "vax.sysgen.pql_dwsdefault", "60")
 

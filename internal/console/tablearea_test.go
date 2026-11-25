@@ -6,6 +6,7 @@ import (
 
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/machine"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vm"
 )
 
@@ -59,6 +60,9 @@ func areaPages(t *testing.T, c *Console, label string, sp *corevms.ProcessSpace)
 // area's end, where P0 and P1 both meet SS$_VASFULL; and P1 into P0's,
 // past /P1.
 func TestTableAreaOnDemand(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	withSettings(t, map[string]string{machine.PagingSetting: "true"})
 
 	c := newServiceConsole(t)
@@ -197,6 +201,9 @@ func TestTableAreaOnDemand(t *testing.T) {
 // pages left without, until the pool hands them out again and
 // AllocateS0 backs them.
 func TestTableAreaNewProcess(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	withSettings(t, map[string]string{machine.PagingSetting: "true"})
 
 	c := newServiceConsole(t)

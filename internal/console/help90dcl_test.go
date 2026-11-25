@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -70,6 +71,7 @@ func help90DCLPart(lines []string, from, to string) []string {
 // procedure writes is held to VMS 7.1's log line for line, file IDs and
 // times masked.
 func TestHelp90DCLOracle(t *testing.T) {
+	t.Parallel()
 	d, c, buf := help90Volume(t)
 
 	// Part A makes the libraries.
@@ -209,6 +211,7 @@ func help90DCLVolume(t *testing.T) (*Dispatcher, *Console, *bytes.Buffer) {
 // at "Topic?" ends HELP (round 2's terminal session, which internal/help's
 // TestHelp90Terminal holds the Session to). A Ctrl/Z ends it at once.
 func TestHelp90DCLTerminal(t *testing.T) {
+	t.Parallel()
 	d, c, buf := help90DCLVolume(t)
 
 	c.In = strings.NewReader("Parameters\n\n\n")
@@ -248,6 +251,7 @@ func TestHelp90DCLTerminal(t *testing.T) {
 // TestHelp90DCLMessages: the qualifiers that wait for a later phase, no
 // library at all, and a library whose file isn't a help library.
 func TestHelp90DCLMessages(t *testing.T) {
+	t.Parallel()
 	d, _, buf := help90DCLVolume(t)
 
 	if err := d.Dispatch("LIBRARY/CREATE/TEXT H90T T1,T2"); err != nil {
@@ -283,6 +287,7 @@ func TestHelp90DCLMessages(t *testing.T) {
 // (CLEAR_SCREEN), or not (SCROLL), and a display longer than the screen
 // stops for RETURN.
 func TestHelp90DCLPage(t *testing.T) {
+	t.Parallel()
 	d, c, buf := help90DCLVolume(t)
 
 	const clear = "\x1b[H\x1b[2J"
@@ -335,6 +340,7 @@ func TestHelp90DCLPage(t *testing.T) {
 // reads govax's own HELPLIB.HLB, built into it: its HELP topic, the list
 // of its topics, and the Topic? prompt.
 func TestHelp90DCLBuiltIn(t *testing.T) {
+	t.Parallel()
 	d, _, buf := newCommandDispatcher(t)
 
 	if err := d.Dispatch("HELP"); err != nil {
@@ -352,6 +358,9 @@ func TestHelp90DCLBuiltIn(t *testing.T) {
 // subprocess's own user libraries: SPAWN copies the process's logical
 // names, HLP$LIBRARY among them.
 func TestHelp90DCLSubprocess(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, _, buf := shareFindConsole(t, false)
 
 	commands := []string{"SET DEFAULT DUA1:[000000]"}

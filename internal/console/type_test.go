@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/dclcmd"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmserrors"
 	"github.com/tucats/ods2/ondisk"
 	"github.com/tucats/ods2/volume"
@@ -60,6 +61,7 @@ func createConsoleTestFileWithContent(t *testing.T, vol *volume.Volume, name, co
 // happy path: typing an existing file prints its content to the console's
 // output stream.
 func TestConsoleType_printsFileContent(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -87,6 +89,7 @@ func TestConsoleType_printsFileContent(t *testing.T) {
 // device is reported as SS_DEVNOTMOUNT, matching Console.Delete's own
 // status for the same underlying condition.
 func TestConsoleType_notMounted(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 
 	err := c.cmd().Type("DUB0:FOO.TXT", false, false)
@@ -113,6 +116,7 @@ func isTypeSearchFail(err error) bool {
 // 7.3's TYPE showed it (testdata/dcl50's round 1); a directory that
 // isn't there is RMS$_DNF.
 func TestConsoleType_notFound(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -135,6 +139,7 @@ func TestConsoleType_notFound(t *testing.T) {
 // every file it matches, each under a heading of its name, as VMS 7.1's
 // TYPE did (testdata/bat98, Phase 98).
 func TestConsoleType_wildcard(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -166,6 +171,7 @@ func TestConsoleType_wildcard(t *testing.T) {
 // reported as CLI_BADFILESPEC, matching Console.Delete/Console.Directory's
 // own catch-all status for the same underlying condition.
 func TestConsoleType_badFileSpec(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -184,6 +190,7 @@ func TestConsoleType_badFileSpec(t *testing.T) {
 // the DCL grammar (internal/bootdata/files/evax.dcl's type verb) into the
 // g.Bind("TYPE", ...) closure this subtask added.
 func TestDispatch_typeViaDCL(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	g := loadEvaxGrammar(t)
 	d := NewDispatcher(c, g)
@@ -214,6 +221,7 @@ func TestDispatch_typeViaDCL(t *testing.T) {
 // after it fails as a missing required argument, matching the grammar's own
 // /prompt="File specification" on SPEC.
 func TestDispatch_typeRequiresSpec(t *testing.T) {
+	t.Parallel()
 	d, _ := newTestDispatcher(t)
 
 	if err := d.Dispatch("TYPE"); err == nil {
@@ -225,6 +233,7 @@ func TestDispatch_typeRequiresSpec(t *testing.T) {
 // abbreviation -- no other verb in this grammar starts with those letters)
 // resolves to the same TYPE verb as the fully spelled-out form.
 func TestDispatch_typeAbbreviated(t *testing.T) {
+	t.Parallel()
 	d, c := newTestDispatcher(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -261,6 +270,7 @@ func writeHostTextFile(t *testing.T, name, content string) string {
 // line by line, a CR before each LF dropped and a last line with no LF
 // still a line.
 func TestConsoleType_hostPath(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	path := writeHostTextFile(t, "notes.txt", "first\r\nsecond\nlast")
 
@@ -276,6 +286,9 @@ func TestConsoleType_hostPath(t *testing.T) {
 // TestConsoleType_hostBareName: with the default directory not on a
 // mounted volume, a bare name is a host file.
 func TestConsoleType_hostBareName(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, buf := newTestConsole(t)
 	path := writeHostTextFile(t, "BARE.TXT", "bare host file\n")
 	t.Chdir(filepath.Dir(path))
@@ -292,6 +305,9 @@ func TestConsoleType_hostBareName(t *testing.T) {
 // TestConsoleType_hostForced: with SET DEFAULT on a volume, a bare name is
 // a volume file, and /HOST makes it a host file instead.
 func TestConsoleType_hostForced(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, buf := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -331,6 +347,7 @@ func TestConsoleType_hostForced(t *testing.T) {
 // TestConsoleType_hostNotFound: a host file that doesn't exist is
 // SEARCHFAIL, as a volume file is.
 func TestConsoleType_hostNotFound(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 
 	path := filepath.Join(t.TempDir(), "missing.txt")
@@ -344,6 +361,7 @@ func TestConsoleType_hostNotFound(t *testing.T) {
 // TestConsoleType_hostPaged: TYPE/PAGE pages a host file as it does a
 // volume file.
 func TestConsoleType_hostPaged(t *testing.T) {
+	t.Parallel()
 	c, buf := pagedConsole(t, 5, 0, "q\n")
 	path := writeHostTextFile(t, "long.txt", numberedLines(10))
 
@@ -359,6 +377,7 @@ func TestConsoleType_hostPaged(t *testing.T) {
 
 // TestDispatch_typeHost: /HOST may follow the verb or the file name.
 func TestDispatch_typeHost(t *testing.T) {
+	t.Parallel()
 	for _, form := range []string{"TYPE/HOST %q", "TYPE %q/HOST", "TYPE/PAGE %q/HOST"} {
 		c, buf := newTestConsole(t)
 		d := NewDispatcher(c, loadEvaxGrammar(t))

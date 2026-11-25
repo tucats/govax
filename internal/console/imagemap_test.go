@@ -12,6 +12,7 @@ import (
 	"github.com/tucats/govax/internal/paging"
 	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vm"
 )
 
@@ -174,6 +175,9 @@ func finishMappedImage(t *testing.T, c *console.Console) {
 // file is held (its volume can't be dismounted); and the image runs to
 // its end, after which its sections, and the file, are gone.
 func TestMappedImage(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, d, name, _ := mappedImageConsole(t, "1")
 	env := c.ProcessOne()
 
@@ -279,6 +283,9 @@ func TestMappedImage(t *testing.T) {
 // TestMappedImageOutput: the mapped image's fixups worked: its G^ call
 // of LIB$PUT_OUTPUT says hello.
 func TestMappedImageOutput(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, d, name, out := mappedImageConsole(t, "1")
 
 	startMappedImage(t, c, d, name)
@@ -294,6 +301,9 @@ func TestMappedImageOutput(t *testing.T) {
 // when the page leaves the working set its frame takes the page file as
 // its backing store, not the file, so the change is kept (question 3).
 func TestMappedImageDeposit(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, d, name, _ := mappedImageConsole(t, "1")
 	startMappedImage(t, c, d, name)
 
@@ -341,6 +351,9 @@ func TestMappedImageDeposit(t *testing.T) {
 // (PFCDEFAULT's, the ISD's cluster factor being 0): with the default,
 // the first code page's fault brings in code pages never run.
 func TestMappedImageCluster(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, d, name, _ := mappedImageConsole(t, "")
 	startMappedImage(t, c, d, name)
 

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -165,6 +166,7 @@ func probe50Runner(d *Dispatcher, buf *bytes.Buffer) func(string) []string {
 // console, comparing each case's messages, $STATUS, and value of X with
 // VMS 7.3's.
 func TestProbe50Oracle(t *testing.T) {
+	t.Parallel()
 	d, _, buf := newCommandDispatcher(t)
 	run := probe50Runner(d, buf)
 
@@ -217,6 +219,7 @@ var probe50Differences = map[string]string{}
 // echoed it, and its procedure's lines too; those are left out, and the
 // rest of each command's lines compared.
 func TestProbe50Statuses(t *testing.T) {
+	t.Parallel()
 	procedure, err := os.ReadFile(probe50Procedure)
 	if err != nil {
 		t.Fatal(err)
@@ -306,6 +309,7 @@ func TestProbe50Statuses(t *testing.T) {
 // apostrophe substitution, comments included, then its messages and
 // output.
 func TestProbe50Verify(t *testing.T) {
+	t.Parallel()
 	procedure, err := os.ReadFile(probe50Procedure)
 	if err != nil {
 		t.Fatal(err)
@@ -380,6 +384,9 @@ func probeSections(text, letter string) map[string][]string {
 // 7.3's log line for line, section by section: SET VERIFY, SET PREFIX,
 // and F$VERIFY. The clock is the run's, for SET PREFIX's time.
 func TestProbe50VOracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	logText, err := os.ReadFile("../../testdata/dcl50/vax/probe50v.log")
 	if err != nil {
 		t.Skipf("no VMS log: %v", err)
@@ -470,6 +477,9 @@ func dataOutcomes(lines []string) []string {
 // writes with VMS 7.3's log: SYS$INPUT from a procedure, DECK, and EOD
 // (subtask 16).
 func TestProbe50IOracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	logText, err := os.ReadFile("../../testdata/dcl50/vax/probe50i.log")
 	if err != nil {
 		t.Skipf("no VMS log: %v", err)
@@ -586,6 +596,7 @@ func maskVolumeDetails(line string) string {
 // VMS 7.3's log line for line, section by section: OPEN, READ, WRITE, and
 // CLOSE.
 func TestProbe50FOracle(t *testing.T) {
+	t.Parallel()
 	logText, err := os.ReadFile("../../testdata/dcl50/vax/probe50f.log")
 	if err != nil {
 		t.Skipf("no VMS log: %v", err)
@@ -707,6 +718,7 @@ func probe50QResults(text string) []string {
 // session (vax/probe50q.log), and the log probe50p.com wrote with VMS's
 // (vax/probe50p.log), line for line.
 func TestProbe50QOracle(t *testing.T) {
+	t.Parallel()
 	session, err := os.ReadFile("../../testdata/dcl50/vax/probe50q.log")
 	if err != nil {
 		t.Skipf("no VMS session: %v", err)

@@ -15,6 +15,7 @@ import (
 // up, accessed, read, written, and read again with the disk's $QIO
 // functions.
 func TestDiskQIO_assembledProgram(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 

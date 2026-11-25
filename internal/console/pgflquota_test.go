@@ -11,6 +11,7 @@ import (
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/registers"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmsdef"
 )
@@ -85,6 +86,9 @@ size:	.long	512*100
 // TestPageFileQuotaServices runs quotaSource with paging on and checks the
 // job's count, each service's status and range, and the process's peak.
 func TestPageFileQuotaServices(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	pageFileSettings(t)
 
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
@@ -279,6 +283,9 @@ func finishImage(t *testing.T, c *console.Console) {
 // pool, and go back to it when the subprocess is deleted. Its peak is its
 // own.
 func TestPageFileQuotaSubprocess(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	pageFileSettings(t)
 
 	c, _ := scheduledConsole(t, longQuantum, brbSelf)
@@ -344,6 +351,9 @@ func TestPageFileQuotaSubprocess(t *testing.T) {
 // TestPageFileQuotaPagingOff: with paging off, nothing is charged and
 // $EXPREG makes every page.
 func TestPageFileQuotaPagingOff(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	setSetting(t, machine.PagingSetting, "false")
 
 	c, _ := scheduledConsole(t, longQuantum, brbSelf)
@@ -366,6 +376,9 @@ func TestPageFileQuotaPagingOff(t *testing.T) {
 // wants to write is reported full on the console, once, and the pages
 // it can't take stay on the modified list.
 func TestPageFileFullNotice(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	pageFileSettings(t)
 	setSetting(t, "vax.sysgen.paging.size", "20")
 
@@ -402,6 +415,9 @@ func TestPageFileFullNotice(t *testing.T) {
 // TestMemoryExhaustedNotice: a fault that finds no free frame tells the
 // console, once until a fault succeeds again.
 func TestMemoryExhaustedNotice(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	pageFileSettings(t)
 
 	c, out := scheduledConsole(t, longQuantum, brbSelf)

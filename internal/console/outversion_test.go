@@ -14,6 +14,7 @@ import (
 // OPEN/WRITE, @/OUTPUT=, DIRECTORY/OUTPUT=, MACRO/OBJECT=,
 // LINK/EXECUTABLE=, and LIBRARY/CREATE keep a version given as well.
 func TestOutputVersion(t *testing.T) {
+	t.Parallel()
 	host := filepath.Join(t.TempDir(), "host.txt")
 	if err := os.WriteFile(host, []byte("from the host\n"), 0o600); err != nil {
 		t.Fatal(err)

@@ -14,6 +14,7 @@ import (
 	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/respath"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // This file is the FORTRAN milestone's test (docs/planning/PHASE-86 - FORTRAN milestone.md).
@@ -80,6 +81,9 @@ func dungeonSources(t *testing.T) map[string]string {
 // make the same MACRO files. Each compiler setting a program might use must also get
 // through FORTRAN and MACRO without an error.
 func TestDungeonCompiles(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	sources := dungeonSources(t)
 
 	d, c, buf := dungeonConsole(t, false)
@@ -234,6 +238,9 @@ func checkDungeonRun(t *testing.T, out string, moves int) {
 // data on a volume, by the logical names the kit gives; a program's RMS reaches only
 // volume files.
 func TestDungeonRuns(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	sources := dungeonSources(t)
 	dir := dungeonSource()
 
@@ -424,6 +431,8 @@ const dungeonGameSHA = "a4e1c720a3c32d67ad40110986492a42192101fb6f68106d3d8ca1a2
 // the same every time. On a volume a game is also saved, and restored by another run.
 // fixtime.for fixes the seed.
 func TestDungeonMilestone(t *testing.T) {
+	testproc.Parallel(t)
+
 	sources := dungeonSources(t)
 	kit := filepath.Join("..", "..", "testdata", "dungeon86")
 
@@ -446,6 +455,10 @@ func TestDungeonMilestone(t *testing.T) {
 					map[bool]string{false: "nopaging", true: "paging"}[paging] + "/" + mode.name
 
 				t.Run(name, func(t *testing.T) {
+					if testproc.Isolate(t) {
+						return
+					}
+
 					var (
 						d   *Dispatcher
 						c   *Console

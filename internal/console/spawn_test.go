@@ -11,6 +11,7 @@ import (
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/machine"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -127,6 +128,9 @@ func runParent(t *testing.T, name, source string) []string {
 // the subprocess has ended, its final status (the command's) in
 // completion-status-address.
 func TestSpawn_wait(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	got := runParent(t, "spawnwait", spawnWaitSource)
 
 	want := []string{"FROM THE CHILD", "Parent: the child has ended", "Parent: its status is SS$_NORMAL"}
@@ -143,6 +147,9 @@ func TestSpawn_wait(t *testing.T) {
 // gives the CPU up after the command (dcllend.go), so the parent goes on
 // before the subprocess logs out, and the AST comes after.
 func TestSpawn_noWait(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	got := runParent(t, "spawnnowait", spawnNoWaitSource)
 
 	want := []string{"FROM THE CHILD", "Parent: going on", "Parent: AST", "Parent: event flag set"}
@@ -157,6 +164,9 @@ func TestSpawn_noWait(t *testing.T) {
 // mode, not CONFINE, not executive mode); CLI$M_NOLOGNAM; LIB$_INVARG
 // for an undefined flag; LIB$_NOCLI from a process with no CLI.
 func TestSpawn_rules(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, _ := scheduledConsole(t, longQuantum, brbSelf)
 	one := c.RTL
 
@@ -234,6 +244,9 @@ func TestSpawn_rules(t *testing.T) {
 // TestSpawn_schedulerOff: with vax.process.scheduler off, LIB$SPAWN is
 // unsupported, as $CREPRC is.
 func TestSpawn_schedulerOff(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, _ := scheduledConsole(t, longQuantum, brbSelf)
 	c.RTL.ProcessSettings.Scheduler = false
 
@@ -248,6 +261,9 @@ func TestSpawn_schedulerOff(t *testing.T) {
 // one that runs, and logs out, before the next command (dcllend.go), and
 // says so; SPAWN/INPUT reads a file of commands.
 func TestSpawnCommand(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
 	echo := buildImage(t, c, "echo", echoSource)
 	child := buildChildImage(t, c)
@@ -313,6 +329,9 @@ func TestSpawnCommand(t *testing.T) {
 // CLI's messages and its images' LIB$PUT_OUTPUT alike, not on the
 // terminal.
 func TestSpawn_outputFile(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
 	echo := buildImage(t, c, "echo", echoSource)
 	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
@@ -355,6 +374,9 @@ func TestSpawn_outputFile(t *testing.T) {
 // finds those first); and its DCL, its images, and WRITE put records on the
 // log's one stream, in order.
 func TestSpawn_permanentFiles(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
 	echo := buildImage(t, c, "echo", echoSource)
 	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))

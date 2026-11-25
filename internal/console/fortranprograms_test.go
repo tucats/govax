@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // The FORTRAN end-to-end harness (docs/planning/PHASE-75 - FORTRAN first
@@ -124,6 +125,8 @@ func maskCodeAddresses(text string) string {
 }
 
 func TestFortranPrograms(t *testing.T) {
+	testproc.Parallel(t)
+
 	sources, err := filepath.Glob(filepath.Join(fortranPrograms, "*.for"))
 	if err != nil || len(sources) == 0 {
 		t.Fatalf("no programs in %s (%v)", fortranPrograms, err)
@@ -151,6 +154,8 @@ var fortran90PagingPrograms = []string{"accounts", "advance", "allocs", "allocst
 // corpus's harness does, because each program is assembled, linked against
 // FTNRTL, and run on the machine.
 func TestFortran90Programs(t *testing.T) {
+	testproc.Parallel(t)
+
 	sources, err := filepath.Glob(filepath.Join(fortran90Programs, "*.f90"))
 	if err != nil || len(sources) == 0 {
 		t.Fatalf("no programs in %s (%v)", fortran90Programs, err)
@@ -164,6 +169,38 @@ func TestFortran90Programs(t *testing.T) {
 // recursiveModes, and holds what each prints to its .out file and to what it
 // printed the other ways.
 func runFortranCorpus(t *testing.T, sources, pagingPrograms []string) {
+	t.Helper()
+
+	// The corpus is run in shards of programs, each a subtest in a process of
+	// its own (internal/testproc), so the shards run in parallel. A shard runs
+	// its programs in every mode, as the whole corpus once did, so what a
+	// program printed in one mode is still compared with what it printed in
+	// the others. A shard is named for its first and last programs.
+	slices.SortFunc(sources, func(a, b string) int {
+		return strings.Compare(filepath.Base(a), filepath.Base(b))
+	})
+
+	for shard := range slices.Chunk(sources, corpusShardSize) {
+		first := strings.TrimSuffix(filepath.Base(shard[0]), filepath.Ext(shard[0]))
+		last := strings.TrimSuffix(filepath.Base(shard[len(shard)-1]), filepath.Ext(shard[len(shard)-1]))
+
+		t.Run(first+"-"+last, func(t *testing.T) {
+			if testproc.Isolate(t) {
+				return
+			}
+
+			runCorpusShard(t, shard, pagingPrograms)
+		})
+	}
+}
+
+// corpusShardSize is how many programs a shard of a corpus runs: enough that
+// a shard's consoles (one per loader and mode) cost little beside its
+// programs, few enough that the shards spread over the machine's cores.
+const corpusShardSize = 16
+
+// runCorpusShard runs sources in every loader and compiler mode.
+func runCorpusShard(t *testing.T, sources, pagingPrograms []string) {
 	t.Helper()
 
 	eachLoader(t, func(t *testing.T, paging bool) {
@@ -302,6 +339,9 @@ func deleteFilesAfter(t *testing.T, d *Dispatcher, name string) {
 // no module file is left from the order before. Without compiles.txt, one
 // FORTRAN command compiles every file.
 func TestFortranModules(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	programs, err := filepath.Glob(filepath.Join(fortranPrograms, "modules", "*"))
 	if err != nil || len(programs) == 0 {
 		t.Fatalf("no programs in %s (%v)", fortranPrograms, err)
@@ -313,6 +353,9 @@ func TestFortranModules(t *testing.T) {
 // TestFortran90Modules is TestFortranModules for the Fortran 90 corpus's
 // programs of several files, whose sources may be of either form (.f90 or .for).
 func TestFortran90Modules(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	programs, err := filepath.Glob(filepath.Join(fortran90Programs, "modules", "*"))
 	if err != nil || len(programs) == 0 {
 		t.Fatalf("no programs in %s (%v)", fortran90Programs, err)
@@ -459,6 +502,9 @@ func fortranModules(t *testing.T, programs []string, paging bool, qualifier stri
 // program's own contribution to the overlaid section, which comes first,
 // mustn't hide the values.
 func TestFortranBlockDataLibrary(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	eachLoader(t, func(t *testing.T, paging bool) {
 		d, c, buf := shareFindConsole(t, paging)
 
@@ -511,6 +557,9 @@ func TestFortranBlockDataLibrary(t *testing.T) {
 // names, which LINK must report, though no code calls it (section 4.1): a
 // program would otherwise run with its common block's initial values missing.
 func TestFortranMissingBlockData(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, c, buf := shareFindConsole(t, false)
 
 	lines := []string{"      PROGRAM NOBD", "      EXTERNAL GONE", "      COMMON /TABLE/ I", "      PRINT *, I", "      END"}
@@ -533,6 +582,9 @@ func TestFortranMissingBlockData(t *testing.T) {
 // of a common block, which one compilation would refuse: the last module
 // linked has it.
 func TestFortranTwoModulesInitialize(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, c, buf := shareFindConsole(t, false)
 
 	files := map[string][]string{

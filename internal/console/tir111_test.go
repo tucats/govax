@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // tir111Differences are the probe's modules whose objects govax's MACRO doesn't make as
@@ -23,6 +24,9 @@ var tir111Differences = map[string]string{
 // tir111Differences. TIRX and TIRR, whose errors are on purpose, are
 // TestTIR111ErrorObjects's.
 func TestTIR111Objects(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	dir := filepath.Join("..", "..", "testdata", "tir111")
 
 	sources, err := filepath.Glob(filepath.Join(dir, "tir*.mar"))
@@ -139,6 +143,9 @@ func firstRecordDifference(got, want [][]byte) string {
 // them: DIRSYNX on each string directive with nothing after it (TIRX), and on TIRR's
 // .LONG R1[2]. (VMS's MACRO writes an object for such a module, as govax's doesn't.)
 func TestTIR111Errors(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	dir := filepath.Join("..", "..", "testdata", "tir111")
 	d, _, buf := dungeonConsole(t, false)
 
@@ -176,6 +183,9 @@ func TestTIR111Errors(t *testing.T) {
 // a string directive with nothing after it as an empty string, and .LONG R1[2] one
 // longword of 0, a register name being no data item (subtask 13c).
 func TestTIR111ErrorObjects(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	dir := filepath.Join("..", "..", "testdata", "tir111")
 	d, c, buf := dungeonConsole(t, false)
 

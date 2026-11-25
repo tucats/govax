@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/lbr"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // fcalc as a tool (docs/planning/PHASE-111 - Fortran 90 milestone.md,
@@ -34,6 +35,9 @@ func runShippedFcalc(c *Console, run func(string) string, input string) string {
 // TestFcalcTry is a tool for writing fcalc's help: FCALC_TRY names a file
 // of fcalc's lines, which the shipped image runs, echoing each.
 func TestFcalcTry(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	file := os.Getenv("FCALC_TRY")
 	if file == "" {
 		t.Skip("FCALC_TRY names no file")
@@ -128,6 +132,9 @@ func fcalcHelpSession(topic helpTopic) (typed, want []string) {
 // into the help file from fcalc's output instead (rebuild the help libraries
 // after: go generate ./internal/bootdata).
 func TestFcalcHelpExamples(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	data, err := os.ReadFile(fcalcHelpFile)
 	if err != nil {
 		t.Fatal(err)
@@ -214,6 +221,7 @@ const fcalcHelpLimit = 40
 // TestFcalcHelpTopicsShort holds every topic of HELP FCALC but the examples
 // to fcalcHelpLimit lines.
 func TestFcalcHelpTopicsShort(t *testing.T) {
+	t.Parallel()
 	data, err := os.ReadFile(fcalcHelpFile)
 	if err != nil {
 		t.Fatal(err)
@@ -242,6 +250,9 @@ func TestFcalcHelpTopicsShort(t *testing.T) {
 // it, which runs a script as the milestone's build does, and with INSTALL
 // makes a new version of SYS$SYSTEM:FCALC.EXE, leaving nothing else behind.
 func TestFcalcOnSystemVolume(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, run := fcalcToolConsole(t)
 
 	quietly(t, run, "@SYS$MANAGER:SYLOGIN")

@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/isam"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // idx88Differences are the cases of testdata/idx88's run in which govax's output
@@ -34,6 +35,9 @@ var idx88Differences = map[int]string{
 // after a split or a deletion VMS leaves stale bytes there that govax's writer
 // doesn't reproduce (the phase doc's answer 3, and "What the splits settled").
 func TestIdx88Oracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	data, err := os.ReadFile(filepath.Join("..", "..", "testdata", "idx88", "vax", "idx88-vax.txt"))
 	if err != nil {
 		t.Fatal(err)

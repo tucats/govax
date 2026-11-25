@@ -11,6 +11,7 @@ import (
 	"github.com/tucats/govax/internal/console/consoletest"
 	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/paging"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // Phase 64's subtask 6 (docs/planning/PHASE-64 - page file.md): the page file
@@ -39,6 +40,9 @@ func mountPageFileVolume(t *testing.T, c *console.Console, device string) {
 // dismounted, and DISMOUNT says so, apart from users' open files; once the
 // page file is closed, as at the session's end, it can.
 func TestDismountPageFileVolume(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	pageFileSettings(t)
 	setSetting(t, "vax.sysgen.paging.file", "DUA1:[000000]PAGEFILE.SYS")
 	setSetting(t, "vax.sysgen.paging.size", "200")
@@ -94,6 +98,9 @@ func TestDismountPageFileVolume(t *testing.T) {
 // on the modified list, their frames are now on the free list, backed by
 // page file blocks that hold their contents.
 func TestReclaimerPageFile(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	setSetting(t, machine.PagingSetting, "true")
 	setSetting(t, "vax.sysgen.pql_dwsdefault", "30")
 	setSetting(t, "vax.sysgen.pql_dwsquota", "40")
@@ -228,6 +235,9 @@ ret:	.blkl	2
 // when the subprocess has logged out, its job's pool has its charges back
 // and the page file holds only process 1's blocks.
 func TestSubprocessPageFile(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	pageFileSettings(t)
 
 	c, dispatch := wsDispatcher(t)

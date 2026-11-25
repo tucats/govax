@@ -8,6 +8,7 @@ import (
 )
 
 func TestConsoleWriteByteAndReadByte(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	c.ConsoleWriteByte('A')
 
@@ -22,6 +23,7 @@ func TestConsoleWriteByteAndReadByte(t *testing.T) {
 }
 
 func TestConsoleReadByteNoInputSource(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	if got := c.ConsoleReadByte(); got != 0 {
 		t.Errorf("ConsoleReadByte() = %d, want 0 (no In configured)", got)
@@ -29,6 +31,7 @@ func TestConsoleReadByteNoInputSource(t *testing.T) {
 }
 
 func TestConsoleCommandNoDispatcher(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	if got := c.ConsoleCommand("SHOW VERSION"); got != 1 {
 		t.Errorf("ConsoleCommand() = %d, want 1 (no Dispatcher configured)", got)
@@ -36,6 +39,7 @@ func TestConsoleCommandNoDispatcher(t *testing.T) {
 }
 
 func TestConsoleCommandDispatches(t *testing.T) {
+	t.Parallel()
 	d, c := newTestDispatcher(t)
 	c.Dispatcher = d
 
@@ -49,6 +53,7 @@ func TestConsoleCommandDispatches(t *testing.T) {
 }
 
 func TestConsoleSystemServiceDelegatesToRTL(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 
 	// Build a real one-argument VAX argument list (SYS$SETEF's own shape)
@@ -82,6 +87,7 @@ func TestConsoleSystemServiceDelegatesToRTL(t *testing.T) {
 }
 
 func TestConsoleShimDelegatesToRTL(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 
 	r0, handled, err := c.Shim(32) // DECC$TIME
@@ -99,6 +105,7 @@ func TestConsoleShimDelegatesToRTL(t *testing.T) {
 }
 
 func TestConsoleReInitReplacesRTLEnvironment(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	first := c.RTL
 

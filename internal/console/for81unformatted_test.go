@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // unformattedCase is one of testdata/for81's cases on unformatted sequential
@@ -164,6 +165,9 @@ func unformattedItems(lengths, variable string) string {
 // returned, and the records left in the file (their lengths, and the first 32
 // bytes VMS's run shows).
 func TestFor81UnformattedOracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	text, err := os.ReadFile(filepath.Join("..", "..", "testdata", "for81", "vax", "for81-vax.txt"))
 	if err != nil {
 		t.Fatal(err)
@@ -311,6 +315,9 @@ func showRecords(records []unformattedRecord) string {
 // END=, or IOSTAT= says of each failure: FORRTL's messages, naming the unit and
 // file, with RMS's status only where RMS reported the failure.
 func TestFortranUnformattedSignals(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, c, buf := shareFindConsole(t, false)
 
 	unformatted := "OPEN (10, FILE='P.DAT', STATUS='UNKNOWN', FORM='UNFORMATTED'"

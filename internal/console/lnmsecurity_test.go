@@ -14,6 +14,7 @@ import (
 // outside the system category needs read access to see a table's profile,
 // which READALL gives and SECURITY doesn't.
 func TestShowSecurityTables(t *testing.T) {
+	t.Parallel()
 	d, c, buf := newCommandDispatcher(t)
 
 	if _, _, err := c.RTL.Logicals.CreateTableWith("PRIV94_PT", lnm.SystemDirectoryName, lnm.User, 0,

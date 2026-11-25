@@ -17,6 +17,7 @@ import (
 // with RMS$_FNF, then NOFILES), and $STATUS after each. The [B69] tree is
 // restored from B69.BCK first, as the probe made it.
 func TestBackupCompareOracle(t *testing.T) {
+	t.Parallel()
 	d, _, output := mountBackupSets(t)
 
 	if err := d.Dispatch("BACKUP [SETS]B69.BCK/SAVE_SET [*...]/BY_OWNER=ORIGINAL"); err != nil {
@@ -76,6 +77,7 @@ func TestBackupCompareOracle(t *testing.T) {
 // names, and a file whose blocks are past the end of the one compared
 // with differs in each of them.
 func TestBackupCompareSelections(t *testing.T) {
+	t.Parallel()
 	d, _, output := mountBackupSets(t)
 
 	if err := d.Dispatch("BACKUP [SETS]PI.BCK/SAVE_SET [CMP]"); err != nil {
@@ -121,6 +123,7 @@ func TestBackupCompareSelections(t *testing.T) {
 // save set, and a host file changed afterwards differs in the piece the
 // change is in.
 func TestBackupCompareHost(t *testing.T) {
+	t.Parallel()
 	d, c, buf := newCommandDispatcher(t)
 	mountFreshContainer(t, c, "DUA0")
 

@@ -53,6 +53,7 @@ func createConsoleTestFile(t *testing.T, vol *volume.Volume, name string) {
 // device is reported as SS_DEVNOTMOUNT, matching Console.Directory's own
 // status for the same underlying condition.
 func TestConsoleDelete_notMounted(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 
 	err := c.cmd().Delete([]string{"DUB0:FOO.TXT;1"}, false)
@@ -70,6 +71,7 @@ func TestConsoleDelete_notMounted(t *testing.T) {
 // refusal to default to "the newest version" the way DIRECTORY would.
 // "NAME;" is the highest version, as on VMS.
 func TestConsoleDelete_versionRequired(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -93,6 +95,7 @@ func isDeleteSearchFail(err error) bool {
 // is DELETE's SEARCHFAIL with the name expanded, then RMS$_FNF, as VMS
 // 7.3 showed it (testdata/dcl50's rounds 4 and 6).
 func TestConsoleDelete_notFound(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -108,6 +111,7 @@ func TestConsoleDelete_notFound(t *testing.T) {
 // reported as CLI_BADFILESPEC, matching Console.SetDefault/Console.
 // Directory's own status for the same underlying condition.
 func TestConsoleDelete_badFileSpec(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -126,6 +130,7 @@ func TestConsoleDelete_badFileSpec(t *testing.T) {
 // removes it from the volume, saying so only with /LOG, as VMS's DELETE
 // does: "%DELETE-I-FILDEL, ... deleted (n blocks)".
 func TestConsoleDelete_removesFileAndPrintsConfirmation(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -158,6 +163,7 @@ func TestConsoleDelete_removesFileAndPrintsConfirmation(t *testing.T) {
 // through the DCL grammar (internal/bootdata/files/evax.dcl's delete verb)
 // into the g.Bind("DELETE", ...) closure this subtask added.
 func TestDispatch_deleteViaDCL(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	g := loadEvaxGrammar(t)
 	d := NewDispatcher(c, g)
@@ -195,6 +201,7 @@ func TestDispatch_deleteViaDCL(t *testing.T) {
 // signs separate them, each takes the defaults the one before it gives,
 // and one that fails is reported without stopping the others.
 func TestDispatch_deleteNullVersionAndList(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	g := loadEvaxGrammar(t)
 	d := NewDispatcher(c, g)
@@ -259,6 +266,7 @@ func TestDispatch_deleteNullVersionAndList(t *testing.T) {
 // /prompt="File specification" on SPEC -- unlike DIRECTORY's SPEC, DELETE
 // has no sensible "delete everything" default to fall back to.
 func TestDispatch_deleteRequiresSpec(t *testing.T) {
+	t.Parallel()
 	d, _ := newTestDispatcher(t)
 
 	if err := d.Dispatch("DELETE"); err == nil {
@@ -271,6 +279,7 @@ func TestDispatch_deleteRequiresSpec(t *testing.T) {
 // DEFINE, which diverges at the third character) resolves to the same
 // DELETE verb as the fully spelled-out form.
 func TestDispatch_deleteAbbreviated(t *testing.T) {
+	t.Parallel()
 	d, c := newTestDispatcher(t)
 	mountFreshContainer(t, c, "DUA0")
 

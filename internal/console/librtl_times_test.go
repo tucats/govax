@@ -16,6 +16,7 @@ import (
 // is 3 hours; plus an hour, 4; times 1.5, 6; minus an hour, 5. Each
 // routine returns LIB$_NORMAL, whose low bit the program tests.
 func TestLibrtlTimeArithmetic(t *testing.T) {
+	t.Parallel()
 	r0, out := runMacroProgram(t, "\t.PSECT\tDATA,NOEXE,WRT,LONG\n"+
 		"HOUR:\t.LONG\t^X9E3B9800,^XFFFFFFF7\n"+ // a delta of one hour
 		"WORK:\t.LONG\t^X9E3B9800,^XFFFFFFF7\n"+
@@ -59,6 +60,7 @@ func TestLibrtlTimeArithmetic(t *testing.T) {
 // codes are LIB$K_HOUR_OF_YEAR (3), LIB$K_DELTA_HOURS (23), and
 // LIB$K_DELTA_DAYS_F (27).
 func TestLibrtlTimeConversion(t *testing.T) {
+	t.Parallel()
 	r0, out := runMacroProgram(t, "\t.PSECT\tDATA,NOEXE,WRT,LONG\n"+
 		"VECTOR:\t.WORD\t1988,1,13,9,13,25,14\n"+
 		"DATE:\t.QUAD\t0\n"+
@@ -115,6 +117,7 @@ func TestLibrtlTimeConversion(t *testing.T) {
 // (47,173 and Wednesday, 3), or 0 if the day-time isn't 3,320,514
 // hundredths (docs/planning/PHASE-56, subtask 4).
 func TestLibrtlDays(t *testing.T) {
+	t.Parallel()
 	r0, out := runMacroProgram(t, "\t.PSECT\tDATA,NOEXE,WRT,LONG\n"+
 		"TIME:\t.ASCID\t/13-JAN-1988 09:13:25.14/\n"+
 		"DATE:\t.QUAD\t0\n"+
@@ -155,6 +158,7 @@ func TestLibrtlDays(t *testing.T) {
 // (LIB$_ILLCOMPONENT, 0x15843C), and FREE zeroes the cell; FREE without
 // an argument frees the static context.
 func TestLibrtlDateContext(t *testing.T) {
+	t.Parallel()
 	r0, _ := runMacroProgram(t, "\t.PSECT\tDATA,NOEXE,WRT,LONG\n"+
 		"CTX:\t.LONG\t0\n"+
 		"COMP:\t.LONG\t12\n"+ // LIB$K_MERIDIEM_INDICATOR
@@ -187,6 +191,7 @@ func TestLibrtlDateContext(t *testing.T) {
 // writes it and LIB$GET_DATE_FORMAT's legible input format with
 // LIB$PUT_OUTPUT (docs/planning/PHASE-56, subtask 6).
 func TestLibrtlDateOutput(t *testing.T) {
+	t.Parallel()
 	v := vmsdef.Time(time.Date(1988, time.September, 21, 23, 24, 0, 0, time.UTC))
 
 	r0, out := runMacroProgram(t, "\t.PSECT\tDATA,NOEXE,WRT,LONG\n"+
@@ -240,6 +245,7 @@ func TestLibrtlDateOutput(t *testing.T) {
 // context's input format: a 12-hour time read back, which LIB$SYS_ASCTIM
 // shows, and the fields it defaulted, the seconds and fraction (0x60).
 func TestLibrtlDateInput(t *testing.T) {
+	t.Parallel()
 	r0, out := runMacroProgram(t, "\t.PSECT\tDATA,NOEXE,WRT,LONG\n"+
 		"CTX:\t.LONG\t0\n"+
 		"INF:\t.LONG\t2\n"+ // LIB$K_INPUT_FORMAT

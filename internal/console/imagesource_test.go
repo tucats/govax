@@ -33,6 +33,7 @@ func checkImageSource(t *testing.T, src corevms.PageSource, want []byte) {
 // blocks read through the source, and while it's held the volume can't
 // be dismounted.
 func TestOpenImage_volume(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -77,6 +78,7 @@ func TestOpenImage_volume(t *testing.T) {
 
 // TestOpenImage_host: a host image is an open host file.
 func TestOpenImage_host(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 
 	host := exeFixturePath(t, "put.exe")

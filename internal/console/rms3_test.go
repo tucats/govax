@@ -193,6 +193,7 @@ func expandedStrings(recs []probeRecord) map[uint32]string {
 // of the oracle's tree and checks the expanded strings name processing
 // gives.
 func TestRMS3Parse_govaxTree(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 	c.HostLibrary = t.TempDir()
 
@@ -261,6 +262,7 @@ func resultantStrings(recs []probeRecord) []string {
 // TestRMS3Search_govaxTree runs the SEARCH probe against a govax-built
 // copy of the oracle's tree and checks what each search returns.
 func TestRMS3Search_govaxTree(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 	c.HostLibrary = t.TempDir()
 
@@ -337,6 +339,7 @@ func probeSummary(recs []probeRecord) []string {
 // against a govax-built copy of the oracle's tree and checks the
 // statuses and resultant strings that don't depend on VMS's details.
 func TestRMS3OpenCreate_govaxTree(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		probe string
 		want  []string
@@ -401,6 +404,7 @@ func TestRMS3OpenCreate_govaxTree(t *testing.T) {
 // the oracle's tree, and the CREATE probe's read-back, and checks the
 // XABs that don't depend on VMS's details.
 func TestRMS3XAB_govaxTree(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 	c.HostLibrary = t.TempDir()
 

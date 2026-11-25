@@ -6,6 +6,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // Phase 113's debugger round (docs/planning/PHASE-113 - Fortran errata.md,
@@ -24,6 +26,9 @@ var dbg113Sessions = []string{
 }
 
 func TestDbg113Procedure(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	dir := filepath.Join("..", "..", "testdata", "dbg113")
 	_, dispatch := wsDispatcher(t)
 	dsk := filepath.Join(t.TempDir(), "dbg113.dsk")

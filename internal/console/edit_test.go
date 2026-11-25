@@ -10,6 +10,7 @@ import (
 	"github.com/tucats/gopackages/app-cli/settings"
 	"github.com/tucats/govax/internal/dclcmd"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // editConsole is a console with a fresh volume as the default device, and a
@@ -81,6 +82,9 @@ func editLoad(t *testing.T, d *Dispatcher, name, text, qualifiers string) {
 // TestEditKeepsRecordLayout has an editor append a line to a file of each kind,
 // and checks the new version's records and that its layout is the old one's.
 func TestEditKeepsRecordLayout(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, c, buf, _ := editConsole(t)
 
 	useEditor(t, `printf 'SHORT\n' >> "$1"`)
@@ -162,6 +166,9 @@ func TestEditKeepsRecordLayout(t *testing.T) {
 // at its end may go, and anything else means no new version, with the user's text
 // kept where the message says.
 func TestEditFixedLines(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, c, buf, scratch := editConsole(t)
 
 	editLoad(t, d, "F.FOR", "      PROG\nA\n", "/RECORD_FORMAT=FIXED/RECORD_SIZE=10")
@@ -218,6 +225,9 @@ func TestEditFixedLines(t *testing.T) {
 
 // TestEditLeavesFileAlone is every way out of the editor that makes no new version.
 func TestEditLeavesFileAlone(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, c, buf, scratch := editConsole(t)
 
 	editLoad(t, d, "F.TXT", "ONE\n", "/RECORD_FORMAT=VARIABLE")
@@ -300,6 +310,9 @@ func TestEditLeavesFileAlone(t *testing.T) {
 // TestEditNewFile is a file that doesn't exist: made as a text file if the editor
 // writes it, and not otherwise.
 func TestEditNewFile(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, c, buf, _ := editConsole(t)
 
 	// The editor has no file to start with, as vi would show for a new one.
@@ -336,6 +349,9 @@ func TestEditNewFile(t *testing.T) {
 // under the scratch area, with the name in lowercase so an editor knows its type,
 // and %file wherever the command says.
 func TestEditScratchName(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, _, buf, scratch := editConsole(t)
 
 	editLoad(t, d, "LOGIN.COM", "$ EXIT\n", "/RECORD_FORMAT=VARIABLE")
@@ -364,6 +380,9 @@ func TestEditScratchName(t *testing.T) {
 
 // TestEditRefused is what never gets as far as an editor.
 func TestEditRefused(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, c, _, _ := editConsole(t)
 
 	// An editor that writes would make a version if EDIT got that far.
@@ -407,6 +426,9 @@ func TestEditRefused(t *testing.T) {
 
 // TestEditReadOnlyVolume finds out before anyone types anything.
 func TestEditReadOnlyVolume(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, c, _, _ := editConsole(t)
 
 	useEditor(t, `exit 9`)
@@ -438,6 +460,9 @@ func TestEditReadOnlyVolume(t *testing.T) {
 
 // TestEditKeepsProtection is the old version's protection on the new one.
 func TestEditKeepsProtection(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, _, buf, _ := editConsole(t)
 
 	editLoad(t, d, "A.TXT", "ONE\n", "/RECORD_FORMAT=VARIABLE")
@@ -471,6 +496,9 @@ func TestEditKeepsProtection(t *testing.T) {
 // TestEditHostFile is a name on the host's side: the file is replaced, with the
 // same rules for when.
 func TestEditHostFile(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, _, buf, _ := editConsole(t)
 
 	host := filepath.Join(t.TempDir(), "notes.txt")
@@ -498,6 +526,9 @@ func TestEditHostFile(t *testing.T) {
 
 // TestSetEditor is SET EDITOR and SHOW EDITOR.
 func TestSetEditor(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, _, buf, scratch := editConsole(t)
 
 	other := t.TempDir()
@@ -551,6 +582,9 @@ func TestSetEditor(t *testing.T) {
 // TestEditInSubprocess is EDIT from a subprocess's DCL, which holds the machine as
 // process 1's does.
 func TestEditInSubprocess(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, c, _, _ := editConsole(t)
 
 	editLoad(t, d, "A.TXT", "ONE\n", "/RECORD_FORMAT=VARIABLE")
@@ -564,6 +598,9 @@ func TestEditInSubprocess(t *testing.T) {
 
 // TestEditMessagesSayItOnce is a failure's message, which has its cause once.
 func TestEditMessagesSayItOnce(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, _, _, _ := editConsole(t)
 
 	editLoad(t, d, "A.TXT", "ONE\n", "/RECORD_FORMAT=VARIABLE")

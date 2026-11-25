@@ -113,6 +113,7 @@ func section(c *Console, name string) *corevms.GlobalSection {
 // $MGBLSC from page 1 maps one page, read-only; what is stored through
 // one mapping is read through the others.
 func TestCrmpsc_createAndMap(t *testing.T) {
+	t.Parallel()
 	c := newServiceConsole(t)
 
 	if got := crmpsc(t, c, "SHARE", pageFile, secPages, secPages+0x400, 2, 0); got != ssCreated {
@@ -174,6 +175,7 @@ func TestCrmpsc_createAndMap(t *testing.T) {
 // TestCrmpsc_errors: the flag checks, the arguments, and writable
 // mapping of a read-only section.
 func TestCrmpsc_errors(t *testing.T) {
+	t.Parallel()
 	c := newServiceConsole(t)
 
 	cases := []struct {
@@ -273,6 +275,7 @@ func TestCrmpsc_errors(t *testing.T) {
 // system group, so in the SYSTEM category too) still may, until it's
 // moved out of the system groups.
 func TestCrmpsc_protection(t *testing.T) {
+	t.Parallel()
 	c := newServiceConsole(t)
 
 	putRange(t, c, vaInadr, secPages, secPages)
@@ -301,6 +304,7 @@ func TestCrmpsc_protection(t *testing.T) {
 // TestCrmpsc_ident: version idents, created with one and matched by
 // each match control.
 func TestCrmpsc_ident(t *testing.T) {
+	t.Parallel()
 	c := newServiceConsole(t)
 
 	const version = 0x01000005 // major 1, minor 5
@@ -341,6 +345,7 @@ func TestCrmpsc_ident(t *testing.T) {
 // $DGBLSC, which deletes its name at once (a new section may take it)
 // and the section with its last mapping; image rundown unmaps.
 func TestCrmpsc_lifetime(t *testing.T) {
+	t.Parallel()
 	c := newServiceConsole(t)
 
 	// The scratch page the arguments go in is touched first, so that
@@ -454,6 +459,7 @@ func TestCrmpsc_lifetime(t *testing.T) {
 // $GETSYI's counts of what's left; and SEC$M_EXPREG placing a section
 // above P0's high-water mark and moving it.
 func TestCrmpsc_limits(t *testing.T) {
+	t.Parallel()
 	c := newServiceConsole(t)
 	g := c.RTL.Sections
 

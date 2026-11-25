@@ -18,6 +18,7 @@ import (
 // abbreviated or not; SET NOVERIFY with keywords is CLI_CONFLICT, its
 // segment the word as typed (VMS 7.3, testdata/dcl50's round 2).
 func TestSetVerifyKeywords(t *testing.T) {
+	t.Parallel()
 	d, c, _ := newCommandDispatcher(t)
 
 	for _, tc := range []struct {
@@ -62,6 +63,7 @@ func TestSetVerifyKeywords(t *testing.T) {
 // continued command a record at a time; and nothing of an IF branch that
 // doesn't run.
 func TestVerifyProcedureLines(t *testing.T) {
+	t.Parallel()
 	out := runFlow(t,
 		"$ SET VERIFY",
 		"$ N = 2",
@@ -115,6 +117,7 @@ func TestVerifyProcedureLines(t *testing.T) {
 // effect after it ends (the Dictionary's SET VERIFY), and a CALL's lines
 // are shown as any others, starting with its SUBROUTINE line (VMS 7.3).
 func TestVerifyLastsAfterProcedure(t *testing.T) {
+	t.Parallel()
 	d, c, buf := newCommandDispatcher(t)
 
 	path := writeProcedure(t, t.TempDir(), "v.com",
@@ -148,6 +151,7 @@ func TestVerifyLastsAfterProcedure(t *testing.T) {
 // replaced by its value; its closing apostrophe may be missing (VMS
 // 7.3). Nothing else in a comment is substituted.
 func TestVerifyInComment(t *testing.T) {
+	t.Parallel()
 	out := runFlow(t,
 		"$ ! 'F$VERIFY(1)'",
 		`$ PRINT "shown"`,
@@ -181,6 +185,7 @@ func TestVerifyInComment(t *testing.T) {
 // each record substituted (VMS 7.3), and the THEN of a false IF isn't
 // shown.
 func TestVerifyContinued(t *testing.T) {
+	t.Parallel()
 	out := runFlow(t,
 		"$ SET VERIFY",
 		`$ N = "MYFILE"`,
@@ -215,6 +220,7 @@ func TestVerifyContinued(t *testing.T) {
 // (the Dictionary's SET PREFIX); F$ENVIRONMENT("VERIFY_PREFIX") returns
 // it, and SET NOPREFIX takes it away.
 func TestVerifyPrefix(t *testing.T) {
+	t.Parallel()
 	d, c, buf := newCommandDispatcher(t)
 	now := vmsdef.Time(time.Date(2026, 10, 10, 17, 52, 30, 0, time.UTC))
 	c.RTL.Clock = func() uint64 { return now }
@@ -272,6 +278,7 @@ func TestVerifyPrefix(t *testing.T) {
 // what reads the procedure's input, here the interactive assembler, and
 // procedure verification alone doesn't.
 func TestVerifyImageData(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		setting string
 		shown   bool

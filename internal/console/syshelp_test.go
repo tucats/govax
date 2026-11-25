@@ -10,6 +10,7 @@ import (
 	"github.com/tucats/govax/internal/dclcmd"
 	"github.com/tucats/govax/internal/lbr"
 	"github.com/tucats/govax/internal/sysvol"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // The help libraries on the system volume (docs/planning/PHASE-90 - VMS help.md,
@@ -22,6 +23,9 @@ import (
 // with a topic edited in its source, the library it builds is the one HELP
 // reads.
 func TestSystemHelpLibraries(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, run := libraryConsole(t, false)
 
 	const built = "HELPLIB.HLB, DBG$HELP.HLB, and UAFHELP.HLB built in SYS$HELP\n"
@@ -70,6 +74,7 @@ func TestSystemHelpLibraries(t *testing.T) {
 // gives the library its own changed modules; the changed one is reported
 // with SYSKEPT naming it, once.
 func TestSystemHelpRefresh(t *testing.T) {
+	t.Parallel()
 	path := filepath.Join(t.TempDir(), "govax-system.dsk")
 
 	c, _, r := mountTestSystemVolume(t, dclcmd.SystemVolume{File: path})

@@ -10,6 +10,7 @@ import (
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/machine"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // Phase 66's probe (testdata/pg66, README.md): govax runs VMS V7.1's own
@@ -157,6 +158,9 @@ func pg66Compare(t *testing.T, name string, got []string) {
 // part A run gives its charges back at its exit, and the copy's file is
 // gone by name once deleted, its image still reading its pages.
 func TestPG66Oracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, dispatch := pg66Console(t)
 
 	// The test console's spin loop and counter (scheduledConsole) are in

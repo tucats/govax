@@ -15,6 +15,7 @@ import (
 // same library: its own LIBMAC.MLB, govax's GV_LIBMAC.MLB, and the copy
 // of that LIBRARIAN changed.
 func TestLibrary_fixtureExtracts(t *testing.T) {
+	t.Parallel()
 	vax := filepath.Join("..", "..", "testdata", "mar", "macros", "vax")
 
 	for _, name := range []string{"libmac", "gv_libmac", "gv_libmac2"} {

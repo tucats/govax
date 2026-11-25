@@ -10,6 +10,7 @@ import (
 
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/machine"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // Phase 65's probe (testdata/pg65, README.md): the program's parts, run
@@ -108,6 +109,9 @@ func pg65VAX(t *testing.T, name string) []string {
 // PG65.COM runs it, with the VAX's SYSGEN values, and matches VMS
 // V7.1's lines (testdata/pg65/vax) but for the expected differences.
 func TestPG65Oracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	_, dispatch := pg65Console(t)
 
 	run := func(part string) []string {
@@ -162,6 +166,9 @@ func TestPG65Oracle(t *testing.T) {
 // TestGetSYIGlobalSectionItems: F$GETSYI's global section items, and
 // PFCDEFAULT, are $GETSYI's (the probe's procedure asks for them).
 func TestGetSYIGlobalSectionItems(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, dispatch := wsDispatcher(t)
 
 	for _, key := range []string{

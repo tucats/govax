@@ -67,6 +67,7 @@ func versionCount(t *testing.T, c *Console, spec string) int {
 // writes the deleted one, keeps the user's, and says so once; the start
 // after it does nothing.
 func TestSystemVolumeRefresh(t *testing.T) {
+	t.Parallel()
 	path := filepath.Join(t.TempDir(), "govax-system.dsk")
 
 	c, _, r := mountTestSystemVolume(t, dclcmd.SystemVolume{File: path})
@@ -249,6 +250,7 @@ func updateLog(t *testing.T, c *Console) []string {
 // TestSystemVolumeRefreshReadOnly checks that a volume another session
 // holds isn't refreshed: the first session's older file stays.
 func TestSystemVolumeRefreshReadOnly(t *testing.T) {
+	t.Parallel()
 	path := filepath.Join(t.TempDir(), "govax-system.dsk")
 
 	first, _, _ := mountTestSystemVolume(t, dclcmd.SystemVolume{File: path})
@@ -268,6 +270,7 @@ func TestSystemVolumeRefreshReadOnly(t *testing.T) {
 // TestSystemVolumeRefreshDamaged checks a manifest that can't be read: a
 // warning, the volume mounted, and nothing written.
 func TestSystemVolumeRefreshDamaged(t *testing.T) {
+	t.Parallel()
 	path := filepath.Join(t.TempDir(), "govax-system.dsk")
 
 	c, _, _ := mountTestSystemVolume(t, dclcmd.SystemVolume{File: path})
@@ -305,6 +308,7 @@ func TestSystemVolumeRefreshDamaged(t *testing.T) {
 // from the procedure's data lines after its VMINIT (the debugger exited
 // again), the terminal defined, and SYSTARTUP_VMS.COM run last.
 func TestStartupFromSystemVolume(t *testing.T) {
+	t.Parallel()
 	path := filepath.Join(t.TempDir(), "govax-system.dsk")
 
 	c, buf, r := mountTestSystemVolume(t, dclcmd.SystemVolume{File: path})

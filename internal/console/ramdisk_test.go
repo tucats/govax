@@ -11,6 +11,7 @@ import (
 	"github.com/tucats/govax/internal/dclcmd"
 	iodev "github.com/tucats/govax/internal/io"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -62,6 +63,9 @@ func ramDiskConsole(t *testing.T) (*console.Console, func(string) string) {
 // mounted unit refused, a redefinition discarding a volume, /NOLOG, and the
 // device's record as F$GETDVI and SHOW DEVICE see it.
 func TestDefineRAMDisk(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, dispatch := ramDiskConsole(t)
 
 	steps := []struct{ line, want string }{
@@ -162,6 +166,9 @@ func TestDefineRAMDisk(t *testing.T) {
 // TestDefineRAMDiskPrivilege: an MD device needs CMKRNL, other devices
 // nothing (Decision 5).
 func TestDefineRAMDiskPrivilege(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, dispatch := ramDiskConsole(t)
 
 	priv94Account.become(c)

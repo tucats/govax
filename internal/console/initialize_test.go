@@ -17,6 +17,7 @@ import (
 // section describes (INITIALIZE formats a volume without mounting it; a
 // separate MOUNT attaches it).
 func TestConsoleInitializeContainer_buildsAMountableVolume(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	path := filepath.Join(t.TempDir(), "new.dsk")
 
@@ -39,6 +40,7 @@ func TestConsoleInitializeContainer_buildsAMountableVolume(t *testing.T) {
 // matching every other console command that reports a bad argument via a
 // real VMS-style status code rather than a bare Go error.
 func TestConsoleInitializeContainer_badPath(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	path := filepath.Join(t.TempDir(), "no-such-directory", "new.dsk")
 
@@ -57,6 +59,7 @@ func TestConsoleInitializeContainer_badPath(t *testing.T) {
 // reported as CLI_INITFAIL here, the same translation TestConsoleInitialize
 // Container_badPath checks for a different underlying failure.
 func TestConsoleInitializeContainer_zeroBlocks(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	path := filepath.Join(t.TempDir(), "new.dsk")
 
@@ -87,6 +90,7 @@ func TestConsoleInitializeContainer_zeroBlocks(t *testing.T) {
 // reason TestDispatch_mountAndDismountViaDCL's own comment explains: DCL
 // upcases an unquoted token, and t.TempDir() paths are mixed-case.
 func TestDispatch_initializeContainerViaDCL(t *testing.T) {
+	t.Parallel()
 	d, c := newTestDispatcher(t)
 	path := filepath.Join(t.TempDir(), "new.dsk")
 
@@ -112,6 +116,7 @@ func TestDispatch_initializeContainerViaDCL(t *testing.T) {
 // qualifier specifically, so it has to work for /CONTAINER exactly as well
 // as it already does for /VAX.
 func TestDispatch_initializeContainerAbbreviatedViaDCL(t *testing.T) {
+	t.Parallel()
 	d, _ := newTestDispatcher(t)
 	path := filepath.Join(t.TempDir(), "new.dsk")
 
@@ -126,6 +131,7 @@ func TestDispatch_initializeContainerAbbreviatedViaDCL(t *testing.T) {
 // own INITIALIZE and docs/planning/PHASE-23.md's own explicit design note that this
 // command formats a volume without mounting it.
 func TestDispatch_initializeContainerDoesNotMount(t *testing.T) {
+	t.Parallel()
 	d, c := newTestDispatcher(t)
 	path := filepath.Join(t.TempDir(), "new.dsk")
 
@@ -146,6 +152,7 @@ func TestDispatch_initializeContainerDoesNotMount(t *testing.T) {
 // PATH/SIZE, carries no /prompt= in the grammar, so it must be genuinely
 // optional on the command line.
 func TestDispatch_initializeContainerDefaultCluster(t *testing.T) {
+	t.Parallel()
 	d, _ := newTestDispatcher(t)
 	path := filepath.Join(t.TempDir(), "new.dsk")
 

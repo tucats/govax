@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // fixedForm wraps each statement longer than the statement field (column 72)
@@ -156,6 +157,9 @@ func positionExpected(t *testing.T, text string, number int) (answers []position
 // FORRTL (testdata/for81): each statement's IOSTAT, each read's text, and the
 // records left in the file, for the cases on formatted units.
 func TestFor81PositionOracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	runs := map[string]string{}
 
 	for _, name := range []string{"for81-vax.txt", "for81f-vax.txt"} {
@@ -277,6 +281,9 @@ func TestFor81PositionOracle(t *testing.T) {
 // do nothing, and ENDFILE connects it, with no form yet, which its next statement
 // gives it (a trial of FORRTL over govax; the phase doc's subtask 6).
 func TestFor81PositionNotOpen(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, c, buf := shareFindConsole(t, false)
 
 	fortranBuild(t, d, c, buf, "NOTOPEN", fixedForm([]string{
@@ -326,6 +333,9 @@ func TestFor81PositionNotOpen(t *testing.T) {
 // run has shown these messages). A BACKSPACE's second condition has no text yet:
 // $PUTMSG has none to find (the phase doc's question).
 func TestFortranPositionSignals(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, c, buf := shareFindConsole(t, false)
 
 	direct := "OPEN (10, FILE='P.DAT', ACCESS='DIRECT', RECL=4, STATUS='UNKNOWN')"
@@ -413,6 +423,9 @@ func TestFortranPositionSignals(t *testing.T) {
 // is a command procedure: a process-permanent file (the phase doc's subtask 6).
 // REWIND says nothing and moves nothing, and BACKSPACE is refused.
 func TestFortranPositionProcedure(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, c, buf := shareFindConsole(t, false)
 
 	fortranBuild(t, d, c, buf, "ONFIVE", []string{

@@ -47,6 +47,7 @@ func runMacroProgram(t *testing.T, source string) (uint32, string) {
 // (the image was linked with traceback), and, the condition being an
 // error rather than a severe one, returns SS$_UNSUPPORTED.
 func TestLibrtlMissingRoutine(t *testing.T) {
+	t.Parallel()
 	r0, out := runMacroProgram(t, "\t.PSECT\tCODE,NOWRT,EXE\n"+
 		"\t.ENTRY\tSTART,^M<>\n\tCALLS\t#0,G^LIB$GETQUI\n\tRET\n\t.END\tSTART\n")
 
@@ -69,6 +70,7 @@ func TestLibrtlMissingRoutine(t *testing.T) {
 // used to be a reserved operand fault. A handler that continues, or none,
 // gets SS$_UNSUPPORTED back.
 func TestMissingService(t *testing.T) {
+	t.Parallel()
 	r0, out := runMacroProgram(t, "\t.PSECT\tCODE,NOWRT,EXE\n"+
 		"\t.ENTRY\tSTART,^M<>\n\tCALLS\t#0,G^SYS$GETLUI\n\tRET\n\t.END\tSTART\n")
 
@@ -90,6 +92,7 @@ func TestMissingService(t *testing.T) {
 // one it can't write, signals SS$_ACCVIO with the hardware's reason mask
 // and address; no handler takes it, and the image ends with it.
 func TestLibrtlAccessViolation(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name, add, sign, mask, va string
 	}{
@@ -122,6 +125,7 @@ func TestLibrtlAccessViolation(t *testing.T) {
 // TestLibrtlAccessViolationContinued: a handler that continues the
 // access violation makes the routine return SS$_ACCVIO.
 func TestLibrtlAccessViolationContinued(t *testing.T) {
+	t.Parallel()
 	r0, out := runMacroProgram(t, "\t.PSECT\tCODE,NOWRT,EXE\n"+
 		"\t.ENTRY\tHANDLER,^M<>\n\tMOVL\t#1,R0\n\tRET\n"+ // SS$_CONTINUE
 		"\t.ENTRY\tSTART,^M<>\n\tMOVAB\tHANDLER,(FP)\n"+

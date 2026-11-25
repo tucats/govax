@@ -10,6 +10,7 @@ import (
 
 	"github.com/tucats/govax/internal/backup"
 	"github.com/tucats/govax/internal/isam"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // for88Dir is round 2's directory, from this package's.
@@ -100,6 +101,9 @@ func for88Cases(text string) map[string]string {
 // every case's output, and every file it made, to VMS's run. With FOR88_WRITE set
 // it keeps the output in that file.
 func TestFor88Oracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	out, saved := runFor88OnFORRTL(t)
 
 	if path := os.Getenv("FOR88_WRITE"); path != "" {

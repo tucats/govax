@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // What an indexed file's statements pass FTNRTL (docs/planning/PHASE-88 - keyed index
@@ -140,6 +141,9 @@ var ftnKeyedRun = []string{
 }
 
 func TestFortranKeyedArguments(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	for _, mode := range optimizerModes {
 		t.Run(mode.name, func(t *testing.T) {
 			d, c, buf := shareFindConsole(t, false)

@@ -10,6 +10,7 @@ import (
 
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -151,6 +152,9 @@ func for81Oracle(t *testing.T, name, vms, env string) for81Run {
 // files and FOP's bits, to VMS's run, and the relative files it made to VMS's
 // blocks.
 func TestFor81RMSOracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	run := for81Oracle(t, "FOR81R", "for81r-vax.txt", "FOR81R_OUT")
 	compareFor81Blocks(t, run, "for81-blocks.txt", regexp.MustCompile(`^R\d+\.DAT$`))
 }
@@ -159,6 +163,9 @@ func TestFor81RMSOracle(t *testing.T) {
 // relative file grows, its bucket size, and locks, to VMS's run, and its files
 // to VMS's blocks.
 func TestFor81RelativeOracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	run := for81Oracle(t, "FOR81D", "for81d-vax.txt", "FOR81D_OUT")
 	compareFor81Blocks(t, run, "for81c-blocks.txt", regexp.MustCompile(`^[DEB]\d+\.DAT$`))
 }

@@ -68,6 +68,7 @@ func translateOne(t *testing.T, c *Console, table, name string) *lnm.Entry {
 }
 
 func TestShowLogical_manualExamples(t *testing.T) {
+	t.Parallel()
 	d, _, buf := logicalDispatcher(t)
 
 	wantOutput(t, d, buf, "SHOW LOGICAL SYS$INPUT",
@@ -94,6 +95,7 @@ func TestShowLogical_manualExamples(t *testing.T) {
 // shown from each, in search order, as VMS showed a process SYS$SHARE
 // and then the system's (testdata/link68's log, R4).
 func TestShowLogical_everyTable(t *testing.T) {
+	t.Parallel()
 	d, _, buf := logicalDispatcher(t)
 
 	mustDispatch(t, d, "DEFINE/SYSTEM SHARED SYS$SYSROOT:[SYSLIB]", "DEFINE SHARED DUA1:[000000.SHRDIR],SYS$SYSROOT:[SYSLIB]")
@@ -104,6 +106,7 @@ func TestShowLogical_everyTable(t *testing.T) {
 }
 
 func TestShowLogical_iterationStops(t *testing.T) {
+	t.Parallel()
 	d, _, buf := logicalDispatcher(t)
 
 	// A circular pair prints each name once. A TERMINAL equivalence
@@ -118,6 +121,7 @@ func TestShowLogical_iterationStops(t *testing.T) {
 }
 
 func TestShowLogical_tableListing(t *testing.T) {
+	t.Parallel()
 	d, _, buf := logicalDispatcher(t)
 
 	mustDispatch(t, d, "DEFINE/USER_MODE SYS$OUTPUT X.LIS")
@@ -154,6 +158,7 @@ func TestShowLogical_tableListing(t *testing.T) {
 }
 
 func TestDefine_andAssign(t *testing.T) {
+	t.Parallel()
 	d, c, buf := logicalDispatcher(t)
 
 	// DEFINE keeps a trailing colon on the name; ASSIGN removes one.
@@ -211,6 +216,7 @@ func TestDefine_andAssign(t *testing.T) {
 }
 
 func TestDeassign(t *testing.T) {
+	t.Parallel()
 	d, c, _ := logicalDispatcher(t)
 
 	mustDispatch(t, d, "DEFINE DISK DUA1:", "DEFINE WORK DUA2:", "DEFINE/SYSTEM SYSWORK DUA3:")
@@ -244,6 +250,7 @@ func TestDeassign(t *testing.T) {
 }
 
 func TestCreateNameTable(t *testing.T) {
+	t.Parallel()
 	d, c, buf := logicalDispatcher(t)
 
 	// User's Manual §11.10.1's TAX example.
@@ -290,6 +297,7 @@ func TestCreateNameTable(t *testing.T) {
 }
 
 func TestShowTranslation(t *testing.T) {
+	t.Parallel()
 	d, _, buf := logicalDispatcher(t)
 
 	mustDispatch(t, d, "DEFINE/SYSTEM WORK4 $255$DUA17:", "DEFINE MYDISK WORK4")
@@ -307,6 +315,7 @@ func TestShowTranslation(t *testing.T) {
 // [concealed,terminal]), and SHOW LOGICAL doesn't follow the device name
 // as another logical name.
 func TestShowLogical_permanentFile(t *testing.T) {
+	t.Parallel()
 	d, c, buf := logicalDispatcher(t)
 
 	eqv := []lnm.Equivalence{{Value: lnm.PermanentFileString(0x8106, "_GOVAX$DUA1"), Attrs: lnm.AttrTerminal}}
@@ -331,6 +340,7 @@ func TestShowLogical_permanentFile(t *testing.T) {
 }
 
 func TestLogicals_trace(t *testing.T) {
+	t.Parallel()
 	d, c, buf := logicalDispatcher(t)
 
 	c.CPU.SetDebugWriter(buf)
@@ -351,6 +361,7 @@ func TestLogicals_trace(t *testing.T) {
 }
 
 func TestLogicals_beforeInit(t *testing.T) {
+	t.Parallel()
 	c := New(&bytes.Buffer{})
 
 	// Logical names don't need INIT; the trace hook must cope with no CPU.
@@ -363,6 +374,7 @@ func TestLogicals_beforeInit(t *testing.T) {
 // work on the job table, which LNM$FILE_DEV searches after the process
 // table (docs/planning/PHASE-45.md, subtask 3).
 func TestLogical_jobTable(t *testing.T) {
+	t.Parallel()
 	d, _, buf := logicalDispatcher(t)
 
 	mustDispatch(t, d, "DEFINE/JOB WORKAREA DUA1:[WORK]")
@@ -380,6 +392,7 @@ func TestLogical_jobTable(t *testing.T) {
 // access mode and a protection line, as VMS 7.3's SHOW LOGICAL/FULL of
 // the process table showed them (testdata/mp/probe5/vax, step 12).
 func TestShowLogical_fullTableHeader(t *testing.T) {
+	t.Parallel()
 	d, _, buf := logicalDispatcher(t)
 
 	mustDispatch(t, d, "DEFINE/SUPERVISOR P5_SUPER X")
@@ -393,6 +406,7 @@ func TestShowLogical_fullTableHeader(t *testing.T) {
 // MACRO in VMS's run of testdata/for83). One of DCL's own commands leaves it, and
 // SHOW TRANSLATION, which is one, shows it for the image to come.
 func TestUserModeNameEndsWithUtility(t *testing.T) {
+	t.Parallel()
 	d, _, buf := logicalDispatcher(t)
 
 	mustDispatch(t, d, "DEFINE/USER_MODE USERNAME A")

@@ -10,6 +10,7 @@ import (
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/paging"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // Phase 64's subtask 4 (docs/planning/PHASE-64 - page file.md): a page deleted
@@ -77,6 +78,9 @@ inadr:	.address buf,buf+<512*80>-1
 // blocks in page file PTEs and the 20 read back hold them as their valid
 // frames' backing store; $DELTVA gives every block back.
 func TestDeleteGivesPageFileBlocksBack(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	pageFileSettings(t)
 
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
@@ -271,6 +275,9 @@ func checkPageFileHolders(t *testing.T, c *console.Console, label string) {
 // free list with their blocks; removing the process gives every block
 // back.
 func TestDeleteProcessGivesPageFileBlocksBack(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	pageFileSettings(t)
 
 	c, _ := scheduledConsole(t, longQuantum, brbSelf)

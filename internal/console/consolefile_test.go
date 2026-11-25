@@ -12,6 +12,7 @@ import (
 	"github.com/tucats/govax/internal/dclcmd"
 	"github.com/tucats/govax/internal/respath"
 	"github.com/tucats/govax/internal/sysvol"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -61,6 +62,7 @@ func machineSymbol(t *testing.T, c *Console, name string) uint32 {
 // it's read from its volume, and its .INCLUDE of a bare name from beside
 // it there, though no host or built-in file has that name.
 func TestASMVolumeFile(t *testing.T) {
+	t.Parallel()
 	c, d, buf := volumeFileConsole(t)
 
 	writeText(t, c, "[SYSTEM.SOURCES]TINY.ASM",
@@ -83,6 +85,7 @@ func TestASMVolumeFile(t *testing.T) {
 // before it read volume files (STARTUP.COM's "kernel.asm" with no system
 // volume but a work volume).
 func TestASMBareName(t *testing.T) {
+	t.Parallel()
 	c, d, buf := volumeFileConsole(t)
 
 	writeText(t, c, "[SYSTEM]HERE.ASM", "here$label:     .long   7")
@@ -101,6 +104,7 @@ func TestASMBareName(t *testing.T) {
 // TestASMVolumeFileMissing checks an explicit volume file that isn't
 // there: NOSUCHFILE with its full name, and no search of the host.
 func TestASMVolumeFileMissing(t *testing.T) {
+	t.Parallel()
 	_, d, _ := volumeFileConsole(t)
 
 	err := d.Dispatch("ASM DUA0:[SYSTEM.SOURCES]NONE.ASM")
@@ -122,6 +126,7 @@ func TestASMVolumeFileMissing(t *testing.T) {
 // named in SHOW ROM by its full name; /NOERROR's quiet failure for a
 // volume file that isn't there; and LOAD/NVRAM of a missing volume file.
 func TestLoadVolumeFiles(t *testing.T) {
+	t.Parallel()
 	c, d, buf := volumeFileConsole(t)
 
 	mustDispatch(t, d, "LOAD/ROM SYS$SYSDEVICE:[SYSTEM.SYSEXE]DEFAULT.ROM", "SHOW ROM")
@@ -151,6 +156,7 @@ func TestLoadVolumeFiles(t *testing.T) {
 // volume: an edited KERNEL.ASM is the one that boots, with its .INCLUDE
 // of a file beside it, and the ROM is the volume's.
 func TestBootFromEditedKernel(t *testing.T) {
+	t.Parallel()
 	c, buf, r := mountTestSystemVolume(t, dclcmd.SystemVolume{File: filepath.Join(t.TempDir(), "govax-system.dsk")})
 	if !r.Mounted || !r.Writable {
 		t.Fatalf("result = %+v", r)
@@ -206,6 +212,9 @@ func TestBootFromEditedKernel(t *testing.T) {
 // only in the host's current directory, but a bare name the configured
 // places hold (govax's built-in ssdef.asm) is still read.
 func TestASMHostRefused(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, d, buf := volumeFileConsole(t)
 
 	dir := t.TempDir()

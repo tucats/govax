@@ -31,6 +31,7 @@ func evalTest(t *testing.T, radix int, syms map[string]uint32, expr string) uint
 }
 
 func TestEvaluator_defaultRadix(t *testing.T) {
+	t.Parallel()
 	if got := evalTest(t, 16, nil, "200"); got != 0x200 {
 		t.Errorf("got %#x, want 0x200", got)
 	}
@@ -41,6 +42,7 @@ func TestEvaluator_defaultRadix(t *testing.T) {
 }
 
 func TestEvaluator_radixPrefix(t *testing.T) {
+	t.Parallel()
 	cases := map[string]uint32{
 		"^D4096": 4096,
 		"^X1F":   0x1F,
@@ -57,6 +59,7 @@ func TestEvaluator_radixPrefix(t *testing.T) {
 }
 
 func TestEvaluator_symbol(t *testing.T) {
+	t.Parallel()
 	got := evalTest(t, 16, map[string]uint32{"FOO": 0x1234}, "FOO")
 	if got != 0x1234 {
 		t.Errorf("got %#x, want 0x1234", got)
@@ -64,6 +67,7 @@ func TestEvaluator_symbol(t *testing.T) {
 }
 
 func TestEvaluator_undefinedSymbol(t *testing.T) {
+	t.Parallel()
 	e := &machine.Evaluator{Symbols: machine.NewSymbolTable(), Radix: 16}
 	if _, _, err := e.Eval("NOSUCH"); err == nil {
 		t.Error("expected an error for an undefined symbol")
@@ -74,6 +78,7 @@ func TestEvaluator_undefinedSymbol(t *testing.T) {
 // system symbols resolve at the console too, and that a console symbol of
 // the same name wins.
 func TestEvaluator_builtinSymbols(t *testing.T) {
+	t.Parallel()
 	cases := map[string]uint32{
 		"PTE$K_UR":   15,
 		"pte$k_none": 0,
@@ -101,12 +106,14 @@ func TestEvaluator_builtinSymbols(t *testing.T) {
 }
 
 func TestEvaluator_here(t *testing.T) {
+	t.Parallel()
 	if got := evalTest(t, 16, nil, "."); got != 0x1000 {
 		t.Errorf("got %#x, want 0x1000", got)
 	}
 }
 
 func TestEvaluator_arithmeticAndPrecedence(t *testing.T) {
+	t.Parallel()
 	cases := map[string]uint32{
 		"1+2*3":   7,
 		"(1+2)*3": 9,
@@ -125,6 +132,7 @@ func TestEvaluator_arithmeticAndPrecedence(t *testing.T) {
 }
 
 func TestEvaluator_comparisons(t *testing.T) {
+	t.Parallel()
 	cases := map[string]uint32{
 		"1=1":  1,
 		"1=2":  0,
@@ -143,6 +151,7 @@ func TestEvaluator_comparisons(t *testing.T) {
 }
 
 func TestEvaluator_divisionByZero(t *testing.T) {
+	t.Parallel()
 	e := &machine.Evaluator{Symbols: machine.NewSymbolTable(), Radix: 10}
 	if _, _, err := e.Eval("1/0"); err == nil {
 		t.Error("expected division-by-zero error")
@@ -150,6 +159,7 @@ func TestEvaluator_divisionByZero(t *testing.T) {
 }
 
 func TestEvaluator_definedFunction(t *testing.T) {
+	t.Parallel()
 	if got := evalTest(t, 16, map[string]uint32{"FOO": 1}, `DEFINED("FOO")`); got != 1 {
 		t.Errorf(`Eval(DEFINED("FOO")) = %d, want 1`, got)
 	}
@@ -170,6 +180,7 @@ func TestEvaluator_definedFunction(t *testing.T) {
 }
 
 func TestEvaluator_trailingRemainder(t *testing.T) {
+	t.Parallel()
 	// A second address (e.g. EXAMINE's optional end-address) is left
 	// unconsumed for the caller to parse separately.
 	e := &machine.Evaluator{Symbols: machine.NewSymbolTable(), Radix: 16}
@@ -208,6 +219,7 @@ func vminitConsoleForStrings(t *testing.T) *Console {
 // literal builds a VAX string descriptor in the console string pool and
 // evaluates to that descriptor's address.
 func TestEvaluator_quotedString(t *testing.T) {
+	t.Parallel()
 	c := vminitConsoleForStrings(t)
 	ev := c.Evaluator()
 
@@ -247,6 +259,7 @@ func TestEvaluator_quotedString(t *testing.T) {
 // TestEvaluator_quotedStringEscapes matches asm_expr3's \n/\r/\t escape
 // handling for a quoted string literal.
 func TestEvaluator_quotedStringEscapes(t *testing.T) {
+	t.Parallel()
 	c := vminitConsoleForStrings(t)
 	ev := c.Evaluator()
 
@@ -283,6 +296,7 @@ func TestEvaluator_quotedStringEscapes(t *testing.T) {
 // onto CONSOLE$STRINGPOOL_BASE's chain in order, matching ShowString's own
 // walk (show.go) of the same linked list asm_expr3 builds.
 func TestEvaluator_quotedStringChain(t *testing.T) {
+	t.Parallel()
 	c := vminitConsoleForStrings(t)
 	ev := c.Evaluator()
 
@@ -333,6 +347,7 @@ func TestEvaluator_quotedStringChain(t *testing.T) {
 // a missing closing quote is not an error, the literal just runs to the end
 // of the input.
 func TestEvaluator_quotedStringUnterminated(t *testing.T) {
+	t.Parallel()
 	c := vminitConsoleForStrings(t)
 	ev := c.Evaluator()
 
@@ -358,6 +373,7 @@ func TestEvaluator_quotedStringUnterminated(t *testing.T) {
 // TestEvaluator_quotedStringNoPool matches asm_expr3's own get_symbol
 // failure path when CONSOLE$STRINGPOOL* isn't defined yet (no VMINIT).
 func TestEvaluator_quotedStringNoPool(t *testing.T) {
+	t.Parallel()
 	e := &machine.Evaluator{Symbols: machine.NewSymbolTable(), Radix: 16}
 	if _, _, err := e.Eval(`"Hello"`); err == nil {
 		t.Error("expected an error with no string pool defined")
@@ -369,6 +385,7 @@ func TestEvaluator_quotedStringNoPool(t *testing.T) {
 // CONSOLE$STRINGPOOL_BASE + CONSOLE$STRINGPOOL_SIZE + 16 fails instead of
 // overrunning the pool's backing storage.
 func TestEvaluator_quotedStringOverflow(t *testing.T) {
+	t.Parallel()
 	c := vminitConsoleForStrings(t)
 	ev := c.Evaluator()
 
@@ -387,6 +404,7 @@ func TestEvaluator_quotedStringOverflow(t *testing.T) {
 // in either case and with the debugger's "%", and "." or "@" before
 // one gives the same; before anything else they read the longword there.
 func TestEvaluator_registers(t *testing.T) {
+	t.Parallel()
 	cpu := registers.New()
 	cpu.SetGPR(registers.R1, 0x100)
 	cpu.SetGPR(registers.SP, 0x7FF00000)

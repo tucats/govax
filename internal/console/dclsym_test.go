@@ -13,6 +13,7 @@ import (
 // TestAssignSymbol defines symbols with each operator and abbreviation,
 // and rejects what it can't evaluate.
 func TestAssignSymbol(t *testing.T) {
+	t.Parallel()
 	c := &Console{Interpreter: &dclshell.Interpreter{Shell: &dclshell.Shell{}}}
 
 	for _, tc := range []struct{ name, op, text string }{
@@ -63,6 +64,7 @@ func TestAssignSymbol(t *testing.T) {
 // looked up again (so an alias of itself is an unknown verb, as VMS 7.3
 // treats an alias of an alias), and DELETE/SYMBOL removes one.
 func TestDispatch_dclSymbols(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 	d := NewDispatcher(c, loadEvaxGrammar(t))
 
@@ -124,6 +126,7 @@ func dclSession(t *testing.T) (*Dispatcher, func(string) string) {
 // those a wildcard matches, locals first, each table in name order; and
 // one by any abbreviation it allows.
 func TestShowDCLSymbols(t *testing.T) {
+	t.Parallel()
 	d, show := dclSession(t)
 
 	if got := show("SHOW SYMBOL/ALL"); got != "" {
@@ -180,6 +183,7 @@ func TestShowDCLSymbols(t *testing.T) {
 // TestShowDCLSymbols_simh is SHOW SYMBOL as a VMS 7.3 system (a simh VAX
 // session) shows its global symbols, and a local string symbol.
 func TestShowDCLSymbols_simh(t *testing.T) {
+	t.Parallel()
 	_, show := dclSession(t)
 
 	for _, line := range []string{
@@ -221,6 +225,7 @@ func TestShowDCLSymbols_simh(t *testing.T) {
 // /LOCAL find each, and DELETE/SYMBOL deletes the local one unless told
 // /GLOBAL; /ALL empties a table.
 func TestDCLSymbols_localAndGlobal(t *testing.T) {
+	t.Parallel()
 	d, show := dclSession(t)
 
 	show(`X = "local"`)

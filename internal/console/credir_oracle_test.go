@@ -181,6 +181,7 @@ func credirFields(d credirDirectory) []string {
 var credirMasked = map[string]map[string]string{}
 
 func TestCreateDirectoryOracle(t *testing.T) {
+	t.Parallel()
 	if _, err := os.Stat(credirVAXDisk); err != nil {
 		t.Skipf("no VMS run of the Phase 34 oracle (%s): see testdata/credir/README.md", credirVAXDisk)
 	}

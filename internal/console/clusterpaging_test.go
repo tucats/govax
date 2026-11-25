@@ -10,6 +10,7 @@ import (
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/paging"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // Phase 65's subtask 6 (docs/planning/PHASE-65 - sections and paging.md): read
@@ -166,6 +167,9 @@ func clusterSettings(t *testing.T, pfcDefault int) {
 // checks that each cluster is one read fault, every page is read once,
 // and each holds its block.
 func TestReadClustering(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	const (
 		private = "sec$m_expreg"
 		global  = "sec$m_gbl!sec$m_expreg"
@@ -269,6 +273,9 @@ func TestReadClustering(t *testing.T) {
 // in a few clusters at first and then a fault at a time, and every page
 // still reads right.
 func TestReadClusteringWorkingSet(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	clusterSettings(t, 32)
 	setSetting(t, "vax.sysgen.pql_dwsdefault", strconv.Itoa(wsLimit))
 
@@ -374,6 +381,9 @@ fail:	brb	fail
 // set: pages in successive page file blocks come back as one cluster, so
 // there are fewer read faults than pages read from the page file.
 func TestReadClusteringPageFile(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	pageFileSettings(t)
 	setSetting(t, "vax.sysgen.pql_dwsquota", "200")
 	setSetting(t, "vax.sysgen.pql_dwsextent", "300")

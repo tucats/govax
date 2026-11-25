@@ -10,6 +10,7 @@ import (
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
 	"github.com/tucats/govax/internal/cpu"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -107,6 +108,9 @@ const (
 // (13.12.1). Process 1, waiting in SPAWN, doesn't see the key, and
 // govax doesn't end.
 func TestSubprocessControlY_procedure(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	for _, tc := range []struct {
 		name, typed string
 		lines       []string
@@ -137,6 +141,9 @@ func TestSubprocessControlY_procedure(t *testing.T) {
 // process 1's does, and its procedure reads the Ctrl/Y level; with STOP
 // typed there, it ends.
 func TestSubprocessControlY_wait(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	got, _, elapsed := subControlY(t, "STOP\n", `SPAWN @"DIR/wait.com"`, map[string][]string{
 		"wait.com": {"$ WAIT 00:01:00", `$ WRITE SYS$OUTPUT "after"`},
 	})
@@ -150,6 +157,9 @@ func TestSubprocessControlY_wait(t *testing.T) {
 // Ctrl/Y ends the image it runs, with SS$_CONTROLY, and its DCL goes on:
 // SPAWN of one command logs out, and SPAWN's status is SS$_CONTROLY.
 func TestSubprocessControlY_levelZero(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	got, c, _ := subControlY(t, "", `SPAWN RUN "FOREVER"`, nil)
 
 	if got != spawnedOne+returnedOne || c.Status() != ssControlY {
@@ -162,6 +172,9 @@ func TestSubprocessControlY_levelZero(t *testing.T) {
 // at its Ctrl/Y level ends its procedure, and its parent's procedure,
 // which waited in SPAWN, goes on.
 func TestSubprocessControlY_nested(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	got, _, _ := subControlY(t, "STOP\n", `SPAWN @"DIR/outer.com"`, map[string][]string{
 		"outer.com": {`$ SPAWN/PROCESS=INNER @"DIR/inner.com"`, `$ WRITE SYS$OUTPUT "outer after"`},
 		"inner.com": {`$ RUN "FOREVER"`, `$ WRITE SYS$OUTPUT "inner after"`},
@@ -182,6 +195,9 @@ func TestSubprocessControlY_nested(t *testing.T) {
 // ignored and its image finishes; once SPAWN has returned, the terminal
 // is process 1's again, whose Ctrl/Y is on.
 func TestSubprocessControlY_noControl(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	off := make(chan bool, 1)
 	ready := make(chan *console.Console, 1)
 

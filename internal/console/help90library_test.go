@@ -175,6 +175,7 @@ func help90Volume(t *testing.T) (*Dispatcher, *Console, *bytes.Buffer) {
 // librarian's name, and the count of history records (govax keeps none) are
 // masked, as in TestFor83LibraryOracle.
 func TestHelp90LibraryOracle(t *testing.T) {
+	t.Parallel()
 	d, _, buf := help90Volume(t)
 
 	host := filepath.Join(t.TempDir(), "parta.com")
@@ -223,6 +224,7 @@ func TestHelp90LibraryOracle(t *testing.T) {
 // SKIP.HLP's bad key line, LIBRARY reads the next file and inserts its
 // modules, and the library lists and extracts them.
 func TestHelp90LibraryGoesOn(t *testing.T) {
+	t.Parallel()
 	d, _, buf := help90Volume(t)
 
 	err := d.Dispatch("LIBRARY/CREATE/HELP H90X8 H90C,SKIP,H90G")

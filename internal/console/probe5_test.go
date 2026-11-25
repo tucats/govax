@@ -10,6 +10,7 @@ import (
 	"github.com/tucats/govax/internal/console/consoletest"
 	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // TestProbe5 runs the multiprocessing program's last probe
@@ -18,6 +19,9 @@ import (
 // P5_INFO.LOG are logged, to set beside VMS's once it has run
 // (testdata/mp/probe5/vax); the test checks that every step reported.
 func TestProbe5(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
 	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
@@ -89,6 +93,9 @@ func TestProbe5(t *testing.T) {
 // first run didn't reach (testdata/mp/probe5/p5args.mar), and logs
 // govax's report to set beside VMS's (vax/p5args.log, once it has run).
 func TestProbe5Args(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
 
 	exe := buildImage(t, c, "p5args", readProbe5Source(t, "p5args"))

@@ -20,6 +20,7 @@ import (
 // commands reaching them through logical names, search lists, the
 // DISK$label names MOUNT defines, and SYS$DISK.
 func TestLogicalNames_fileCommands(t *testing.T) {
+	t.Parallel()
 	d, c, buf := logicalDispatcher(t)
 
 	host := t.TempDir()
@@ -117,6 +118,7 @@ func TestLogicalNames_fileCommands(t *testing.T) {
 // the console), and deletes it with $DELLNM. The program checks each
 // step itself and leaves 1 in R0 only if all of them worked.
 func TestLNMRoundTrip_assembledProgram(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 	out := c.Out.(*bytes.Buffer)
 
@@ -157,6 +159,7 @@ func TestLNMRoundTrip_assembledProgram(t *testing.T) {
 // in the process table are deleted, and others are kept (User's Manual
 // §11.3.5). A CALL that isn't a RUN image leaves them alone.
 func TestImageRundown(t *testing.T) {
+	t.Parallel()
 	c := New(&bytes.Buffer{})
 
 	define := func(name string, mode lnm.Mode) {
@@ -203,6 +206,7 @@ func TestImageRundown(t *testing.T) {
 
 // TestImageRundown_run: the same, through a real RUN of simple.exe.
 func TestImageRundown_run(t *testing.T) {
+	t.Parallel()
 	c := newBootableConsole(t)
 
 	if _, _, err := c.Assemble(kernelPath(t)); err != nil {

@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -213,6 +214,9 @@ func lnm91Run(t *testing.T, label, proc string) string {
 
 // TestLnm91ServicesOracle holds RMS's services to VMS's answers in both logs.
 func TestLnm91ServicesOracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	image, err := filepath.Abs(filepath.Join(lnm91Dir, "vax", "lnm91.exe"))
 	if err != nil {
 		t.Fatal(err)
@@ -332,6 +336,9 @@ func maskVolumeTimes(line string) string {
 // VMS's image, and holds what DCL's commands print to VMS's log, command by
 // command.
 func TestLnm91DCLOracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	image, err := filepath.Abs(filepath.Join(lnm91Dir, "vax", "lnm91.exe"))
 	if err != nil {
 		t.Fatal(err)
@@ -416,6 +423,9 @@ func lnm91CompareSection(t *testing.T, sect string, want, got [][]string) {
 // set's paths are relative to the root, and a file restored through a root
 // lands below it and is named as RMS would name it.
 func TestBackupThroughRoot(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	proc := `$ SET NOON
 $ CREATE/DIRECTORY DUA1:[R.SUB]
 $ CREATE/DIRECTORY DUA1:[R.OUT]

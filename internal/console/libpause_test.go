@@ -6,6 +6,7 @@ import (
 
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -75,6 +76,9 @@ func pauseConsole(t *testing.T, typed string) (*console.Console, func() string, 
 // goes on (VMS V7.1, testdata/lib57's I1 to I3); a command that runs an
 // image (a procedure, here) ends it and then runs.
 func TestLibPause_levelZero(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	proc := writeCommands(t, `$ WRITE SYS$OUTPUT "procedure"`)
 
 	for _, tc := range []struct {
@@ -111,6 +115,9 @@ func TestLibPause_levelZero(t *testing.T) {
 // level's: CONTINUE resumes the image and the procedure goes on; STOP
 // ends the image and the procedure.
 func TestLibPause_procedure(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	for _, tc := range []struct {
 		name, typed, want string
 	}{
@@ -138,6 +145,9 @@ func TestLibPause_procedure(t *testing.T) {
 // its own DCL, which reads the terminal with its prompt; CONTINUE lets
 // the image finish, and STOP ends it, SPAWN's status SS$_CONTROLY.
 func TestLibPause_subprocess(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	for _, tc := range []struct {
 		name, typed, want string
 	}{
@@ -163,6 +173,9 @@ func TestLibPause_subprocess(t *testing.T) {
 // TestLibPause_batch: in a LOGINOUT job reading a command file, which
 // isn't interactive, LIB$PAUSE does nothing and returns SS$_NORMAL.
 func TestLibPause_batch(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, output, d := pauseConsole(t, "")
 	pause, _ := c.DCLSymbol("PAUSE")
 

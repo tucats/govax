@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // Phase 72's study of FORRTL's calls (testdata/ots72's ots72t.mar) on
@@ -51,6 +53,9 @@ var ots72tDifferences = map[string]string{
 // holds each case to VMS's run: its text, the tracer's state, the value
 // at R0, and the two records' fields (ots72tFields).
 func TestOTS72TOracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	disk, file := findFORRTL(t)
 	_, dispatch := wsDispatcher(t)
 	dsk := filepath.Join(t.TempDir(), "ots72t.dsk")

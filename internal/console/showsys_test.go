@@ -10,6 +10,7 @@ import (
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
 	"github.com/tucats/govax/internal/corevms"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // Phase 44's subtask 10: SHOW SYSTEM and SHOW PROCESS.
@@ -33,6 +34,9 @@ func sayConsole(t *testing.T, c *console.Console, d *console.Dispatcher, line st
 // TestShowSystem: SHOW SYSTEM lists both processes, with the states the
 // scheduler has them in and the CPU time each has used.
 func TestShowSystem(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	code, _ := assembleAt(t, hiberCount)
 
 	c, _ := scheduledConsole(t, longQuantum, counter())
@@ -102,6 +106,9 @@ func TestShowSystem(t *testing.T) {
 // TestShowProcess: SHOW PROCESS shows the console's process, or another
 // by name or /IDENTIFICATION; a process that doesn't exist is an error.
 func TestShowProcess(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, _ := scheduledConsole(t, longQuantum, counter())
 	two := handBuiltProcess(t, c, counter())
 	two.Process.Name = "OTHER"

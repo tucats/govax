@@ -9,6 +9,7 @@ import (
 
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // Phase 50, subtask 21: the other processes run between DCL commands
@@ -63,6 +64,9 @@ func indexOf(lines []string, text string) int {
 // terminal runs it before the next prompt, and the subprocess has logged
 // out by then.
 func TestLend_spawnNoWait(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, dispatch := lendConsole(t)
 
 	got := strings.Join(dispatch(`SPAWN/NOWAIT/PROCESS=BACK WRITE SYS$OUTPUT "in the background"`), "|")
@@ -80,6 +84,9 @@ func TestLend_spawnNoWait(t *testing.T) {
 // commands between them, each process giving the CPU up after a
 // command; both run to their ends.
 func TestLend_interleave(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, dispatch := lendConsole(t)
 	dir := t.TempDir()
 
@@ -121,6 +128,9 @@ func TestLend_interleave(t *testing.T) {
 // procedure meanwhile; a subprocess's WAIT doesn't stop process 1, whose
 // commands run while it waits.
 func TestLend_wait(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, dispatch := lendConsole(t)
 	dir := t.TempDir()
 
@@ -182,6 +192,9 @@ func TestLend_wait(t *testing.T) {
 // timer pending the clock now stands still meanwhile, as it does while
 // process 1 waits alone.
 func TestLend_waitBesideWaitingSubprocess(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	_, dispatch := lendConsole(t)
 
 	proc := writeProcedure(t, t.TempDir(), "waits.com",

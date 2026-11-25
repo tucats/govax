@@ -10,6 +10,7 @@ import (
 )
 
 func TestPrint_quotedAndExpression(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	buf.Reset()
 
@@ -24,6 +25,7 @@ func TestPrint_quotedAndExpression(t *testing.T) {
 }
 
 func TestQuit_setsRunningFalse(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	if !c.Running() {
 		t.Fatal("expected Running() true before Quit")
@@ -39,6 +41,7 @@ func TestQuit_setsRunningFalse(t *testing.T) {
 }
 
 func TestTime_runsCommandAndReportsElapsed(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	called := false
 
@@ -71,6 +74,7 @@ func TestTime_runsCommandAndReportsElapsed(t *testing.T) {
 // (RUN, GO, CALL), which begins the engine's per-run budget again: the
 // count TIME reports is still the command's own instructions.
 func TestTime_countsAcrossANewRun(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 
 	// Instructions before the command, so a count that went back to 0 at
@@ -102,6 +106,7 @@ func TestTime_countsAcrossANewRun(t *testing.T) {
 }
 
 func TestRunProcedure_dispatchesEachLine(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	path := filepath.Join(t.TempDir(), "script.com")
 	writeFile(t, path, "$! a comment\n$ SHOW REG\n$\n$ SHOW PSL\n")
@@ -133,6 +138,7 @@ func writeFile(t *testing.T, path, content string) {
 }
 
 func TestClearSymbol(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	c.Symbols.Set("FOO", 1, machine.SymbolUser)
 	c.Symbols.Set("BAR", 2, machine.SymbolUser)
@@ -159,6 +165,7 @@ func TestClearSymbol(t *testing.T) {
 }
 
 func TestClearSymbolTemporary(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	c.Symbols.SetQualified("PERM", 1, true, false, false)
 	c.Symbols.SetQualified("TEMP", 2, false, false, false)
@@ -182,6 +189,7 @@ func TestClearSymbolTemporary(t *testing.T) {
 }
 
 func TestClearString(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 
 	if err := c.ClearString(); err == nil {
@@ -218,6 +226,7 @@ func TestClearString(t *testing.T) {
 // TestZero_reinitializes: Zero, which INITIALIZE/VAX runs, clears memory
 // and the symbols.
 func TestZero_reinitializes(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	c.Symbols.Set("FOO", 1, machine.SymbolUser)
 
@@ -246,6 +255,7 @@ func TestZero_reinitializes(t *testing.T) {
 // TestClearTB: a full translation-buffer flush plus a tries/hits/pflushes counter reset,
 // leaving the flush counter itself untouched -- see docs/planning/PHASE-21.md.
 func TestClearTB(t *testing.T) {
+	t.Parallel()
 	c := newRunnableConsole(t)
 
 	if _, err := c.Mem.LoadLongword(c.CPU, 0x200); err != nil {
@@ -271,6 +281,7 @@ func TestClearTB(t *testing.T) {
 }
 
 func TestClearInterruptAndClearAllInterrupts(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 
 	psl := c.CPU.PSL()
@@ -302,6 +313,7 @@ func TestClearInterruptAndClearAllInterrupts(t *testing.T) {
 // before a machine symbol of the same name, and that a DCL string that
 // isn't a number leaves the machine's symbol to be found.
 func TestPrint_DCLSymbols(t *testing.T) {
+	t.Parallel()
 	d, c, buf := newCommandDispatcher(t)
 
 	c.Symbols.Set("COUNT", 0x10, machine.SymbolUser)

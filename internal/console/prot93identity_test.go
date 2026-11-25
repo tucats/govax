@@ -5,6 +5,7 @@ import (
 
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/security"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // TestCreprcInheritsProtection (Phase 93's subtask 5): a process gets its
@@ -12,6 +13,9 @@ import (
 // System's MAXSYSGROUP; a subprocess holds its owner's rights, and a
 // detached process none.
 func TestCreprcInheritsProtection(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, _ := scheduledConsole(t, longQuantum, nil)
 	one := c.RTL
 	one.Process.DefaultProtection = 0xAF00

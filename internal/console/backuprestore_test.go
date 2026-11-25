@@ -102,6 +102,7 @@ func maskRestoreOutput(text string) string {
 // trees made; and each $STATUS. The [B69] tree the restores to [*...]
 // find is restored from B69.BCK first, as the probe made it.
 func TestBackupRestoreOracle(t *testing.T) {
+	t.Parallel()
 	d, _, output := mountBackupSets(t)
 
 	if err := d.Dispatch("BACKUP [SETS]B69.BCK/SAVE_SET [*...]/BY_OWNER=ORIGINAL"); err != nil {
@@ -156,6 +157,7 @@ func TestBackupRestoreOracle(t *testing.T) {
 // names one, its data VMS's (PI.EXE byte for byte); /LOG's CREDIR names
 // the deepest directory made. Without /LOG nothing is shown.
 func TestBackupRestoreHost(t *testing.T) {
+	t.Parallel()
 	d, c, buf := newCommandDispatcher(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -214,6 +216,7 @@ func TestBackupRestoreHost(t *testing.T) {
 // and one with three elements DCL's own %DCL-W-DIRECT (the $UIC grammar
 // type); nothing is restored.
 func TestBackupRestoreBadOwner(t *testing.T) {
+	t.Parallel()
 	d, c, _ := newCommandDispatcher(t)
 	mountFreshContainer(t, c, "DUA0")
 

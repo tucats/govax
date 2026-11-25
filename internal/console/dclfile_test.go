@@ -8,6 +8,7 @@ import (
 
 	"github.com/tucats/govax/internal/dclshell"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -42,6 +43,9 @@ func runFileProcedure(t *testing.T, onHost bool, typed string, lines ...string) 
 // TestDCLFile_host: OPEN/WRITE makes a host file of lines, and OPEN/READ
 // reads them back, a READ loop ending at /END_OF_FILE's label.
 func TestDCLFile_host(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	t.Chdir(t.TempDir())
 
 	out, _ := runFileProcedure(t, true, "",
@@ -78,6 +82,7 @@ func TestDCLFile_host(t *testing.T) {
 // node's, until CLOSE; TYPE shows the records as lines
 // (rms.TestOpenDCLFile checks the file's attributes).
 func TestDCLFile_volume(t *testing.T) {
+	t.Parallel()
 	out, _ := runFileProcedure(t, false, "",
 		`$ OPEN/WRITE OUT RESULTS`,
 		`$ SHOW LOGICAL OUT`,
@@ -105,6 +110,7 @@ func TestDCLFile_volume(t *testing.T) {
 // read with one of the same length, and WRITE adds a record only once
 // READ has reached the end of the file (RMS$_NEF before that).
 func TestDCLFile_appendAndUpdate(t *testing.T) {
+	t.Parallel()
 	out, _ := runFileProcedure(t, false, "",
 		`$ SET NOON`,
 		`$ OPEN/WRITE OUT LIST`,
@@ -140,6 +146,7 @@ func TestDCLFile_appendAndUpdate(t *testing.T) {
 // shown; a record operation's is RMS's message, its status not marked; a
 // name OPEN didn't define is CLI$_UNDFIL.
 func TestDCLFile_failures(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name    string
 		command []string
@@ -204,6 +211,7 @@ func TestDCLFile_failures(t *testing.T) {
 // message, and the ON action isn't taken: without SET NOON, an error
 // would otherwise end the procedure.
 func TestDCLFile_branches(t *testing.T) {
+	t.Parallel()
 	out, _ := runFileProcedure(t, false, "",
 		`$ OPEN/ERROR=NOFILE IN NOSUCH`,
 		`$ WRITE SYS$OUTPUT "not here"`,
@@ -245,6 +253,7 @@ func TestDCLFile_branches(t *testing.T) {
 // its /ERROR label, with no message (Phase 95's probe rehearsal found it
 // going on to the next line).
 func TestDCLFile_openErrorBeforeRMS(t *testing.T) {
+	t.Parallel()
 	out, _ := runFileProcedure(t, false, "",
 		`$ DEFINE NOTMOUNTED DUA7:`,
 		`$ OPEN/READ/ERROR=NOFILE IN NOTMOUNTED:[X]Y.DAT`,
@@ -262,6 +271,7 @@ func TestDCLFile_openErrorBeforeRMS(t *testing.T) {
 // in $STATUS, as VMS 7.3 showed it (testdata/dcl50's F1, F10, and Q1):
 // %X00000001, RMS$_NORMAL, RMS$_NORMAL, CLI$_NORMAL, %X00000001.
 func TestDCLFile_statuses(t *testing.T) {
+	t.Parallel()
 	out, _ := runFileProcedure(t, false, "",
 		`$ OPEN/WRITE OUT A`,
 		`$ SHOW SYMBOL $STATUS`,
@@ -289,6 +299,7 @@ func TestDCLFile_statuses(t *testing.T) {
 // whatever it is, and is at its end of file at the procedure's end; READ
 // SYS$COMMAND reads the terminal, prompting.
 func TestDCLFile_processPermanent(t *testing.T) {
+	t.Parallel()
 	out, c := runFileProcedure(t, false, "typed Line\n",
 		`$ DEFINE OUT SYS$OUTPUT`,
 		`$ WRITE OUT "through OUT"`,
@@ -326,6 +337,7 @@ func TestDCLFile_processPermanent(t *testing.T) {
 // /NOPUNCTUATION, and treats the reply as a string assignment's value,
 // after substituting its symbols.
 func TestDCLFile_inquire(t *testing.T) {
+	t.Parallel()
 	out, c := runFileProcedure(t, false, "hello  'X'   \"Mixed  Case\"\nyes\nraw\n",
 		`$ X = "there"`,
 		`$ INQUIRE ANSWER "Your answer"`,
@@ -352,6 +364,7 @@ func TestDCLFile_inquire(t *testing.T) {
 // TestDCLFile_staysOpen: a file a procedure opens stays open after it
 // ends, and EndSession closes what is left, its records written.
 func TestDCLFile_staysOpen(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	inner := writeProcedure(t, dir, "inner.com", `$ OPEN/WRITE KEEP KEPT`, `$ WRITE KEEP "from inner"`)
 
@@ -381,6 +394,7 @@ func TestDCLFile_staysOpen(t *testing.T) {
 // once the name is deassigned, READ and CLOSE can't reach the file (VMS
 // 7.3, testdata/dcl50's F2 and F11).
 func TestDCLFile_logicalName(t *testing.T) {
+	t.Parallel()
 	out, c := runFileProcedure(t, false, "",
 		`$ SET NOON`,
 		`$ OPEN/WRITE OUT THREE`,
@@ -415,6 +429,7 @@ func TestDCLFile_logicalName(t *testing.T) {
 // verification shows INQUIRE's reply, substituted, in the log (VMS 7.3,
 // testdata/dcl50's Q11).
 func TestDCLFile_terminal(t *testing.T) {
+	t.Parallel()
 	d, c, buf := newCommandDispatcher(t)
 	c.In = strings.NewReader("it is 'X'\n")
 
@@ -465,6 +480,9 @@ func joinRecords(records [][]byte) []byte {
 // for is passed over, with no message, and READ goes on reading the first
 // file (the DCL Dictionary).
 func TestDCLFile_sameName(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	t.Chdir(t.TempDir())
 	writeFile(t, "FIRST.DAT", "from first\n")
 	writeFile(t, "SECOND.DAT", "from second\n")
@@ -486,6 +504,7 @@ func TestDCLFile_sameName(t *testing.T) {
 // out: a reader, a /SHARE reader, and TYPE (VMS 7.3, testdata/dcl50's
 // F9).
 func TestDCLFile_sharing(t *testing.T) {
+	t.Parallel()
 	out, _ := runFileProcedure(t, false, "",
 		`$ SET NOON`,
 		`$ OPEN/WRITE OUT LOG`,
@@ -514,6 +533,9 @@ func TestDCLFile_sharing(t *testing.T) {
 // TestDCLFile_ownCommand: OPEN is one of DCL's own commands, so a data
 // line after it is read as a command, not skipped.
 func TestDCLFile_ownCommand(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	t.Chdir(t.TempDir())
 	writeFile(t, filepath.Join(".", "A.DAT"), "x\n")
 

@@ -18,6 +18,7 @@ const backupSets = "../../testdata/backup69/vax/"
 // backup69/backup69.com) read into BackupCommands, each qualifier by
 // where it stands.
 func TestBackupCommandParse(t *testing.T) {
+	t.Parallel()
 	g := loadEvaxGrammar(t)
 
 	parse := func(line string) dclcmd.BackupCommand {
@@ -124,6 +125,7 @@ func TestBackupCommandParse(t *testing.T) {
 // set opened and read (a restore's own messages are
 // TestBackupRestoreOracle's).
 func TestBackupMessages(t *testing.T) {
+	t.Parallel()
 	d, c := newTestDispatcher(t)
 	mountFreshContainer(t, c, "DUA0")
 
@@ -191,6 +193,7 @@ func TestBackupMessages(t *testing.T) {
 // TestBackupMessageShown: in a procedure, BACKUP's failure is shown as
 // VMS shows it, "%" first, and ends the procedure with its status.
 func TestBackupMessageShown(t *testing.T) {
+	t.Parallel()
 	err, out, status := runStatusProcedure(t, "$ BACKUP/LIST NOSUCH.BCK", `$ PRINT "after"`)
 	if out != "%BACKUP-F-LISINPSAV, /LIST requires save set as input\n" || status != 0x10A3808C || !vmserrors.MessageInhibited(err) {
 		t.Errorf("output %q, $STATUS %%X%08X, %v", out, status, err)

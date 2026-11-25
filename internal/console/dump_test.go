@@ -12,6 +12,7 @@ import (
 // rounds 4 and 6, which the round's oracles compare whole), its ranges,
 // and its failures (Phase 51).
 func TestDump(t *testing.T) {
+	t.Parallel()
 	d, c, buf := newCommandDispatcher(t)
 	mountFreshContainer(t, c, "DUA0")
 

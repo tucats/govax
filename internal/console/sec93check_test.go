@@ -47,6 +47,7 @@ func sec93Passes(t *testing.T) (privileged, unprivileged map[int][]string) {
 }
 
 func TestSec93CheckOracle(t *testing.T) {
+	t.Parallel()
 	c, run := sec93Console(t)
 	image := sec93Build(t, c)
 	privileged, unprivileged := sec93Passes(t)

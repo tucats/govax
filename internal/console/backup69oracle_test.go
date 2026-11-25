@@ -214,6 +214,7 @@ var backup69Reports = []string{"tree.lst", "sets.lst", "r1.lst", "r7.lst", "text
 // TestBackup69Oracle runs BACKUP69.COM on govax and holds its log, its
 // reports, and Part 2's save sets to VMS's.
 func TestBackup69Oracle(t *testing.T) {
+	t.Parallel()
 	d, c, buf := backup69Govax(t)
 
 	if err := d.Dispatch("@BACKUP69/OUTPUT=BACKUP69.LOG"); err != nil && !vmserrors.MessageInhibited(err) {

@@ -9,6 +9,7 @@ import (
 	"github.com/tucats/govax/internal/dclcmd"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/sysvol"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // The system logical names (docs/planning/PHASE-91 - concealed logical names.md,
@@ -20,6 +21,9 @@ import (
 // [SYS0.SYSCOMMON.], govax's one root, [SYSTEM.], so here each name shows
 // itself, where VMS's show SYS$COMMON for a file found in its second element.
 func TestSystemNames(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	_, _, run := bootOnSystemVolume(t, filepath.Join(t.TempDir(), "govax-system.dsk"), false, "")
 
 	const rooted = " = \"_DUA0:[SYSTEM.]\" [concealed,terminal] (LNM$SYSTEM_TABLE)\n"
@@ -153,6 +157,9 @@ func startSystemVolumeWithStartup(t *testing.T, path string, startup, recorded [
 // STARTUP.COM, unchanged, gets the new copy at the next start, and the system
 // names are rooted from then on.
 func TestSystemNamesRefresh(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	path := filepath.Join(t.TempDir(), "govax-system.dsk")
 	old := oldStartup(t)
 
@@ -173,6 +180,9 @@ func TestSystemNamesRefresh(t *testing.T) {
 // changed: it is kept, with SYSKEPT, and its names of directories on
 // SYS$SYSDEVICE go on working beside the rooted names govax defines itself.
 func TestSystemNamesKeptStartup(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	path := filepath.Join(t.TempDir(), "govax-system.dsk")
 	mine := append(oldStartup(t), "$ write sys$output \"my startup\"\n"...)
 

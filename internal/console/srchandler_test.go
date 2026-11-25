@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // srchandlerProgram signals CONDITION the way VMS 7.1's own LIB$SIGNAL does
@@ -54,6 +56,9 @@ const srchandlerProgram = `	.TITLE	SRCH
 // handler continues resumes at the signal array's PC with the arrays gone; a
 // severe condition every handler resignals ends the image.
 func TestSrchandlerFromProgram(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, _, buf := dungeonConsole(t, false)
 	dir := t.TempDir()
 

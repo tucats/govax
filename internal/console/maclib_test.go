@@ -11,6 +11,7 @@ import (
 	"github.com/tucats/govax/internal/dclcmd"
 	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -58,6 +59,7 @@ func hasSymbol(t *testing.T, c *Console, path, name string) bool {
 // TestMacro_govaxStarlet assembles a $EXIT_S call with no VMS library to
 // be found: the macro comes from govax's own STARLET.MLB.
 func TestMacro_govaxStarlet(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	c.HostLibrary = t.TempDir()
 
@@ -78,6 +80,7 @@ func TestMacro_govaxStarlet(t *testing.T) {
 // (the last named first), then /LIBRARY='s (the last named first), then
 // STARLET.MLB.
 func TestMacro_librarySearchOrder(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	c.HostLibrary = t.TempDir()
 
@@ -130,6 +133,7 @@ func TestMacro_librarySearchOrder(t *testing.T) {
 
 // TestMacro_libraryErrors covers libraries that can't be used.
 func TestMacro_libraryErrors(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	dir := t.TempDir()
 	src := filepath.Join(dir, "prog.mar")
@@ -169,6 +173,7 @@ func TestMacro_libraryErrors(t *testing.T) {
 // in the host library directory: a program with no library macros never
 // reads it, and one with a library macro reports it.
 func TestMacro_starletReadWhenNeeded(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	c.HostLibrary = t.TempDir()
 	writeHostFile(t, filepath.Join(c.HostLibrary, "STARLET.MLB"), "not a library")
@@ -199,6 +204,7 @@ func TestMacro_starletReadWhenNeeded(t *testing.T) {
 // directory, then through SYS$LIBRARY on a mounted volume, which comes
 // first.
 func TestMacro_starletSources(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	c.HostLibrary = t.TempDir()
 	makeMacroLibrary(t, c, filepath.Join(c.HostLibrary, "starlet.mlb"), whichMacro("1"))
@@ -250,6 +256,7 @@ func TestMacro_starletSources(t *testing.T) {
 // TestMacro_realStarlet assembles system macro calls from VMS's own
 // STARLET.MLB in the host library directory.
 func TestMacro_realStarlet(t *testing.T) {
+	t.Parallel()
 	vmsLibFile(t, "starlet.mlb")
 
 	c, out := newTestConsole(t)
@@ -281,6 +288,9 @@ func TestMacro_realStarlet(t *testing.T) {
 // TestHostLibraryDir checks where the host library directory comes from:
 // the console's own, then vax.library, then vax.link.library.
 func TestHostLibraryDir(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	for _, key := range []string{dclcmd.LibrarySetting, dclcmd.LegacyLibrarySetting} {
 		old, had := settings.Get(key), settings.Exists(key)
 
@@ -318,6 +328,9 @@ func TestHostLibraryDir(t *testing.T) {
 // TestDispatch_macroLibraryQualifier runs MACRO/LIBRARY= through the DCL
 // grammar.
 func TestDispatch_macroLibraryQualifier(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, _ := newTestDispatcher(t)
 	d.Console.HostLibrary = t.TempDir()
 

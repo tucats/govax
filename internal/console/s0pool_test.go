@@ -6,6 +6,7 @@ import (
 	"github.com/tucats/govax/internal/bootdata"
 	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/respath"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vm"
 )
 
@@ -15,6 +16,7 @@ import (
 // microkernel, ends at S0's end, and holds the number of processes
 // corevms/s0pool.go's arithmetic promises.
 func TestS0PoolAfterVaxInit(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 	c.Paths = respath.New(nil, bootdata.FS)
 	d := NewDispatcher(c, loadEvaxGrammar(t))
@@ -79,6 +81,9 @@ func s0Mapped(t *testing.T, c *Console, va uint32) bool {
 // pool's other pages, which have no access; AllocateS0 gives a run
 // cleared frames, and FreeS0 and FreeProcessS0 take them back.
 func TestS0PoolOnDemand(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	withSettings(t, map[string]string{machine.PagingSetting: "true"})
 
 	c, _ := newTestConsole(t)
@@ -198,6 +203,9 @@ func TestS0PoolOnDemand(t *testing.T) {
 // TestS0PoolPagingOff: with paging off the pool's pages keep VMINIT's
 // frames, allocated or freed.
 func TestS0PoolPagingOff(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	withSettings(t, map[string]string{machine.PagingSetting: "false"})
 
 	c := newServiceConsole(t)

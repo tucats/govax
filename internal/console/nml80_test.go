@@ -10,6 +10,7 @@ import (
 
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // testdata/nml80 is Phase 80's probe of NAMELIST I/O (subtask 11): one table
@@ -88,6 +89,9 @@ const nml80PromptInput = " ?\n =?\n $GRP ?\n =?\n I=7 $END\n"
 // case's lines, the condition a READ ended with, and what it stored, written
 // back out as namelist output, the same as vax/nml80-forrtl.txt's.
 func TestNML80Oracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, dispatch := nml80Volume(t, "nml80f.for", "nml80r.com")
 	nml80Build(t, dispatch, "FORTRAN NML80F", "MACRO NML80F", "LINK NML80F")
 
@@ -140,6 +144,9 @@ func nml80Messages(out string) []string {
 // nml80e.mar: SYNERRNAM with the text it stopped at, TOOMANVAL with the
 // entity's name, INVREFVAR with the name typed or the entity's.
 func TestNML80Messages(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	_, dispatch := nml80Volume(t, "nml80e.for", "nml80e.com")
 	nml80Build(t, dispatch, "FORTRAN NML80E", "MACRO NML80E", "LINK NML80E")
 
@@ -161,6 +168,9 @@ func TestNML80Messages(t *testing.T) {
 // (vax/nml80t-forrtl.txt): the group's names, or the group as a WRITE writes
 // it, in the search for the group and in it.
 func TestNML80Prompt(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, dispatch := nml80Volume(t, "nml80e.for")
 	nml80Build(t, dispatch, "FORTRAN NML80E", "MACRO NML80E", "LINK NML80E")
 
@@ -181,6 +191,9 @@ func TestNML80Prompt(t *testing.T) {
 // over govax, from a local-only volume, and holds them to the files the other
 // tests read; with NML80_WRITE set it writes those files instead.
 func TestNML80RunsOnFORRTL(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	disk, file := findFORRTL(t)
 	c, dispatch := nml80Volume(t, "nml80.mar", "nml80r.com", "nml80e.mar", "nml80e.com")
 

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/machine"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // Phase 46's subtask 8: testdata/mp/mbxpingpong.mar, a MACRO program
@@ -19,6 +20,9 @@ import (
 // TestMbxPingPong runs MBXPINGPONG.EXE, giving it MBXPONG.EXE on its
 // command line, and checks everything both processes print.
 func TestMbxPingPong(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	for _, tc := range []struct {
 		name    string
 		quantum string

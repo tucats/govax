@@ -5,6 +5,7 @@ import (
 
 	"github.com/tucats/gopackages/app-cli/settings"
 	"github.com/tucats/govax/internal/registers"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // Tests of STARTUP.COM's memory sizes, which the vax.memory.* configuration
@@ -65,6 +66,9 @@ func bootLayout(t *testing.T, values map[string]string) memoryLayout {
 // TestVaxInitMemoryConfig: with no vax.memory.* items, STARTUP.COM's own
 // sizes; with them, theirs, in decimal or %X.
 func TestVaxInitMemoryConfig(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	def := bootLayout(t, nil)
 
 	if def.physical != 16384 || def.p0 != 16384 || def.p1 != 8192 {

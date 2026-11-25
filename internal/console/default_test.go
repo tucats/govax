@@ -15,6 +15,7 @@ import (
 // covers): SetDefault stores the parsed spec, and ShowDefault prints it
 // back out.
 func TestConsoleSetShowDefault_roundTrip(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 
 	if err := c.cmd().SetDefault("DUA0:[MYDIR]"); err != nil {
@@ -35,6 +36,7 @@ func TestConsoleSetShowDefault_roundTrip(t *testing.T) {
 // Go error), matching every other console command that reports a bad
 // argument via a real VMS-style status code.
 func TestConsoleSetDefault_badFileSpec(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 
 	err := c.cmd().SetDefault("DUA0:[UNTERMINATED")
@@ -52,6 +54,7 @@ func TestConsoleSetDefault_badFileSpec(t *testing.T) {
 // bare name goes, the host's current directory, rather than showing a
 // directory with no device.
 func TestConsoleShowDefault_initialState(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 
 	if err := c.cmd().ShowDefault(); err != nil {
@@ -72,6 +75,7 @@ func TestConsoleShowDefault_initialState(t *testing.T) {
 // TestConsoleSetDefault_hostPath confirms SET DEFAULT refuses a host path
 // with VAX-E-HOSTDEF, and leaves the default as it was.
 func TestConsoleSetDefault_hostPath(t *testing.T) {
+	t.Parallel()
 	c, _ := newTestConsole(t)
 
 	if err := c.cmd().SetDefault("DUA0:[MYDIR]"); err != nil {
@@ -95,6 +99,7 @@ func TestConsoleSetDefault_hostPath(t *testing.T) {
 // command line actually reaches Console.SetDefault with its argument
 // threaded through correctly.
 func TestDispatch_setDefault(t *testing.T) {
+	t.Parallel()
 	d, c := newTestDispatcher(t)
 
 	if err := d.Dispatch("SET DEFAULT DUA0:[MYDIR]"); err != nil {
@@ -112,6 +117,7 @@ func TestDispatch_setDefault(t *testing.T) {
 // CLI_MISSINGPARAMETER since docs/planning/PHASE-37.md, CLI_NEEDSETARG before),
 // rather than silently doing nothing or panicking on an empty string.
 func TestDispatch_setDefaultNeedsArgument(t *testing.T) {
+	t.Parallel()
 	d, _ := newTestDispatcher(t)
 
 	err := d.Dispatch("SET DEFAULT")
@@ -132,6 +138,7 @@ func TestDispatch_setDefaultNeedsArgument(t *testing.T) {
 // which discards its Console's output buffer) so this test can inspect
 // what actually got printed.
 func TestDispatch_showDefaultViaDCL(t *testing.T) {
+	t.Parallel()
 	c, buf := newTestConsole(t)
 	g := loadEvaxGrammar(t)
 	d := NewDispatcher(c, g)
@@ -154,6 +161,7 @@ func TestDispatch_showDefaultViaDCL(t *testing.T) {
 // the same show_default syntax as the fully spelled-out form, matching how
 // every other SHOW sub-form's keyword already abbreviates.
 func TestDispatch_showDefaultAbbreviated(t *testing.T) {
+	t.Parallel()
 	d, _ := newTestDispatcher(t)
 
 	if err := d.Dispatch("SHOW DEF"); err != nil {

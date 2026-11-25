@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -101,6 +102,9 @@ ST:	.LONG	0
 `
 
 func TestFortranValueFromMACRO(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	d, c, buf := shareFindConsole(t, false)
 
 	for name, text := range map[string]string{"RAMPV.FOR": ftnValueRoutines, "VALUEM.MAR": ftnValueCaller} {

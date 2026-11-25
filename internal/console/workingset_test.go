@@ -10,6 +10,7 @@ import (
 	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/paging"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vm"
 )
 
@@ -126,6 +127,9 @@ spin:	brb	spin
 // them a second chance; a sweep a little longer than the working set,
 // as the 34-page ones are, then finds many of its pages still there.
 func TestWorkingSetReplacement(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	strict := workingSetRun(t, "0")
 	skipping := workingSetRun(t, "8")
 

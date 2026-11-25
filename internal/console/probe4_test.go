@@ -11,6 +11,7 @@ import (
 	"github.com/tucats/govax/internal/console/consoletest"
 	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // TestProbe4 runs Phase 48's probe 4 (testdata/mp/probe4) under govax, as
@@ -19,6 +20,9 @@ import (
 // must be VMS's (testdata/mp/probe4/vax/probe4.log) line for line, and
 // each spawned process's log VMS's but for what maskProbe4 masks.
 func TestProbe4(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
 	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 

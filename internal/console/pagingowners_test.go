@@ -5,6 +5,7 @@ import (
 
 	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/paging"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vm"
 )
 
@@ -114,6 +115,9 @@ func globalFrameFound(c *Console, pfn uint32, owner paging.Owner) bool {
 // mappings share it; and the frames go back to the free list with the
 // section.
 func TestPagingGlobalSectionFrames(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	withSettings(t, map[string]string{machine.PagingSetting: "true"})
 
 	c := newServiceConsole(t)

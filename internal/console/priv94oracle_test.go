@@ -12,6 +12,7 @@ import (
 
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/security"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -255,6 +256,9 @@ var priv94Walk = regexp.MustCompile(`^  self 1 G ([01]) W ([01]) nopriv ([0-9]+)
 // (testdata/priv94/vax), but for priv94Differences and the parts later
 // subtasks hold; then image rundown's part R and a run after it, whole.
 func TestPriv94Oracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	systemDown := priv94System
 	systemDown.holds = priv94Mask("TMPMBX", "NETMBX")
 
@@ -348,6 +352,9 @@ func TestPriv94Oracle(t *testing.T) {
 // then as PRIV94, who finds the tables SYSTEM's undo left (as VMS's
 // PRIV94 did: SS$_SUPERSEDE).
 func TestPriv94BOracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	outs := runPriv94As(t, []string{"PRIV94B"}, []priv94Run{
 		{priv94System, "F", false},
 		{priv94System, "MUND", false},

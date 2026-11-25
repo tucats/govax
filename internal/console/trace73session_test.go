@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // TestTrace73Procedure runs testdata/trace73's TRACE73.COM on govax as it
@@ -17,6 +19,9 @@ import (
 // being logged at all. RUN/DEBUG's $STATUS is VMS's, and the volume
 // dismounts afterward: no session leaves a file open.
 func TestTrace73Procedure(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	sources := append([]string{"trace73.mar", "trace73.com"}, withType(trace73Sessions, ".dbg")...)
 	out := runProbeProcedure(t, trace73Dir, sources, "TRACE73", trace73Sessions)
 
@@ -38,6 +43,9 @@ func TestTrace73Procedure(t *testing.T) {
 // from VMS's in internal/debugger's session oracle (dbgcmdIdentical) are
 // held to VMS's logs whole; the others must have been logged.
 func TestDbgcmdProcedure(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	dir := filepath.Join("..", "..", "testdata", "dbgcmd")
 	sessions := []string{"break", "brkcls", "step", "watch", "trace", "exam", "call", "except", "errors"}
 	sources := append([]string{"dbgcmd.mar", "dbgcmd.com"}, withType(sessions, ".dbg")...)

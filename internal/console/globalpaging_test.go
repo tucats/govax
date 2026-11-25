@@ -9,6 +9,7 @@ import (
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/paging"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -300,6 +301,9 @@ func (r *gblPagingRun) checkGlobalPages(t *testing.T, label string) globalPageSt
 // they leave the working set, come back, are written, and lose their
 // frames.
 func TestGlobalSectionPaging(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	pageFileSettings(t)
 
 	r := startGlobalPaging(t)
@@ -527,6 +531,9 @@ func checkGlobalSectionFile(t *testing.T, r *gblPagingRun, label string) {
 // off: every page stays in memory once read, and the file ends with the
 // same contents.
 func TestGlobalSectionPagingOff(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	r := startGlobalPaging(t)
 	c := r.c
 

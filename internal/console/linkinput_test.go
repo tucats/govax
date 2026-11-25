@@ -18,6 +18,7 @@ import (
 // read are DCL's to skip (SKPDAT), not commands. An option govax's LINK
 // doesn't act on yet is refused.
 func TestLinkOptionsInput(t *testing.T) {
+	t.Parallel()
 	d, c, buf := newCommandDispatcher(t)
 	dir := t.TempDir()
 	obj := assembleFixture(t, c, "entry", dir)

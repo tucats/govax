@@ -178,6 +178,7 @@ func maskLib59(lines []string) []string {
 }
 
 func TestLib59Oracle(t *testing.T) {
+	t.Parallel()
 	r0, out := runLib59(t)
 	if r0 != 1 {
 		t.Errorf("the program's status = %#x, want 1", r0)

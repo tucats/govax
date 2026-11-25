@@ -8,6 +8,7 @@ import "testing"
 // The program ends with 1 when every status was a success and both
 // pointers are 0 again.
 func TestLibrtlDynamicStrings(t *testing.T) {
+	t.Parallel()
 	r0, out := runMacroProgram(t, "\t.PSECT\tDATA,NOEXE,WRT,LONG\n"+
 		"DESC:\t.LONG\t0,0\nD2:\t.LONG\t0,0\nLEN:\t.WORD\t5\n"+
 		"HELLO:\t.ASCII\t/HELLO/\nBYE:\t.ASCII\t/BYE/\n"+
@@ -39,6 +40,7 @@ func TestLibrtlDynamicStrings(t *testing.T) {
 // source with LIB$ANALYZE_SDESC_R2, which returns its length and text's
 // address in R1 and R2. It ends with 1 when all of that held.
 func TestLibrtlCopyAndAnalyze(t *testing.T) {
+	t.Parallel()
 	r0, out := runMacroProgram(t, "\t.PSECT\tDATA,NOEXE,WRT,LONG\n"+
 		"SRC:\t.ASCID\t/GOVAX/\nDYN:\t.LONG\t^X020E0000,0\nTEXT:\t.ASCII\t/VMS/\n"+
 		"\t.PSECT\tCODE,NOWRT,EXE\n"+
@@ -66,6 +68,7 @@ func TestLibrtlCopyAndAnalyze(t *testing.T) {
 // showing the character it built. It ends with 1 when each result was
 // right, or the number of the check that failed.
 func TestLibrtlStringFunctions(t *testing.T) {
+	t.Parallel()
 	r0, out := runMacroProgram(t, "\t.PSECT\tDATA,NOEXE,WRT,LONG\n"+
 		"SRC:\t.ASCID\t/ONE DAY AT A TIME/\nSUB:\t.ASCID\t/DAY/\n"+
 		"CODE:\t.BYTE\t^A/*/\nONE:\t.ASCID\t/?/\n"+
@@ -93,6 +96,7 @@ func TestLibrtlStringFunctions(t *testing.T) {
 // reference, as MACRO calls them. It ends with 1 when each gave its
 // value and a blank made LIB$CVT_DTB fail with 0.
 func TestLibrtlCvtTextToBinary(t *testing.T) {
+	t.Parallel()
 	r0, out := runMacroProgram(t, "\t.PSECT\tDATA,NOEXE,WRT,LONG\n"+
 		"DEC:\t.ASCII\t/-1234/\nHEX:\t.ASCII\t/7fF/\nOCT:\t.ASCII\t/777/\nBLANK:\t.ASCII\t/1 2/\nRES:\t.LONG\t0\n"+
 		"\t.PSECT\tCODE,NOWRT,EXE\n"+
@@ -119,6 +123,7 @@ func TestLibrtlCvtTextToBinary(t *testing.T) {
 // keyword it found and checks its value; then "XYZ", which is
 // LIB$_UNRKEY. It ends with 1 when all of that held.
 func TestLibrtlLookupKey(t *testing.T) {
+	t.Parallel()
 	r0, out := runMacroProgram(t, "\t.PSECT\tDATA,NOEXE,WRT,LONG\n"+
 		"KEYTABLE:\t$LIB_KEY_TABLE\t<<ADD,1>,<DELETE,2>,<EXIT,3>>\n"+
 		"SEARCH:\t.ASCID\t/DEL/\nBAD:\t.ASCID\t/XYZ/\nFULL:\t.LONG\t^X020E0000,0\nVALUE:\t.LONG\t0\n"+
@@ -145,6 +150,7 @@ func TestLibrtlLookupKey(t *testing.T) {
 // and LIB$CURRENCY's symbols (no logical names defined: the United
 // States'), and ends with LIB$LP_LINES's 66.
 func TestLibrtlLocale(t *testing.T) {
+	t.Parallel()
 	r0, out := runMacroProgram(t, "\t.PSECT\tDATA,NOEXE,WRT,LONG\n"+
 		"SYM:\t.LONG\t^X020E0000,0\n"+
 		"\t.PSECT\tCODE,NOWRT,EXE\n"+
@@ -168,6 +174,7 @@ func TestLibrtlLocale(t *testing.T) {
 // value to text in E format (shown), and text to a longword. It ends
 // with 1 when the last gave -77.
 func TestLibrtlCvtDxDx(t *testing.T) {
+	t.Parallel()
 	r0, out := runMacroProgram(t, "\t.PSECT\tDATA,NOEXE,WRT,LONG\n"+
 		"LDESC:\t.WORD\t4\n\t.BYTE\t8,9\n\t.ADDRESS\tLVAL\n\t.BYTE\t-2,0,0,0\n"+ // DSC$K_DTYPE_L, DSC$K_CLASS_SD, scale -2
 		"LVAL:\t.LONG\t123456\n"+

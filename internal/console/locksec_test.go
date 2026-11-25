@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/sched"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -51,6 +52,9 @@ lcknam:	.ascid	"COUNTERLOCK"
 // TestLockedSection_enqw: every increment lands; the processes did wait
 // for each other's locks.
 func TestLockedSection_enqw(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	flags := vmsdef.LibrarySymbols["SEC$M_GBL"] | vmsdef.LibrarySymbols["SEC$M_PAGFIL"] |
 		vmsdef.LibrarySymbols["SEC$M_WRT"]
 

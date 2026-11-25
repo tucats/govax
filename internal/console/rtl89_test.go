@@ -4,6 +4,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // rtl89Dir holds Phase 89's programs of FTNRTL under recursion and ASTs
@@ -61,6 +63,9 @@ func rtl89Run(t *testing.T, qualifier string, names ...string) string {
 // before each: some ASTs come while the main line is parsing it, and then both
 // statements parse it, and the copy that doesn't go in the cell must be freed.
 func TestRTL89FormatCache(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	for _, qualifier := range []string{"/NOOPTIMIZE", "/OPTIMIZE"} {
 		t.Run(qualifier, func(t *testing.T) {
 			got := rtl89Run(t, qualifier, "FMTRACE.FOR", "RTL89U.MAR")
@@ -79,6 +84,9 @@ func TestRTL89FormatCache(t *testing.T) {
 // from FORRTL (docs/DEVIATIONS.md). If this changes, the difference may be gone:
 // see for83GoneSameFrame too.
 func TestRTL89SameFrames(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	got := rtl89Run(t, "", "GONE89.FOR")
 	want := "DEEPER          40|AFTER           0"
 

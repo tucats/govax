@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -252,6 +253,8 @@ var fcalcModes = []struct{ name, qualifier string }{
 // printing the same lines. "-run TestFcalcMilestone/nopaging/opt" is the
 // usual build alone.
 func TestFcalcMilestone(t *testing.T) {
+	testproc.Parallel(t)
+
 	type mode struct {
 		name, qualifier string
 		paging          bool
@@ -273,6 +276,10 @@ func TestFcalcMilestone(t *testing.T) {
 		name := map[bool]string{false: "nopaging", true: "paging"}[m.paging] + "/" + m.name
 
 		t.Run(name, func(t *testing.T) {
+			if testproc.Isolate(t) {
+				return
+			}
+
 			d, c, buf := fcalcConsole(t, m.paging)
 			buildFcalc(t, d, c, buf, m.qualifier)
 			runFcalcScripts(t, d, c, buf)

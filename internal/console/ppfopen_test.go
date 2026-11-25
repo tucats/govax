@@ -6,6 +6,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // Tests of the files DCL's OPEN opens as process-permanent files
@@ -17,6 +19,9 @@ import (
 // defined reach DCL's files, and DCL and the image read and write each
 // file's one stream in turn, as VMS 7.1's log shows.
 func TestDCLOpenFiles_partF(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	_, dispatch := wsDispatcher(t)
 	dir := t.TempDir()
 	dsk := filepath.Join(dir, "ppf.dsk")

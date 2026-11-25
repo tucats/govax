@@ -8,6 +8,7 @@ import "testing"
 // and shows the masks and end positions with LIB$SYS_FAO (docs/planning/PHASE-55,
 // subtask 7).
 func TestLibrtlProtection(t *testing.T) {
+	t.Parallel()
 	r0, out := runMacroProgram(t, "\t.PSECT\tDATA,NOEXE,WRT,LONG\n"+
 		"OUT:\t.LONG\t^X020E0000,0\n"+
 		"CTRL:\t.ASCID\t/!XL !XW !XW !UW !XL !XW !UW/\n"+

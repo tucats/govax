@@ -176,4 +176,8 @@ var hostAccessReasons = map[string]string{
 	"jobqueue/file.go:Load":                        "the queue database, vax.queue.file",
 	"jobqueue/file.go:LockManager":                 "the queue manager's lock beside the queue database",
 	"uaf/file.go:Load":                             "the authorization file, vax.authorization.file",
+
+	// Test support, which nothing in a govax build imports.
+	"testproc/testproc.go:Isolate": "tests only: runs the test binary again as a child process",
+	"testproc/testproc.go:Shared":  "tests only: a result shared by a go test run's processes",
 }

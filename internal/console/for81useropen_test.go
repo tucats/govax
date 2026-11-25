@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // useropenRoutine is a USEROPEN routine in MACRO, as testdata/for81's UOLOG
@@ -252,6 +253,9 @@ func useropenMasked(line string) string { return useropenSTV.ReplaceAllString(li
 // FAB and RAB as FTNRTL would give them to RMS, the names, and what OPEN does
 // with the routine's open, its failure, and an unconnected RAB.
 func TestFor81UserOpenOracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	text, err := os.ReadFile(filepath.Join("..", "..", "testdata", "for81", "vax", "for81-vax.txt"))
 	if err != nil {
 		t.Fatal(err)

@@ -8,6 +8,7 @@ import (
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // Phase 45's subtask 6: a process $CREPRC created is deleted when its
@@ -46,6 +47,9 @@ func memoryInUse(c *console.Console) (pool uint32, frames int) {
 // once, while the CPU is still in its context; its page tables, stacks,
 // and PCB go as soon as the CPU has left it, to process 1.
 func TestDeleteProcess_imageExit(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, _ := scheduledConsole(t, longQuantum, brbSelf)
 	exe := buildChildImage(t, c)
 	one := c.RTL
@@ -96,6 +100,9 @@ func TestDeleteProcess_imageExit(t *testing.T) {
 // counting: process 1 gets a PCB page the first time it's switched out,
 // and keeps it.)
 func TestDeleteProcess_hundred(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, _ := scheduledConsole(t, longQuantum, brbSelf)
 	exe := buildChildImage(t, c)
 
@@ -143,6 +150,9 @@ done:	ret
 // left open, as RMS's rundown does, so the record it wrote is in the
 // file on the volume.
 func TestDeleteProcess_closesFiles(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, _ := scheduledConsole(t, longQuantum, brbSelf)
 
 	path := filepath.Join(t.TempDir(), "work.dsk")

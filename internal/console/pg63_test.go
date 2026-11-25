@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/machine"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // Phase 63's probe (testdata/pg63, README.md): govax runs the program and
@@ -105,6 +106,9 @@ func vaxLines(t *testing.T, name string) []string {
 // TestPG63Oracle runs the program's two parts and compares their lines
 // with VMS's.
 func TestPG63Oracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	_, run := pg63Console(t)
 
 	for _, part := range []struct{ name, file string }{{"A", "pg63a.out"}, {"B", "pg63b.out"}} {
@@ -144,6 +148,9 @@ var expectedPG63SetDifferences = map[string]bool{
 // command lines as VMS's verification shows them, after substitution),
 // then each subprocess case, whose message is compared.
 func TestPG63SetWorkingSet(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	dispatch, _ := pg63Console(t)
 	log := vaxLines(t, "pg63.log")
 

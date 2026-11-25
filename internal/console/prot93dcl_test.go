@@ -55,6 +55,7 @@ func logSection(t *testing.T, log []string, first, end string) []string {
 // the lines VMS 7.1 gave. (The section's CREATE and DIRECTORY lines are
 // new files' profiles, subtask 7's.)
 func TestDefaultProtectionOracle(t *testing.T) {
+	t.Parallel()
 	log := prot93Log(t, "prot93.log")
 	lines := logSection(t, log, "######## DEFAULT PROTECTION", "$ CREATE/DIRECTORY")
 	lines = append(lines, logSection(t, log, "$ SET PROTECTION=(S:Z)/DEFAULT", "$ COPY")...)
@@ -100,6 +101,7 @@ func TestDefaultProtectionOracle(t *testing.T) {
 // and an unknown category in SET PROTECTION=(code) of a file, which DCL
 // refuses before the command runs. Each one's messages must be VMS 7.1's.
 func TestProtectionGrammarOracle(t *testing.T) {
+	t.Parallel()
 	lines := logSection(t, prot93Log(t, "prot93.log"), "######## MALFORMED AND ODD VALUES", "######## ACLS")
 
 	d, _, buf := newCommandDispatcher(t)
@@ -141,6 +143,7 @@ func dclMessage(err error) string { return "%" + err.Error() }
 // TestDefaultProtectionCommands: the code is merged into the process's own
 // default protection, and SET PROTECTION=(Q:R)/DEFAULT is DCL's IVKEYW.
 func TestDefaultProtectionCommands(t *testing.T) {
+	t.Parallel()
 	d, c, _ := newCommandDispatcher(t)
 	p := c.RTL.Process
 
@@ -177,6 +180,7 @@ func TestDefaultProtectionCommands(t *testing.T) {
 // SYSTEM held NET$MANAGE, and both held the SYS$NODE_ system right,
 // which govax's processes don't, so those lines are left out.
 func TestShowProcessPrivilegesOracle(t *testing.T) {
+	t.Parallel()
 	d, c, buf := newCommandDispatcher(t)
 
 	report := func() []string {
@@ -240,6 +244,7 @@ func TestShowProcessPrivilegesOracle(t *testing.T) {
 // off past an image's rundown; they come back, ALL and NOALL are every
 // privilege, and a name that isn't a privilege is DCL's IVKEYW.
 func TestSetProcessPrivileges(t *testing.T) {
+	t.Parallel()
 	d, c, _ := newCommandDispatcher(t)
 	p := c.RTL.Process
 	four := security.PrivBYPASS | security.PrivSYSPRV | security.PrivGRPPRV | security.PrivREADALL
@@ -290,6 +295,7 @@ func TestSetProcessPrivileges(t *testing.T) {
 // [300,1], under PROT93A's [PROT93.OWN], which gives everyone RWE, as the
 // probe's did).
 func TestCreateDirectoryOwnerOracle(t *testing.T) {
+	t.Parallel()
 	log := prot93Log(t, filepath.Join("round2", "prot93v_prot93c.log"))
 
 	d, c, buf := newCommandDispatcher(t)

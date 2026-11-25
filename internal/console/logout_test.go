@@ -12,6 +12,7 @@ import (
 // /NOBRIEF is /FULL. EXIT, and a LOGOUT taken back (Resume, a No to
 // ending batch jobs), write nothing.
 func TestLogout_processOne(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		command string
 		full    bool

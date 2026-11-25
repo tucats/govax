@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/security"
+	"github.com/tucats/govax/internal/testproc"
 )
 
 // Phase 93's subtask 12 (docs/planning/PHASE-93 - file protection.md):
@@ -40,6 +41,9 @@ var prot93FCommands = []string{
 
 // TestProt93TreeOracle replays PROT93Z.COM's listings on round 1's volume.
 func TestProt93TreeOracle(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, run := prot93Console(t, "prot93-round1.dsk", false)
 
 	for _, id := range sec93Identifiers {
@@ -137,6 +141,7 @@ func prot93MaskRevised(lines []string) []string {
 // may not read (VMS's READERR), SHOW ACL with entries and without, and
 // F$FILE_ATTRIBUTES' UIC by the rights database's names.
 func TestShowSecurityCases(t *testing.T) {
+	t.Parallel()
 	c, run := prot93SetConsole(t)
 	p := c.RTL.Process
 

@@ -10,6 +10,7 @@ import "testing"
 // FREE_LUN frees once (LIB$_LUNALRFRE the second time). VMS 7.1's order
 // (testdata/lib55).
 func TestLibrtlResources(t *testing.T) {
+	t.Parallel()
 	r0, out := runMacroProgram(t, "\t.PSECT\tDATA,NOEXE,WRT,LONG\n"+
 		"OUT:\t.LONG\t^X020E0000,0\n"+
 		"CTRL:\t.ASCID\t/!SL !XL !XL !XL !SL !XL !SL !XL !XL !XL/\n"+

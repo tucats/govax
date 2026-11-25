@@ -13,6 +13,7 @@ import (
 	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/sched"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -64,6 +65,9 @@ func stepUntilStored(t *testing.T, c *console.Console) uint32 {
 // space, stacks, and PCB, the name, flags, and mailbox unit asked for,
 // and its startup pending with the image named.
 func TestCreprc_subprocess(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	code, _ := assembleAt(t, createChild)
 	c, _ := scheduledConsole(t, longQuantum, code)
 	one := c.RTL
@@ -153,6 +157,9 @@ func TestCreprc_subprocess(t *testing.T) {
 // (with its own logical-name table and the pooled quotas asked for), no
 // owner, its UIC's group, and nothing counted against the creator's job.
 func TestCreprc_detached(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, _ := scheduledConsole(t, longQuantum, nil)
 	one := c.RTL
 
@@ -202,6 +209,9 @@ func TestCreprc_detached(t *testing.T) {
 // TestCreprc_limitedCreator: without SETPRV and ALTPRI, a creator gives
 // only privileges it has and no priority above its own.
 func TestCreprc_limitedCreator(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, _ := scheduledConsole(t, longQuantum, nil)
 	one := c.RTL
 
@@ -236,6 +246,9 @@ func TestCreprc_limitedCreator(t *testing.T) {
 // TestCreprc_limits: PRCLM, and a pool too full for a new process: both
 // refuse, and the pool and process table are as they were.
 func TestCreprc_limits(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, _ := scheduledConsole(t, longQuantum, nil)
 	one := c.RTL
 	sys := one.System
@@ -369,6 +382,9 @@ func runUntil(t *testing.T, c *console.Console, limit int, done func() bool) {
 // Its SYS$OUTPUT is the output $CREPRC gave, in its own process table,
 // and its default directory is process 1's.
 func TestCreprc_startup(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
 	exe := buildChildImage(t, c)
 	one := c.RTL
@@ -432,6 +448,9 @@ func TestCreprc_startup(t *testing.T) {
 // TestCreprc_startupHibernates: PRC$M_HIBER makes the new process
 // hibernate before its image runs, until process 1 wakes it.
 func TestCreprc_startupHibernates(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	code, _ := assembleAt(t, `
 loop:	tstl	@#^X604			; wait for the child's PID
 	beql	loop
@@ -476,6 +495,9 @@ done:	brb	done
 // image), and the scheduler chooses again before anything runs: process 1 goes
 // on.
 func TestCreprc_startupFails(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	for _, tt := range []struct {
 		image string
 		want  uint32
@@ -510,6 +532,9 @@ func TestCreprc_startupFails(t *testing.T) {
 // system service failure exceptions enabled in user mode (the Internals
 // book's Table 12-2); without it they are disabled.
 func TestCreprc_failureExceptions(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, _ := scheduledConsole(t, longQuantum, nil)
 	one := c.RTL
 

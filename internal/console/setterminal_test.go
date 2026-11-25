@@ -6,6 +6,7 @@ import (
 
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
+	"github.com/tucats/govax/internal/testproc"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -14,6 +15,9 @@ import (
 // LOG_IO or PHY_IO changes nothing; a device that isn't a terminal is
 // NOTSET (docs/planning/PHASE-94 - privileges.md, subtask 6).
 func TestSetTerminal(t *testing.T) {
+	if testproc.Isolate(t) {
+		return
+	}
 	c, buf := scheduledConsole(t, longQuantum, brbSelf)
 	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 	dispatch := func(line string) string {
