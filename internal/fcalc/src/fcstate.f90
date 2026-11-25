@@ -190,9 +190,10 @@ contains
   ! the variable is full, which is the usual case, and END= one for the end
   ! of the input. These labels, 10, 20, and 30, are the old-fashioned GO TO
   ! targets Fortran's I/O statements still use. A line too long for the
-  ! system to read (on VMS, a terminal's line past 199 characters) is an
-  ! error the READ's IOSTAT= catches, after which the next READ reads the
-  ! next line.
+  ! system to read is an error the READ's IOSTAT= catches. From a file that
+  ! is a line past 199 characters, and the next READ reads the next line;
+  ! at a terminal it is one past 133 characters (the unit's record), and as
+  ! on VMS the rest of the line is what the next READ reads.
   !
   ! The terminal is unit *, which isn't a number, so each READ is written
   ! twice, once for each.

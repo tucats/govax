@@ -54,6 +54,20 @@ func f90rFromFile(out, in string) string {
 	return out
 }
 
+// f90rFileOut is what fcalc prints for a script read from a file, laid out as at
+// the terminal (f90rFromFile makes the rest of the difference): name.file.out
+// where a line is longer than a terminal's READ takes whole (133 characters,
+// testdata/for81's round 3) and shorter than a file's (199), and so prints
+// otherwise at a terminal; name.out for every other script.
+func f90rFileOut(script string) ([]byte, error) {
+	base := strings.TrimSuffix(script, ".in")
+	if text, err := os.ReadFile(base + ".file.out"); err == nil {
+		return text, nil
+	}
+
+	return os.ReadFile(base + ".out")
+}
+
 // runF90R builds the volume as exchange.cmd does and runs F90R.COM on it.
 func runF90R(t *testing.T) (string, *Console, *Dispatcher) {
 	t.Helper()
@@ -185,7 +199,7 @@ func checkF90RFcalc(t *testing.T, sections map[string]string) {
 		for _, script := range scripts {
 			name := strings.ToUpper(strings.TrimSuffix(filepath.Base(script), ".in"))
 
-			want, err := os.ReadFile(strings.TrimSuffix(script, ".in") + ".out")
+			want, err := f90rFileOut(script)
 			if err != nil {
 				t.Fatal(err)
 			}

@@ -75,8 +75,8 @@ module fckinds
   ! function: it looks only at its argument's kind, never its value.
   real(rk), parameter :: eps = epsilon(1.0_rk)
 
-  ! The longest line fcalc reads (VMS's FORTRAN reads a terminal's records
-  ! of up to 199 bytes), and the longest name.
+  ! The longest line fcalc reads (VMS's FORTRAN reads records of up to 199
+  ! bytes from a file, and of up to 133 at a terminal), and the longest name.
   integer, parameter :: line_length = 199
   integer, parameter :: name_length = 31
 

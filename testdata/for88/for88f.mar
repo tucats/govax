@@ -12,7 +12,8 @@
 ; high word, and mechanism 0 a keyword with no value at all; FTNRTL takes either as
 ; a value by mechanism 4. Any other has its value in the next argument, which is
 ; FTNRTL's form as it stands. Code 3 by mechanism 2 is ERR=, a flag of the control
-; block.
+; block. Code 22 by reference is IOSTAT=, another flag (FTNRTL's 4), its variable
+; set from FTNRTL's R0 (testdata/for81's round 3, #45).
 ;
 ; FTNRTL returns 0, -1 at an end of file, or a FOR number, where FORRTL returns a
 ; condition value, which is what the program shows. So R0 is made a condition value.
@@ -35,6 +36,7 @@ FLAGS:	.WORD	0			; bit 0, ERR=
 	.LONG	0
 NEWARGS:
 	.BLKL	256
+IOSTAT:	.LONG	0			; IOSTAT='s variable, or 0
 FORMAT:	.WORD	0			; a run-time format's descriptor
 	.BYTE	14,1
 	.ADDRESS 0
@@ -47,6 +49,7 @@ FORMAT:	.WORD	0			; a run-time format's descriptor
 ;
 TRANSLATE:
 	CLRW	FLAGS
+	CLRL	IOSTAT
 	MOVAB	CONTROL,NEWARGS+4
 	MOVAB	NEWARGS+8,R3		; where the next one goes
 	TSTL	R4
@@ -55,7 +58,9 @@ TRANSLATE:
 5$:	MOVL	#1,R2
 10$:	MOVZBL	(AP),R0
 	CMPL	R2,R0
-	BGTR	90$
+	BLEQ	11$
+	BRW	90$
+11$:
 	MOVL	(AP)[R2],R0
 	INCL	R2
 	EXTZV	#8,#8,R0,R1		; the mechanism
@@ -65,30 +70,36 @@ TRANSLATE:
 	BEQL	30$
 	TSTL	R1
 	BEQL	40$
-	MOVL	R0,(R3)+		; as it stands
+	CMPB	R0,#22			; IOSTAT=: a flag of the control block,
+	BNEQ	15$			;  the value FTNRTL's R0
+	BISW2	#4,FLAGS
+	MOVL	(AP)[R2],IOSTAT
+	INCL	R2
+	BRW	10$
+15$:	MOVL	R0,(R3)+		; as it stands
 	MOVL	(AP)[R2],(R3)+
 	INCL	R2
-	BRB	10$
+	BRW	10$
 20$:	EXTV	#16,#16,R0,R1		; the unit
 	TSTL	R4
 	BEQL	25$
 	MOVL	R1,NEWARGS+8
-	BRB	10$
+	BRW	10$
 25$:	MOVL	#^X0401,(R3)+
 	MOVL	R1,(R3)+
-	BRB	10$
+	BRW	10$
 30$:	CMPB	R0,#3			; ERR=
 	BNEQ	35$
 	BISW2	#1,FLAGS
-	BRB	10$
+	BRW	10$
 35$:	MOVZBL	R0,R1			; a value in the high word
 	BISL3	#^X0400,R1,(R3)+
 	EXTZV	#16,#16,R0,(R3)+
-	BRB	10$
+	BRW	10$
 40$:	MOVZBL	R0,R1			; a keyword with no value
 	BISL3	#^X0400,R1,(R3)+
 	MOVL	#1,(R3)+
-	BRB	10$
+	BRW	10$
 90$:	MOVAB	NEWARGS,R0		; the count
 	SUBL3	R0,R3,R1
 	ASHL	#-2,R1,R1
@@ -99,9 +110,13 @@ TRANSLATE:
 ;
 ; CONDITION: R0, FTNRTL's status, as FORRTL's. A FOR number n is the condition
 ; ^X188004 + 8n, each with the severity E but for those it doesn't matter to here.
+; IOSTAT='s variable, if any, gets FTNRTL's status first.
 ;
 CONDITION:
-	TSTL	R0
+	MOVL	IOSTAT,R1
+	BEQL	5$
+	MOVL	R0,(R1)
+5$:	TSTL	R0
 	BNEQ	10$
 	MOVL	#1,R0
 	RSB

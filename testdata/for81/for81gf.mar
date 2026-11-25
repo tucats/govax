@@ -1,0 +1,55 @@
+	.TITLE	FOR81GF - round 3's program on FTNRTL
+;
+; for81g.mar calls VMS's FORTRAN run-time library. testdata/for88's for88f.mar
+; passes most of its FOR$ calls on to FTNRTL; this module adds the four it lacks,
+; and TestFor81GOnFTNRTL links the three:
+;
+;	FOR$IO_L_V(value)	a longword by value
+;	FOR$IO_L_R(address)	a longword by reference
+;	FOR$IO_F_R(address)	an F_floating value by reference
+;	FOR$ERRSNS(...)		FTN$ERRSNS, the same arguments
+;
+; FTNRTL takes every item by descriptor, FTN$IO_ITEM(desc), so each item routine
+; makes a class S descriptor of its item and runs FTN$IO_ITEM's code in its own
+; frame, as for88f.mar's do (FTNRTL knows the statement by its caller's frame). A
+; value by value is copied to a cell of this module's first.
+;
+	.PSECT	FOR81GF_DATA,NOEXE,WRT,LONG
+
+ITEMARGS:
+	.LONG	1
+	.ADDRESS ITEM
+ITEM:	.WORD	4			; the item's descriptor
+	.BYTE	8,1			; DSC$K_DTYPE_L, DSC$K_CLASS_S
+	.ADDRESS 0
+VALUE:	.LONG	0			; a value by value
+
+	.PSECT	FOR81GF_CODE,EXE,NOWRT,LONG
+
+ALL	= ^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+
+	.MACRO	ITEM_GO	TYPE
+	MOVB	#TYPE,ITEM+2
+	MOVAB	ITEMARGS,AP
+	MOVAB	G^FTN$IO_ITEM,R0
+	JMP	2(R0)
+	.ENDM	ITEM_GO
+
+	.ENTRY	FOR$IO_L_V,ALL
+	MOVL	4(AP),VALUE
+	MOVAL	VALUE,ITEM+4
+	ITEM_GO	8			; DSC$K_DTYPE_L
+
+	.ENTRY	FOR$IO_L_R,ALL
+	MOVL	4(AP),ITEM+4
+	ITEM_GO	8			; DSC$K_DTYPE_L
+
+	.ENTRY	FOR$IO_F_R,ALL
+	MOVL	4(AP),ITEM+4
+	ITEM_GO	10			; DSC$K_DTYPE_F
+
+	.ENTRY	FOR$ERRSNS,^M<>
+	CALLG	(AP),G^FTN$ERRSNS
+	RET
+
+	.END

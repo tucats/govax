@@ -341,3 +341,33 @@ func TestLibGetInputFile(t *testing.T) {
 		t.Errorf("at the terminal it printed %q", out)
 	}
 }
+
+// TestFortranTerminalLongLine is testdata/for81's FOR81T, round 3's #0 and #1, as
+// FORTRAN: a READ at the terminal takes as much of a line as the unit's record
+// (133 characters), which RMS reports as RMS$_TNS and the READ as ERRDURREA (39),
+// and the rest of the line is the next READ's, as on VMS 7.1.
+func TestFortranTerminalLongLine(t *testing.T) {
+	d, c, buf := shareFindConsole(t, false)
+
+	buildFortranProgram(t, d, c, buf, "LONGLN", []string{
+		"      PROGRAM LONGLN",
+		"      CHARACTER*300 LINE",
+		"      INTEGER N, IOS, NUM, STS, STV, U, CND",
+		"      READ (5,'(Q,A)',IOSTAT=IOS) N, LINE",
+		"      CALL ERRSNS (NUM, STS, STV, U, CND)",
+		"      WRITE (6,'(1X,I3,1X,Z8.8)') IOS, STS",
+		"      READ (5,'(Q,A)',IOSTAT=IOS) N, LINE",
+		"      WRITE (6,'(1X,I3,1X,I3)') IOS, N",
+		"      END",
+	})
+
+	c.In = strings.NewReader(strings.Repeat("x", 240) + "\n")
+
+	want := " 39 000181B8\n" +
+		"  0 107\n" +
+		"  $STATUS == \"%X00000001\"\n"
+
+	if out := shareRun(t, d, buf, "LONGLN"); out != want {
+		t.Errorf("RUN LONGLN printed:\n%q\nwant\n%q", out, want)
+	}
+}

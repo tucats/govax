@@ -60,6 +60,10 @@ var (
 	// records have all been read — the RMS equivalent of Go's io.EOF.
 	rmsEOF = vmsConst("RMS$_EOF")
 
+	// rmsTerminatorNotStandard is RMS$_TNS, a warning: a terminal $GET
+	// whose buffer filled before a line's end, the record what it holds.
+	rmsTerminatorNotStandard = vmsConst("RMS$_TNS")
+
 	// rmsFileExists is RMS$_FEX: the target of SYS$CREATE already
 	// exists and the caller didn't ask to supersede it.
 	rmsFileExists = vmsConst("RMS$_FEX")

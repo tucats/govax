@@ -85,6 +85,14 @@ compared with govax's and gfortran's runs, which print the same lines. Each
 script starts with `set echo`, so the transcript shows each line after its
 prompt, as a terminal does.
 
+A READ at a terminal takes at most 133 characters of a line, as VMS's FORTRAN
+run-time library does (Phase 113, `testdata/for81`'s round 3), and the rest of a
+longer line is the next READ's; from a file a line of up to 199 is read whole.
+`basics.in` and `errors.in` type lines longer than 133 characters, so their
+`.out` is the terminal's transcript, and `basics.file.out` and `errors.file.out`
+what the script prints read from a file (laid out as at the terminal), which
+the VMS round (`testdata/f90r`) and gfortran's runs hold fcalc to.
+
 | Script | What it covers |
 |---|---|
 | `basics` | numbers and how they are shown, every operator and its precedence, the constants, variables and `ans`, LIST, CLEAR, SET [NO]ECHO, comments, and the messages |

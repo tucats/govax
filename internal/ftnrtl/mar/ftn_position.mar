@@ -29,7 +29,10 @@
 ;			(FTN$$UNIT_GET).
 ;
 ; Each takes the unit's current record away (FTN_UNITS), as the 1988 LRM's 7.4
-; says any statement does; ENDFILE's write does it in FTN$$UNIT_PUT.
+; says any statement does; ENDFILE's write does it in FTN$$UNIT_PUT. A REWIND or
+; BACKSPACE that is refused keeps it, so a relative unit's DELETE after one goes
+; on (VMS's FORRTL, testdata/for81's round 3, #3 and #5), and a BACKSPACE's
+; current record is the last it read again, if any, which a REWRITE takes (#6).
 ;
 ; None of them works on a unit with direct or keyed access, or on a file that
 ; isn't sequential. BACKSPACE doesn't work on a device that isn't file-oriented,
@@ -63,6 +66,7 @@ UB_APPENDED	= 43
 UB_FAB		= 76
 UB_RAB		= UB_FAB+FAB$C_BLN
 UB_CURRENT	= 620+36
+CURRENT_GONE	= 3			; UB_CURRENT's: a READ's record taken away
 UB_POSITION	= 620+42		; INQUIRE's POSITION=: 2 REWIND
 
 CTX_STATUS	= 16			; A statement's context (FTN_STATEMENT)
@@ -133,9 +137,9 @@ RANDOM:	CMPB	UB_ACCESS(R7),#ACCESS_DIRECT
 	BLBC	R0,1$
 	BLBS	UB_OPEN(R7),2$
 1$:	BRW	END
-2$:	CLRB	UB_CURRENT(R7)		; no current record after
-	BSBW	RANDOM
+2$:	BSBW	RANDOM			; refused: the current record kept
 	BNEQ	80$
+	BSBW	TAKE_CURRENT		; no current record after
 	$REWIND	RAB=R6
 	BLBS	R0,10$
 	CMPL	R0,#RMS$_IOP
@@ -155,8 +159,7 @@ RANDOM:	CMPB	UB_ACCESS(R7),#ACCESS_DIRECT
 	BLBC	R0,1$
 	BLBS	UB_OPEN(R7),2$
 1$:	BRW	END
-2$:	CLRB	UB_CURRENT(R7)
-	MOVL	#FOR$_NOBACK,CTX_REASON(R9)
+2$:	MOVL	#FOR$_NOBACK,CTX_REASON(R9)
 	BSBW	RANDOM
 	BNEQ	80$
 	TSTB	UB_APPENDED(R7)
@@ -164,6 +167,7 @@ RANDOM:	CMPB	UB_ACCESS(R7),#ACCESS_DIRECT
 	MOVL	#FOR$_NOTFOD,CTX_REASON(R9)
 	BBC	#DEV$V_FOD,UB_FAB+FAB$L_DEV(R7),80$
 	CLRL	CTX_REASON(R9)
+	BSBW	TAKE_CURRENT
 	$REWIND	RAB=R6
 	BLBC	R0,80$
 	;
@@ -182,7 +186,8 @@ RANDOM:	CMPB	UB_ACCESS(R7),#ACCESS_DIRECT
 	CMPL	R0,#RMS$_RTB		; a record too long to hold is still passed
 	BEQL	20$
 	BRB	80$
-27$:	BLBC	UB_SEGMENTED(R7),20$
+27$:	MOVB	#1,UB_CURRENT(R7)	; the record read is the current one
+	BLBC	UB_SEGMENTED(R7),20$
 	CMPW	RAB$W_RSZ(R6),#2
 	BLSSU	20$			; ENDFILE's record, which has no segments
 	BBS	#1,@UB_RECP(R7),20$	; a record's last segment
@@ -190,6 +195,17 @@ RANDOM:	CMPB	UB_ACCESS(R7),#ACCESS_DIRECT
 30$:	BRW	END
 80$:	MOVL	#FOR$_BACERR,R0
 	BRW	REFUSED
+
+;
+; TAKE_CURRENT: the unit's current record taken away. One a READ reached is
+; CURRENT_GONE, so that a REWRITE's FOR$_NO_CURREC has RMS's RMS$_CUR, as
+; VMS's FORRTL's has, which asks RMS for it (testdata/for81's round 3, #4).
+;
+TAKE_CURRENT:
+	TSTB	UB_CURRENT(R7)
+	BEQL	10$
+	MOVB	#CURRENT_GONE,UB_CURRENT(R7)
+10$:	RSB
 
 ;
 ; FTN$ENDFILE(control block, unit)

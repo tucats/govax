@@ -438,7 +438,12 @@ def compare_fcalc_build(work, label, flags):
     for script in sorted(FCALC.glob("*.in")):
         run = subprocess.run([str(work / "fcalc")], cwd=work, input=script.read_text(), capture_output=True,
                              text=True, timeout=120)
-        ok &= same(f"{label} {script.stem}", masked(script.with_suffix(".out").read_text()), masked(run.stdout))
+        # gfortran reads its input whole lines at a time, as fcalc reads a file, so
+        # a script whose terminal transcript differs is held to its .file.out.
+        want = script.with_suffix(".file.out")
+        if not want.exists():
+            want = script.with_suffix(".out")
+        ok &= same(f"{label} {script.stem}", masked(want.read_text()), masked(run.stdout))
         if run.returncode != 0 or run.stderr:
             print(f"{label} {script.stem}: ended with status {run.returncode}:\n{run.stderr}")
             ok = False

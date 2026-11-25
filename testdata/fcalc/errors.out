@@ -40,6 +40,8 @@ fcalc> -------------------------------------------------------------------------
                                                                                                            ^
 %FCALC-E-TOODEEP, expression is nested too deeply
 fcalc> %FCALC-E-LINELONG, line is too long
+fcalc> -----------------------------------------------------------------------------------1
+-1
 fcalc> aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa = 1
        ^
 %FCALC-E-NAMELONG, name is too long

@@ -25,10 +25,13 @@
 ; segment exactly is one segment, and a WRITE with no items one segment of the
 ; control word alone.
 ;
-; A READ that finds a control word that isn't one of these, or a segment out of
-; place (a first segment where a record goes on, or a later one where a record
-; starts), fails with FOR$_SEGRECFOR, as VMS's does reading a file whose
-; records have no segments. Items past the record's end are FOR$_INPSTAREQ;
+; A READ that finds a control word that isn't one of these, or a record too
+; short to hold one (an empty record among them), fails with FOR$_SEGRECFOR, as
+; VMS's does reading a file whose records have no segments. Only a control
+; word's bit 1, the last segment, says where a record ends: a first segment where
+; a record goes on, or a middle or last one where a record starts, is taken as
+; the next segment of the record, as VMS's FORRTL takes it (testdata/for81's
+; round 3, S1 to S13). A file that ends inside a record is FOR$_ENDDURREA. Items past the record's end are FOR$_INPSTAREQ;
 ; what the items leave of the record is passed over, whatever its segments.
 ; A WRITE past the end of a record that can't have more segments (VARIABLE,
 ; FIXED, STREAM) is FOR$_OUTSTAOVE, and writes nothing, but for a direct WRITE,
@@ -239,10 +242,7 @@ GET_SEGMENT:
 	MOVZWL	@CTX_RECP(R6),R0	; the control word
 	CMPL	R0,#SEG_ONLY
 	BGTRU	80$
-	XORL3	R0,R2,R1		; a first segment exactly where one goes:
-	BLBS	R1,80$			;  the low bits of what it is and what
-					;  was wanted differ if not
-	BICL2	#S_LAST,CTX_UNF_STATE(R6)
+	BICL2	#S_LAST,CTX_UNF_STATE(R6) ; only the last bit counts (round 3)
 	BBC	#1,R0,30$
 	BISL2	#S_LAST,CTX_UNF_STATE(R6)
 30$:	MOVL	#SEGMENT_WORD,CTX_UNF_POS(R6)

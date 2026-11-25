@@ -44,7 +44,9 @@
 ;
 ; An integer VAL takes the size of an integer key: a word's value on a longword key is
 ; found (#272), so it is sign-extended into UB_KEY, which KBF then names. A longword on
-; a word key is its low word, govax's choice, there being no such key in VMS's run. Any
+; a word key is its low word if the key can hold its value, and FOR$_INVKEYSPE if not,
+; with no RMS status (testdata/for81's round 3, #62, a signed word key; an unsigned
+; one's limit, 65,535, is govax's choice). Any
 ; other VAL's bytes go to RMS as they are, as on a string key (#271: its length is then
 ; a generic key's), or a string on an integer key (#271).
 ;
@@ -59,7 +61,8 @@
 	$XABDEF
 	$XABKEYDEF
 
-UB_FAB		= 76			; A unit's block (FTN_UNITS)
+UB_STS		= 8			; A unit's block (FTN_UNITS)
+UB_FAB		= 76
 UB_RAB		= UB_FAB+FAB$C_BLN
 UB_ASV		= 620
 UB_KEY		= UB_ASV+8
@@ -145,7 +148,18 @@ FRAME_FAB	= FRAME_XAB-FAB$C_BLN	;  and the FAB's copy
 35$:	CMPB	DSC$B_DTYPE(R9),#DSC$K_DTYPE_L
 	BNEQ	40$
 	MOVL	@DSC$A_POINTER(R9),UB_KEY(R7)
+	CMPB	R1,#XAB$C_IN2		; a longword on a word key: only a value
+	BNEQ	36$			;  the key can hold
+	CVTLW	UB_KEY(R7),R0		; (V set if it doesn't fit)
+	BVS	38$
 	BRB	45$
+36$:	CMPB	R1,#XAB$C_BN2
+	BNEQ	45$
+	CMPL	UB_KEY(R7),#^XFFFF
+	BLEQU	45$
+38$:	CLRQ	UB_STS(R7)		; FORTRAN's to say, not RMS's
+	MOVL	#FOR$_INVKEYSPE,R0
+	RET
 40$:	CMPB	DSC$B_DTYPE(R9),#DSC$K_DTYPE_W
 	BNEQ	47$
 	CVTWL	@DSC$A_POINTER(R9),UB_KEY(R7)

@@ -941,8 +941,10 @@ FRAME_ESA	= FRAME_NAM-<RSA_SIZE+1>
 	MOVL	4(AP),R3
 	MOVAB	UB_RAB(R3),R2		; the RAB
 	MOVL	UB_RECP(R3),RAB$L_UBF(R2) ; the buffer
-	MOVW	UB_RECSIZE(R3),RAB$W_USZ(R2) ; and its size
-	MOVB	#1,UB_CURRENT(R3)
+	MOVW	UB_RECSIZE(R3),RAB$W_USZ(R2) ; and its size, but at a terminal
+	BBC	#DEV$V_TRM,UB_FAB+FAB$L_DEV(R3),12$ ; the size OPEN gave it: a
+	MOVW	UB_SIZE(R3),RAB$W_USZ(R2) ;  longer line is RMS's TNS, ERRDURREA,
+12$:	MOVB	#1,UB_CURRENT(R3)	;  as VMS's FORRTL's (round 3's FOR81T)
 	MOVZBL	UB_KEYED(R3),R4		; R4 is 1 for a keyed READ's first $GET
 	CLRB	UB_KEYED(R3)
 	CMPB	UB_FAB+FAB$B_ORG(R3),#FAB$C_IDX
@@ -953,7 +955,10 @@ FRAME_ESA	= FRAME_NAM-<RSA_SIZE+1>
 8$:	BLBS	R4,0$			; any other $GET is the next in sequence
 	MOVB	#RAB$C_SEQ,RAB$B_RAC(R2)
 0$:	$GET	RAB=R2
-	BLBC	R0,5$
+	CMPB	UB_FAB+FAB$B_ORG(R3),#FAB$C_IDX
+	BEQL	11$
+	MOVW	UB_SIZE(R3),RAB$W_USZ(R2) ; the size OPEN gave it, as VMS's FORRTL
+11$:	BLBC	R0,5$			;  leaves it (testdata/for81's round 3, #18)
 	MOVZWL	RAB$W_RSZ(R2),R1
 	CMPL	RAB$L_RBF(R2),UB_RECP(R3) ; located elsewhere: copied to the buffer
 	BEQL	9$
@@ -1066,8 +1071,9 @@ SET_NEXT:
 ; with. A unit that isn't connected is opened now if DEFINE FILE described it
 ; (FTN$$UNIT_DEFINED), and is otherwise FOR$_OPEDEFREQ, as is a unit whose
 ; access isn't direct, as on VMS (testdata/for81's #558, #562). Record 0, or one
-; past MAXREC, is FOR$_RECNUMOUT; any other goes to RMS, so that -1 fails as
-; RMS fails it (#553, #556). FTNRTL's own MAXREC is the one OPEN gave, which RMS
+; past MAXREC, is FOR$_RECNUMOUT, as is one less than 0 on a relative file
+; (round 3's #15); any other goes to RMS, so that -1 on a sequential file fails
+; as RMS fails it (#553, #556; round 3's #16). FTNRTL's own MAXREC is the one OPEN gave, which RMS
 ; doesn't keep for a sequential file.
 ;
 	.ENTRY	FTN$$UNIT_DIRECT,^M<R2>
@@ -1086,7 +1092,10 @@ SET_NEXT:
 	RET
 30$:	MOVL	12(AP),R0
 	BEQL	40$
-	MOVL	UB_MAXREC(R2),R1
+	BGTR	32$
+	CMPB	UB_FAB+FAB$B_ORG(R2),#FAB$C_REL ; less than 0: a relative file's is
+	BEQL	40$			;  FTNRTL's own refusal too
+32$:	MOVL	UB_MAXREC(R2),R1
 	BLEQ	35$			; 0, or DEFINE FILE's -1: no limit
 	CMPL	R0,R1
 	BGTR	40$

@@ -728,7 +728,7 @@ A.8.1 is not planned.
       `.WARN`/`.ERROR`/`.PRINT`, DCL's messages, TYPE without carriage control, a full volume;
       `TestErr113Procedure` held to `vax/err113.log` (done 2026-11-24).
     - 13d. The index file's growth (A.9.1): ods2 extending INDEXF.SYS as VMS's XQP does (done 2026-11-24).
-    - 13e. FTNRTL to the FORRTL round (`testdata/for81`'s round 3 and the terminal's limits).
+    - 13e. FTNRTL to the FORRTL round (`testdata/for81`'s round 3 and the terminal's limits) (done 2026-11-24).
     - 13f. The debugger to the debugger round (`testdata/dbg113`'s sessions).
     - 13g. The FORTRAN rounds: `TestFTN86Oracle` on `testdata/ftn86`'s round 6 and
       `TestF90ROracle` on `testdata/f90r`'s round 3, their awaiting lists emptied.
@@ -1506,3 +1506,50 @@ Each subtask may begin with a survey of its own, as earlier phases' did.
     inside govax's index file now, as it was inside VMS's 829 blocks (SS$_FILESTRUCT); Phase 58's
     log marked.
   - Subtask 13e, FTNRTL to the FORRTL round, is next.
+- **2026-11-24, subtask 13e (done):** FTNRTL made VMS 7.1's FORRTL in round 3 of
+  `testdata/for81`. `TestFor81GOnFTNRTL` (`internal/console/for81g_test.go`) runs FOR81G on
+  FTNRTL, its FOR$ calls passed on by `testdata/for88`'s `for88f.mar` and the new
+  `testdata/for81/for81gf.mar` (FOR$IO_L_V, IO_L_R, IO_F_R, ERRSNS; for88f.mar now passes
+  IOSTAT=, code 22, as FTNRTL's control block flag), and holds all 64 cases to
+  `vax/for81g-vax.txt` but for `for81GFTNRTLDifferences`; `TestFor81GProcedure` now holds FORRTL
+  over govax to it too (`for81GDifferences`); both run in `[FOR81G]`, as on the VAX, with the
+  condition's own PC masked (`for81GMasked`: it is wherever FORRTL or FTNRTL was loaded).
+  - *RMS and ods2* (seen under both libraries): a FIX file's last record cut short by the end of
+    file is read whole, the bytes past the end as the blocks hold them (ods2's
+    `blockStream.readPastEnd`, the Reader's `nextFixed`; ods2's change is in the sibling
+    checkout, to be tagged and pinned, CLAUDE.md's rule); `$REWIND` leaves no current record
+    (`recordops.go`); a relative file's key of a negative longword is RMS$_KEY, as 0 is
+    (`relativeKey`); a terminal `$GET` whose buffer fills before the line ends is RMS$_TNS with the
+    record, the rest of the line the next `$GET`'s (`rms/terminal.go`, `getTerminal`).
+  - *FTNRTL*: FTN$IO_END returns the FOR number after a signal a handler went on from
+    (OUTCONERR's 63, where it returned 0), and an end of file or SYNERRFOR found before the end
+    reports the user PC of the call that found it (CTX_ITEMPC; an OPEFAI at the begin call keeps
+    FOR$IO_END's, as ftn86's DIALOG shows VMS's); a REWIND or BACKSPACE refused (REWERR, BACERR)
+    keeps the current record, a BACKSPACE's is the last record it read again, and one a READ
+    reached that they take away is `CURRENT_GONE`, a REWRITE's NO_CURREC then carrying RMS$_CUR
+    (NO_CURREC is in `RMS_REPORTED`, each refusal setting the unit's status); UNLOCK on a direct
+    unit makes DELETE (u) DELERR with the `$FREE`'s RMS$_RNL (`CURRENT_UNLOCKED`; on a
+    sequential-access unit it went on, #9); DELETE (u'r) on a sequential-access unit is
+    OPEDEFREQ, and a record number below 1 on a relative unit is RECNUMOUT before RMS (also
+    `FTN$$UNIT_DIRECT`'s); a segment's control word says only where a record ends (bit 1), a
+    first bit out of place no longer SEGRECFOR; a longword on a word key the key can't hold is
+    INVKEYSPE (49) with no RMS status (an unsigned word's limit govax's choice); after a `$GET`
+    RAB$W_USZ is OPEN's size again (133, #18's implicit READ); and at a terminal a READ's `$GET`
+    asks for OPEN's size, so a line past 133 characters is ERRDURREA with RMS$_TNS and its rest
+    the next READ's, as FOR81T showed (`TestFortranTerminalLongLine`).
+  - *The terminal's limit and fcalc* (the author's choice, VMS's 133 everywhere): fcalc reads
+    199-character lines from files still, but at a terminal a longer line than 132 is LINELONG and
+    its rest the next line. `testdata/fcalc`'s `basics.out` and `errors.out` are the terminal's
+    transcripts now, and `basics.file.out` and `errors.file.out` (the old ones) what a file gives,
+    which `TestF90ROracle` (`f90rFileOut`) and `compare.py` hold VMS's and gfortran's runs to;
+    `TestFortranFormattedInput` and `TestFortranListInput` type lines VMS's way; MANUAL.md's 14.7
+    and FTNRTL notes, fcalc's comments.
+  - *Left, unconfirmed* (for a round 3b on the VAX): the associated variable after DELETE (u'r)
+    (#14: VMS set 3 after a READ of 1 and DELETE of 1; FTNRTL's r+1 gives 2; the larger of
+    FORRTL's next record and r, plus 1, or the next record plus r, both fit); VMS's `0` written
+    before an O0 or Z0 field of 0 (#58, under FORRTL over govax too: VMS's OTS$ conversion into a
+    field of no columns, it seems); a REWRITE after UNLOCK on a direct unit; an unsigned word key's
+    limit; the user PC of an error found at an item's call other than INPCONERR; a terminal line of
+    exactly 133 characters (whether its return is an empty next line); a REWRITE after a
+    BACKSPACE to the first record.
+  - Subtask 13f, the debugger to the debugger round, is next.

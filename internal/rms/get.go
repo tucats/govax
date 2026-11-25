@@ -141,6 +141,12 @@ func getTerminal(ctx *Context, rabAddr uint32) (uint32, error) {
 
 	ctx.countIO(1, 0)
 
+	if status == rmsTerminatorNotStandard { // the record, with the warning
+		if _, err := storeRecord(ctx, rabAddr, record); err != nil {
+			return 0, err
+		}
+	}
+
 	if status != 0 {
 		return storeStatus(ctx, rabAddr, rabSTS, rabSTV, status)
 	}

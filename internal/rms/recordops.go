@@ -72,7 +72,7 @@ func findOnDevice(ctx *Context, rabAddr uint32, h *FileHandle) (uint32, error) {
 			return 0, err
 		}
 
-		if status != 0 {
+		if status != 0 && status != rmsTerminatorNotStandard {
 			return storeStatus(ctx, rabAddr, rabSTS, rabSTV, status)
 		}
 
@@ -403,6 +403,7 @@ func SysRewind(ctx *Context, argv []uint32) (uint32, error) {
 	if !handle.IsConsole() && !handle.IsRecordDevice() {
 		s := &handle.stream
 		s.next, s.atEnd, s.afterFind, s.heldEnd = 0, false, false, false
+		s.hasCurrent = false // no current record after it, as VMS 7.1's (testdata/for81, round 3)
 		s.nextBlock = 1
 		handle.relStream.afterPut = 0
 	}

@@ -470,8 +470,9 @@ func (h *FileHandle) relativeNext() uint32 {
 	return uint32(max(h.stream.next, 1))
 }
 
-// relativeKey is the record number RAB$L_KBF names: RMS$_KEY for 0 (or a
-// RAB$B_KSZ other than 0 or 4, RMS$_KSZ), RMS$_MRN past the file's highest.
+// relativeKey is the record number RAB$L_KBF names: RMS$_KEY for 0 or a
+// negative longword (VMS 7.1's answer to -1, testdata/for81's round 3), RMS$_KSZ
+// for a RAB$B_KSZ other than 0 or 4, RMS$_MRN past the file's highest.
 func (ctx *Context) relativeKey(rabAddr uint32, l *relativeLayout) (uint32, uint32, error) {
 	ksz, err := ctx.loadByte(rabAddr + rabKSZ)
 	if err != nil {
@@ -493,7 +494,7 @@ func (ctx *Context) relativeKey(rabAddr uint32, l *relativeLayout) (uint32, uint
 	}
 
 	switch {
-	case n == 0:
+	case int32(n) <= 0:
 		return 0, rmsInvalidKey, nil
 	case n > l.mrn:
 		return 0, rmsInvalidMRN, nil

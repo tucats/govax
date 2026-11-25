@@ -146,10 +146,15 @@ It goes to the VAX on `testdata/err113`'s volume, in `[FOR81G]`, whose README ha
 `err113/copyout.cmd` brings back `vax/for81g-vax.txt` and `vax/for81g.log`, and FOR81T's
 terminal text is pasted into `vax/for81t.log`.
 
-`TestFor81GProcedure` (`internal/console/for81g_test.go`) rehearses it on VMS's FORRTL.EXE over
-govax (or skips without one on a local volume). FORRTL's own logic runs unchanged there, so the
-rehearsal already answers what doesn't reach RMS (the phase doc lists it); the VAX confirms
-those and answers the rest. `FOR81G_WRITE` names a file for govax's output.
+`TestFor81GProcedure` (`internal/console/for81g_test.go`) runs it on VMS's FORRTL.EXE over
+govax (or skips without one on a local volume) and holds it to VMS's run, `vax/for81g-vax.txt`,
+but for `for81GDifferences`: FORRTL's own logic runs unchanged there, so this holds govax's RMS.
+`TestFor81GOnFTNRTL` runs it on FTNRTL, its FOR$ calls passed on by `testdata/for88`'s
+`for88f.mar` and `for81gf.mar` (the item routines by value and reference, and ERRSNS), and holds
+it to the same run but for `for81GFTNRTLDifferences`. Each case's condition PC (` pc b=`) is
+masked, being wherever the library was loaded. `FOR81G_WRITE` names a file for govax's output,
+and `FOR81G_DEBUG` turns on SET DEBUG RMS for the run. FOR81T's terminal session is held by
+`TestFortranTerminalLongLine`.
 
 ## What the tests hold
 

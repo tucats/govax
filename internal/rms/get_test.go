@@ -405,7 +405,7 @@ func consoleGet(t *testing.T, f *createFixture) (uint32, string) {
 		t.Fatalf("SysGet: %v", err)
 	}
 
-	if r0 != rmsNormal {
+	if r0 != rmsNormal && r0 != rmsTerminatorNotStandard {
 		return r0, ""
 	}
 
@@ -441,13 +441,19 @@ func TestSysGet_console(t *testing.T) {
 }
 
 // TestSysGet_consoleCtrlZ is end of file at a Ctrl/Z, and a line longer
-// than the user buffer is read a buffer at a time.
+// than the user buffer is read a buffer at a time, a full buffer RMS$_TNS
+// with its record, as VMS 7.1's (testdata/for81, round 3's FOR81T).
 func TestSysGet_consoleCtrlZ(t *testing.T) {
 	f, out := consoleGetFixture(t, "abcdef\n\x1Amore\n", "", 4)
 
-	for _, want := range []string{"abcd", "ef"} {
-		if r0, got := consoleGet(t, f); r0 != rmsNormal || got != want {
-			t.Errorf("SYS$GET = %#x, %q; want RMS$_NORMAL, %q", r0, got, want)
+	for i, want := range []string{"abcd", "ef"} {
+		sts := uint32(rmsNormal)
+		if i == 0 {
+			sts = rmsTerminatorNotStandard
+		}
+
+		if r0, got := consoleGet(t, f); r0 != sts || got != want {
+			t.Errorf("SYS$GET = %#x, %q; want %#x, %q", r0, got, sts, want)
 		}
 	}
 

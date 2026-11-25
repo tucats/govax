@@ -149,6 +149,7 @@ UB_OPEN		= 0			; A unit's block (FTN_UNITS)
 UB_STS		= 8
 UB_ACCESS	= 37
 UB_CURRENT	= 620+36
+CURRENT_GONE	= 3			; UB_CURRENT's: taken by REWIND or BACKSPACE
 UB_REWRITE	= 620+37
 UB_KEYED	= 620+38
 UB_OPENREC	= 620+43		; a record left open: 1 output, 2 input
@@ -282,7 +283,8 @@ RMS_REPORTED:
 	.LONG	FOR$_FILNOTFOU, FOR$_OPEFAI, FOR$_NO_SUCDEV, FOR$_FILNAMSPE
 	.LONG	FOR$_CLOERR, FOR$_REWERR, FOR$_BACERR, FOR$_ENDFILERR
 	.LONG	FOR$_ATTACCNON, FOR$_FINERR, FOR$_REWRITERR, FOR$_DELERR
-	.LONG	FOR$_UNLERR, FOR$_SPERECLOC, FOR$_INVKEYSPE, FOR$_INCKEYCHG, 0
+	.LONG	FOR$_UNLERR, FOR$_SPERECLOC, FOR$_INVKEYSPE, FOR$_INCKEYCHG
+	.LONG	FOR$_NO_CURREC, 0
 
 	.PSECT	$FTN_CODE,EXE,NOWRT,PIC,SHR,LONG
 
@@ -585,9 +587,14 @@ BEGIN:	MOVL	12(FP),R2		; the caller's FP, saved in this frame
 	MOVL	CTX_STREAM(R3),R1
 	MOVL	#FOR$_NO_CURREC,R0
 	BLBC	UB_OPEN(R1),42$
-	TSTB	UB_CURRENT(R1)
-	BEQL	42$
-	MOVB	#1,UB_REWRITE(R1)
+	CLRQ	UB_STS(R1)		; no RMS status, but after a REWIND or
+	TSTB	UB_CURRENT(R1)		;  BACKSPACE took the record a READ
+	BEQL	42$			;  reached (CURRENT_GONE, FTN_POSITION):
+	CMPB	UB_CURRENT(R1),#CURRENT_GONE ; RMS's RMS$_CUR, as VMS's FORRTL,
+	BNEQ	41$			;  which asks RMS (testdata/for81's #4)
+	MOVL	#RMS$_CUR,UB_STS(R1)
+	BRB	42$
+41$:	MOVB	#1,UB_REWRITE(R1)
 	BRW	65$
 42$:	BRW	FAIL
 
@@ -1025,7 +1032,8 @@ REPORT		= -36			; the name's length and address, RMS's
 	BNEQ	5$
 3$:	CLRL	R0			; no statement
 	RET
-5$:	CMPB	CTX_KIND(R2),#K_WRITE_SF
+5$:	MOVL	CTX_STATUS(R2),R4	; failed before the end: R4 isn't 0
+	CMPB	CTX_KIND(R2),#K_WRITE_SF
 	BGTRU	7$
 	PUSHL	R2			; formatted: the end of the walk, the
 	CALLS	#1,FTN$$FMT_END		;  last record, after no failure
@@ -1116,10 +1124,18 @@ REPORT		= -36			; the name's length and address, RMS's
 	;
 40$:	MOVL	CTX_USERPC(R2),R5	; the user PC: a statement of one call's,
 	BNEQ	45$
-	MOVL	16(FP),R5		;  or where this call returns
-45$:	JSB	SIGNAL_FAILURE
-	CLRL	R0
-	RET
+	MOVL	16(FP),R5		;  or where this call returns, but for an
+	TSTL	R4			;  end of file or a format syntax error
+	BEQL	45$			;  before the end, where the call that found
+	CMPL	R3,#FOR$_ENDDURREA	;  it returns, the begin call or an item's
+	BEQL	44$			;  (VMS's FORRTL's: testdata/for81's #54
+	CMPL	R3,#FOR$_SYNERRFOR	;  and #55; an OPEFAI at the begin call is
+	BNEQ	45$			;  FOR$IO_END's, ftn86's DIALOG)
+44$:	MOVL	CTX_ITEMPC(R2),R5
+45$:	PUSHL	R3
+	JSB	SIGNAL_FAILURE
+	EXTZV	#3,#12,(SP)+,R0		; gone on from: the FOR number, as VMS's
+	RET				;  FORRTL returns it (for81's #56 to #61)
 
 ;
 ; FTN$$IO_SIGNAL(context, condition)

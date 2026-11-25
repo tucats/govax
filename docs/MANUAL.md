@@ -6594,7 +6594,9 @@ output it prints, and programs of several files in its `modules` directory.
   is compiled as a FORMAT statement is when it reads as one, and parsed once. A format that runs
   out of data edit descriptors with items left is `INFFORLOO` (60), and a
   record past column 133 `OUTSTAOVE` (66); reading, a record longer than
-  199 characters is `INPRECTOO` (22).
+  199 characters is `INPRECTOO` (22). At a terminal a READ takes at most the
+  unit's record, 133 characters by default: a longer line is `ERRDURREA` (39),
+  RMS's `RMS-W-TNS`, and the rest of the line is the next READ's.
 - **Unformatted sequential I/O** (sections 7.2.1.4 and 7.3.1.4): `WRITE (1) N, X, ARRAY`
   writes its items' bytes one after another as one record, and `READ (1) N, X, ARRAY`
   gives each item as many bytes as it holds, from one record; what the items leave of
@@ -7790,8 +7792,11 @@ FORTRAN run-time library, which could be run:
   `%FOR-F-LISIO_SYN`.
 - A formatted record written to a unit holds 133 bytes with its carriage
   control, and one read holds 199 (`%FOR-F-OUTSTAOVE`, `%FOR-F-INPRECTOO`), the
-  limits VMS's library showed writing a file and reading a procedure's data;
-  at a terminal they weren't checked on VMS.
+  limits VMS's library showed writing a file and reading a procedure's data.
+  At a terminal a READ takes as much of a line as the unit's record holds, 133
+  characters by default, as VMS's library did: a longer line is
+  `%FOR-F-ERRDURREA` with `-RMS-W-TNS`, and what is left of it is the next
+  READ's line.
 - Without OPEN, a blank in a numeric input field is a zero (BLANK='ZERO', the
   language manual's default with no OPEN), so `1 2` under I3 is 102; BN and BZ
   in the FORMAT change it.

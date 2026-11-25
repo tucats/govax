@@ -1,0 +1,251 @@
+fcalc> set echo
+fcalc> ! fcalc's basics: numbers, operators, variables, and messages.
+fcalc> ! Numbers, and how they are shown: twelve significant digits, fixed
+fcalc> ! notation from 1e-5 to 1e+11, scientific outside it.
+fcalc> 42
+42
+fcalc> 1.5e-3
+0.0015
+fcalc> .5
+0.5
+fcalc> 5.
+5
+fcalc> 0.0001
+0.0001
+fcalc> 0.00001
+0.00001
+fcalc> 0.000001
+1e-6
+fcalc> 100000000000
+100000000000
+fcalc> 1000000000000
+1e+12
+fcalc> 123456789012345
+1.23456789012e+14
+fcalc> 1 / 3
+0.333333333333
+fcalc> 2 / 3
+0.666666666667
+fcalc> 7 / 2
+3.5
+fcalc> 1/7*1e-3
+0.000142857142857
+fcalc> 2^53
+9.00719925474e+15
+fcalc> 2^-20
+9.53674316406e-7
+fcalc> 6.02214076E23
+6.02214076e+23
+fcalc> 1e-400
+0
+fcalc> ! The operators, loosest first.
+fcalc> 2 + 3 * 4
+14
+fcalc> (2 + 3) * 4
+20
+fcalc> 2 - 3 - 4
+-5
+fcalc> 2 / 4 / 5
+0.1
+fcalc> 2 ** 10
+1024
+fcalc> 2 ^ 3 ^ 2
+512
+fcalc> -2 ^ 2
+-4
+fcalc> 2 ^ -1
+0.5
+fcalc> - - 3
+3
+fcalc> +7
+7
+fcalc> -3!
+-6
+fcalc> 3!^2
+36
+fcalc> 2^3!
+64
+fcalc> 0!
+1
+fcalc> 10!
+3628800
+fcalc> 20!
+2.43290200818e+18
+fcalc> 10 mod 3
+1
+fcalc> -10 mod 3
+2
+fcalc> 10 mod -3
+-2
+fcalc> -10 mod -3
+-1
+fcalc> 5.5 mod 2
+1.5
+fcalc> 1e17 mod 7
+5
+fcalc> 1 == 1
+1
+fcalc> 1 <> 1
+0
+fcalc> 2 < 3
+1
+fcalc> 3 <= 3
+1
+fcalc> 3 > 3
+0
+fcalc> 2 >= 3
+0
+fcalc> 0.1 + 0.2 == 0.3
+1
+fcalc> 1 < 2 and 2 < 3
+1
+fcalc> 1 > 2 or 2 > 3
+0
+fcalc> not 0
+1
+fcalc> not 5
+0
+fcalc> not 1 == 2
+1
+fcalc> 0 and 1/0
+0
+fcalc> 1 or 1/0
+1
+fcalc> 1 + 2 == 3 and not (2 > 3)
+1
+fcalc> ! The constants.
+fcalc> pi
+3.14159265359
+fcalc> e
+2.71828182846
+fcalc> eps
+2.22044604925e-16
+fcalc> huge
+1e+300
+fcalc> ! Variables: names are case-insensitive, ans is the last value.
+fcalc> r = 2.5
+r = 2.5
+fcalc> area = pi*r^2
+area = 19.6349540849
+fcalc> Circumference = 2*PI*R
+circumference = 15.7079632679
+fcalc> 2 + 3
+5
+fcalc> ans
+5
+fcalc> ans * 2
+10
+fcalc> ans + 1
+11
+fcalc> Total_1 = 10
+total_1 = 10
+fcalc> TOTAL_1 + 1
+11
+fcalc> list
+ans = 11
+area = 19.6349540849
+circumference = 15.7079632679
+r = 2.5
+total_1 = 10
+fcalc> list variables
+ans = 11
+area = 19.6349540849
+circumference = 15.7079632679
+r = 2.5
+total_1 = 10
+fcalc> clear r
+fcalc> r
+       ^
+%FCALC-E-UNDEFINED, r is not defined
+fcalc> clear area circumference
+fcalc> LIST
+ans = 11
+total_1 = 10
+fcalc> clear all
+fcalc> list
+ans = 0
+fcalc> ! Messages: each points at the column it is about.
+fcalc> 1/0
+        ^
+%FCALC-E-DIVZERO, division by zero
+fcalc> x + 1
+       ^
+%FCALC-E-UNDEFINED, x is not defined
+fcalc> 2 +* 3
+          ^
+%FCALC-E-OPERAND, operand expected
+fcalc> (1 + 2
+             ^
+%FCALC-E-RPAREN, missing right parenthesis
+fcalc> 1 + 2)
+            ^
+%FCALC-E-EXTRA, unexpected text
+fcalc> 2 3
+         ^
+%FCALC-E-EXTRA, unexpected text
+fcalc> 3 # 4
+         ^
+%FCALC-E-BADCHAR, invalid character
+fcalc> 1e301
+       ^
+%FCALC-E-OVERFLOW, result is too large
+fcalc> 1e400
+       ^
+%FCALC-E-OVERFLOW, result is too large
+fcalc> 1e300*10
+            ^
+%FCALC-E-OVERFLOW, result is too large
+fcalc> 1e200^2
+            ^
+%FCALC-E-OVERFLOW, result is too large
+fcalc> 2^2000
+        ^
+%FCALC-E-OVERFLOW, result is too large
+fcalc> 0^-1
+        ^
+%FCALC-E-DIVZERO, division by zero
+fcalc> 170!
+          ^
+%FCALC-E-OVERFLOW, result is too large
+fcalc> (-2)!
+           ^
+%FCALC-E-DOMAIN, argument is out of range
+fcalc> (-1)!
+           ^
+%FCALC-E-DOMAIN, argument is out of range
+fcalc> pi = 3
+       ^
+%FCALC-E-CONSTANT, pi is a constant
+fcalc> or = 1
+       ^
+%FCALC-E-RESERVED, or is a reserved word
+fcalc> mod 3
+       ^
+%FCALC-E-OPERAND, operand expected
+fcalc> clear 3
+             ^
+%FCALC-E-NAMEREQ, name expected
+fcalc> clear nosuch
+             ^
+%FCALC-W-NOTDEF, nosuch was not defined
+fcalc> set colour
+           ^
+%FCALC-E-BADSET, unknown setting
+fcalc> aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa = 1
+       ^
+%FCALC-E-NAMELONG, name is too long
+fcalc> (((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((1))))))))))))))))))))))))))))))))
+)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+1
+fcalc> ---------------------------------------------------------------------------------------------------1
+-1
+fcalc> ----------------------------------------------------------------------------------------------------1
+                                                                                                           ^
+%FCALC-E-TOODEEP, expression is nested too deeply
+fcalc> %FCALC-E-LINELONG, line is too long
+fcalc> 2 + 2
+4
+fcalc> set noecho
+fcalc> 6
+fcalc> set echo
+fcalc> exit

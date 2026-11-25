@@ -19,7 +19,8 @@ const ctrlZ = 0x1A
 // feed (a host "\r\n" pair is one end), neither of which is part of it,
 // or when capacity bytes have been read: the terminal driver ends a read
 // when the buffer fills, and whatever was typed beyond it is the next
-// record. A Ctrl/Z ends a record too, but with nothing read before it
+// record. That record's status is RMS$_TNS, as VMS 7.1's was (govax's
+// testdata/for81, round 3's FOR81T: 133 characters of a longer line). A Ctrl/Z ends a record too, but with nothing read before it
 // is end of file: status is RMS$_EOF, as it is at the end of the host's
 // input with nothing read. status is 0 for a record.
 func terminalRecord(ctx *Context, rabAddr uint32, capacity int) (record []byte, status uint32, err error) {
@@ -57,7 +58,7 @@ func terminalRecord(ctx *Context, rabAddr uint32, capacity int) (record []byte, 
 		b, readErr := r.ReadByte()
 		if readErr != nil {
 			if errors.Is(readErr, io.EOF) && len(record) > 0 {
-				break
+				return record, 0, nil
 			}
 
 			return nil, rmsEOF, nil
@@ -83,7 +84,7 @@ func terminalRecord(ctx *Context, rabAddr uint32, capacity int) (record []byte, 
 		record = append(record, b)
 	}
 
-	return record, 0, nil
+	return record, rmsTerminatorNotStandard, nil
 }
 
 // readPrompt reads a RAB's prompt (RAB$L_PBF, RAB$B_PSZ).

@@ -85,8 +85,11 @@ func TestFortranIOSignals(t *testing.T) {
 // and at reversion; T, TL, and TR in the record; A of a field shorter and
 // longer than its item; Q, the characters left; an H constant read into
 // its FORMAT, which a later WRITE writes; a run-time format; and the end
-// of the input, END=, then IOSTAT's -1. A record of 200 characters is too
-// long (FOR$_INPRECTOO, 22: VMS reads at most 199 from SYS$INPUT).
+// of the input, END=, then IOSTAT's -1. A line of 200 characters at the
+// terminal is read 133 at a time, the unit's record: the first READ is
+// FOR$_ERRDURREA, 39 (RMS's RMS$_TNS), and the next reads the rest, as VMS
+// 7.1's FORRTL did (testdata/for81, round 3's FOR81T). From a file, SYS$INPUT's
+// limit is 199 (FOR$_INPRECTOO, 22).
 func TestFortranFormattedInput(t *testing.T) {
 	eachLoader(t, func(t *testing.T, paging bool) {
 		d, c, buf := shareFindConsole(t, paging)
@@ -140,7 +143,7 @@ func TestFortranFormattedInput(t *testing.T) {
 		c.In = strings.NewReader("ABC   XYZ\nABCDE\nHELLO\nHI THERE\nWXYZ\nABCDEFGH\nPQ\nRS\n" +
 			strings.Repeat("L", 200) + "\n")
 
-		want := "|XYZ|ABC|\nCB\nHEL           2\nI TH\n|WX |ABCDEF|\n|P  |R  |\nLONG RECORD          22\nEND          -1\n" +
+		want := "|XYZ|ABC|\nCB\nHEL           2\nI TH\n|WX |ABCDEF|\n|P  |R  |\nLONG RECORD          39\nNOT HERE\nEND          -1\n" +
 			"  $STATUS == \"%X00000001\"\n"
 		if got := shareRun(t, d, buf, "FIN"); got != want {
 			t.Errorf("RUN FIN printed:\n%s\nwant:\n%s", got, want)
@@ -283,7 +286,7 @@ func TestFortranListInput(t *testing.T) {
 			"      READ (*,*) T, L",
 			"      PRINT *, T, L",
 			"      READ *, LONG",
-			"      PRINT *, LONG(1:1), LONG(190:191), LONG(600:600)",
+			"      PRINT *, LONG(1:1), LONG(130:131), LONG(520:520)",
 			"      READ (5,*) J",
 			"      PRINT *, J",
 			"      READ (5,*,END=10) J",
@@ -308,8 +311,8 @@ func TestFortranListInput(t *testing.T) {
 		}
 
 		c.In = strings.NewReader("1 2*7\n 9 THE REST IS LOST\n1.5,,2.5\n(1,2)\n 2.5\n'AB' 'CDEFGH' .T\n'" +
-			strings.Repeat("A", 190) + "\n" + strings.Repeat("B", 190) + "\n" + strings.Repeat("C", 190) + "\n" +
-			strings.Repeat("D", 190) + "'\n1.5E1\n")
+			strings.Repeat("A", 130) + "\n" + strings.Repeat("B", 130) + "\n" + strings.Repeat("C", 130) + "\n" +
+			strings.Repeat("D", 130) + "'\n1.5E1\n")
 
 		want := "          1           7           7           9\n" +
 			"  1.500000       9.000000       2.500000    \n" +
