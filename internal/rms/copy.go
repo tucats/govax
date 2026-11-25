@@ -530,6 +530,16 @@ func (s *Session) copyVolumeToVolume(sourceText, destText string, opts CopyOptio
 				}
 			}
 
+			// A header the volume couldn't make is named the same way
+			// (testdata/err113, round 2's HDRFULL).
+			var created *CreateError
+			if errors.As(err, &created) {
+				created.Spec, created.Source = asked.String()+";", srcFound[0].shownFile(m)
+				if asked.Version != "" {
+					created.Spec = asked.String()
+				}
+			}
+
 			return results, fmt.Errorf("copy: %w", fullOutputName(err, dest, destDir))
 		}
 
@@ -1248,6 +1258,10 @@ func createVersion(who creator, destVol *volume.Volume, destDir *volume.Director
 	dst, err := destVol.CreateFileVersionWith(destDir, fullName, version, attr, profile, destBm, destIb)
 	if errors.Is(err, volume.ErrExists) {
 		return nil, &OutputExistsError{Spec: fmt.Sprintf("%s;%d", fullName, version), version: fmt.Sprint(version)}
+	}
+
+	if stv, ok := createFailure(err); ok {
+		return nil, &CreateError{STV: stv, Err: err}
 	}
 
 	if err != nil {

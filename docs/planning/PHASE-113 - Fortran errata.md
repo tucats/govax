@@ -741,7 +741,8 @@ A.8.1 is not planned.
       and F90R's round 4 (done 2026-11-25).
     - 14b. Round 2's answers, after the author's run (2026-11-25), in parts: 14b1, DCL's file
       parameters, MACRO's registers in data, FOR81M, and FOR81W (done 2026-11-25); 14b2, LINK's
-      NONPICREF and the DST's blocks (done 2026-11-25); 14b3, RMS's extension size and HEADERFULL (ods2).
+      NONPICREF and the DST's blocks (done 2026-11-25); 14b3, RMS's extension size and HEADERFULL (ods2)
+      (done 2026-11-25).
     - 14c. The documents: MANUAL.md, FORTRAN-INTERNALS.md, HELP, PLAN.md, "Where things stand".
 
 Each subtask may begin with a survey of its own, as earlier phases' did.
@@ -1507,6 +1508,7 @@ Each subtask may begin with a survey of its own, as earlier phases' did.
   - *What VMS does when the header does fill* (an extension header, or HEADERFULL) is still
     unconfirmed; ods2 still writes its own extension header there, now only on a volume too
     fragmented to give the pieces whole (DEVIATIONS.md's Phase 111 entry, updated).
+    *(Resolved in subtask 14b3: HEADERFULL, no extension header.)*
   - `TestErr113Procedure` checks INDEX's 3,000 files and INDEXF.SYS's size, 3,373 blocks: VMS's
     less the block its index file grew by in FULL (govax has no DUMP/HEADER or
     ANALYZE/DISK_STRUCTURE for the rest). FULL's MORE.TXT difference stays with a new reason:
@@ -1766,4 +1768,46 @@ Each subtask may begin with a survey of its own, as earlier phases' did.
     block) gave LNK113D08 to 15 a block too many. `TestErr113BDSTBlocks` links the sweep; FTNRTL's and
     fcalc's images are unchanged. Round 3 is to sweep fixup records from about 730 to 1,010 bytes
     to settle the slack.
+- **2026-11-25, subtask 14b3 (done):** RMS's extension size and HEADERFULL, made VMS 7.1's in round
+  2's FULL2 and HDRFULL. ods2's changes are to be tagged with this subtask (govax's `go.mod` still
+  pins the last tag; the workspace builds against the sibling checkout).
+  - *FULL2*: VMS's REST.DAT grew 2 blocks at a time, all or nothing, so it stopped at 1,242 blocks with
+    one free. That is the Guide to OpenVMS File Applications's auto extend (3.2.1.3.1) for a sequential
+    file written by records: the file's default extension quantity, else (after the process and system
+    defaults govax lacks) RMS's minimal size, the smaller of twice the multiblock count and 256, DCL's
+    RAB's count being 1; the guide raises only the listed defaults to the volume's, and VMS 7.1 didn't
+    raise the minimal one (testdata/dcl50's F1, 3 blocks on a volume of 3-block clusters whose quantity
+    was 5). ods2's `File.ExtendQuantity` is the size `WriteBlock` extends by at least, all or nothing;
+    govax's `sequentialExtendSize` (`rms/autoextend.go`) sets it for a file DCL's OPEN writes
+    (`DCLAccess.Command`). DCL's CLOSE then gives back the blocks past the end of file, rounded to a
+    cluster (`closeTruncate`, over ods2's new `volume.Truncate`): testdata/lnm91's W.DAT and
+    testdata/ppf71's PPF71B.DAT, a line each, are 1/1 on VMS, and F1 1/3. An image's own SYS$OUTPUT file
+    grows by what it needs, as before (testdata/tb70's 1/1). The last free block then went to the index
+    file for MORE.TXT's header, and CREATE's write failed, WRITEERR, as VMS's: round 1's FULL and INDEX
+    are now VMS's outright (`TestErr113Procedure`'s differences for them gone, INDEXF.SYS 3,374 blocks).
+  - *The index file's end of file*: VMS's DIRECTORY showed INDEXF.SYS 22/22 in FULL2, where govax's said
+    16/22. On VMS's volumes (testdata/disks) the end of file moved to the whole size when a header went in
+    the last mapped block (16 headers: block 23; 15: still 17); ods2's `noteLastSlot` does that.
+  - *HDRFULL*: VMS grew INDEXF.SYS by 15% of the slots MAXFILES still allowed, first fit (1,197 at LBN
+    1035 and 1,018 at 11843, both as ods2 already grew it), then by the longest free run (213, then 6, 6,
+    5, ... 1), each a retrieval pointer in its one header, until the map held 76 pointers, 154 of 155
+    words; the next file was `-RMS-E-CRE` and `-SYSTEM-W-HEADERFULL`, with no extension header. ods2's
+    `growIndexFile` now does the same: the growth's pointers in the last header or `volume.ErrHeaderFull`,
+    nothing allocated (`TestIndexFileHeaderFull`, replacing `TestIndexFileGrowsIntoExtensionHeaders`), and
+    a grown index file marked contiguous-best-try, as every index file VMS grew is in testdata/disks and
+    none it didn't. ods2's refusals are now values (`volume.ErrNoSpace`, `ErrHeaderFull`,
+    `ErrIndexFileFull`); govax's `rms.CreateError` is RMS$_CRE with SS$_HEADERFULL (or SS$_IDXFILEFULL,
+    unconfirmed) as its STV, from `$CREATE`, COPY (OPENOUT, the two lines, NOTCOPIED, as VMS's), and the
+    other utilities, where 14a found ods2's words in a BADFILESPEC. DEVIATIONS.md's Phase 111 entry on
+    the index file's extension header moved to DEVIATIONS-RESOLVED.md.
+  - *The counts*: VMS left 30 short free runs (1 to 7 blocks, one of 40) between its 8-block files, none
+    on a track or cylinder boundary, so it made 2,305 and govax 2,239, and every count after differs;
+    `TestErr113BProcedure` compares HDRFULL with its digits masked (`scratchCompared`), and FULL2 exactly
+    but for its time. That, and DIRECTORY/FULL's version limit (VMS's from the MFD record, govax's from
+    the header), are DEVIATIONS.md's new Phase 113 entry.
+  - *The rehearsal*: INITIALIZE/CONTAINER takes `/MAXIMUM_FILES` and `/EXTENSION` (ods2's
+    `InitializeOptions.Extension`; HELP INITIALIZE), so `TestErr113BProcedure` makes FULL2's volume as
+    VMS's (`/HEADERS=16/EXTENSION=1`) and runs HDRFULL again on one with `/MAXIMUM_FILES=8000`.
+    `tools/odscheck` has `-map`, each file's extents, which showed where VMS put each piece.
+  - Subtask 14c, the documents, is next.
 

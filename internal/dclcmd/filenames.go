@@ -185,6 +185,15 @@ func FileFailure(err error, spec string) error {
 		return vmserrors.ConditionError{Status: rmsFUL, Text: text}
 	}
 
+	// A file the volume couldn't make a header for is RMS$_CRE and its
+	// reason (unconfirmed for a utility but COPY: testdata/err113, round 2's
+	// HDRFULL, was COPY's).
+	if created, ok := rms.AsCreateError(err); ok {
+		text := strings.TrimPrefix(ConditionLine(created.Status()), "-") + "\n" + ConditionLine(created.STV)
+
+		return vmserrors.ConditionError{Status: created.Status(), Text: text}
+	}
+
 	return vmserrors.Wrap(vmserrors.CLI_BADFILESPEC, err, spec)
 }
 

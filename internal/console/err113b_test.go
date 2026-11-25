@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -19,19 +20,32 @@ import (
 // on a fragmented volume). TestErr113BProcedure rehearses it on govax.
 
 // runErr113B makes round 2's volume as exchangeb.cmd does and runs ERR113B.COM
-// with it on DUA1 and an RD51 scratch volume on DUA3, made as INITIALIZE
-// /HEADERS=16 makes it and used as it is (P3 KEEP: govax has no INITIALIZE of
-// a device). It returns the log.
-func runErr113B(t *testing.T) string {
+// with it on DUA1, from section start ("" for the first), and an RD51 scratch
+// volume on DUA3, made with the INITIALIZE qualifiers given (the section's
+// own) and used as it is (P3 KEEP: govax has no INITIALIZE of a device). It
+// returns the log.
+func runErr113B(t *testing.T, qualifiers, start string) string {
 	t.Helper()
+
+	// The console's fixtures are found from this package's directory, and
+	// an earlier run left the test in the repository's root.
+	if _, err := os.Stat("err113b_test.go"); err != nil {
+		t.Chdir(filepath.Join("internal", "console"))
+	}
 
 	d, c, buf := shareFindConsole(t, false)
 	dir := t.TempDir()
 	exchange := filepath.Join(dir, "err113b.dsk")
 	scratch := filepath.Join(dir, "scratch.dsk")
 
+	// ERR113B_SCRATCH keeps the scratch volume for a look afterward.
+	if keep := os.Getenv("ERR113B_SCRATCH"); keep != "" {
+		scratch = filepath.Join(keep, "scratch"+start+".dsk")
+		_ = os.Remove(scratch)
+	}
+
 	shareFindRun(t, d, `INITIALIZE/CONTAINER "`+exchange+`" /DEVICE=RD54 ERR113B`)
-	shareFindRun(t, d, `INITIALIZE/CONTAINER "`+scratch+`" /DEVICE=RD51 /HEADERS=16 SCR113`)
+	shareFindRun(t, d, `INITIALIZE/CONTAINER "`+scratch+`" /DEVICE=RD51 `+qualifiers+` SCR113`)
 
 	if err := c.cmd().Mount("DUA5:", exchange, true); err != nil {
 		t.Fatal(err)
@@ -72,7 +86,7 @@ func runErr113B(t *testing.T) string {
 	}
 
 	shareFindRun(t, d, "SET DEFAULT DUA1:[000000]")
-	shareFindRun(t, d, `@ERR113B/OUTPUT=ERR113B.LOG DUA3: "" KEEP`)
+	shareFindRun(t, d, `@ERR113B/OUTPUT=ERR113B.LOG DUA3: "`+start+`" KEEP`)
 
 	host := filepath.Join(t.TempDir(), "err113b.log")
 	shareFindRun(t, d, `COPY/QUIET DUA1:[000000]ERR113B.LOG "`+host+`"/HOST`)
@@ -90,15 +104,21 @@ func TestErr113BProcedure(t *testing.T) {
 		t.Skip("the round's procedure fills a volume with files")
 	}
 
-	log := runErr113B(t)
+	// FULL2's volume is VMS's INITIALIZE/HEADERS=16/EXTENSION=1, HDRFULL's
+	// that with /MAXIMUM_FILES=8000 (the index file's growth is 15% of the
+	// headers it still allows), so HDRFULL is run again on a volume of its
+	// own and taken from there.
+	log := runErr113B(t, "/HEADERS=16/EXTENSION=1", "")
+	sections := vms93Sections(log)
+
+	hdrfull := runErr113B(t, "/HEADERS=16/EXTENSION=1/MAXIMUM_FILES=8000", "HDRFULL")
+	sections["HDRFULL"] = vms93Sections(hdrfull)["HDRFULL"]
 
 	if path := os.Getenv("ERR113B_WRITE"); path != "" {
-		if err := os.WriteFile(path, []byte(log), 0o600); err != nil {
+		if err := os.WriteFile(path, []byte(log+"\n---- HDRFULL again\n"+hdrfull), 0o600); err != nil {
 			t.Fatal(err)
 		}
 	}
-
-	sections := vms93Sections(log)
 
 	for _, name := range []string{"LNK113L", "LNK113D", "MAC113F", "DCL2", "FULL2", "HDRFULL", "END"} {
 		if _, ok := sections[name]; !ok {
@@ -128,6 +148,51 @@ func TestErr113BProcedure(t *testing.T) {
 			t.Errorf("%s is\n%s\nVMS's (with err113BDifferences)\n%s", name, got, want)
 		}
 	}
+
+	// FULL2 is VMS's but for REST.DAT's time. HDRFULL ends as VMS's does,
+	// the index file's header full, but its counts differ: VMS's XQP left
+	// short free runs between the 8-block files (3 blocks at LBN 2464, 7 at
+	// 4371, ...; its extent cache's leftovers, presumably), which the
+	// 1-block files and the index file's last pieces took later, and govax
+	// allocates first fit. So HDRFULL is compared with its digits masked, up
+	// to the DUMP/HEADER and ANALYZE/DISK_STRUCTURE govax doesn't have.
+	for _, name := range []string{"FULL2", "HDRFULL"} {
+		masked := name == "HDRFULL"
+		got, want := scratchCompared(sections[name], masked), scratchCompared(vms[name], masked)
+
+		if masked {
+			want = strings.Replace(want, "Version limit: n,", "No version limit,", 1)
+		}
+
+		if got != want {
+			t.Errorf("%s (compared as scratchCompared) is\n%s\nVMS's\n%s", name, got, want)
+		}
+	}
+}
+
+// scratchCompared is a section on the scratch volume as it is compared: no
+// MOUNT line (the rehearsal's volume is mounted already), times masked,
+// and up to the DUMP/HEADER, which govax doesn't have. With digits, each
+// run of digits is an n. (VMS's DIRECTORY/FULL says INDEXF.SYS's version
+// limit is 1, from its MFD record; govax's reads the header, which has
+// none.)
+func scratchCompared(section string, digits bool) string {
+	section = regexp.MustCompile(`(?m)^%MOUNT-I-MOUNTED, .*\n`).ReplaceAllString(section, "")
+	section = regexp.MustCompile(`[0-9]{1,2}-[A-Z]{3}-[0-9]{4} [0-9:.]{11}`).ReplaceAllString(section, "<time>")
+
+	for _, end := range []string{"Dump of file", "%DCL-W-IVQUAL"} {
+		if i := strings.Index(section, end); i >= 0 {
+			section = section[:i]
+		}
+	}
+
+	section = strings.TrimRight(section, "\n\f")
+
+	if digits {
+		section = regexp.MustCompile(`[0-9]+`).ReplaceAllString(section, "n")
+	}
+
+	return section
 }
 
 // err113BDifferences are the round's sections TestErr113BProcedure compares

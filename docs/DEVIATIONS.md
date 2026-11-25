@@ -2094,27 +2094,6 @@ nothing is changed until a program needs it. `TestLink82Oracle` lists the case.
   `/LIST` is numbered as its comment is, by its own file's line (unconfirmed what VAX FORTRAN shows).
 - **Status**: kept, by design.
 
-### [Phase 111] VMS 7.1's file system fails on an index file extension header ods2 made
-
-- **Where**: ods2's `volume/writeheader.go` (`ensureHeaderSlot`, the index file's growth), seen through
-  `testdata/f90r` (`docs/planning/PHASE-111 - Fortran 90 milestone.md`, subtask 11).
-- **What**: a volume govax made whose INDEXF.SYS had outgrown its header (98 pieces, the last 411 blocks mapped by
-  an extension header in file 1279) bug-checked VMS 7.1 twice: UNXSIGNAL (an access violation reading address
-  `0000000C` in F11BXQP) at `@F90R/OUTPUT=F90R.LOG`, and XQPERR at a read-only `ANALYZE/DISK_STRUCTURE`, whose
-  stack held 1,302, the blocks the primary header mapped. `tools/odscheck` finds the volume consistent by ODS-2's
-  rules (checksums, maps, the chain, the bitmaps). ods2's extension headers have their ident and map areas both at
-  word 40, no record attributes, and the primary's FID as their back link; what VMS writes in an index file
-  extension header, and which of these VMS objects to (or whether it reads one at all at mount), is unconfirmed:
-  no VMS-made one is at hand. Phase 89's log thought VMS had read such a header on its round's volume; the copy
-  VMS left suggests it never had one.
-- **Status**: open, but rarely reached. Phase 113's probe (`testdata/err113`, the INDEX section) let VMS grow an
-  index file to 3,374 blocks with 3,000 files: it never needed an extension header, since VMS grows INDEXF.SYS by
-  15% of the header slots MAXFILES still allows, in one extent (807, 686, 583, ... blocks), where ods2 grew it by 16
-  blocks at a time, a retrieval pointer each. ods2 now grows it VMS's way (`indexFileGrowth`, subtask 13d), so its
-  header fills only on a volume too fragmented to give the pieces whole. What VMS does then (an extension header
-  of its own form, or HEADERFULL) is still unconfirmed, and ods2 still writes its own extension header there. A
-  volume meant for VMS can still be made with a large `/HEADERS` (`testdata/f90r`'s `/HEADERS=6000`).
-
 ### [Phase 111] VMS MACRO stores an occasional byte of a long immediate run through the stack
 
 - **Where**: `internal/asm/object.go` (the object's STORE IMMEDIATE runs); `testdata/tir111`,
@@ -2155,3 +2134,21 @@ nothing is changed until a program needs it. `TestLink82Oracle` lists the case.
   65,535 bytes read from beyond the operand's digits (`testdata/str113`'s run). govax signals
   LIB$_INVARG for the first and gives a zero, as for 0 places, for the second.
 - **Status**: by choice.
+
+### [Phase 113] Where VMS's file system puts a file, and DIRECTORY/FULL's version limit
+
+- **Where**: ods2's allocator (`volume/writeheader.go`'s `allocateExtents`, first fit), and govax's
+  DIRECTORY/FULL (`internal/rms/directory.go`'s version limit text, `fileattr.go`); `testdata/err113`'s
+  round 2, HDRFULL (`TestErr113BProcedure`, `scratchCompared`).
+- **What**: VMS 7.1 filled the round's RD51 with 8-block files first fit from the volume's start, as ods2
+  does, and put the index file's growths where ods2 does, but left short free runs between some files: 30 of
+  them in 2,305 files, 1 to 7 blocks (one of 40), at irregular places, none on a track or cylinder boundary
+  (18 and 72 blocks), later taken by the 1-block files and the index file's last pieces. So VMS made 2,305
+  8-block files and govax 2,239, and every count after differs; the section is compared with its digits
+  masked. The XQP's extent cache leaving the end of a cached run too short for the next contiguous file
+  would explain it; unconfirmed. VMS's DIRECTORY/FULL also said INDEXF.SYS's version limit is 1, from its
+  record in the MFD (as Phase 69's round 2 found for a restored file), where govax's reads the header's,
+  which has none ("No version limit").
+- **Status**: open. The placement needs a probe of its own (files made one at a time, the map after each);
+  the version limit is DIRECTORY/FULL reading the directory record, which would change every oracle that
+  shows one.

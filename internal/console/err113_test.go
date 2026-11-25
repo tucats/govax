@@ -127,14 +127,14 @@ func TestErr113Procedure(t *testing.T) {
 	}
 
 	// The index file grew as VMS's did (subtask 13d): 3,000 files and an
-	// INDEXF.SYS of VMS's size less the block VMS's grew by in FULL, for
-	// MORE.TXT's header, which govax's volume had no room for.
+	// INDEXF.SYS of VMS's size, with the block it grew by in FULL for
+	// MORE.TXT's header (REST.DAT left it free, subtask 14b3).
 	if !strings.Contains(sections["INDEX"], "FILES 3000 STATUS %X00000001\n") {
 		t.Errorf("INDEX didn't make 3,000 files:\n%s", sections["INDEX"])
 	}
 
-	if got, want := err113IndexBlocks(t, sections["INDEX"]), err113IndexBlocks(t, vms["INDEX"])-1; got != want {
-		t.Errorf("INDEXF.SYS is %d blocks, want %d (VMS's less FULL's block):\n%s", got, want, sections["INDEX"])
+	if got, want := err113IndexBlocks(t, sections["INDEX"]), err113IndexBlocks(t, vms["INDEX"]); got != want {
+		t.Errorf("INDEXF.SYS is %d blocks, want VMS's %d:\n%s", got, want, sections["INDEX"])
 	}
 
 	for name, want := range vms {
@@ -191,22 +191,6 @@ var err113Differences = map[string][]err113Difference{
 		// The third pass ran with SET VERIFY on, so CREATE's data line is
 		// in VMS's log.
 		{vms: "A line for a full volume.\n", why: "SET VERIFY's data line"},
-		// VMS's REST.DAT stopped with one block of the volume free, and its
-		// index file grew by that block for MORE.TXT's header, as ods2's
-		// now would (indexFileGrowth, TestIndexFileGrowthOnAFullVolume);
-		// govax's REST.DAT fills the volume, so there is no block for the
-		// header, CREATE fails at its open, and MORE.TXT isn't there for
-		// DELETE. Why VMS's RMS left the block is unconfirmed.
-		{
-			vms:   "%CREATE-E-WRITEERR, error writing DUA3:[000000]MORE.TXT;1\n-RMS-F-FUL, device full (insufficient space for allocation)\n  $STATUS == \"%X109110D2\"\n",
-			govax: "%CREATE-E-OPENOUT, error opening DUA3:[000000]MORE.TXT as output\n-RMS-F-FUL, device full (insufficient space for allocation)\n  $STATUS == \"%X00700032\"\n",
-			why:   "the block VMS's REST.DAT left free",
-		},
-		{
-			vms:   "%DELETE-W-SEARCHFAIL, error searching for DUA3:[000000]*.OBJ;*",
-			govax: "%DELETE-W-SEARCHFAIL, error searching for DUA3:[000000]*.TXT;*\n-RMS-E-FNF, file not found\n%DELETE-W-SEARCHFAIL, error searching for DUA3:[000000]*.OBJ;*",
-			why:   "no MORE.TXT (the block VMS's REST.DAT left free)",
-		},
 	},
 }
 

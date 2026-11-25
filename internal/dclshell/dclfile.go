@@ -485,6 +485,8 @@ func (c *Interpreter) openDCLFile(spec string, host bool, access rms.DCLAccess) 
 		loc = loc.WithDefaultType("DAT")
 	}
 
+	access.Command = true
+
 	f, err := c.ContainerSession.OpenDCLFile(loc, access)
 	if err != nil {
 		return nil, err

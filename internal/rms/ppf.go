@@ -445,8 +445,13 @@ func closeHandle(h *FileHandle) error {
 
 // closeRevision gives h's file a new revision date and number as it's closed,
 // if h.reviseAtClose says it's owed one (a file DCL's OPEN opened to write;
-// dclfile.go) and isn't about to be deleted.
+// dclfile.go) and isn't about to be deleted. A file DCL's OPEN wrote is
+// truncated first (closeTruncate).
 func (h *FileHandle) closeRevision() error {
+	if err := h.closeTruncate(); err != nil {
+		return err
+	}
+
 	if !h.reviseAtClose || h.File == nil || h.File.MarkedForDelete() {
 		return nil
 	}

@@ -71,6 +71,12 @@ type DCLAccess struct {
 	// unconfirmed, the blocks used VMS 7.1's, testdata/tb70).
 	Variable bool
 
+	// Command says the open is DCL's OPEN command's, whose writes extend a
+	// sequential file by RMS's auto extend size (sequentialExtendSize);
+	// another open's grow by just what each write needs (VMS 7.1 gave an
+	// image's SYS$OUTPUT file of a line one block, testdata/tb70).
+	Command bool
+
 	// Locks are where an indexed file's records are locked as READ reads
 	// them (dclkeyed.go); none without a Manager.
 	Locks DCLLocks
@@ -272,6 +278,13 @@ func (s *Session) OpenDCLFile(loc FileLocation, a DCLAccess) (*DCLFile, error) {
 		_ = f.Close()
 
 		return fail(f.Name, sts)
+	}
+
+	// A sequential file DCL writes grows by RMS's auto extend size, all or
+	// nothing (VMS 7.1's REST.DAT left a volume's last block free so).
+	if a.Command && fac&facPut != 0 && !isIndexed(handle.File) && !isRelative(handle.File) {
+		handle.File.ExtendQuantity = sequentialExtendSize(handle.File, dclMultiblockCount)
+		handle.truncateAtClose = true
 	}
 
 	return f, nil

@@ -2799,4 +2799,32 @@ widened."
   and ADRLSTSYNX then DIRSYNX for an `.ADDRESS` item (nothing stored); govax's
   does the same (`internal/asm`'s `registerItem`), so TIRR's object is VMS's
   too. A register within an item's expression (`.LONG 4+R1`) is still taken as
-  a symbol (unconfirmed).
+  a symbol (unconfirmed). *(Resolved in Phase 113, subtask 14b1: round 2's
+  MAC113F; an operator before a register ends the item.)*
+
+### [Phase 111, resolved] VMS 7.1's file system fails on an index file extension header ods2 made
+
+- **Where**: ods2's `volume/writeheader.go` (`ensureHeaderSlot`, the index file's growth), seen through
+  `testdata/f90r` (`docs/planning/PHASE-111 - Fortran 90 milestone.md`, subtask 11).
+- **What**: a volume govax made whose INDEXF.SYS had outgrown its header (98 pieces, the last 411 blocks mapped by
+  an extension header in file 1279) bug-checked VMS 7.1 twice: UNXSIGNAL (an access violation reading address
+  `0000000C` in F11BXQP) at `@F90R/OUTPUT=F90R.LOG`, and XQPERR at a read-only `ANALYZE/DISK_STRUCTURE`, whose
+  stack held 1,302, the blocks the primary header mapped. `tools/odscheck` finds the volume consistent by ODS-2's
+  rules (checksums, maps, the chain, the bitmaps). ods2's extension headers have their ident and map areas both at
+  word 40, no record attributes, and the primary's FID as their back link; what VMS writes in an index file
+  extension header, and which of these VMS objects to (or whether it reads one at all at mount), is unconfirmed:
+  no VMS-made one is at hand. Phase 89's log thought VMS had read such a header on its round's volume; the copy
+  VMS left suggests it never had one.
+- **Status**: resolved in Phase 113, subtask 14b3. Before then: open, but rarely reached. Phase 113's probe (`testdata/err113`, the INDEX section) let VMS grow an
+  index file to 3,374 blocks with 3,000 files: it never needed an extension header, since VMS grows INDEXF.SYS by
+  15% of the header slots MAXFILES still allows, in one extent (807, 686, 583, ... blocks), where ods2 grew it by 16
+  blocks at a time, a retrieval pointer each. ods2 now grows it VMS's way (`indexFileGrowth`, subtask 13d), so its
+  header fills only on a volume too fragmented to give the pieces whole. What VMS does then (an extension header
+  of its own form, or HEADERFULL) is still unconfirmed, and ods2 still writes its own extension header there. A
+  volume meant for VMS can still be made with a large `/HEADERS` (`testdata/f90r`'s `/HEADERS=6000`).
+  Round 2 of the probe round (`testdata/err113`'s HDRFULL) settled it: on a volume whose free space was all
+  single blocks, VMS 7.1 grew INDEXF.SYS by the longest free run each time, a retrieval pointer each, until its
+  header's map area held 76 pointers (154 of its 155 words), and then refused the next file, `-RMS-E-CRE, ACP
+  file create failed` and `-SYSTEM-W-HEADERFULL`. It gives the index file no extension header. ods2 now does the
+  same (`growIndexFile`, `volume.ErrHeaderFull`; govax's RMS says RMS$_CRE with SS$_HEADERFULL as its STV), so it
+  never writes an index file extension header; a volume already holding one is still read.

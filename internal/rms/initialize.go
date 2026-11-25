@@ -81,6 +81,11 @@ func InitializeContainer(path string, blocks uint32, label string, clusterSize u
 type ContainerSpace struct {
 	Headers     uint32
 	Directories uint32
+
+	// MaxFiles is /MAXIMUM_FILES, and Extension /EXTENSION, the volume's
+	// default extension quantity; zero is the default for each.
+	MaxFiles  uint32
+	Extension uint16
 }
 
 // InitializeContainerWith is InitializeContainer with the index file's and
@@ -121,6 +126,7 @@ func InitializeContainerWith(path string, blocks uint32, label string, clusterSi
 
 	opts := initializeOptions(label, clusterSize)
 	opts.Headers, opts.Directories = space.Headers, space.Directories
+	opts.MaxFiles, opts.Extension = space.MaxFiles, space.Extension
 
 	if err := volume.Initialize(c, opts); err != nil {
 		return fmt.Errorf("rms: initializing %s: %w", path, err)

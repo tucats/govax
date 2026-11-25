@@ -113,6 +113,10 @@ type FileHandle struct {
 	// it's closed without a FAB (closeRevision): DCL's OPEN of a file that
 	// was there, to write.
 	reviseAtClose bool
+
+	// truncateAtClose gives back, at the close, the blocks past the file's
+	// end, as DCL's CLOSE does for a file its OPEN wrote (closeTruncate).
+	truncateAtClose bool
 	idx           indexedStream
 
 	// readBuffer and writeBuffer are the last multiblock buffers the

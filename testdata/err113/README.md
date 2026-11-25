@@ -211,6 +211,8 @@ is now.
        ./govax --profile tbprobe --system-file none console < testdata/f90r/copyout.cmd
 
    The scratch disk stays in `testdata/disks` as the VAX left it, HDRFULL's index file in it.
+   (Round 2's VAX used `err113-scratch.dsk`, which now holds HDRFULL's end; `err113b-scratch.dsk`
+   is empty. `tools/odscheck -map` lists every file's extents.)
 
 `TestErr113BProcedure` (`internal/console/err113b_test.go`) rehearses ERR113B.COM on govax
 with P3 `KEEP` (govax has no INITIALIZE of a device, so the test mounts a scratch volume made
@@ -240,7 +242,9 @@ them.
   MORE.TXT and failed to write it (WRITEERR), the volume's last block gone.
 - HDRFULL: 2,305 8-block files, 1,163 7-block files, then 237 1-block files before
   `-RMS-E-CRE, ACP file create failed` and `-SYSTEM-W-HEADERFULL`: INDEXF.SYS's 154 map words
-  full (73 retrieval pointers), 2,574 blocks, no extension header.
+  full (76 retrieval pointers), 2,574 blocks, no extension header. The growths were 15% of the
+  headers MAXFILES still allowed, first fit (1,197 at LBN 1035, 1,018 at 11843), then the longest
+  free run (213, then 6, 6, 5, ... 1).
 - FOR81M: VMS's FORRTL gave what FORRTL over govax and FTNRTL now give.
 - FOR81W: a READ of exactly 133 characters ended when the buffer filled, with no Return,
   ERRDURREA with RMS$_TNS; 132 characters and a Return read whole.

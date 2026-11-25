@@ -5,7 +5,7 @@
 // and may become the basis of an ANALYZE/DISK_STRUCTURE/REPAIR for govax.
 //
 //	cd tools/odscheck
-//	GOWORK=off go run . [-free] [-dirs] [-blocks N] CONTAINER
+//	GOWORK=off go run . [-free] [-dirs] [-map] [-blocks N] CONTAINER
 //
 // It is a module of its own, outside govax's build, since only internal/rms may
 // import ods2 (CLAUDE.md); GOWORK=off keeps the repository's go.work from claiming it.
@@ -57,6 +57,7 @@ type checker struct {
 	problems int
 
 	showExtensions bool // -extensions
+	showMap        bool // -map
 }
 
 // block reads one logical block.
@@ -108,6 +109,7 @@ func main() {
 	showFree := flag.Bool("free", false, "show the free header slots INDEXF.SYS maps")
 	showDirs := flag.Bool("dirs", false, "show each directory's header and its blocks' fill")
 	showExtensions := flag.Bool("extensions", false, "show every extension header, raw")
+	showMap := flag.Bool("map", false, "show each file's name and extents")
 	flag.Parse()
 
 	if flag.NArg() != 1 {
@@ -127,7 +129,7 @@ func main() {
 		os.Exit(2)
 	}
 
-	c := &checker{disk: disk, blocks: uint32(info.Size() / 512), showExtensions: *showExtensions}
+	c := &checker{disk: disk, blocks: uint32(info.Size() / 512), showExtensions: *showExtensions, showMap: *showMap}
 	c.check(*showFree, *showDirs)
 	c.checkBitmap(flag.Arg(0))
 
@@ -279,6 +281,10 @@ func (c *checker) readHeaders(home ondisk.HomeBlock, index extents, headerVBN fu
 		pointers, err := h.RetrievalPointers()
 		if err != nil {
 			c.bad("file %d's map: %v", n, err)
+		}
+
+		if c.showMap {
+			showFileMap(n, h, pointers)
 		}
 
 		for _, x := range pointers {
@@ -509,6 +515,23 @@ func describe(what string, h ondisk.FileHeader) {
 	ra := h.RecordAttributes
 	fmt.Printf("    end of file block %d, first free byte %d, highest block %d\n",
 		ra.EndOfFileBlock, ra.FirstFreeByte, ra.HighestBlock)
+}
+
+// showFileMap prints file n's name (from its ident area, if it reads) and each
+// of its extents, a count of blocks at a logical block.
+func showFileMap(n uint32, h ondisk.FileHeader, pointers []ondisk.Extent) {
+	name := "?"
+	if ident, err := (&h).Ident(); err == nil {
+		name = ident.Filename
+	}
+
+	fmt.Printf("file %d %s:", n, name)
+
+	for _, x := range pointers {
+		fmt.Printf(" %d@%d", x.Count, x.StartLBN)
+	}
+
+	fmt.Println()
 }
 
 // hexDump is a header's bytes up to its last nonzero one, 16 to a line.

@@ -224,6 +224,20 @@ func (c *Context) Copy(sourceText string, sourceHost bool, destText string, dest
 			return vmserrors.ConditionError{Status: rmsFUL, Text: text}
 		}
 
+		// A file the volume couldn't make a header for: OPENOUT, RMS$_CRE
+		// and its reason, then NOTCOPIED, as VMS 7.1 said it when its index
+		// file's header was full (testdata/err113, round 2's HDRFULL).
+		var created *rms.CreateError
+		if errors.As(err, &created) {
+			text := "COPY-E-OPENOUT, error opening " + created.Spec + " as output\n" +
+				ConditionLine(created.Status()) + "\n" + ConditionLine(created.STV)
+			if created.Source != "" {
+				text += "\n%COPY-W-NOTCOPIED, " + created.Source + " not copied"
+			}
+
+			return vmserrors.ConditionError{Status: copyOpenOut | stsInhibitMsg, Text: text}
+		}
+
 		return vmserrors.Wrap(vmserrors.CLI_BADFILESPEC, err, sourceText)
 	}
 

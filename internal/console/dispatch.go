@@ -534,7 +534,10 @@ func (d *Dispatcher) bindGrammar() {
 			r.String("LABEL"),
 			uint16(r.Int("CLUSTER")),
 			r.String("DEVICE"),
-			rms.ContainerSpace{Headers: uint32(r.Int("HEADERS")), Directories: uint32(r.Int("DIRECTORIES"))},
+			rms.ContainerSpace{
+				Headers: uint32(r.Int("HEADERS")), Directories: uint32(r.Int("DIRECTORIES")),
+				MaxFiles: uint32(r.Int("MAXIMUM_FILES")), Extension: uint16(r.Int("EXTENSION")),
+			},
 		)
 	})
 

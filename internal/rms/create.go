@@ -552,6 +552,13 @@ func createOnVolume(ctx *Context, fabAddr uint32, fac byte, p parsedName, cif bo
 		return 0, found, false, nil, rmsDeviceFull, ssDeviceFull, nil
 	}
 
+	// A header the volume couldn't make is RMS$_CRE with the reason its
+	// STV, SS$_HEADERFULL as VMS 7.1 said it (testdata/err113, round 2's
+	// HDRFULL).
+	if stv, ok := createFailure(err); ok {
+		return 0, found, false, nil, rmsCreateFailed, stv, nil
+	}
+
 	if err != nil {
 		// Any other ods2/volume-layer failure (a
 		// directory-lookup problem past what ResolveDirectory already

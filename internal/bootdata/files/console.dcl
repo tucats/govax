@@ -525,6 +525,13 @@ grammar console
                     /type=$integer
         qualifier   directories/id=815          -
                     /type=$integer
+        ! VMS INITIALIZE's /MAXIMUM_FILES and /EXTENSION (Phase 113,
+        ! subtask 14b3): the files the index file bitmap allows, and the
+        ! volume's default extension quantity.
+        qualifier   maximum_files/id=816        -
+                    /type=$integer
+        qualifier   extension/id=817            -
+                    /type=$integer
 
     ! INITIALIZE/MEMORY (was VMINIT) lays out virtual memory: the P0, P1,
     ! and S0 regions, the privileged modes' stacks, and the string pool,
