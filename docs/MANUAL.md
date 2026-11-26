@@ -2010,6 +2010,96 @@ same, `%X006C8013` when they differ, and `%X006C8018` (`%DIF-W-MAXDIF`) when
 `/MAXIMUM_DIFFERENCES` stopped the comparison. VMS's paging qualifiers, `/PAGE`
 and its companions, are left out. HELP DIFFERENCES has every qualifier.
 
+#### EDIT/SUM
+
+```text
+EDIT/SUM [/OUTPUT[=file] | /NOOUTPUT] [/LISTING[=file]] [/[NO]HEADER]
+         input-file/UPDATE[=(update-file[,...])]
+```
+
+Runs SUMSLP, VMS's batch editor: the input file is updated by the edit
+commands in one or more update files, and the result is written as a new
+file, the input and the update files unchanged. It does what VMS 7.1's
+SUMSLP does, held to a probe of 422 cases in two rounds on VMS (`testdata/sum117`):
+the same output, listing, messages, and statuses. `EDIT/SLP` is the same
+command, under the name older VMS versions used (VMS 7.1's EDIT/SLP runs
+another utility).
+
+An update file is the script `DIFFERENCES/SLP` writes, or one written by
+hand. A line starting with `-` is an edit: `-m,n` replaces input lines m to
+n with the records that follow it (deletes them if none do), and `-m`
+inserts the records that follow after line m (`-0` before line 1). `/` ends
+the file. Any other line is a record to insert, and `<` before a line's
+first character makes it an ordinary one (`</` is a record starting with
+a slash). An edit may end with `,/text/`, an audit trail marking the lines
+it inserts in the listing, and `;comment`. The line numbers are always
+the input's, so several update files, each written against the same
+input, are merged into one list and applied in one pass; where their
+edits meet, the last file listed wins, with `%SUM-W-` warnings for edits
+that clash or are out of order.
+
+`DIFFERENCES/SLP` and `EDIT/SUM` together turn one file into another: the
+script, then the input updated by it, then the comparison of the result
+with the revision.
+
+```text
+VAX> DIFFERENCES/SLP MEMO.TXT MEMO2.TXT
+VAX> TYPE MEMO.DIF
+-    2,    4
+The meeting is on Thursday, at ten.
+Please bring the minutes.
+We will discuss the budget.
+And the new building.
+/
+VAX> EDIT/SUM/LISTING MEMO.TXT/UPDATE=MEMO.DIF
+VAX> TYPE MEMO.LIS
+                                                            25-NOV-2026 22:45:00    VAX-11 SUMSLP V01.00                Page    1
+                                                            25-NOV-2026 22:45:00    DUA1:[WORK]MEMO.TXT;1
+
+                      1 Dear committee,
+                     .1 The meeting is on Thursday, at ten.
+                     .2 Please bring the minutes.
+                     .3 We will discuss the budget.
+                     .4 And the new building.
+-3                    5 Regards,
+                      6 Pat
+VAX> DIFFERENCES MEMO.TXT MEMO2.TXT
+Number of difference sections found: 0
+Number of difference records found: 0
+
+DIFFERENCES /IGNORE=()/MERGED=1-
+    DUA1:[WORK]MEMO.TXT;2-
+    DUA1:[WORK]MEMO2.TXT;1
+```
+
+The listing shows each line of the result with the input's line number,
+`.1`, `.2`, ... for inserted lines (and their audit trail, in the first 16
+columns), and `-n` on the first line after n deleted ones. Its pages hold
+57 lines each under two heading lines and a blank one, as SUMSLP's do.
+
+`/UPDATE` follows the input file. With no value the update file is the
+input's name with the type `.UPD`; each later file in the list takes its
+device and directory from the one before. An update file that can't be
+opened is reported (`%SUM-I-OPENIN`) and the others are applied.
+`/UPDATE=SYS$INPUT` reads the update from the lines after the command in a
+procedure. With no `/UPDATE` the input is copied, and listed, unchanged.
+`/OUTPUT` names the result, by default a new version of the input;
+`/NOOUTPUT` writes none. `/LISTING` names the listing, by default the
+input's name with the type `.LIS` in the default directory. Either may be
+`TT:` or `SYS$OUTPUT`, which shows it at the terminal. `/HEADER` writes the
+result as VFC records, each with SUMSLP's 12-byte header: the input line's
+number, the deletion count or an inserted line's place in its run, and the
+audit trail's first 8 characters.
+
+The result is always variable-length records with carriage return carriage
+control, whatever the input's record format. An input record longer than 255
+bytes stops the pass there (`%SUM-E-READERR`, RMS's RTB), the output and
+listing holding what came before it. `$STATUS` is `%X10010001`, RMS's success
+with its message inhibited, after a run that finished, warnings and all; or
+the RMS status of the file that stopped it. HELP EDIT /SUM has every qualifier
+and the edit commands. MACRO's `/UPDATE` runs the same editor on a source
+before assembling it ([The MACRO command](#the-macro-command)).
+
 #### CONVERT
 
 ```text
@@ -3647,8 +3737,8 @@ what you need.
 ### The MACRO command
 
 ```text
-MACRO source[{,|+}...][/HOST] [/OBJECT[=file] | /NOOBJECT] [/LIST[=file] | /NOLIST]
-      [/LIBRARY=(mlb,...)] [/SHOW=(...) | /NOSHOW=(...)]
+MACRO source[/UPDATE[=(file,...)]][{,|+}...][/HOST] [/OBJECT[=file] | /NOOBJECT]
+      [/LIST[=file] | /NOLIST] [/LIBRARY=(mlb,...)] [/SHOW=(...) | /NOSHOW=(...)]
       [/CROSS_REFERENCE[=(...)]] [/DEBUG[=(...)] | /NODEBUG]
       [/ENABLE=(...)] [/DISABLE=(...)]
 ```
@@ -3659,7 +3749,7 @@ with the last failure's status. Sources joined by `+` are concatenated into one
 input, for a single object and listing named for the first file; as in VMS's
 MACRO, the listing numbers each file's lines from 1 and heads a page with the
 file it starts in, the debugger's records name each file, and a file after an
-`.END` isn't read. All have the same qualifiers.
+`.END` isn't read. Qualifiers after the verb apply to every source.
 
 | Qualifier | Meaning |
 | --- | --- |
@@ -3671,6 +3761,39 @@ file it starts in, the debugger's records name each file, and a file after an
 | `/DEBUG[=(...)]`, `/NODEBUG` | What the object carries for the debugger: `TRACEBACK` (the default), `SYMBOLS`, `ALL` (what `/DEBUG` alone means), or `NONE`. Use `/DEBUG` for source-line debugging. |
 | `/ENABLE=(...)`, `/DISABLE=(...)` | Assembler functions, as `.ENABLE`/`.DISABLE`: `ABSOLUTE`, `DEBUG`, `GLOBAL`, `SUPPRESSION`, `TRACEBACK`, `TRUNCATION`, `VECTOR`. |
 | `/LIBRARY` | After a file in the list, that file is a macro library (`.MLB`) to search before the system macro library: `MACRO PROG+MYMAC/LIBRARY`, VMS's form. With a value, `/LIBRARY=(...)`, after the verb or a file, govax's form: the libraries it names. |
+| `/UPDATE[=(file,...)]` | After a source, apply the update files' SLP edits to it before assembling, as `EDIT/SUM` would ([EDIT/SUM](#editsum)); the source file isn't changed. With no value, the source's name with the type `.UPD`. Not after the verb (`%DCL-W-IVQLOC`). |
+
+`/LIST`, `/OBJECT`, and `/UPDATE` may follow a source, for that source alone
+(`MACRO A/LIST=A1,B/LIST=B1` makes two listings), as in VMS's MACRO.
+
+With `/UPDATE`, the listing shows SUMSLP's line numbers (`.1`, `.2`, ... for
+inserted lines) and, in the first 16 columns of the binary field, an inserted
+line's audit trail or `-n` on the first line after n deleted ones; the binary
+field is then 20 columns wide. SUMSLP's warnings are listed before their lines
+and counted as warnings. An update file that can't be opened is
+`%SUM-I-OPENIN`, and the assembly goes on. Here `HELLO.UPD` replaces line 3 of
+`HELLO.MAR`, marking it `FIX1`:
+
+```text
+VAX> TYPE HELLO.UPD
+-3,3,/FIX1/
+MSG:    .ASCID  /Hello, VAX!/
+/
+VAX> MACRO HELLO/UPDATE/LIST
+VAX> LINK HELLO
+VAX> RUN HELLO
+Hello, VAX!
+VAX> TYPE HELLO.LIS
+...
+                                     0000     1         .TITLE  HELLO
+                                 00000000     2         .PSECT  DATA, WRT, NOEXE, LONG
+FIX1              00000008'010E0000' 0000    .1 MSG:    .ASCID  /Hello, VAX!/
+                  2C 6F 6C 6C 65 48  0008
+                     21 58 41 56 20  000E
+-1                               00000000     4         .PSECT  CODE, NOWRT, EXE, LONG
+                               0000  0000     5         .ENTRY  HELLO, ^M<>
+...
+```
 
 Every error in the source is reported, with its line (each undefined symbol
 by name), and the object is still written, as VMS's MACRO writes it, its end

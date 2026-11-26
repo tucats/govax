@@ -2,9 +2,9 @@
 
 **Status:** planned 2026-11-25 (subtask 1, the survey and this plan);
 the plan reviewed and accepted by the author the same day, with the
-answers recorded in "The review". This document is the development plan; as
-the work proceeds it becomes the implementation record (the progress
-log, and at the end "Where things stand").
+answers recorded in "The review"; done 2026-11-25. This document was the
+development plan and is now the implementation record: the progress log,
+and at the end "Where things stand".
 
 ## Goal
 
@@ -528,7 +528,7 @@ Each is one commit, with tests, stopping for review.
    default, the source updated through `sumslp` before assembly, the
    listing's audit trail, a missing update file's message; held to the
    MACRO section (listings and objects).
-9. **The close-out**: MANUAL.md (section 6's file commands, beside
+9. **The close-out** (done 2026-11-25): MANUAL.md (section 6's file commands, beside
    DIFFERENCES, with a worked DIFFERENCES/SLP and EDIT/SUM example run on
    govax, and MACRO's chapter for `/UPDATE`), HELP, DEVIATIONS.md (what
    stays unconfirmed), PLAN.md, CLAUDE.md.
@@ -816,3 +816,57 @@ The author's answers to the plan's four questions:
   255 bytes is READERR and the lines before it are assembled. HELP MACRO
   has `/UPDATE` (VMS 7.1's has none, H04). Subtask 9, the close-out, is
   next.
+- **2026-11-25 — subtask 9 done: the close-out.** MANUAL.md's 6.1 has
+  EDIT/SUM after DIFFERENCES (the edit commands, merging, a worked
+  DIFFERENCES/SLP, EDIT/SUM, and DIFFERENCES example run on govax, the
+  names, the listing, `/HEADER`, long records, the statuses), and section
+  8's MACRO command has `/UPDATE` (a row in the qualifiers' table, the
+  positional `/LIST`, `/OBJECT`, and `/UPDATE`, and a worked example whose
+  listing was made on govax). HELP EDIT /SUM and HELP MACRO /UPDATE needed
+  nothing: subtasks 3 and 8 wrote them. Running the manual's example found
+  two bugs, fixed: (1) DIFFERENCES with `/OUTPUT` naming a host file made
+  the file and then failed to write the listing into it, looking for it on
+  a volume (`differences.outHost`; Phase 116's oracles all wrote to
+  volumes); (2) EDIT/SUM's `/OUTPUT` or `/LISTING` naming `TT:` or
+  `SYS$OUTPUT` made a file of that name (on the host) or failed, where VMS's
+  shows it at the terminal (`Context.sumToSysOutput`: a terminal device, or
+  a name for a process-permanent file). `internal/console`'s
+  `TestSum117HostFiles` is the manual's example on host files, and
+  `TestSum117TerminalOracle` replays `vax/terminal.log` (the output and
+  listing at the terminal, `/LISTING=SYS$OUTPUT`, a syntax error's
+  messages), the output and listing compared apart where VMS interleaves
+  them. DEVIATIONS.md has "EDIT/SUM and MACRO/UPDATE beside VMS 7.1's"
+  (EDIT/SLP, the single reading, the terminal's order, the messages'
+  numbers, and every choice no case settled), "DELETE's and DUMP's success
+  status", and "A Stream_LF file's carriage control after COPY and
+  OPEN/APPEND". VAX-VMS-INTERNALS.md is unchanged: no mechanism it describes
+  changed. PLAN.md and CLAUDE.md summarize the phase.
+
+## Where things stand
+
+EDIT/SUM is VMS 7.1's SUMSLP on every case of `testdata/sum117`'s two rounds
+and its terminal session but those the oracles list: the edit commands and
+their errors, merging several update files with their clashes, the audit
+trail, the listing and its pages, `/HEADER`'s VFC records, record formats and
+long records, the names, messages, and statuses; and all 136 round trips
+through DIFFERENCES/SLP. MACRO/UPDATE applies update files before assembling,
+its listing, messages, and objects VMS's. The engine is `internal/sumslp`, a
+leaf package whose tests hold the probe's outputs and listings and thousands
+of random round trips in milliseconds; the commands are
+`internal/dclcmd/sumslp.go` and `macroupdate.go`, the listing's side
+`internal/asm/update.go`; the oracles are `internal/console`'s
+`sum117*_test.go`.
+
+Left for later:
+
+- **What no case settled**, each a choice in the code marked unconfirmed and
+  listed in DEVIATIONS.md: questions for a next VMS round (the output's and
+  listing's directories from another default directory, a range that runs
+  out of input among several update files, U03's trail, MACRO/UPDATE's
+  corners).
+- **The terminal's order**: with the output and listing both at the
+  terminal, VMS interleaves them record by record; govax writes one, then
+  the other.
+- **Two DCL differences the probe found**, outside SUMSLP: DELETE's and
+  DUMP's success status, and the carriage control of D01's input after COPY
+  and OPEN/APPEND (DEVIATIONS.md).

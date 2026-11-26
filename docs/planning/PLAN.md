@@ -166,7 +166,7 @@ questions, and a progress log extended as that phase is worked.
 | 114 | [PHASE-114 - FORTRAN CONVERT](PHASE-114%20-%20FORTRAN%20CONVERT.md) | OPEN's `CONVERT=` other than NATIVE in FTNRTL, held to VMS's FORRTL — planned 2026-11-22 |
 | 115 | [PHASE-115 - Fortran 90 NOTIMPLs](PHASE-115%20-%20Fortran%2090%20NOTIMPLs.md) | The compiler's remaining NOTIMPLs, compiled or refused with a reason — planned 2026-11-23 |
 | 116 | [PHASE-116 - DIFFERENCES](PHASE-116%20-%20DIFFERENCES.md) | DCL's DIFFERENCES: VMS's matching rule, listing forms, and statuses, held to a VMS 7.1 probe — planned 2026-11-25; done 2026-11-25 |
-| 117 | [PHASE-117 - SUMSLP](PHASE-117%20-%20SUMSLP.md) | SUMSLP, VMS's batch editor, as EDIT/SUM (and EDIT/SLP): SLP scripts like DIFFERENCES/SLP's merged and applied to a file, and MACRO/UPDATE, held to a VMS 7.1 probe — planned 2026-11-25 |
+| 117 | [PHASE-117 - SUMSLP](PHASE-117%20-%20SUMSLP.md) | SUMSLP, VMS's batch editor, as EDIT/SUM (and EDIT/SLP): SLP scripts like DIFFERENCES/SLP's merged and applied to a file, and MACRO/UPDATE, held to a VMS 7.1 probe — planned 2026-11-25; done 2026-11-25 |
 
 Phase 13 was split out of Phase 10 once that phase's own investigation found that
 `console_run.c`'s `RUN` command (real `.exe` image activation: ICB/ISD/IHD/IHI struct
@@ -1308,3 +1308,26 @@ DIFFERENCES command, made to print what VMS 7.1 prints for the same files.
 MANUAL.md's 6.1 and HELP DIFFERENCES describe it; DEVIATIONS.md lists what stays a choice (the
 paging qualifiers, left out by the author's choice, and what no case settled); the phase doc's
 "Where things stand" lists what it left.
+
+## SUMSLP (Phase 117)
+
+Phase 117 (planned and done 2026-11-25, the plan accepted by the author the same day) is VMS's
+SUMSLP batch editor as EDIT/SUM (and govax's own EDIT/SLP), and MACRO/UPDATE, made to write what
+VMS 7.1 writes for the same input and update files.
+
+- **The probe**: `testdata/sum117`, 422 cases in two rounds on VMS 7.1 and a terminal session:
+  every edit command and its errors, merging, the audit trail and listing, `/HEADER`, record formats
+  and long records, 136 round trips through DIFFERENCES/SLP, and MACRO/UPDATE's listings and objects.
+- **The engine**: `internal/sumslp`, a leaf package: `parse.go` (an update file's edits, with
+  SUMSLP's syntax errors), `Apply` (every file's edits merged and applied in one pass, by rules fitted
+  to VMS's output: held inserts, dropped ranges, a range past the end reading the input again), the
+  listing's pages, and `/HEADER`'s records. Its tests hold the probe and thousands of random round
+  trips in milliseconds.
+- **The commands**: `internal/dclcmd/sumslp.go` (EDIT/SUM's names, files, messages, and statuses,
+  RMS's with the inhibit bit) and `macroupdate.go` (MACRO's positional `/UPDATE`, with `/LIST` and
+  `/OBJECT` positional too); `internal/asm/update.go` is the MACRO listing's audit trail. The
+  oracles are `internal/console`'s `sum117*_test.go`.
+
+MANUAL.md's 6.1 (EDIT/SUM) and section 8 (MACRO's `/UPDATE`) and HELP describe it; DEVIATIONS.md
+lists what differs by design (EDIT/SLP, the single reading of an update file) and what no case
+settled; the phase doc's "Where things stand" lists what it left.

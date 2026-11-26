@@ -2209,3 +2209,58 @@ nothing is changed until a program needs it. `TestLink82Oracle` lists the case.
   converted the string to its value and printed the status. The probe's second round wrote the
   string itself.
 - **Status**: open; a procedure that depends on VMS's answer is unlikely.
+
+### [Phase 117] EDIT/SUM and MACRO/UPDATE beside VMS 7.1's
+
+- **Where**: `internal/sumslp`, `internal/dclcmd/sumslp.go`, `internal/dclcmd/macroupdate.go`,
+  `internal/asm/update.go`, `internal/vmsdef/summessages.go`; `docs/planning/PHASE-117 - SUMSLP.md`,
+  A.4, A.5, and the progress log.
+- **What**: every output, listing, message, and status of `testdata/sum117`'s cases and terminal
+  session is VMS 7.1's on govax, but for the cases the oracles list (C23, C28's directory file, C29
+  and C30's second reading, M06's and M13's assembly errors). What differs by design, and what the
+  probe didn't settle:
+  - **EDIT/SLP** is govax's own name for EDIT/SUM (the review's answer 1): on VMS 7.1 it runs
+    another utility, BACKTRANS, which isn't installed there.
+  - **An update file is read once** (Decision 8). VMS's SUMSLP reads each update file twice, so an
+    update typed at the terminal (`/UPDATE=SYS$COMMAND`) is `%SUM-E-READERR` with RMS's RAC there and
+    works on govax; `/UPDATE=SYS$INPUT` in a procedure reads its data lines once (C29, C30).
+  - **The output and the listing both at the terminal**: VMS's SUMSLP writes each output record
+    before its listing line; govax writes the whole output, then the whole listing
+    (`TestSum117TerminalOracle` compares them apart).
+  - **The SUM messages' numbers** are govax's: `$STATUS` is always an RMS status with the inhibit
+    bit, so none ever showed (Decision 6).
+  - **Settled by choice, no case showing** (`internal/sumslp`'s `doc.go` has each): the output's
+    directory (the input's) and the listing's (the default), every case having run in the input's
+    directory; a day before the 10th in the listing's heading shown with a blank; "." after a
+    replace is its locator2; a range starting two past the input's end is lost; EDOUTSEQ of a
+    dropped or held edit listed when the pass reaches it; PRMEOF unnumbered; a range open at the
+    input's second end closes there; with several update files, a range that runs out of input lets
+    the other files' inserts and ranges reach the second reading by their numbers, and drops a range
+    starting inside it; U03's audit trail (an edit before any trail takes the file's first); an
+    input record past 255 bytes inside an open range stops the pass there, the range's text
+    unwritten.
+  - **MACRO/UPDATE, by choice**: a source none of whose update files opened is assembled with a
+    plain listing; a macro expansion under an updated line keeps the full binary field; a SUMSLP
+    warning after a file's last line is listed after it; an input record past 255 bytes is READERR
+    and the lines before it are assembled. HELP MACRO has `/UPDATE`, which VMS 7.1's HELP lacks
+    (H04).
+- **Status**: kept; the oracles are `internal/console`'s `sum117*_test.go` and `internal/sumslp`'s
+  `probe_test.go`.
+
+### [Phase 117] DELETE's and DUMP's success status
+
+- **Where**: DCL's DELETE and DUMP (`internal/dclcmd`); `testdata/sum117`'s C31, U11D to U14D, and
+  the FORMATS section's DUMP/RECORD cases.
+- **What**: after a DELETE or DUMP that succeeds, govax's `$STATUS` is DCL's `%X00030001`
+  (CLI$_NORMAL); VMS 7.1's is `%X10000001` (SS$_NORMAL with the message inhibited), the status the
+  utility image left. `sum117Known` masks it.
+- **Status**: open.
+
+### [Phase 117] A Stream_LF file's carriage control after COPY and OPEN/APPEND
+
+- **Where**: COPY or DCL's OPEN/APPEND (`internal/rms`); `testdata/sum117`'s D01.
+- **What**: D01's input, a Stream_LF file with no carriage control, copied by COPY and appended to
+  by OPEN/APPEND, has carriage return carriage control on VMS (DIRECTORY/FULL's "Record
+  attributes") and none on govax. Which of the two commands gives it on VMS wasn't isolated.
+  `sum117Known` masks it.
+- **Status**: open.

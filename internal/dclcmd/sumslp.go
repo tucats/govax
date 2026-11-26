@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/sumslp"
 	"github.com/tucats/govax/internal/vmsdef"
@@ -312,6 +313,21 @@ func (c *Context) sumListing(spec, inName string, in rms.ParsedName, lines []sum
 func (c *Context) sumWrite(spec, dna string, records [][]byte, control int) error {
 	s := c.ContainerSession
 
+	// A terminal, or a name for SYS$OUTPUT's process-permanent file, gets
+	// the records as lines on SYS$OUTPUT (the probe's terminal session,
+	// /OUTPUT=TT: and /LISTING=SYS$OUTPUT), without any fixed control.
+	if c.sumToSysOutput(spec) {
+		for _, r := range records {
+			if control > 0 && len(r) >= control {
+				r = r[control:]
+			}
+
+			c.Printf("%s\n", r)
+		}
+
+		return nil
+	}
+
 	name := spec
 	if p, _, err := s.Parse(spec, dna, "", true, false); err == nil && !s.DefaultOnHost() {
 		name = p.String()
@@ -333,6 +349,43 @@ func (c *Context) sumWrite(spec, dna string, records [][]byte, control int) erro
 	}
 
 	return nil
+}
+
+// sumToSysOutput says whether an output or listing spec names a terminal
+// device (TT:, a terminal's name, or a logical name for one) or a logical
+// name whose translation is a process-permanent file (SYS$OUTPUT in a
+// procedure run with /OUTPUT or in a batch job): either way the records go
+// to DCL's SYS$OUTPUT rather than to a file of that name.
+func (c *Context) sumToSysOutput(spec string) bool {
+	if spec == "" {
+		return false
+	}
+
+	spec = strings.ToUpper(spec)
+
+	device, rest, colon := strings.Cut(spec, ":")
+	if !colon && strings.ContainsAny(spec, ".[]<>;\"") {
+		return false
+	}
+
+	if c.RTL != nil {
+		if _, st := c.RTL.TerminalSettings(device); st == 0 {
+			return true
+		}
+	}
+
+	if rest != "" || c.Logicals == nil {
+		return false
+	}
+
+	e, err := c.Logicals.Translate("LNM$FILE_DEV", device, lnm.User, 0)
+	if err != nil || len(e.Equivalences) == 0 {
+		return false
+	}
+
+	_, ok := lnm.ParsePermanentFile(e.Equivalences[0].Value)
+
+	return ok
 }
 
 // hasWildcard says a file name has a wildcard.

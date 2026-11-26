@@ -79,6 +79,7 @@ type differences struct {
 	comments []byte      // /COMMENT_DELIMITER's characters, none for the type's
 
 	outTerminal bool // /OUTPUT names a terminal: the listing goes to SYS$OUTPUT
+	outHost     bool // the listing's file, made by output or userOutput, is a host file
 }
 
 // Differences runs DIFFERENCES.
@@ -712,6 +713,8 @@ func (d *differences) output(master string) (string, error) {
 		return "", objectFailureAs(vmserrors.CLI_BADFILESPEC, err, loc.Name)
 	}
 
+	d.outHost = created.Host
+
 	return created.Name, nil
 }
 
@@ -729,7 +732,7 @@ func (d *differences) write(name string, l *diff.Listing) error {
 		records[i] = []byte(line)
 	}
 
-	_, err := d.c.ContainerSession.RewriteRecordFile(rms.FileLocation{Name: name}, rms.TextRecords, records)
+	_, err := d.c.ContainerSession.RewriteRecordFile(rms.FileLocation{Host: d.outHost, Name: name}, rms.TextRecords, records)
 	if err != nil {
 		return objectFailureAs(vmserrors.CLI_BADFILESPEC, err, name)
 	}
@@ -834,6 +837,8 @@ func (d *differences) userOutput() string {
 	if err != nil {
 		return ""
 	}
+
+	d.outHost = created.Host
 
 	return created.Name
 }

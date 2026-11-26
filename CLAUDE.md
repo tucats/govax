@@ -1516,7 +1516,17 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   lower version, the output file, the terminal's width, a user-mode
   SYS$OUTPUT), the DIF messages and statuses (facility 108,
   `vmsdef/difmessages.go`), and DCL's IVQLOC and MAXPARM as VMS's; the
-  paging qualifiers left out by the author's choice. An item an old
+  paging qualifiers left out by the author's choice.
+  Phase 117 (planned and done 2026-11-25; its "Where things stand" is the
+  follow-up list, and PLAN.md summarizes it) is SUMSLP, VMS's batch editor,
+  as EDIT/SUM (EDIT/SLP govax's own synonym), held to `testdata/sum117`'s
+  two rounds on VMS 7.1: the engine `internal/sumslp` (below), the command
+  `internal/dclcmd/sumslp.go` (names, `/UPDATE`'s defaults, `/HEADER`'s VFC
+  records through `rms.Session.CreateVFCFile`, `TT:` and `SYS$OUTPUT`
+  shown at the terminal, `$STATUS` RMS's with the inhibit bit), the SUM
+  messages (`vmsdef/summessages.go`), and MACRO/UPDATE
+  (`dclcmd/macroupdate.go`; `/LIST`, `/OBJECT`, and `/UPDATE` positional on
+  each source; the listing's audit trail, `internal/asm/update.go`). An item an old
   phase doc or DEVIATIONS.md still lists that a later phase did is marked
   where it was written, "*(Resolved in Phase N.)*" (the author's direction).
   Read the relevant phase doc
@@ -1838,6 +1848,12 @@ DEVIATIONS-RESOLVED.md. New phase docs go in `docs/planning/`; a doc in
   `dif116t.com` (the terminal, by hand), and the exchange and copy-out scripts; `vax/` is
   VMS 7.1's logs, `terminal.log`, and 796 listings in `out/`. `internal/diff`'s
   `TestProbeListings` and `internal/console`'s `dif116_test.go` oracles hold govax to them.
+- `testdata/sum117/` — Phase 117's probe of SUMSLP (README.md): `gen.go` writes `cases.txt`
+  (every input and update file's records and all 422 cases, in sections HELP to DATES; the one
+  record the tests read), `sum117.com` and round 2's `sum117b.com`, `sum117t.com` (the terminal, by
+  hand), and the exchange and copy-out scripts; `vax/` is VMS 7.1's logs, `terminal.log`,
+  `headers.txt` (`/HEADER`'s records from the volume's blocks), and the outputs in `out/`.
+  `internal/sumslp`'s `probe_test.go` and `internal/console`'s `sum117*_test.go` hold govax to them.
 - `testdata/f95/` — Phase 112's survey probes (README.md): a program per group of Fortran
   95's additions, each with `name.gfortran`, gfortran `-std=f95`'s output; survey material,
   not a corpus.
@@ -3092,6 +3108,12 @@ expect adjustment as phases land):
   a `Result` (`listing.go`'s `Merged`, `forms.go`'s `Separated`, `Parallel`,
   `ChangeBars`, and `List`, their order; `radix.go`'s dumps; `slp.go`); `echo.go` is
   the closing echo's line breaking. Knows nothing of RMS or DCL.
+- `internal/sumslp` — SUMSLP's engine (Phase 117; `doc.go` has the rules and the cases that
+  showed them): a leaf package. `parse.go` reads an update file into `Edit`s (locators
+  modulo 65,536, ".", each edit's audit trail, SLPSYNERR, PRMEOF, EDOUTSEQ); `Apply` (`sumslp.go`)
+  merges every file's edits and applies them in one pass, giving a `Result`'s output records,
+  listing `Line`s, `Head`s for `/HEADER` (`Headed`), and `Long` for an input record past 255 bytes;
+  `Listing` (`listing.go`) lays out the pages. Knows nothing of RMS or DCL.
 - `internal/fdl` — the File Definition Language (Phase 88, subtask 10b; `doc.go` has VMS's rules): a leaf package. `Parse` turns an FDL file's text into a `Definition` of `Section`s and the `Message`s VMS's parser gives, from `table.go`'s table of every primary and secondary. `rms/fdlcreate.go`'s `Session.CreateFDL` makes a file from a `Definition`.
 - `internal/anl` — VMS's ANALYZE utility (Phase 38): `AnalyzeObject` turns an
   object file's records into report `Line`s exactly as VMS 7.3's ANALYZE/OBJECT
