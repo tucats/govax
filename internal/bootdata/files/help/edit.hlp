@@ -58,13 +58,25 @@
    The file is a host file, replaced when the editor has written its
    copy.
 
+/READONLY
+
+   The file will not be modified by the EDIT operation, even if the
+   native editor saves the file. The results of the edit operation are
+   discarded.
+
 2 Examples
 
    1.$ EDIT LOGIN.COM
 
      Edits LOGIN.COM in the default directory, making a new version.
 
-   2.$ SET EDITOR/COMMAND="vim -n %file"
+   2.$ EDIT/READ STARTUP.COM
+
+     Opens the editor with a copy of STARTUP.COM. Because the file
+     is opened /READONLY, no changes will be made to sTARTIP.COM
+     when the editor exits.
+     
+   3.$ SET EDITOR/COMMAND="vim -n %file"
      $ EDIT "notes.txt"/HOST
 
      Edits a host file with vim.

@@ -781,6 +781,7 @@ grammar console
                     /type=$string               -
                     /prompt="File"
         qualifier   host/id=2255
+        qualifier   readonly/id=4001
         qualifier   sum/id=3306/syntax=edit_sum
         qualifier   slp/id=3307/syntax=edit_sum
 

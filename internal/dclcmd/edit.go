@@ -214,7 +214,7 @@ func defaultNote(key string) string {
 }
 
 // Edit is the EDIT command.
-func (c *Context) Edit(name string, host bool) error {
+func (c *Context) Edit(name string, host, readonly bool) error {
 	file, err := c.ContainerSession.OpenForEdit(name, host)
 	if err != nil {
 		return editFailure(err, name)
@@ -256,7 +256,16 @@ func (c *Context) Edit(name string, host bool) error {
 
 	failed := c.runEditor(exec.Command(words[0], words[1:]...)) //nolint:gosec // running it is the point
 
-	edited, written := readScratch(path, file, before)
+	var (
+		edited  []byte
+		written bool
+	)
+
+	if !readonly {
+		edited, written = readScratch(path, file, before)
+	} else {
+		edited, written = nil, false
+	}
 
 	switch {
 	case failed != nil && written:
