@@ -28,6 +28,11 @@ type Edit struct {
 	First, Last int
 	Range       bool
 
+	// Trail is the audit trail the edit's inserted lines show: the last one
+	// a command of its file gave at or before it, or for an edit before
+	// any, the file's first (U03, M10).
+	Trail string
+
 	// OutOfSequence is EDOUTSEQ: First isn't above the locator1 of the
 	// file's command before it (or, for the file's first command, below 0).
 	OutOfSequence bool
@@ -66,14 +71,9 @@ type About struct {
 	Command, File string
 }
 
-// parsed is an update file read: its edits, and its audit trail.
+// parsed is an update file read: its edits.
 type parsed struct {
 	edits []*Edit
-
-	// trail is the file's audit trail: the last one a command gave. Every
-	// inserted line of the file shows it, even one read before the command
-	// that gave it (U03; unconfirmed beyond that case).
-	trail string
 }
 
 // parse reads update file u, the file-th of the run.
@@ -95,13 +95,28 @@ func parse(u Update, file int) *parsed {
 		prev    *Edit // the last edit command, for EDOUTSEQ
 		plain   bool
 		ended   bool
+
+		// trail is the audit trail in force, nil until a command gives
+		// one; the edits made before then wait for the first.
+		trail   *string
+		waiting []*Edit
 	)
+
+	// made notes a new edit's trail, or that it waits for one.
+	made := func(e *Edit) {
+		if trail != nil {
+			e.Trail = *trail
+		} else {
+			waiting = append(waiting, e)
+		}
+	}
 
 	// add gives a line to the edit before it, made (an insert before line
 	// 1) if there is none yet.
 	add := func(seq int, t Text) {
 		if cur == nil {
 			cur = &Edit{File: file, Seq: seq}
+			made(cur)
 			p.edits = append(p.edits, cur)
 		}
 
@@ -132,10 +147,17 @@ func parse(u Update, file int) *parsed {
 			}
 
 			if c.trail != nil {
-				p.trail = *c.trail
+				if trail == nil {
+					for _, w := range waiting {
+						w.Trail = *c.trail
+					}
+				}
+
+				trail = c.trail
 			}
 
 			e := &Edit{File: file, Seq: seq, Command: string(rec), First: c.first, Last: c.last, Range: c.ranged}
+			made(e)
 
 			if c.ranged {
 				current = c.last

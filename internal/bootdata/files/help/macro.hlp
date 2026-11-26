@@ -163,6 +163,10 @@
    mounted /WRITE.  /NOOBJECT assembles the source and reports any
    errors, but writes no object.
 
+   /LIST and /OBJECT are positional: after the verb they are every
+   assembly's, after a file in the list that file's assembly's alone
+   (MACRO A/LIST=A1,B/LIST=B1 makes two listings).
+
 /SHOW
 
       /[NO]SHOW=(option[,...])
@@ -174,6 +178,26 @@
    leave out; DEFINITIONS (MD), macro definitions; and EXPANSIONS (ME),
    every line of a macro expansion.  By default, all but BINARY and
    EXPANSIONS are on.
+
+/UPDATE
+
+      file/[NO]UPDATE[=(update-filespec[,...])]
+
+   After a source file, assembles the source as SUMSLP updates it with
+   the edit commands of the update files (see EDIT /SUM): the files'
+   edits merged into one list, the first file listed lowest in
+   precedence, and applied to the source before MACRO reads it.  The
+   source and the update files aren't changed.  The first update file
+   takes the source's name, with the type UPD; each later one takes the
+   device and directory of the one before.  A bare /UPDATE is the
+   source's name with the type UPD.  An update file that can't be
+   opened is %SUM-I-OPENIN, and the assembly goes on without it.
+
+   The listing shows SUMSLP's numbers in the line number column (".1",
+   ".2", ... for inserted lines) and its audit trail, or "-n" after n
+   deleted lines, in the first 16 columns of the line; SUMSLP's warnings
+   are listed where they arose, and counted as warnings.  /UPDATE is the
+   file's alone: after the verb it is %DCL-W-IVQLOC.
 
 2 Examples
 
@@ -194,6 +218,11 @@
      Assembles PROG.MAR, searching two macro libraries, COMMON.MLB
      first.  $ MACRO PROG /LIBRARY=(MYMACROS,COMMON) is the same.
 
-   5.% govax --mount-write DUA1=work.dsk macro DUA1:[000000]HELLO.MAR
+   5.$ MACRO/LIST PROG/UPDATE=(FIXES,LOCAL)
+
+     Assembles PROG.MAR as FIXES.UPD and LOCAL.UPD update it, LOCAL's
+     edits taking precedence, with a listing of the changes.
+
+   6.% govax --mount-write DUA1=work.dsk macro DUA1:[000000]HELLO.MAR
 
      Assembles a volume's file from the host shell.

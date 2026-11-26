@@ -43,6 +43,11 @@ type listLine struct {
 	// MACRO A+B joins it is in and its line number there (SetFileLines);
 	// file 0 and line for one file.
 	file, number int
+	// update is how SUMSLP numbered the line, for a line of a file
+	// MACRO/UPDATE updated (update.go), and updateLast says it is the file's
+	// last line.
+	update     *UpdatedLine
+	updateLast bool
 
 	// sect and loc are where the line was assembled: the section, and
 	// the location in it, when the line began. endSect and endLoc are
@@ -261,6 +266,7 @@ func (a *Assembler) listBegin(f *sourceFrame, line int, raw string) *listLine {
 
 	if l.depth == 0 {
 		l.file, l.number = a.fileOf(line)
+		l.update, l.updateLast = a.updateOf(l)
 	}
 
 	if debug {

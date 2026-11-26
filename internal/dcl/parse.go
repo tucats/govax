@@ -1363,6 +1363,22 @@ func readListElement(s string, paren bool) (token, rest string, err error) {
 	return s, "", nil
 }
 
+// splitJoinedValue splits s, what follows a positional qualifier's name in a
+// /joinable list, at a + that ends its plain value ("=M05+SUMA" is "=M05"
+// and "+SUMA"); a value in parentheses or quotes, or one that a /, a comma,
+// or a blank ends first, comes back whole, with "".
+func splitJoinedValue(s string) (string, string) {
+	if !strings.HasPrefix(s, "=") || strings.HasPrefix(s, "=(") || strings.HasPrefix(s, `="`) {
+		return s, ""
+	}
+
+	if end := strings.IndexAny(s, "+/, \t"); end > 0 && s[end] == '+' {
+		return s[:end], s[end:]
+	}
+
+	return s, ""
+}
+
 // readItems reads a list parameter whose elements can each carry
 // positional qualifiers ("MAIN,MYLIB/LIBRARY,OPTS/OPTIONS"). Each
 // element's positional qualifiers go into its own Result. Any other
@@ -1413,9 +1429,18 @@ func (g *Grammar) readItems(r *Result, active *Entry, nextParam int, p *Paramete
 			}
 
 			if q, negated, err := matchQualifier(positional, name); err == nil {
-				if rem, err = g.itemQualifier(item, q, negated, after[1+len(name):]); err != nil {
+				// In a /joinable list a + ends a plain value too and joins
+				// the next element: MACRO SUMP/UPDATE=M05+SUMA.
+				value, held := after[1+len(name):], ""
+				if p.Joinable {
+					value, held = splitJoinedValue(value)
+				}
+
+				if rem, err = g.itemQualifier(item, q, negated, value); err != nil {
 					return nil, nil, "", err
 				}
+
+				rem += held
 
 				continue
 			}

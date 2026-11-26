@@ -934,11 +934,30 @@ func (d *Dispatcher) bindGrammar() {
 		sources := make([]dclcmd.MacroSource, len(names))
 		libraries := withoutEmpty(r.List("LIBRARY"))
 
+		// /UPDATE is the file's alone: after the verb it is VMS 7.1's
+		// IVQLOC (testdata/sum117's M11). /LIST and /OBJECT after an
+		// element are its assembly's (M04).
+		if r.Present("UPDATE") {
+			return vmserrors.NewSegment(vmserrors.CLI_IVQLOC, "UPDATE")
+		}
+
+		value := func(item *dcl.Result, name string) dclcmd.DifferencesValue {
+			return dclcmd.DifferencesValue{
+				Given: item.Present(name), Negated: item.Negated(name), Text: item.String(name),
+			}
+		}
+
 		for i, name := range names {
 			named := withoutEmpty(items[i].List("LIBRARY"))
 			library := items[i].Present("LIBRARY") && len(named) == 0
 			libraries = append(libraries, named...)
-			sources[i] = dclcmd.MacroSource{Name: name, Joined: items[i].Joined(), Library: library}
+			sources[i] = dclcmd.MacroSource{
+				Name: name, Joined: items[i].Joined(), Library: library,
+				Update:      items[i].Present("UPDATE") && !items[i].Negated("UPDATE"),
+				UpdateFiles: items[i].List("UPDATE"),
+				List:        value(items[i], "LIST"),
+				Object:      value(items[i], "OBJECT"),
+			}
 		}
 
 		return d.Console.cmd().MacroList(sources, dclcmd.MacroOptions{

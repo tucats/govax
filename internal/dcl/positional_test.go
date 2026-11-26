@@ -186,3 +186,57 @@ end
 		t.Error("/QUIET lost")
 	}
 }
+
+// TestPositionalJoinedValue checks that in a /joinable list a + ends a
+// positional qualifier's plain value and joins the next element, as it ends
+// a bare element: MACRO SUMP/UPDATE=M05+SUMA (testdata/sum117's M05). A value
+// in parentheses keeps its own commas, and a quoted one its +.
+func TestPositionalJoinedValue(t *testing.T) {
+	g, err := ParseGrammar(`
+grammar test
+
+verb macro
+    parameter source/id=1/type=$file/list/joinable/prompt="Source"
+    qualifier update/id=2/parameter=source/placement=positional/type=$string/list/default=""
+
+end
+`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, c := range []struct {
+		line    string
+		sources []string
+		joined  []bool
+		updates [][]string
+	}{
+		{"MACRO SUMP/UPDATE=M05+SUMA", []string{"SUMP", "SUMA"}, []bool{true, false}, [][]string{{"M05"}, nil}},
+		{"MACRO SUMA/UPDATE=(A,B)+SUMB", []string{"SUMA", "SUMB"}, []bool{true, false}, [][]string{{"A", "B"}, nil}},
+		{"MACRO SUMA/UPDATE+SUMB/UPDATE=X", []string{"SUMA", "SUMB"}, []bool{true, false}, [][]string{{""}, {"X"}}},
+		{`MACRO SUMA/UPDATE="A+B",SUMB`, []string{"SUMA", "SUMB"}, []bool{false, false}, [][]string{{"A+B"}, nil}},
+	} {
+		r, err := g.Parse(c.line)
+		if err != nil {
+			t.Errorf("%s: %v", c.line, err)
+
+			continue
+		}
+
+		if got := r.List("SOURCE"); !reflect.DeepEqual(got, c.sources) {
+			t.Errorf("%s: sources %q, want %q", c.line, got, c.sources)
+
+			continue
+		}
+
+		for i, item := range r.Items("SOURCE") {
+			if item.Joined() != c.joined[i] {
+				t.Errorf("%s: item %d joined %v", c.line, i, item.Joined())
+			}
+
+			if got := item.List("UPDATE"); !reflect.DeepEqual(got, c.updates[i]) {
+				t.Errorf("%s: item %d /UPDATE %q, want %q", c.line, i, got, c.updates[i])
+			}
+		}
+	}
+}

@@ -122,6 +122,10 @@ type MacroOptions struct {
 	// CommandLine is the command as typed, for the object's SRC header,
 	// where real MACRO records its command line.
 	CommandLine string
+
+	// Updates are /UPDATE's files for Source and each of Joined, in order:
+	// nil for a file without /UPDATE (MacroSource.UpdateFiles).
+	Updates [][]string
 }
 
 // debugFunctions returns the .ENABLE functions /DEBUG=(kinds) (or, with
@@ -185,6 +189,17 @@ type MacroSource struct {
 	// Library says it is a macro library the assembly searches, not a
 	// source: VMS's PROG+LIB/LIBRARY (Phase 113, subtask 5).
 	Library bool
+
+	// Update says /UPDATE was given on the file (and no /NOUPDATE after
+	// it), and UpdateFiles are its update files, "" for a bare /UPDATE's
+	// default (Phase 117, subtask 8; sumslp.go's sumUpdates).
+	Update      bool
+	UpdateFiles []string
+
+	// List and Object are /[NO]LIST and /[NO]OBJECT given after the file,
+	// which its assembly takes over the command's: VMS's are positional
+	// (testdata/sum117's M04).
+	List, Object DifferencesValue
 }
 
 // macroAssemblies groups the command's list: each assembly's elements, from one
@@ -218,16 +233,40 @@ func (c *Context) MacroList(sources []MacroSource, opts MacroOptions) error {
 
 	assemble := func(group []MacroSource) error {
 		// The assembly's library elements join /LIBRARY's libraries, in
-		// the order written; the rest are its sources.
+		// the order written; the rest are its sources, each with its
+		// /UPDATE. A /LIST or /OBJECT after an element is the assembly's,
+		// the last one given.
 		var sources []string
 
+		opts := opts
 		opts.Libraries = slices.Clone(libraries)
+		opts.Updates = nil
 
 		for _, element := range group {
 			if element.Library {
 				opts.Libraries = append(opts.Libraries, element.Name)
 			} else {
 				sources = append(sources, element.Name)
+
+				var files []string
+				if element.Update {
+					files = element.UpdateFiles
+					if len(files) == 0 {
+						files = []string{""}
+					}
+				}
+
+				opts.Updates = append(opts.Updates, files)
+			}
+
+			if l := element.List; l.Given {
+				opts.List = !l.Negated
+				opts.ListFile = l.Text
+			}
+
+			if o := element.Object; o.Given {
+				opts.NoObject = o.Negated
+				opts.Object = o.Text
 			}
 		}
 
@@ -291,6 +330,27 @@ func (c *Context) Macro(opts MacroOptions) (err error) {
 		return FileFailure(err, loc.Name)
 	}
 
+	// A file with /UPDATE is assembled as SUMSLP updates it
+	// (macroupdate.go), updates[i] saying how for the ith file.
+	updates := map[int]*asm.Update{}
+
+	update := func(i int, lines [][]byte, found rms.FileLocation) ([][]byte, error) {
+		if i >= len(opts.Updates) || opts.Updates[i] == nil {
+			return lines, nil
+		}
+
+		out, u, err := c.macroUpdate(lines, found, opts.Updates[i])
+		if u != nil {
+			updates[i] = u
+		}
+
+		return out, err
+	}
+
+	if lines, err = update(0, lines, found); err != nil {
+		return err
+	}
+
 	// MACRO A+B's files, each with its line count.
 	files := []rms.FileLocation{found}
 	counts := []int{len(lines)}
@@ -308,6 +368,10 @@ func (c *Context) Macro(opts MacroOptions) (err error) {
 			return FileFailure(err, next.Name)
 		}
 
+		if more, err = update(i+1, more, read); err != nil {
+			return err
+		}
+
 		lines = append(lines, more...)
 		prev = read
 
@@ -319,6 +383,10 @@ func (c *Context) Macro(opts MacroOptions) (err error) {
 	a.SetDialect(asm.DialectMACRO)
 	a.SetListing(opts.List)
 	a.SetFileLines(counts)
+
+	for i, u := range updates {
+		a.SetUpdate(i, u)
+	}
 
 	if err := a.SetListingShow(opts.Show, opts.NoShow); err != nil {
 		return err

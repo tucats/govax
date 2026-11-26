@@ -109,7 +109,6 @@ func Apply(input [][]byte, updates []Update) *Result {
 	for i, u := range updates {
 		p := parse(u, i)
 		a.edits = append(a.edits, p.edits...)
-		a.trails = append(a.trails, p.trail)
 		a.names[i] = u.Name
 	}
 
@@ -123,7 +122,6 @@ func Apply(input [][]byte, updates []Update) *Result {
 type applier struct {
 	input  [][]byte
 	edits  []*Edit
-	trails []string // each update file's audit trail
 	names  []string // each update file's name
 	r      Result
 
@@ -472,7 +470,7 @@ func (a *applier) write(e *Edit) {
 
 		l := Line{Number: "." + strconv.Itoa(a.inserted), Text: t.Record}
 		if !t.Plain {
-			l.Field = a.trails[e.File]
+			l.Field = e.Trail
 		}
 
 		a.r.Lines = append(a.r.Lines, l)

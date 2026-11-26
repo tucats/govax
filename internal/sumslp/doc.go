@@ -74,9 +74,11 @@
 //     input ended marks nothing, though its lines count toward the next mark
 //     (E10). Inserted lines are numbered ".1", ".2", ... from the last input
 //     line written.
-//   - An inserted line shows its file's audit trail, the last one a command
-//     of the file gave, unless a "\" line turned it off before the line was
-//     read (U01 to U10, G12).
+//   - An inserted line shows its edit's audit trail, the last one a command
+//     of its file gave at or before the edit (M10: two inserts, each with its
+//     own), or for an edit before any command gave one, the file's first
+//     (U03: an insert before "-,,/;U03 NEW/" shows it), unless a "\" line
+//     turned it off before the line was read (U01 to U10, G12).
 //
 // Not settled by any case, and govax's choice: "." after a replace is its
 // locator2; a range starting two or more lines past the input's end is lost,

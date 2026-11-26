@@ -923,7 +923,12 @@ grammar console
     ! of SYMBOLS and MACROS unless options say which. ENABLE and DISABLE
     ! (subtask 11) are VMS MACRO's /ENABLE=(function,...) and
     ! /DISABLE=(function,...), .ENABLE's functions at the start, and DEBUG
-    ! is /[NO]DEBUG[=(ALL|SYMBOLS|TRACEBACK|NONE)].
+    ! is /[NO]DEBUG[=(ALL|SYMBOLS|TRACEBACK|NONE)]. UPDATE (Phase 117,
+    ! subtask 8) is VMS MACRO's /[NO]UPDATE[=(file,...)]: SUMSLP's update
+    ! files applied to the source it follows (internal/sumslp); after the
+    ! verb it is %DCL-W-IVQLOC, as VMS 7.1's (testdata/sum117's M11), which
+    ! the handler says. OBJECT and LIST are positional, as VMS's are: after
+    ! an element they are its assembly's alone (M04).
     !
     verb macro/id=1300
 
@@ -935,6 +940,8 @@ grammar console
                     /parameter=source
 
         qualifier   object/id=1303              -
+                    /parameter=source           -
+                    /placement=positional       -
                     /type=$string               -
                     /default=""
         qualifier   library/id=1304             -
@@ -943,6 +950,8 @@ grammar console
                     /type=$string/list          -
                     /default=""
         qualifier   list/id=1305                -
+                    /parameter=source           -
+                    /placement=positional       -
                     /type=$string               -
                     /default=""
         qualifier   show/id=1306                -
@@ -955,6 +964,11 @@ grammar console
         qualifier   disable/id=1309             -
                     /type=$string/list
         qualifier   debug/id=1310               -
+                    /type=$string/list          -
+                    /default=""
+        qualifier   update/id=1311              -
+                    /parameter=source           -
+                    /placement=positional       -
                     /type=$string/list          -
                     /default=""
 

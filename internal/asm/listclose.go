@@ -3,6 +3,7 @@ package asm
 import (
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -476,7 +477,7 @@ func libraryLine(name string, macros int) string {
 func (a *Assembler) summary(p *listPager) {
 	p.add("")
 
-	errs, warnings := len(a.errs), len(a.warnings)
+	errs, warnings := len(a.errs), len(a.warnings)+a.updateWarnings()
 	if errs == 0 && warnings == 0 {
 		p.add("There were no errors, warnings or information messages.")
 
@@ -489,26 +490,29 @@ func (a *Assembler) summary(p *listPager) {
 		countOf(errs, "error"), countOf(warnings, "warning")))
 
 	var (
-		row   strings.Builder
-		count int
-		last  int
-		line  int
+		row    strings.Builder
+		count  int
+		last   string
+		line   int
+		insert string
 	)
 
-	for _, l := range a.listLines {
-		// A message from a macro expansion or repeat block is counted
-		// on the program's line that called it.
-		if l.depth == 0 {
-			line = l.line
+	// entry is a line in the list: its number in 5 columns, an inserted
+	// line's ".n" after it (VMS's "    6.1 (1)   "), and the file number.
+	entry := func(line int, insert string) string {
+		return fmt.Sprintf("%5d%s (1)%s", line, insert, strings.Repeat(" ", max(1, 5-len(insert))))
+	}
+
+	// add lists a line the summary counts a message on, once.
+	add := func(line int, insert string) {
+		label := strconv.Itoa(line) + insert
+		if label == last {
+			return
 		}
 
-		if len(l.notes) == 0 || line == last {
-			continue
-		}
+		last = label
 
-		last = line
-
-		fmt.Fprintf(&row, "%5d (1)     ", line)
+		row.WriteString(entry(line, insert))
 
 		if count++; count%5 == 0 {
 			p.add(row.String())
@@ -516,10 +520,37 @@ func (a *Assembler) summary(p *listPager) {
 		}
 	}
 
+	for _, l := range a.listLines {
+		// A message from a macro expansion or repeat block is counted
+		// on the program's line that called it. A line of a file
+		// MACRO/UPDATE updated is counted by SUMSLP's numbers, "6.1" for
+		// an inserted one, and a SUMSLP warning on the input's last line
+		// (testdata/sum117's M06 and M13; update.go).
+		if l.depth == 0 {
+			line, insert = l.line, ""
+
+			if l.update != nil {
+				for range l.update.Before {
+					add(a.updates[l.file].Inputs, "")
+				}
+
+				line, insert = l.update.Line, l.update.Insert
+			}
+		}
+
+		if len(l.notes) > 0 {
+			add(line, insert)
+		}
+
+		if l.updateLast && len(a.updates[l.file].After) > 0 {
+			add(a.updates[l.file].Inputs, "")
+		}
+	}
+
 	// The errors found at the end of the source are counted on its last
 	// line.
-	if len(a.endErrors) > 0 && line != last {
-		fmt.Fprintf(&row, "%5d (1)     ", line)
+	if len(a.endErrors) > 0 && strconv.Itoa(line)+insert != last {
+		row.WriteString(entry(line, insert))
 	}
 
 	if row.Len() > 0 {

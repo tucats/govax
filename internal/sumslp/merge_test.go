@@ -130,3 +130,44 @@ func TestMergeChoices(t *testing.T) {
 		}
 	}
 }
+
+// TestTrailPerEdit checks the audit trail an inserted line shows: its edit's,
+// the last a command of its file gave at or before it (testdata/sum117's
+// M10), and for an edit before any, the file's first (U03).
+func TestTrailPerEdit(t *testing.T) {
+	t.Parallel()
+
+	ten := make([][]byte, 10)
+	for i := range ten {
+		ten[i] = fmt.Appendf(nil, "%d", i+1)
+	}
+
+	for _, c := range []struct {
+		name   string
+		update string // its lines joined by "|"
+		want   string // each inserted line's field, joined by " "
+	}{
+		{"each edit its own (M10)", "-6,,/;FIRST/|A|-7,7,/;SECOND/|B|C", ";FIRST ;SECOND ;SECOND"},
+		{"before any, the first (U03)", "-2|A|-,,/;NEW/|-5|B|-7,,/;LAST/|C", ";NEW ;NEW ;LAST"},
+		{"none given", "-2|A|-5|B", " "},
+	} {
+		var records [][]byte
+		for l := range strings.SplitSeq(c.update+"|/", "|") {
+			records = append(records, []byte(l))
+		}
+
+		r := Apply(ten, []Update{{Name: "U", Records: records}})
+
+		var fields []string
+
+		for _, l := range r.Lines {
+			if strings.HasPrefix(l.Number, ".") {
+				fields = append(fields, l.Field)
+			}
+		}
+
+		if got := strings.Join(fields, " "); got != c.want {
+			t.Errorf("%s: %q, want %q", c.name, got, c.want)
+		}
+	}
+}

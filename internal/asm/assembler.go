@@ -220,6 +220,9 @@ type Assembler struct {
 	// fileCounts are the line counts of the files the source joins, for
 	// MACRO A+B (SetFileLines); nil for one file.
 	fileCounts []int
+	// updates are the files of the source MACRO/UPDATE updated, by their
+	// place in it (SetUpdate, update.go).
+	updates map[int]*Update
 	// fortranLines says the program's lines held the FORTRAN compiler's
 	// traceback marker (dbgtable.TracebackMarker), and fortranLine is the
 	// number of the last FORTRAN source line its comments gave

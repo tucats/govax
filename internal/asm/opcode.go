@@ -122,9 +122,14 @@ func (a *Assembler) assembleOpcode(c *cursor) error {
 
 		c.skipBlanks()
 
-		// Real MACRO lists too few operands at the last one there is.
+		// Real MACRO lists too few operands at the last one there is: at
+		// its first character (errors.lis's MOVL R0), or past an
+		// immediate operand's "#" (testdata/sum117's M06, MOVL #1).
 		if n < inst.OperandCount-1 && c.atEnd() {
 			c.pos = start
+			if start < len(c.s) && c.s[start] == '#' {
+				c.pos++
+			}
 
 			return vmserrors.New(vmserrors.VAX_BADOPERANDS, inst.Name)
 		}

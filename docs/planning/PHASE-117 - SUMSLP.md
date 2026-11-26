@@ -524,7 +524,7 @@ Each is one commit, with tests, stopping for review.
    VFC output, U11 to U14.)
 7. **Files and the round trip on VMS** (done 2026-11-25): record formats,
    every byte, long records; held to FORMATS and ROUNDTRIP.
-8. **MACRO/UPDATE**: the grammar's positional qualifier, `.UPD`'s
+8. **MACRO/UPDATE** (done 2026-11-25): the grammar's positional qualifier, `.UPD`'s
    default, the source updated through `sumslp` before assembly, the
    listing's audit trail, a missing update file's message; held to the
    MACRO section (listings and objects).
@@ -778,3 +778,41 @@ The author's answers to the plan's four questions:
   Before the subtask, origin's EDIT/READONLY commits were merged (the help
   library regenerated from the merged `.HLP` files); EDIT/SUM still refuses
   `/READ_ONLY` (C25). Subtask 8, MACRO/UPDATE, is next.
+- **2026-11-25 — subtask 8 done: MACRO/UPDATE.** MACRO's grammar has
+  `/UPDATE[=(file,...)]` as a positional qualifier on each source, and the
+  handler makes one after the verb VMS's IVQLOC (M11); `/LIST` and
+  `/OBJECT` are positional too, as VMS's are, so `MACRO A/LIST=A1,B/LIST=B1`
+  makes two listings (M04). `dclcmd/macroupdate.go` runs `sumslp` on each
+  file with `/UPDATE` before the assembler reads it, the update files named
+  by EDIT/SUM's `sumUpdates` (the source's name and `.UPD`, a missing one
+  `%SUM-I-OPENIN` and the assembly going on, M07, M16), SUMSLP's warnings to
+  the terminal, and turns SUMSLP's listing lines into an `asm.Update`
+  (`sumUpdate`). `internal/asm/update.go` is the listing's side
+  (`SetUpdate`; `listLine.update`): SUMSLP's numbers in the line number
+  column, its 16-column field (trail or `-n`) over the binary field's first
+  columns on the line's first listing line and the binary field 20 columns
+  wide on all of them (`layoutRows` now takes a width), a SUMSLP warning
+  listed before its line as two empty lines, its lines, and the location
+  line, and counted as a warning on the input's last line, and an inserted
+  line in the summary's list as `6.1` (`0.2` before the first). Held by
+  `internal/console`'s `TestSum117MacroOracle`: every MACRO case's log (but
+  M06's and M13's, whose assembly errors govax shows in its own form, not
+  VMS's listing line), files, listing source pages, summary and lines
+  read, and objects record for record (M14's `/DEBUG` line table too), all
+  VMS's; and by `asm`'s `TestListingUpdated`. Found and fixed on the way:
+  (1) a positional qualifier's value in a `/joinable` list now ends at a
+  `+`, as a bare element does (`dcl`'s `splitJoinedValue`, M05's
+  `SUMP/UPDATE=M05+SUMA`; `TestPositionalJoinedValue`); (2) NOTENUFOPR's
+  `!` is past an immediate operand's `#` (M06's `MOVL #1`, beside
+  errors.lis's `MOVL R0`); (3) the audit trail is the edit's, not the
+  file's last: M10's two inserts show `;M10 FIRST` and `;M10 SECOND`, and an
+  edit before any command gave a trail takes the file's first (U03), so
+  `sumslp.Edit.Trail` replaces the file's one trail, for EDIT/SUM too
+  (`TestTrailPerEdit`; every EDIT/SUM case still VMS's). Unconfirmed,
+  for DEVIATIONS.md at the close-out: a source none of whose update files
+  opened is assembled with a plain listing (M07's lines fit either way); a
+  macro expansion under an updated line keeps the full binary field; a
+  warning after a file's last line is listed after it; an input record past
+  255 bytes is READERR and the lines before it are assembled. HELP MACRO
+  has `/UPDATE` (VMS 7.1's has none, H04). Subtask 9, the close-out, is
+  next.

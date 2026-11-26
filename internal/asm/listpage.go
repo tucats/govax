@@ -111,6 +111,12 @@ func (a *Assembler) Listing(opts ListingOptions) []string {
 			p.subtitle = l.subtitle
 		}
 
+		// SUMSLP's warnings come before the line they came before in its
+		// listing, whatever the listing controls say (update.go).
+		if l.update != nil {
+			listUpdateNotes(p, l.update.Before, l.loc)
+		}
+
 		if !listShown(l) {
 			// A line the listing controls leave out is still listed
 			// when it has a message, as its location alone.
@@ -120,6 +126,10 @@ func (a *Assembler) Listing(opts ListingOptions) []string {
 				for _, n := range l.notes {
 					p.add(l.messageLine(n))
 				}
+			}
+
+			if l.updateLast {
+				listUpdateNotes(p, a.updates[l.file].After, l.endLoc)
 			}
 
 			continue
@@ -138,6 +148,8 @@ func (a *Assembler) Listing(opts ListingOptions) []string {
 			lines = a.listRepeatEnd(l, first)
 		}
 
+		lines = l.withField(lines)
+
 		for _, line := range lines {
 			p.add(line)
 		}
@@ -146,6 +158,10 @@ func (a *Assembler) Listing(opts ListingOptions) []string {
 		// message itself goes to the terminal).
 		for range l.messages {
 			p.add("")
+		}
+
+		if l.updateLast {
+			listUpdateNotes(p, a.updates[l.file].After, l.endLoc)
 		}
 	}
 
@@ -338,6 +354,10 @@ func (l *listLine) tail() string {
 		return strings.Repeat(" ", 7) + l.text
 	}
 
+	if l.update != nil {
+		return fmt.Sprintf("%6s %s", l.update.number(), l.text)
+	}
+
 	return fmt.Sprintf("%6d %s", l.number, l.text)
 }
 
@@ -373,7 +393,7 @@ func (a *Assembler) listNotedLine(l *listLine) []string {
 	first := segment(l.notes[0].loc, false)
 
 	if l.op != ".ERROR" && l.op != ".WARN" {
-		rows := layoutRows(first, l.instruction, false)
+		rows := layoutRows(first, l.instruction, false, l.binaryWidth())
 		if len(rows) == 0 {
 			rows = []binaryRow{{}}
 		}
@@ -401,7 +421,7 @@ func (a *Assembler) listNotedLine(l *listLine) []string {
 		// column), an instruction's continuation lines keep the
 		// opcode's columns empty; after one it finds as it stores the
 		// bytes, they start afresh.
-		rows := layoutRows(after, l.instruction, l.macroMessageFor(n).column)
+		rows := layoutRows(after, l.instruction, l.macroMessageFor(n).column, l.binaryWidth())
 
 		for _, r := range rows {
 			out = append(out, listColumns(r.text, r.offset)+strings.Repeat(" ", 7))
@@ -491,6 +511,7 @@ func (a *Assembler) listRepeatEnd(end, first *listLine) []string {
 	shown := *first
 	shown.text = end.text
 	shown.line, shown.number = end.line, end.number
+	shown.update = end.update
 	shown.depth = end.depth
 
 	return a.listSourceLine(&shown)
@@ -533,20 +554,20 @@ type binaryUnit struct {
 // continuation lines, which for an instruction leave the opcode's
 // columns blank.
 func (a *Assembler) binaryRows(l *listLine) []binaryRow {
-	return layoutRows(a.listFields(l), l.instruction, false)
+	return layoutRows(a.listFields(l), l.instruction, false, l.binaryWidth())
 }
 
 // layoutRows lays fields out as binary field lines, as binaryRows does.
 // continued says they all go on continuation lines, so an instruction's
-// opcode columns are empty on the first of them too.
-func layoutRows(fields []listBytes, instruction, continued bool) []binaryRow {
+// opcode columns are empty on the first of them too. width is the binary
+// field's width: binaryWidth, or less beside SUMSLP's field (update.go).
+func layoutRows(fields []listBytes, instruction, continued bool, width int) []binaryRow {
 	if len(fields) == 0 {
 		return nil
 	}
 
 	units := binaryUnits(fields, instruction)
 
-	width := binaryWidth
 	pad := ""
 
 	if continued && instruction {
