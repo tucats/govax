@@ -345,6 +345,9 @@ in `vax/out/`, the terminal in `vax/terminal.log`). Case IDs are
      with the input's line number (0 for an inserted line), a word with
      the insert number (`.n`'s n, 0 for an input line), and 8 bytes of
      the audit trail, zero-filled.
+     *(Subtask 6, from the VAX's own files: for an input line the second
+     word is the count its `-n` marker shows, 0 for none; U11's line 6 has
+     1.)*
    - No limit at 32,767 lines: 32,768 lines edited as well (L10).
    - (The probe's own inputs were Stream_LF, govax's COPY/HOST's
      default, not variable as `cases.txt` says: F05S.)
@@ -513,8 +516,9 @@ Each is one commit, with tests, stopping for review.
    conflicts; held to MERGE. (Held since subtask 4, engine and command; what
    was left was the unconfirmed cases: a range that runs out with several
    files.)
-6. **Audit trail and listing**: held to AUDIT and LISTING. (The engine's
-   part held since subtask 4; left: `/HEADER`'s VFC output, U11 to U14.)
+6. **Audit trail and listing** (done 2026-11-25): held to AUDIT and
+   LISTING. (The engine's part held since subtask 4; left was `/HEADER`'s
+   VFC output, U11 to U14.)
 7. **Files and the round trip on VMS**: record formats, every byte, long
    records; held to FORMATS and ROUNDTRIP.
 8. **MACRO/UPDATE**: the grammar's positional qualifier, `.UPD`'s
@@ -725,3 +729,23 @@ The author's answers to the plan's four questions:
   dropped, and a range open at the second end closes there (`doc.go`; for
   DEVIATIONS.md at the close-out). The random pairs' maker is shared,
   `randomPair`. No engine change was needed. Subtask 6 is next.
+- **2026-11-25 — subtask 6 done: the audit trail and the listing.** The
+  engine's trails, numbers, markers, and pages were held by subtask 4's
+  pass; what was left was `/HEADER`. The probe's host copies of U11 to U14
+  had lost their fixed control (copyout.cmd's COPY to the host writes text),
+  so the records were read from the exchange volume's blocks with govax's
+  DUMP/BLOCK and kept as `testdata/sum117/vax/headers.txt`. They showed what
+  A.4.7 had missed: an input line's second word is the deletion count its
+  `-n` shows. `sumslp.Result` now has a `Head` per output record and
+  `Headed()`, the records with their fixed control (`TestHeadedAsVMS`
+  holds all four files to VMS's byte for byte), and EDIT/SUM/HEADER writes
+  them through RMS's new `Session.CreateVFCFile` (VFC, the given fixed
+  control, CR carriage control, the longest record counting data alone, no
+  maximum, as VMS's DIRECTORY/FULL showed; a host file gets the data as
+  lines; `createVolumeRecordsAllocated` now takes the attributes, not a
+  kind). `internal/console`'s `TestSum117AuditOracle` holds the AUDIT,
+  LISTING, and PAGES sections, run by EDIT/SUM, to VMS's logs and files,
+  U11D's DUMP/RECORD and DIRECTORY/FULL included. The oracles now mask file
+  IDs (the volume's own) and skip a procedure line's `-` continuations
+  (P04's), and DUMP's success status joins DELETE's among the known DCL
+  differences (`dclSuccessStatus`). Subtask 7 is next.

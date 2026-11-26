@@ -495,7 +495,39 @@ func (s *Session) CreateRecordFileAs(loc FileLocation, kind RecordKind, records 
 		return loc, writeHostRecords(loc.Name, kind, records)
 	}
 
-	created, err := s.createVolumeRecordsAllocated(loc.Name, kind, records, 0, explicit)
+	created, err := s.createVolumeRecordsAllocated(loc.Name, newRecordAttributes(kind, records), records, 0, explicit)
+	if err != nil {
+		return FileLocation{}, fmt.Errorf("rms: creating %s: %w", loc.Name, err)
+	}
+
+	return created, nil
+}
+
+// CreateVFCFile creates a text file of VFC records at loc, each record's
+// first control bytes its fixed control (FAB$B_FSZ), with carriage-return
+// carriage control, as EDIT/SUM/HEADER makes its output: the longest record
+// the file records counts its data alone, and it has no maximum (the phase
+// doc's U11). A host file has no fixed control: it is the records' data as
+// lines of text.
+func (s *Session) CreateVFCFile(loc FileLocation, control int, records [][]byte) (FileLocation, error) {
+	if loc.Host {
+		data := make([][]byte, len(records))
+		for i, r := range records {
+			data[i] = r[min(control, len(r)):]
+		}
+
+		return loc, writeHostRecords(loc.Name, TextRecords, data)
+	}
+
+	attr := ondisk.RecAttr{Format: ondisk.RecordFormatVFC, Attributes: ratCarriageReturn, VfcSize: uint8(control)}
+
+	for _, r := range records {
+		if n := len(r) - control; n > int(attr.RecordSize) {
+			attr.RecordSize = uint16(min(n, 0xFFFF))
+		}
+	}
+
+	created, err := s.createVolumeRecordsAllocated(loc.Name, attr, records, 0, ExplicitProfile{})
 	if err != nil {
 		return FileLocation{}, fmt.Errorf("rms: creating %s: %w", loc.Name, err)
 	}
@@ -638,7 +670,7 @@ func (s *Session) RewriteRecordFile(loc FileLocation, kind RecordKind, records [
 		return failed(err)
 	}
 
-	created, err := s.createVolumeRecordsAllocated(spec.String(), kind, records, alloc, ExplicitProfile{})
+	created, err := s.createVolumeRecordsAllocated(spec.String(), newRecordAttributes(kind, records), records, alloc, ExplicitProfile{})
 	if err != nil {
 		return failed(fmt.Errorf("%w (the new contents are in %s)", err, tempLoc.Name))
 	}
@@ -771,7 +803,7 @@ func writeHostRecords(path string, kind RecordKind, records [][]byte) error {
 
 // createVolumeRecords creates a volume file holding records.
 func (s *Session) createVolumeRecords(text string, kind RecordKind, records [][]byte) (FileLocation, error) {
-	return s.createVolumeRecordsAllocated(text, kind, records, 0, ExplicitProfile{})
+	return s.createVolumeRecordsAllocated(text, newRecordAttributes(kind, records), records, 0, ExplicitProfile{})
 }
 
 // CreateRecordFileAllocated is CreateRecordFile with at least alloc blocks
@@ -784,7 +816,7 @@ func (s *Session) CreateRecordFileAllocated(loc FileLocation, kind RecordKind, r
 		return loc, writeHostRecords(loc.Name, kind, records)
 	}
 
-	created, err := s.createVolumeRecordsAllocated(loc.Name, kind, records, alloc, ExplicitProfile{})
+	created, err := s.createVolumeRecordsAllocated(loc.Name, newRecordAttributes(kind, records), records, alloc, ExplicitProfile{})
 	if err != nil {
 		return FileLocation{}, fmt.Errorf("rms: creating %s: %w", loc.Name, err)
 	}
@@ -833,7 +865,7 @@ func (s *Session) allocatedBlocks(text string) (uint32, error) {
 // createVolumeRecordsAllocated creates a volume file holding records, with
 // at least alloc blocks, its profile by VMS's rules and explicit
 // (profile.go).
-func (s *Session) createVolumeRecordsAllocated(text string, kind RecordKind, records [][]byte, alloc uint32, explicit ExplicitProfile) (FileLocation, error) {
+func (s *Session) createVolumeRecordsAllocated(text string, attr ondisk.RecAttr, records [][]byte, alloc uint32, explicit ExplicitProfile) (FileLocation, error) {
 	vol, spec, err := s.resolveVolume(text)
 	if err != nil {
 		return FileLocation{}, err
@@ -882,7 +914,7 @@ func (s *Session) createVolumeRecordsAllocated(text string, kind RecordKind, rec
 		return FileLocation{}, err
 	}
 
-	f, err := vol.CreateFileVersionWith(dir, fullName, version, newRecordAttributes(kind, records), profile, bm, ib)
+	f, err := vol.CreateFileVersionWith(dir, fullName, version, attr, profile, bm, ib)
 	if err != nil {
 		return FileLocation{}, err
 	}

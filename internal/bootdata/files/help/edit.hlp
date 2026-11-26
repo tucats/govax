@@ -124,8 +124,11 @@
       /HEADER
       /NOHEADER (default)
 
-   Writes the output with each record's line number, insert number,
-   and audit trail in a 12-byte record header (VFC records).
+   Writes the output as VFC records, each with a 12-byte record header:
+   a word with the input line's number (0 for an inserted line), a word
+   with an inserted line's number in its run (or, for an input line, the
+   number of lines deleted just before it), and the first 8 characters
+   of the audit trail.
 
 /LISTING
 

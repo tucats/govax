@@ -2,6 +2,7 @@ package sumslp
 
 import (
 	"cmp"
+	"encoding/binary"
 	"slices"
 	"strconv"
 
@@ -37,6 +38,39 @@ type Line struct {
 type Result struct {
 	Output [][]byte
 	Lines  []Line
+
+	// Heads are each output record's facts for /HEADER, Output's in order.
+	Heads []Head
+}
+
+// Head is what /HEADER puts in an output record's 12-byte fixed control
+// (the probe's U11 to U14, read from the VAX's own files): the input line's
+// number, 0 for an inserted line; an inserted line's number in its run, or
+// for an input line the deleted lines its "-n" shows (0 for none); and the
+// audit trail the listing shows, cut or zero-filled to 8 bytes.
+type Head struct {
+	Line, Count int
+	Trail       string
+}
+
+// HeaderSize is the fixed control /HEADER gives each record.
+const HeaderSize = 12
+
+// Headed is the output's records with their /HEADER fixed control before
+// each: two little-endian words, then the trail's 8 bytes.
+func (r *Result) Headed() [][]byte {
+	out := make([][]byte, len(r.Output))
+
+	for i, rec := range r.Output {
+		h := r.Heads[i]
+		b := make([]byte, HeaderSize, HeaderSize+len(rec))
+		binary.LittleEndian.PutUint16(b[0:], uint16(h.Line))
+		binary.LittleEndian.PutUint16(b[2:], uint16(h.Count))
+		copy(b[4:HeaderSize], h.Trail)
+		out[i] = append(b, rec...)
+	}
+
+	return out
 }
 
 // Messages are the listing's message lines alone, which EDIT/SUM writes to
@@ -353,14 +387,17 @@ func (a *applier) advance(n int) bool {
 		a.passed++
 
 		l := Line{Number: strconv.Itoa(a.passed), Text: rec}
+		h := Head{Line: a.passed}
 
 		if a.marked {
 			l.Field = "-" + strconv.Itoa(a.deleted)
+			h.Count = a.deleted
 			a.deleted, a.marked = 0, false
 		}
 
 		a.r.Lines = append(a.r.Lines, l)
 		a.r.Output = append(a.r.Output, rec)
+		a.r.Heads = append(a.r.Heads, h)
 		a.inserted = 0
 	}
 
@@ -391,6 +428,7 @@ func (a *applier) write(e *Edit) {
 
 		a.r.Lines = append(a.r.Lines, l)
 		a.r.Output = append(a.r.Output, t.Record)
+		a.r.Heads = append(a.r.Heads, Head{Count: a.inserted, Trail: l.Field})
 	}
 }
 

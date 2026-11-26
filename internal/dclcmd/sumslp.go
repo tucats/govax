@@ -34,6 +34,8 @@ import (
 //   - The output is the input's name and type, a new version, unless
 //     /OUTPUT names another (its missing fields the input's, C08, C10, C12,
 //     C13); /NOOUTPUT makes none (C11).
+//   - /HEADER makes the output VFC records with a 12-byte fixed control,
+//     sumslp.Head's (U11 to U14).
 //   - The listing is made only with /LISTING, by default the input's name
 //     with the type .LIS (C09, C12, C24).
 //
@@ -118,7 +120,7 @@ func (c *Context) EditSum(req EditSumRequest) error {
 	}
 
 	if !(req.Output.Given && req.Output.Negated) {
-		if err := c.sumOutput(req.Output.Text, parsed, r.Output); err != nil {
+		if err := c.sumOutput(req.Output.Text, parsed, r, on(req.Header)); err != nil {
 			return err
 		}
 	}
@@ -270,11 +272,16 @@ func sumOpenText(name string) string {
 }
 
 // sumOutput writes the output file: spec's name, its missing fields the
-// input's name and type (beside the input), a new version.
-func (c *Context) sumOutput(spec string, in rms.ParsedName, records [][]byte) error {
+// input's name and type (beside the input), a new version. With /HEADER its
+// records are VFC, each with SUMSLP's 12-byte fixed control (U11 to U14).
+func (c *Context) sumOutput(spec string, in rms.ParsedName, r *sumslp.Result, headed bool) error {
 	dna := in.Node + in.Device + in.Directory + in.Name + in.Type
 
-	return c.sumWrite(spec, dna, records)
+	if headed {
+		return c.sumWrite(spec, dna, r.Headed(), sumslp.HeaderSize)
+	}
+
+	return c.sumWrite(spec, dna, r.Output, 0)
 }
 
 // sumListing writes the listing: spec's name, its missing fields the input's
@@ -286,13 +293,14 @@ func (c *Context) sumListing(spec, inName string, in rms.ParsedName, lines []sum
 		h.Created = vmsdef.GoTime(a.Created)
 	}
 
-	return c.sumWrite(spec, in.Name+".LIS", sumslp.Listing(lines, h))
+	return c.sumWrite(spec, in.Name+".LIS", sumslp.Listing(lines, h), 0)
 }
 
 // sumWrite makes a new file of records, spec named with default name dna:
 // variable-length records with carriage return carriage control, whatever the
-// input's form (the probe's FORMATS section).
-func (c *Context) sumWrite(spec, dna string, records [][]byte) error {
+// input's form (the probe's FORMATS section), or VFC records whose first
+// control bytes are their fixed control if control isn't 0.
+func (c *Context) sumWrite(spec, dna string, records [][]byte, control int) error {
 	s := c.ContainerSession
 
 	name := spec
@@ -305,7 +313,13 @@ func (c *Context) sumWrite(spec, dna string, records [][]byte) error {
 		return FileFailure(err, name)
 	}
 
-	if _, err := s.CreateRecordFile(loc, rms.TextRecords, records); err != nil {
+	if control > 0 {
+		_, err = s.CreateVFCFile(loc, control, records)
+	} else {
+		_, err = s.CreateRecordFile(loc, rms.TextRecords, records)
+	}
+
+	if err != nil {
 		return objectFailureAs(vmserrors.CLI_BADFILESPEC, err, loc.Name)
 	}
 

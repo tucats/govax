@@ -298,14 +298,28 @@ func runSum117(t *testing.T, cases []*sum117Case) map[string]*sum117Run {
 }
 
 // sum117LogCases splits a log by its "#### CASE id:" lines, each case's
-// lines with the command lines left out and any CR removed.
+// lines with the command lines (and their "-" continuations) left out and any
+// CR removed.
 func sum117LogCases(lines []string) map[string]*sum117Run {
 	runs := map[string]*sum117Run{}
 
-	var cur *sum117Run
+	var (
+		cur       *sum117Run
+		continued bool
+	)
 
 	for _, line := range lines {
 		line = strings.ReplaceAll(line, "\r", "")
+
+		if continued {
+			continued = strings.HasSuffix(line, "-")
+
+			continue
+		}
+
+		if strings.HasPrefix(line, "$ ") {
+			continued = strings.HasSuffix(line, "-")
+		}
 
 		if rest, ok := strings.CutPrefix(line, "#### CASE "); ok {
 			id, _, _ := strings.Cut(rest, ":")
@@ -378,12 +392,17 @@ func readVMSSum117(t *testing.T) map[string]*sum117Run {
 // a listing heading's.
 var sum117Times = regexp.MustCompile(`\d{1,2}-[A-Z]{3}-\d{4} \d\d:\d\d:\d\d(\.\d\d)?`)
 
-// sum117Mask takes the times out of lines.
+// sum117FileIDs are the file IDs DUMP and DIRECTORY/FULL show, which are the
+// volume's own.
+var sum117FileIDs = regexp.MustCompile(`File ID:? +\(\d+,\d+,\d+\)`)
+
+// sum117Mask takes the times and file IDs out of lines.
 func sum117Mask(lines []string) []string {
 	out := make([]string, len(lines))
 
 	for i, line := range lines {
-		out[i] = sum117Times.ReplaceAllString(line, "<time>")
+		line = sum117Times.ReplaceAllString(line, "<time>")
+		out[i] = sum117FileIDs.ReplaceAllString(line, "File ID <id>")
 	}
 
 	return out
@@ -409,12 +428,20 @@ var sum117NotCompared = map[string]map[string]string{
 // sum117Known are log lines govax writes differently for reasons outside
 // EDIT/SUM, each replaced by VMS's before the logs are compared.
 var sum117Known = map[string][][2]string{
-	// DELETE's success status is DCL's on govax, SS$_NORMAL with the
-	// message inhibited on VMS: the phase's progress log, for a later fix.
-	"C31": {{
-		"STATUS %X00030001 %CLI-S-NORMAL, normal successful completion",
-		"STATUS %X10000001 %SYSTEM-S-NORMAL, normal successful completion",
-	}},
+	// DELETE's and DUMP's success status is DCL's on govax, SS$_NORMAL with
+	// the message inhibited on VMS: the phase's progress log, for a later
+	// fix.
+	"C31":  {dclSuccessStatus},
+	"U11D": {dclSuccessStatus},
+	"U12D": {dclSuccessStatus},
+	"U13D": {dclSuccessStatus},
+	"U14D": {dclSuccessStatus},
+}
+
+// dclSuccessStatus is govax's status after DELETE or DUMP, and VMS's.
+var dclSuccessStatus = [2]string{
+	"STATUS %X00030001 %CLI-S-NORMAL, normal successful completion",
+	"STATUS %X10000001 %SYSTEM-S-NORMAL, normal successful completion",
 }
 
 // holdSum117 runs the cases of sections and holds each to VMS's: its log
@@ -521,4 +548,14 @@ func TestSum117MergeOracle(t *testing.T) {
 	t.Parallel()
 
 	holdSum117(t, "MERGE", "CLASH2")
+}
+
+// TestSum117AuditOracle holds the audit trail, /HEADER's VFC output (its
+// attributes and records as DIRECTORY/FULL and DUMP/RECORD show them), and
+// the listing's numbers, markers, and pages, run by EDIT/SUM, to VMS's
+// (subtask 6: the AUDIT, LISTING, and PAGES sections).
+func TestSum117AuditOracle(t *testing.T) {
+	t.Parallel()
+
+	holdSum117(t, "AUDIT", "LISTING", "PAGES")
 }

@@ -87,6 +87,15 @@
 // numbers, and a range starting inside the one that ran out is dropped
 // (TestMergeChoices pins each).
 //
+// # /HEADER
+//
+// With /HEADER the output's records are VFC, each with a 12-byte fixed
+// control (Result.Headed): a word with the input line's number, 0 for an
+// inserted line; a word with an inserted line's number in its run, or for
+// an input line the count its "-n" shows, 0 for none; and the audit trail
+// the listing shows, cut or zero-filled to 8 bytes. The VAX's own files had
+// them (testdata/sum117/vax/headers.txt, U11 to U14).
+//
 // # The listing
 //
 // A listing is pages of 60 lines: two heading lines, a blank line, and 57
