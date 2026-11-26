@@ -168,3 +168,28 @@ func TestProbeTrailsAndPages(t *testing.T) {
 
 	holdProbe(t, nil, "AUDIT", "LISTING", "PAGES")
 }
+
+// TestProbeFormatsAndLengths holds records of every byte and length to VMS's
+// (the probe's FORMATS and LENGTHS sections): any byte goes through as it is,
+// and an input record past MaxRecord stops the pass there, the output and
+// listing holding what came before it (A.5.5).
+func TestProbeFormatsAndLengths(t *testing.T) {
+	t.Parallel()
+
+	later := map[string]string{
+		"F03": "its record of bytes 0 to 31 holds a line feed, which splits it in vax/out's host copy; internal/console's oracle holds it by DUMP/RECORD",
+	}
+	for _, n := range []string{"W256", "W257", "W511", "W512", "W513"} {
+		later[n] = "an update record past 255 bytes is the command's READERR (internal/console's oracle)"
+	}
+
+	holdProbe(t, later, "FORMATS", "LENGTHS")
+
+	files := probeFiles(t)
+
+	for name, long := range map[string]int{"X00255.SRC": 0, "X00256.SRC": 256, "X04096.SRC": 4096} {
+		if r := Apply(files[name], nil); r.Long != long {
+			t.Errorf("%s: Long is %d, want %d", name, r.Long, long)
+		}
+	}
+}

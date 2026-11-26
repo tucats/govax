@@ -87,6 +87,20 @@
 // numbers, and a range starting inside the one that ran out is dropped
 // (TestMergeChoices pins each).
 //
+// # Records
+//
+// Any byte goes through as it is, control and 8-bit bytes, form feeds, tabs,
+// trailing blanks, and empty records (F03, F08, F09), whatever the input's
+// record format (F01 to F07: the command reads and writes the files). SUMSLP
+// reads records of up to 255 bytes (MaxRecord). A longer one in an update
+// file is the command's READERR, that file's edits none of them applied
+// (B30, W256 to W513); a longer one in the input stops the pass where it
+// reaches it: the output and listing hold what came before, an open range's
+// text and every later edit unwritten, and Result.Long is its length, which
+// the command reports as READERR with RMS's RTB, its status (X00256 to
+// X32767). Unconfirmed: a long record inside an open range (govax stops
+// there too, the range's text unwritten).
+//
 // # /HEADER
 //
 // With /HEADER the output's records are VFC, each with a 12-byte fixed

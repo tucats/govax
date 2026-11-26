@@ -421,9 +421,12 @@ round 1's). Messages that go to the terminal rather than the log
 5. **Record lengths** (LENGTHS): records of up to 255 bytes, in an update
    file or the input (W255, X00255); 256 or more is `%SUM-E-READERR,
    error reading DUA1:[SUM117.IN]X00256.SRC;1` / `-RMS-W-RTB, 256 byte
-   record too large for user's buffer`, and the run **stops there**: the
-   output and listing have what came before, and the status is still
-   success (W256 to W513, X00256 to X32767). (RMS gave 16,385 and 32,768
+   record too large for user's buffer`. An update file's is passed over,
+   none of its edits applied, the status success (W256 to W513); at an
+   input's the run **stops there**: the output and listing have what came
+   before, and the status is RTB with the inhibit bit, `%X100181A8`
+   (X00256 to X32767; *corrected in subtask 7*, which read the log again:
+   this item said success for both). (RMS gave 16,385 and 32,768
    bytes for X16384's and X32767's records: their Stream_LF records as
    VMS counted them.) A listing line is cut at 255 bytes (W255's 279-byte
    line).
@@ -519,8 +522,8 @@ Each is one commit, with tests, stopping for review.
 6. **Audit trail and listing** (done 2026-11-25): held to AUDIT and
    LISTING. (The engine's part held since subtask 4; left was `/HEADER`'s
    VFC output, U11 to U14.)
-7. **Files and the round trip on VMS**: record formats, every byte, long
-   records; held to FORMATS and ROUNDTRIP.
+7. **Files and the round trip on VMS** (done 2026-11-25): record formats,
+   every byte, long records; held to FORMATS and ROUNDTRIP.
 8. **MACRO/UPDATE**: the grammar's positional qualifier, `.UPD`'s
    default, the source updated through `sumslp` before assembly, the
    listing's audit trail, a missing update file's message; held to the
@@ -749,3 +752,29 @@ The author's answers to the plan's four questions:
   IDs (the volume's own) and skip a procedure line's `-` continuations
   (P04's), and DUMP's success status joins DELETE's among the known DCL
   differences (`dclSuccessStatus`). Subtask 7 is next.
+- **2026-11-25 — subtask 7 done: files and the round trip.**
+  `internal/console`'s `TestSum117FilesOracle` holds the FORMATS, LENGTHS,
+  DATES, and ROUNDTRIP sections, run by EDIT/SUM, to VMS's logs and files:
+  all 136 round trips (DIFFERENCES/SLP, EDIT/SUM of its script, DIFFERENCES
+  of the result) and every update record's length held as they stood. What
+  was missing was an input record past 255 bytes (X00256 to X32767): the
+  pass now stops where it reaches one (`sumslp`'s `applier.read`,
+  `Result.Long`), the output and listing holding what came before, and the
+  command reports `%SUM-E-READERR` with RMS's RTB, which is `$STATUS` with the
+  inhibit bit (A.5.5 had said success; corrected). `sumslp`'s
+  `TestProbeFormatsAndLengths` holds the same sections on the engine (F03's
+  host copy, a record holding a line feed, is the console oracle's, by
+  DUMP/RECORD); `doc.go` has a "Records" section. Found on the way and fixed:
+  VMS 7.1's DUMP shows the DEC Multinational graphic characters, `%XA1` to
+  `%XFE`, as themselves in its text column, where govax showed dots
+  (`dclcmd/dump.go`'s `dumpPrintable`; F03D); `testdata/for81`'s
+  `vax/for81-blocks.txt` and `for81c-blocks.txt`, made by govax's DUMP on
+  the exchange volume, had their text columns recomputed from their hex by
+  the new rule. For a later look: D01's input,
+  a Stream_LF file with no carriage control copied by COPY and appended to by
+  OPEN/APPEND, has carriage return carriage control on VMS and none on govax
+  (one of the two commands; masked by `sum117Known`). The oracles' file ID
+  mask now takes the blanks after an ID, whose number its digits decide.
+  Before the subtask, origin's EDIT/READONLY commits were merged (the help
+  library regenerated from the merged `.HLP` files); EDIT/SUM still refuses
+  `/READ_ONLY` (C25). Subtask 8, MACRO/UPDATE, is next.

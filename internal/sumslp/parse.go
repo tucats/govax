@@ -6,8 +6,9 @@ package sumslp
 // precedence.
 
 // MaxRecord is the longest record SUMSLP reads, in an update file or the
-// input: a longer one is RMS's RTB (A.5.5). The command reads the files and
-// enforces it; Parse and Apply take any length.
+// input: a longer one is RMS's RTB (A.5.5). An update file's the command
+// finds before Apply (the file's edits none of them applied); the input's
+// Apply finds, stopping its pass there (Result.Long).
 const MaxRecord = 255
 
 // Edit is one edit command and the lines that follow it.

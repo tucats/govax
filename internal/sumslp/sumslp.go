@@ -41,6 +41,11 @@ type Result struct {
 
 	// Heads are each output record's facts for /HEADER, Output's in order.
 	Heads []Head
+
+	// Long is the length of the input record past MaxRecord the pass
+	// stopped at, or 0: the output and listing hold what came before it
+	// (A.5.5, X00256 to X32767).
+	Long int
 }
 
 // Head is what /HEADER puts in an output record's 12-byte fixed control
@@ -91,7 +96,15 @@ func (r *Result) Messages() [][]byte {
 // lowest in precedence: every file's edits sorted into one list and applied
 // in one pass over the input (doc.go has the rules).
 func Apply(input [][]byte, updates []Update) *Result {
-	a := &applier{input: input, names: make([]string, len(updates))}
+	a := &applier{input: input, names: make([]string, len(updates)), stopAt: len(input)}
+
+	for i, rec := range input {
+		if len(rec) > MaxRecord {
+			a.stopAt = i
+
+			break
+		}
+	}
 
 	for i, u := range updates {
 		p := parse(u, i)
@@ -120,6 +133,12 @@ type applier struct {
 	next, passed int
 	reread       bool // the input has been read again
 	ended        bool // the input's end ended the run
+
+	// stopAt is the index of the first input record past MaxRecord (the
+	// input's length if none), and stopped says the pass reached it: SUMSLP
+	// can't read it, and the run stops there, writing nothing more.
+	stopAt  int
+	stopped bool
 
 	// deleted is the lines deleted since an input line was last written,
 	// and marked says a range has ended normally since, so the next input
@@ -231,6 +250,10 @@ func (a *applier) about(e *Edit) About {
 // run is the pass.
 func (a *applier) run() {
 	for _, e := range a.edits {
+		if a.stopped {
+			return
+		}
+
 		if e.Range && e.First > 0 {
 			a.replace(e)
 		} else {
@@ -238,13 +261,27 @@ func (a *applier) run() {
 		}
 	}
 
-	if a.open != nil {
+	if a.open != nil && !a.stopped {
 		a.close(true)
 	}
 
 	if !a.ended {
 		a.advance(int(^uint(0) >> 1))
 	}
+}
+
+// read says whether the input's next record can be read: at a record past
+// MaxRecord the run stops (A.5.5), the open range's text and every later
+// edit left unwritten.
+func (a *applier) read() bool {
+	if a.next != a.stopAt || a.stopped {
+		return !a.stopped
+	}
+
+	a.stopped, a.ended, a.open = true, true, nil
+	a.r.Long = len(a.input[a.next])
+
+	return false
 }
 
 // insert applies an insert: its text after its line, at the current place if
@@ -308,6 +345,10 @@ func (a *applier) replace(e *Edit) {
 		if a.next == len(a.input) {
 			a.runOut()
 
+			return
+		}
+
+		if !a.read() {
 			return
 		}
 
@@ -382,6 +423,10 @@ func (a *applier) advance(n int) bool {
 			return false
 		}
 
+		if !a.read() {
+			return false
+		}
+
 		rec := a.input[a.next]
 		a.next++
 		a.passed++
@@ -408,6 +453,10 @@ func (a *applier) advance(n int) bool {
 // lines, with its file's audit trail unless it was off; a message in its
 // place listed (a syntax error's taking its number, Y21).
 func (a *applier) write(e *Edit) {
+	if a.stopped {
+		return
+	}
+
 	for _, t := range e.Text {
 		if t.Message != nil {
 			if t.Numbered {
@@ -435,6 +484,10 @@ func (a *applier) write(e *Edit) {
 // message lists a message: its line, then a line per edit it names, the
 // command as written, four blanks, and the update file's name.
 func (a *applier) message(m *Message) {
+	if a.stopped {
+		return
+	}
+
 	a.r.Lines = append(a.r.Lines, Line{Text: []byte(MessageLine(m.ID))})
 
 	for _, ab := range m.About {

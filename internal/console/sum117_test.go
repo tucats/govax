@@ -393,8 +393,9 @@ func readVMSSum117(t *testing.T) map[string]*sum117Run {
 var sum117Times = regexp.MustCompile(`\d{1,2}-[A-Z]{3}-\d{4} \d\d:\d\d:\d\d(\.\d\d)?`)
 
 // sum117FileIDs are the file IDs DUMP and DIRECTORY/FULL show, which are the
-// volume's own.
-var sum117FileIDs = regexp.MustCompile(`File ID:? +\(\d+,\d+,\d+\)`)
+// volume's own,
+// and the blanks after them, whose number the IDs' widths decide.
+var sum117FileIDs = regexp.MustCompile(`File ID:? +\(\d+,\d+,\d+\) *`)
 
 // sum117Mask takes the times and file IDs out of lines.
 func sum117Mask(lines []string) []string {
@@ -402,7 +403,7 @@ func sum117Mask(lines []string) []string {
 
 	for i, line := range lines {
 		line = sum117Times.ReplaceAllString(line, "<time>")
-		out[i] = sum117FileIDs.ReplaceAllString(line, "File ID <id>")
+		out[i] = sum117FileIDs.ReplaceAllString(line, "File ID <id> ")
 	}
 
 	return out
@@ -436,6 +437,18 @@ var sum117Known = map[string][][2]string{
 	"U12D": {dclSuccessStatus},
 	"U13D": {dclSuccessStatus},
 	"U14D": {dclSuccessStatus},
+	"F01D": {dclSuccessStatus},
+	"F02D": {dclSuccessStatus},
+	"F03D": {dclSuccessStatus},
+	"F04D": {dclSuccessStatus},
+	"F05D": {dclSuccessStatus},
+	"F08D": {dclSuccessStatus},
+	"F09D": {dclSuccessStatus},
+	// D01's input, S10.SRC (Stream_LF, no carriage control) copied and
+	// appended to by DCL, has carriage return carriage control on VMS and
+	// none on govax: COPY's or OPEN/APPEND's, the phase's progress log, for
+	// a later look.
+	"D01": {{"Record attributes:  None", "Record attributes:  Carriage return carriage control"}},
 }
 
 // dclSuccessStatus is govax's status after DELETE or DUMP, and VMS's.
@@ -558,4 +571,14 @@ func TestSum117AuditOracle(t *testing.T) {
 	t.Parallel()
 
 	holdSum117(t, "AUDIT", "LISTING", "PAGES")
+}
+
+// TestSum117FilesOracle holds EDIT/SUM's files to VMS's (subtask 7): inputs
+// and update files of every record format, every byte, records past 255
+// bytes, the input's date in the listing, and the round trip through
+// DIFFERENCES/SLP (the FORMATS, LENGTHS, DATES, and ROUNDTRIP sections).
+func TestSum117FilesOracle(t *testing.T) {
+	t.Parallel()
+
+	holdSum117(t, "FORMATS", "LENGTHS", "DATES", "ROUNDTRIP")
 }

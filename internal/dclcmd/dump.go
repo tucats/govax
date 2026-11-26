@@ -25,7 +25,9 @@ import (
 //
 // Each line is 32 bytes: as longwords in hexadecimal, the highest first
 // (so each reads as a number), then the bytes as text, lowest first, a
-// "." for one that isn't printable, then the line's offset. A record's
+// "." for one that isn't printable (printable are ASCII's graphic characters
+// and the DEC Multinational set's, %XA1 to %XFE, as VMS 7.1's DUMP shows
+// them: Phase 117's F03D), then the line's offset. A record's
 // last line has only its bytes, the hexadecimal right-aligned and the
 // text padded with ".":
 //
@@ -211,10 +213,17 @@ func dumpLine(line []byte, off int) string {
 	for i := range text {
 		text[i] = '.'
 
-		if i < len(line) && line[i] >= ' ' && line[i] < 0x7F {
+		if i < len(line) && dumpPrintable(line[i]) {
 			text[i] = line[i]
 		}
 	}
 
 	return fmt.Sprintf("%*s %s %06X", dumpLineBytes/4*9, hex.String(), text, off)
+}
+
+// dumpPrintable says whether DUMP shows a byte as itself: an ASCII graphic
+// character or blank, or a DEC Multinational graphic character (%XA1 to
+// %XFE); control characters, DEL, %X80 to %XA0, and %XFF are ".".
+func dumpPrintable(b byte) bool {
+	return (b >= ' ' && b < 0x7F) || (b >= 0xA1 && b <= 0xFE)
 }

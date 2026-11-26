@@ -119,6 +119,15 @@ func (c *Context) EditSum(req EditSumRequest) error {
 		}
 	}
 
+	// An input record past SUMSLP's buffer stopped the pass: READERR with
+	// RMS's RTB, which is the status, and the output and listing hold what
+	// came before it (X00256 to X32767).
+	status := uint32(sumSuccess)
+	if r.Long > 0 {
+		c.Printf("%%SUM-E-READERR, %s\n%s\n", sumReadText(in.Name), rtbLine(r.Long))
+		status = vmsdef.Symbols["RMS$_RTB"] | stsInhibitMsg
+	}
+
 	if !(req.Output.Given && req.Output.Negated) {
 		if err := c.sumOutput(req.Output.Text, parsed, r, on(req.Header)); err != nil {
 			return err
@@ -132,7 +141,7 @@ func (c *Context) EditSum(req EditSumRequest) error {
 	}
 
 	if c.SetStatus != nil {
-		c.SetStatus(sumSuccess)
+		c.SetStatus(status)
 	}
 
 	return nil
