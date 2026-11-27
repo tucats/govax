@@ -1,7 +1,9 @@
 package machine
 
 import (
+	"errors"
 	"fmt"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -461,7 +463,43 @@ func (m *Machine) ShowRadix() error {
 
 // ShowVersion is SHOW VERSION: which microkernel govax's console is.
 func (m *Machine) ShowVersion() error {
-	m.Printf("govax Console Microkernel 2.0\nBy Tom Cole\n")
+	version := corevms.VersionString
+	buildTime := corevms.BuildTime
+	microkernel := "2.0" // This only changes if we make (unlikely changes) to the microkernel's own code.
+
+	os := runtime.GOOS
+	arch := runtime.GOARCH
+
+	switch os {
+	case "darwin":
+		os = "macOS"
+
+		if arch == "arm64" {
+			arch = "Apple Silicon"
+		}
+
+	case "windows":
+		os = "Windows"
+
+	case "linux":
+		os = "Linux"
+	}
+
+	host := ("Platform " + runtime.Version() + " on " + os + " (" + arch + ")")
+
+	if buildTime != "" {
+		// Format the buildtime for human readability. The string is UTCS and looks like "20261127160114" (YYYYMMDDHHMMSS) and we
+		// want this converted to local time in a format like  "2026-11-27 16:01:14". Parse the time string into time.Time object
+		// and then reformat it as local time.
+		t, err := time.Parse("20060102150405", buildTime)
+		if err != nil {
+			return errors.New("Invalid build time: " + err.Error())
+		}
+
+		buildTime = ", Built " + strings.ToUpper(t.Local().Format("02-Jan-2006 15:04:05"))
+	}
+
+	m.Printf("govax Version %s%s, Microkernel %s, %s\n", version, buildTime, microkernel, host)
 
 	return nil
 }

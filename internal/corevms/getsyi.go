@@ -21,6 +21,7 @@ var (
 	ssNoMoreNode  = vmsdef.Symbols["SS$_NOMORENODE"]
 	ssNoSuchNode  = vmsdef.Symbols["SS$_NOSUCHNODE"]
 	VersionString = "V7.3" // Default value, main injects govax build version
+	BuildTime     = ""     // Default value, main injects govax build time
 )
 
 // The system's identity. The node name is govax's own. The version is
@@ -94,6 +95,7 @@ const maxNodeNameLength = 15
 //     FREE_GBLPAGES, since govax's global page table has no fixed size to
 //     fragment (unconfirmed).
 var syiItemsByName = map[string]func(env *Environment) itemValue{
+	"SYI$_BUILD_TIME":     func(env *Environment) itemValue { return itemPadded(BuildTime, 14) },
 	"SYI$_VERSION":        func(env *Environment) itemValue { return itemPadded(VersionString, 8) },
 	"SYI$_NODE_SWVERS":    func(env *Environment) itemValue { return itemPadded(VersionString, 4) },
 	"SYI$_NODE_SWTYPE":    func(env *Environment) itemValue { return itemPadded(vmsSoftwareType, 4) },

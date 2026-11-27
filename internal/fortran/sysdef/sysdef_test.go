@@ -66,7 +66,7 @@ func TestAllModulesTogether(t *testing.T) {
 // vmsdef's as a hexadecimal constant.
 func TestPlannedModules(t *testing.T) {
 	counts := map[string]int{
-		"$SSDEF": 731, "$IODEF": 547, "$JPIDEF": 222, "$SYIDEF": 445, "$DVIDEF": 187, "$RMSDEF": 268,
+		"$SSDEF": 731, "$IODEF": 547, "$JPIDEF": 222, "$SYIDEF": 446, "$DVIDEF": 187, "$RMSDEF": 268,
 		"$LIBDEF": 117, "$FORDEF": 172, "$MTHDEF": 32, "$DSCDEF": 138, "$STSDEF": 32, "$LNMDEF": 40,
 		"$SECDEF": 67, "$PSLDEF": 39, "$PRVDEF": 43, "$CHFDEF": 21, "$OPCDEF": 228,
 	}

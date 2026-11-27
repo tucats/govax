@@ -405,7 +405,8 @@ func lexGetJPI(e *dclExpression, args []lexicalArg) (dclValue, error) {
 // syiKeywords are F$GETSYI's keywords, each the $GETSYI item of the
 // same name, written as corevms's item forms say in DCL's style.
 var syiKeywords = map[string]bool{
-	"BOOTTIME": true, "CLUSTER_MEMBER": true, "CPU": true, "MINWSCNT": true,
+	"BUILD_TIME": true,
+	"BOOTTIME":   true, "CLUSTER_MEMBER": true, "CPU": true, "MINWSCNT": true,
 	"NODE_CSID": true, "NODE_SWTYPE": true, "NODE_SWVERS": true,
 	"NODENAME": true, "SID": true, "VERSION": true, "HW_NAME": true,
 	"GROWLIM": true, "FREELIM": true, "FREEGOAL": true, "TBSKIPWSL": true,

@@ -60,6 +60,10 @@ func main() {
 		corevms.VersionString = "V" + BuildVersion
 	}
 
+	if BuildTime != "" {
+		corevms.BuildTime = BuildTime
+	}
+
 	// Disable subcommands and options we don't use.
 	app.MakePrivate("logon")
 	app.MakePrivate("format")

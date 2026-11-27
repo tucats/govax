@@ -6177,6 +6177,7 @@ var LibrarySymbols = map[string]uint32{
 	"SYI$_BOOT_STYLE":                 0x1147,
 	"SYI$_BORROWLIM":                  0x1056,
 	"SYI$_BREAKPOINTS":                0x1130,
+	"SYI$_BUILD_TIME":                 0x10de,
 	"SYI$_BUGCHECKFATAL":              0x2004,
 	"SYI$_BUGREBOOT":                  0x2001,
 	"SYI$_CHANNELCNT":                 0x1024,

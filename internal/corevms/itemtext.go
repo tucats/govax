@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/tucats/govax/internal/sched"
 	"github.com/tucats/govax/internal/vmsdef"
@@ -48,6 +49,11 @@ const (
 	// FormTime is a quadword VMS time, written as $ASCTIM writes an
 	// absolute time.
 	FormTime
+
+	// ForBuildTime is a string written as a UTC time, in the format
+	// "YYYYMMDDHHMMSS" which is converted to a local time in the format
+	// "YYYY-MM-DD HH:MM:SS" for display.
+	FormBuildTime
 
 	// FormUIC is a UIC, written by identifier where the rights database
 	// has one ("[SYSTEM]"), as numbers otherwise ("[1,4]").
@@ -138,6 +144,7 @@ var jpiForms = map[string]forms{
 // boot time as a time, CLUSTER_MEMBER as a truth, and the CSID in
 // hexadecimal in LIB$GETSYI as F$GETSYI does (testdata/lib55).
 var syiForms = map[string]forms{
+	"SYI$_BUILD_TIME":     both(FormBuildTime),
 	"SYI$_VERSION":        both(FormString),
 	"SYI$_NODE_SWVERS":    both(FormString),
 	"SYI$_NODE_SWTYPE":    both(FormString),
@@ -241,6 +248,20 @@ func (env *Environment) ItemText(form ItemForm, data string, s Style) string {
 		}
 
 		return PrivilegeList(ItemQuadword(data))
+	case FormBuildTime:
+		// The time is a UTC time in the format "YYYYMMDDHHMMSS" (14 bytes). Convert it to a local time in the format "YYYY-MM-DD HH:MM:SS".
+		if len(data) < 14 {
+			return data
+		}
+
+		t, err := time.Parse("20060102150405", data[:14])
+		if err != nil {
+			return data
+		}
+
+		// Make the format a VMS-tyle type, such as "27-NOV-2026 16:01:14".
+		return strings.ToUpper(t.Local().Format("02-Jan-2006 15:04:05"))
+
 	case FormTime:
 		text, _ := formatVMSTime(ItemQuadword(data), false)
 
