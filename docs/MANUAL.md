@@ -519,12 +519,12 @@ Global options go before the subcommand or command.
 | `--system-file FILE` | The system volume's container, for this run, instead of `vax.default.system.file`'s (by default `~/.govax/govax-system.dsk`). `none` starts govax with no system volume, from its built-in files. |
 | `--system-device DEV` | The device to mount the system volume on (by default `DUA0`). |
 | `--user NAME`, `-u` | Log process 1 in as the account `NAME` instead of SYSTEM ([Accounts and logging in](#accounts-and-logging-in)). An account with a password must give it: govax asks for it at a terminal, and reads the environment variable `GOVAX_PASSWORD` otherwise. |
-| `--system-initialize` | Make the system volume again from govax's own files, keeping the old container beside it as `FILE.old`. |
-| `--path DIR,...` | Host directories to search for files govax and its commands name (its grammars, `@` procedures, MACRO sources, ...), after the name as given and before the system volume's copies. govax's built-in copies of its startup files are always searched last. |
+| `--system-initialize` | Make the system volume again from govax up-to-date internal files. |
+| `--path DIR,...` | Host directories to search for files govax and its commands name (its grammars, `@` procedures, MACRO sources, ...), after the name as given and before the system volume's copies. |
 | `--profile NAME` | Use the configuration profile `NAME` instead of the default one (section 4). |
-| `--instruction-limit N`, `-i` | Stop a program after it has executed `N` VAX instructions. Each run (a `RUN`, or the debugger's `GO`, `CALL`, or `STEP`) starts with a fresh budget. |
+| `--instruction-limit N`, `-i` | Stop a program after it has executed `N` VAX instructions. |
 | `--time-limit D`, `-t` | Stop a run after the elapsed time `D` (`10s`, `2m`, ...). |
-| `--stats`, `-s` | When govax exits, show statistics: instructions executed, memory accesses, translation buffer use, and (with paging on) the paging counts. |
+| `--stats`, `-s` | When govax exits, show statistics: instructions executed, memory accesses, paging stats, and Go host memory use. |
 | `--cpu-profile FILE` | Write a Go CPU profile of govax itself (for govax's developers; see `docs/PERFORMANCE.md`). |
 | `--version`, `-v` | Show the version. |
 | `--help`, `-h` | Show help. |
@@ -557,7 +557,7 @@ govax macro ./prog.mar && govax link ./prog.obj && govax run ./prog.exe
 
 ### Control keys
 
-govax gives the control keys their VMS meanings:
+govax handles control keys the VMS way:
 
 | Key | At the `VAX>` prompt | While a program or command runs |
 | --- | --- | --- |
@@ -566,15 +566,16 @@ govax gives the control keys their VMS meanings:
 | **Ctrl/Z** | Echoes `*Exit*`, as DCL does. At `DBG>` it's `EXIT`. | End of file for the program's read (RMS's `RMS$_EOF`). |
 
 `SET NOCONTROL=Y` turns Ctrl/Y off. `HELP KEYS` has the details,
-including how the keys go to a subprocess that `SPAWN` is waiting for.
+including how the keys go to a subprocess that `SPAWN` is waiting for. **Ctrl/T** is not currently supported in govax.
 
 ---
 
 ## 4. Configuration
 
 govax keeps settings in a *profile*: a file in the `.govax` directory of
-your home directory, read each time govax starts. You change them from
-your host shell with `govax config`, not from the `VAX>` prompt.
+your home directory, read each time govax starts. You change configuration
+settings from your host shell with `govax config` (not from within the VMS
+ssytem at the `VAX>` prompt).
 
 ### Setting, showing, and deleting
 
@@ -602,9 +603,10 @@ true
 $ govax config delete vax.sysgen.paging.enable
 ```
 
-Keys are lowercase. `govax config set` refuses a `vax.` key govax doesn't
-read, which usually means a misspelling, and a value the key can't take (a
-page count that isn't a number, say), and says why:
+Keys are lowercase. `govax config set` refuses a `vax.` key that govax
+doesn't recognize, which usually means a misspelling, or a value the key
+can't take (a page count that isn't a number, say). A message explains
+what the problem was with a configuration setting:
 
 ```text
 $ govax config set vax.sysgen.minwscnt=lots
@@ -613,9 +615,9 @@ $ govax config set vax.libary=~/vax/lib
 govax: invalid configuration name: vax.libary
 ```
 
-`govax config delete` removes any key, known or not. A key that got into
+`govax config delete` removes a configuration key (valid or not). A key that got into
 the profile another way, as by editing its file, is warned about as govax
-exits, and for a value it can't use govax uses the default instead.
+exits. For a value govax can't use, the default is used instead.
 
 Quote values your shell would otherwise change. In particular, zsh and
 some other shells treat `[...]` as a file name pattern:
@@ -637,11 +639,11 @@ govax --profile test config set-description "For the test suite"
 govax config remove test                           delete the "test" profile
 ```
 
-Without `--profile`, govax uses the profile named `default`.
+If you don't specify `--profile`, govax uses the profile named `default`.
 
 ### Reading the configuration from DCL
 
-The lexical function `F$CONFIG`, which is govax's own, reads a key from a
+The lexical function `F$CONFIG`, which is a govax-only feature, reads a key from a
 DCL procedure:
 
 ```text
@@ -1809,7 +1811,7 @@ the output one run of blocks, marked contiguous, failing at its open as on a
 full volume when no free run is long enough. An indexed file
 whose prolog RMS can't read isn't copied (`%COPY-E-OPENIN`, with RMS's
 status). As VMS's COPY does, it says nothing of a file copied unless
-`/LOG` is given; `/VERBOSE` (govax's own) also shows each, and `/QUIET`
+`/LOG` is given; `/VERBOSE` also shows each, and `/QUIET`
 none. A copy of a volume file is given its input's blocks as it's made, as
 VMS's COPY makes it, so on a volume without room for them the copy fails at
 once and leaves nothing:
@@ -1824,8 +1826,8 @@ A volume that fills while some other output is written is
 `%COPY-E-WRITEERR` naming the output, then `-RMS-F-FUL`; what was written so
 far stays. A copy that works leaves `$STATUS` `%X00000001`, as VMS's does.
 
-`/RECORD_FORMAT` is govax's own, with the three qualifiers that go with it,
-named as in FDL's RECORD section. A Files-11 file's header says how its bytes
+`/RECORD_FORMAT` is unqiue to govax with the three qualifiers that go with it,
+named the same as in FDL's RECORD section. A Files-11 file's header says how its bytes
 make records; a host file says nothing, so a copy from the host can be told what
 file to make. Without `/BINARY` the host file is read as lines, each a record. With
 `/BINARY` it is read as bytes.
@@ -2023,7 +2025,7 @@ extra dog
 TRAILING_SPACES)` leaves things out of the comparison, and `EDITED`, `EXACT`, or
 `PRETTY` says how the listing shows the records; `/COMMENT_DELIMITER` names the
 comment characters, or takes the file type's (`!` for `.COM`, `;` for `.MAR`,
-column 1's C and D for `.FOR`, and so on; `.F90`'s `!` is govax's own).
+column 1's C and D for `.FOR`, and so on; `.F90`'s `!` is a feature unique to govax.
 
 The listing goes to SYS$OUTPUT, or with `/OUTPUT[=file]` to a file (`name.DIF`
 by default); at a terminal it is the terminal's width whatever `/WIDTH` says,
@@ -2767,7 +2769,7 @@ line you're typing. Commands that work on the machine itself (`DEBUG`,
 `INITIALIZE/MEMORY`, `INITIALIZE/VAX`, `SAVE`, `LOAD`, ...) aren't available in a
 subprocess (`%VAX-E-NOTSUBPROC`).
 
-`SPAWN/HOST`, govax's own, runs the command as a program on the host with
+`SPAWN/HOST` is a feature unqiue to govax. It runs the command as a program on the host with
 exec, and makes no subprocess. The command is split at blanks, quotes
 keeping a word together, with no shell: write `SPAWN/HOST sh -c "ls | wc -l"`
 for a shell's features, and quote a first word starting with `/`, or DCL
@@ -3114,7 +3116,7 @@ These are described in [section 7](#7-command-procedures-and-the-dcl-language).
 | `SHOW TIME`, `SHOW DAYTIME` | The system's date and time, to the second. |
 | `SHOW RADIX` | The console's numeric radix. |
 | `SHOW DEBUG` | The debugging switches. |
-| `HELP [topic ...]` | The help text: govax's own, or with `/LIBRARY=` a help library's, as VMS's HELP shows it (`/[NO]PROMPT`, `/[NO]INSTRUCTIONS`, `/[NO]LIBLIST`, `/[NO]LIBRARY`, `/[NO]USERLIBRARY`, `/[NO]OUTPUT`, `/[NO]PAGE`). |
+| `HELP [topic ...]` | The built-in help text, or with `/LIBRARY=` a help library's, as VMS's HELP shows it (`/[NO]PROMPT`, `/[NO]INSTRUCTIONS`, `/[NO]LIBLIST`, `/[NO]LIBRARY`, `/[NO]USERLIBRARY`, `/[NO]OUTPUT`, `/[NO]PAGE`). |
 
 ### 6.10 The machine and the console
 
@@ -3556,7 +3558,7 @@ while unique (`F$LEN` is `F$LENGTH`).
 | `F$PRIVILEGE(privs)`, `F$SETPRV(privs)` | test, and set, privileges |
 | `F$IDENTIFIER(id, type)` | converts an identifier's name and value |
 | `F$VERIFY([proc] [,image])` | the verification settings, and sets them |
-| `F$CONFIG(key [,op])` | govax's own: a configuration key (section 4) |
+| `F$CONFIG(key [,op])` | a govax configuration key (section 4) |
 
 **Files, devices, names, messages, and time**
 
@@ -3602,7 +3604,7 @@ $ WRITE SYS$OUTPUT "Hex: ", F$FAO("!XL", 255), "  Upcase: ", F$EDIT("  mixed   C
 ```text
 VAX> @LEX
 Process:  SYSTEM  PID 00000301
-Node:     GOVAX running V7.3
+Node:     GOVAX running V7.1
 Today is  Tuesday, 20-OCT-2026
  1. red (3 letters)
  2. green (5 letters)
@@ -4485,8 +4487,8 @@ If you have VMS's own system macro library, govax uses it instead (see
 below), and every VMS system macro is available.
 
 Symbols such as `SS$_NORMAL`, `RMS$_EOF`, `IO$_WRITEVBLK`, and the FAB
-and RAB field offsets are also known to the linker from govax's own
-tables, so a module can refer to them without defining them; the linker
+and RAB field offsets are also known to the linker from govax's internal
+symbol tables, so a module can refer to them without defining them; the linker
 supplies their values, as VMS's LINK does from its system object
 library.
 
@@ -4499,7 +4501,7 @@ and point `vax.library` at it, or keep them on a volume and define
 
 | File | Used by | Without it |
 | --- | --- | --- |
-| the system macro library (STARLET's `.MLB`) | `MACRO`: every system macro | govax's own STARLET (above) |
+| the system macro library (STARLET's `.MLB`) | `MACRO`: every system macro | govax's interal STARLET (above) |
 | the system object library, `STARLET.OLB` | `LINK`: the system library's modules | govax's tables of its symbols; routines it holds as code (`BAS$`, ...) are missing |
 | `IMAGELIB.OLB` | `LINK`: which shareable image defines each routine | govax's tables of LIBRTL's routines |
 | `LIBRTL.EXE` and other shareable images | `LINK`: routine offsets | govax's tables |
@@ -4507,7 +4509,7 @@ and point `vax.library` at it, or keep them on a volume and define
 These are copyrighted files and aren't part of govax; the project's
 README lists them.
 
-With a system volume, `SYS$LIBRARY` leads to govax's own macro library
+With a system volume, `SYS$LIBRARY` points to the govax macro library
 on it, which `MACRO` finds before it would look in `vax.library`'s
 directory. (The volume holds no `STARLET.OLB`, `IMAGELIB.OLB`, or VMS
 shareable images, so `LINK` still finds those in `vax.library`.) To have
@@ -4588,7 +4590,7 @@ Each global symbol a module refers to must be defined by some module.
 4. the system libraries: `IMAGELIB.OLB` (which shareable image defines a
    routine) and `STARLET.OLB` (whose modules are added to the image), if
    you have them;
-5. govax's own tables: every LIBRTL routine and the other run-time
+5. govax's internal symbol tables: every LIBRTL routine and the other run-time
    routines govax provides, in their shareable images; STARLET's symbols
    (`SS$_...`, `RMS$_...`, `IO$_...`, the FAB/RAB/NAM offsets, and more);
    and the system services (`SYS$...`) at their addresses in the system
@@ -4933,7 +4935,7 @@ VAX> HELP/LIBRARY=DUA1:[WORK]OTHER TOOLS
 ```
 
 With no `/LIBRARY`, HELP reads `SYS$HELP:HELPLIB.HLB`, the system
-volume's, or govax's own copy when there's no system volume; the
+volume's, or govax's internal copy when there's no system volume; the
 debugger's HELP reads the library the logical name `DBG$HELP` names, or
 `SYS$HELP:DBG$HELP.HLB`, the same way, and AUTHORIZE's HELP reads
 `SYS$HELP:UAFHELP.HLB`, a module for each of its commands.
@@ -4994,7 +4996,7 @@ key, and `KEY...` shows a topic with everything under it. A library's HELP
 module, if it has one, is what HELP with no topic shows above the list of
 topics.
 
-govax's own help follows the shapes of VMS's modules: a command's level 1
+govax's help text follows the form of VMS's modules: a command's level 1
 is what it does and its format, with `Parameters`, `Description`,
 `Qualifiers` (a `/` line for each), and `Examples` below it; a command
 with subcommands has a level-2 topic for each; and a verb whose qualifier
@@ -5130,7 +5132,7 @@ When `RUN` starts an image, govax does what VMS's image activator does:
    shareable images it was linked against.
 2. **Finds each shareable image**, and the ones they use in turn:
    1. A shareable image govax provides itself (LIBRTL, LIBRTL2, MTHRTL, the C
-      run-time library, and the other system images) is govax's own
+      run-time library, and the other system images) are govax internal
       routines, unless you've defined a logical name of the image's name
       (`DEFINE LIBRTL DUA1:[X]LIBRTL.EXE`), which asks for that file
       instead.
@@ -5153,8 +5155,8 @@ When `RUN` starts an image, govax does what VMS's image activator does:
    ```
 
 3. **Checks each shareable image's ident** against the program's `GSMATCH`
-   (`%SYSTEM-F-SHRIDMISMAT` if they don't match). govax's own routines
-   always match.
+   (`%SYSTEM-F-SHRIDMISMAT` if they don't match). govax's internal library
+   routines always match.
 4. **Places the images** in the process's P0 space: the program at its
    base, each shareable image after it (or at its own base, if it was
    linked with one).
@@ -5758,8 +5760,8 @@ internals for readers who know VMS only from the outside.
 
 Two references are used throughout: DIGITAL's *VAX Architecture
 Reference Manual* for the processor, and Kenah and Bate's *VAX/VMS
-Internals and Data Structures* for how VMS works. govax's own design
-notes are in `docs/`, a document per development phase.
+Internals and Data Structures* for how VMS works. govax's design
+notes are in `docs/planning/`, a document per development phase.
 
 ### 13.1 The overall design
 
@@ -7088,8 +7090,8 @@ host shell, `govax fortran` runs it (`--optimize` and `--no-optimize` are `/[NO]
 
 **The listing.** `/LIST` writes a listing, by default the source's name with the
 type `.LIS`, in the default directory; `/LIST=file` names another. It is written after
-errors too, without maps, since that's when it's wanted. Its layout is govax's own,
-in MACRO's manner: 132 columns and 66 lines to a page, with a two-line heading. Each
+errors too, without maps, since that's when it's wanted. Its layout emulates VMS
+MACRO's listings: 132 columns and 66 lines to a page, with a two-line heading. Each
 line of the source has its number, one from an `INCLUDE` file its include depth before
 that, and a message about a line comes under it, with a caret under the column. Each
 program unit starts a page. After the whole source come the units' storage maps, in
@@ -7153,11 +7155,11 @@ string changes nothing. So a directive on a program's first line doesn't head pa
 | `BOUNDS` | Each subscript against its dimension, and `1 <= first <= last <= length` for each substring | The `INDEX` instruction's trap, `%SYSTEM-F-SUBRNG` |
 | | An adjustable array's bounds at each entry point defining it, an upper below its lower being wrong | `%FOR-F-ADJARRDIM` |
 | | A Fortran 90 array section's first and last subscripts, once before its assignment's loops, and each of a vector subscript's values | `%SYSTEM-F-SUBRNG` |
-| | Two arrays' extents in one Fortran 90 array assignment, where they weren't known to be equal when compiling, and an array constructor's values against the section it is stored in | `%FOR-F-NOTCONFOR` (govax's own, FOR number 300) |
-| | An assumed-shape dummy's argument, at each entry point: a class NCA or class A descriptor of the dummy's rank, nothing else | `%FOR-F-BADARRDESC` (govax's own, FOR number 303) |
+| | Two arrays' extents in one Fortran 90 array assignment, where they weren't known to be equal when compiling, and an array constructor's values against the section it is stored in | `%FOR-F-NOTCONFOR` (FORTRAN error number 300) |
+| | An assumed-shape dummy's argument, at each entry point: a class NCA or class A descriptor of the dummy's rank, nothing else | `%FOR-F-BADARRDESC` ((FORTRAN error number 303) |
 | `OVERFLOW` | Integer arithmetic, each unit's entry masks setting the IV bit | `%SYSTEM-F-INTOVF` |
-| `POINTERS` | A Fortran 90 pointer's target, where it is used: the pointer must be associated (a pointer nullified, deallocated, or never assigned isn't) | `%FOR-F-NOTASSOC`, "pointer is not associated" (govax's own, FOR number 311) |
-| | An allocatable array's element, the whole array (an argument, an output list's item), or its bounds (`SIZE`, `LBOUND`, `UBOUND`), where it is used: the array must be allocated | `%FOR-F-UNALLOCATED`, "allocatable array is not allocated" (govax's own, FOR number 312) |
+| `POINTERS` | A Fortran 90 pointer's target, where it is used: the pointer must be associated (a pointer nullified, deallocated, or never assigned isn't) | `%FOR-F-NOTASSOC`, "pointer is not associated" ((FORTRAN error number 311) |
+| | An allocatable array's element, the whole array (an argument, an output list's item), or its bounds (`SIZE`, `LBOUND`, `UBOUND`), where it is used: the array must be allocated | `%FOR-F-UNALLOCATED`, "allocatable array is not allocated" ((FORTRAN error number 312) |
 | `UNDERFLOW` | Floating arithmetic, each entry point setting the PSW's FU bit | `%SYSTEM-F-FLTUND_F`, not a quiet zero |
 
 The keywords also come as `NOBOUNDS` and so on, with `ALL` and `NONE`, cut short if you
@@ -7397,7 +7399,7 @@ directory. Included files may include others, ten deep.
 3. `SYS$LIBRARY:FORSYSDEF.TLB`, if there is one: on the system volume,
    govax's modules below as a text library, which `LIBRARY/TEXT` can add
    modules to;
-4. govax's own definition modules, built in.
+4. govax's internal built-in definition modules.
 
 `INCLUDE 'lib(module)'` reads only that library, found as an INCLUDE file is.
 
@@ -7635,9 +7637,9 @@ It has these routines, which MACRO programs can call too:
 | `FTN$ADJARRDIM()` | Signals `%FOR-F-ADJARRDIM`, severe: `/CHECK=BOUNDS` found an adjustable array's upper bound below its lower |
 | `FTN$NOTCONFOR()` | Signals `%FOR-F-NOTCONFOR`, severe, "array shapes do not conform": `/CHECK=BOUNDS` found two arrays of different shapes in a Fortran 90 array assignment. VAX FORTRAN had no such condition; it is govax's, FOR number 300 |
 | `FTN$ALLOCATE(desc, flags, l1, u1, ...)` | Fortran 90's ALLOCATE of one allocatable array or array pointer: `desc` is its class NCA descriptor (its element size and rank filled in, POINTER 0 for an allocatable array), `flags` a longword (bit 0: STAT= given; bit 1: a pointer's, which is never already allocated, and whose block has an 8-byte header before it, a mark and the size, for DEALLOCATE to check; bit 2: the block cleared), and each dimension's bounds follow by value. Fills in the strides, bounds, size, A0, and last POINTER, with memory from `LIB$GET_VM` (8 bytes at least). Returns 0 in R0; on a failure, with flag bit 0 the condition's FOR number, else it signals `%FOR-F-ALREADYALLOC` (FOR number 301), or `%FOR-F-INSVIRMEM` |
-| `FTN$BADARRDESC()` | Signals `%FOR-F-BADARRDESC`, severe, "argument is not an array descriptor of the dummy argument's rank": `/CHECK=BOUNDS` found an assumed-shape dummy given something other than a class NCA or class A descriptor of its rank (a call without the routine's interface, or a MACRO caller's mistake). govax's own, FOR number 303 |
-| `FTN$NOTASSOC()` | Signals `%FOR-F-NOTASSOC`, severe, "pointer is not associated": `/CHECK=POINTERS` found a pointer's target about to be used while the pointer is disassociated. govax's own, FOR number 311. The compiled code calls it in the middle of an expression, keeping nothing in R0 and R1 |
-| `FTN$UNALLOCATED()` | Signals `%FOR-F-UNALLOCATED`, severe, "allocatable array is not allocated": the same for an allocatable array. govax's own, FOR number 312 (`NOTALLOC`, 302, is `DEALLOCATE`'s) |
+| `FTN$BADARRDESC()` | Signals `%FOR-F-BADARRDESC`, severe, "argument is not an array descriptor of the dummy argument's rank": `/CHECK=BOUNDS` found an assumed-shape dummy given something other than a class NCA or class A descriptor of its rank (a call without the routine's interface, or a MACRO caller's mistake). (FORTRAN error number 303) |
+| `FTN$NOTASSOC()` | Signals `%FOR-F-NOTASSOC`, severe, "pointer is not associated": `/CHECK=POINTERS` found a pointer's target about to be used while the pointer is disassociated. (FORTRAN error number 311) The compiled code calls it in the middle of an expression, keeping nothing in R0 and R1 |
+| `FTN$UNALLOCATED()` | Signals `%FOR-F-UNALLOCATED`, severe, "allocatable array is not allocated": the same for an allocatable array. govax's own, FOR number 312 (`NOTALLOC`, FORTRAN error number 302, is `DEALLOCATE`'s) |
 | `FTN$GET_TEMP(desc)` | The storage of an array the compiler makes when the program runs, on the heap: a statement's temporary past 64 KB, or the value of a function whose value's shape is known only when it runs. `desc` is a class A descriptor with its size (ARSIZE) filled in; takes that many bytes (8 at least) from `LIB$GET_VM` into its POINTER, or signals `%FOR-F-INSVIRMEM`. `FTN$DEALLOCATE` gives it back |
 | `FTN$DEALLOCATE(desc, flags)` | Fortran 90's DEALLOCATE of one allocatable array or array pointer: gives its memory to `LIB$FREE_VM` and clears POINTER. With flag bit 1, a pointer's, the descriptor must describe the whole of a block `FTN$ALLOCATE` or `FTN$ALLOC_SCALAR` made for a pointer, in order. Returns 0 in R0; for an array not allocated, with flag bit 0 the FOR number 302, else it signals `%FOR-F-NOTALLOC`; for a pointer's target that isn't such a block, 304, or `%FOR-F-BADDEALLOC` (govax's own) |
 | `FTN$ALLOC_SCALAR(cell, flags, size)` | Fortran 90's ALLOCATE of a scalar pointer: `cell` is the longword that holds its target's address (a CHARACTER pointer's descriptor's POINTER), `flags` `FTN$ALLOCATE`'s (bit 1 always set), `size` the target's size in bytes, by value. Takes the memory as `FTN$ALLOCATE` does for a pointer, and stores its address in `cell`. Returns 0 in R0, or 41 or `%FOR-F-INSVIRMEM` |
@@ -10868,8 +10870,8 @@ shows it `TYPE(NODE), POINTER`.
 Pointer components start disassociated too: storage ALLOCATE makes for a type with pointers in
 it (a pointer's target, or an allocatable array's elements) is cleared, and so are the
 pointers of records in a stack frame, and of an automatic array's, at each entry. Fortran 90
-and 95 leave them undefined, and gfortran doesn't clear them, so a program that relies on it is
-govax's own.
+and 95 leave them undefined, and gfortran doesn't clear them, so a program that relies on it
+may not be portable as they are unique to govax Fortran.
 
 A pointer component may be an **array pointer**, its shape deferred, `INTEGER, POINTER ::
 V(:)` or `TYPE(NODE), POINTER :: KIDS(:)` (a tree whose nodes point at an array of their
@@ -11128,7 +11130,7 @@ through their pointers (`FN%BODY%KID%OP`).
 **gfortran.** A Fortran 90 program that keeps to the standard and names its kinds by what it
 needs ([Writing for any processor](#writing-for-any-processor)) compiles under gfortran too,
 `-std=f95`, and prints the same lines but where the standard leaves a choice to the processor.
-Every program of `testdata/fortran90` but govax's own (those calling VMS, or testing what only
+Every program of `testdata/fortran90` but those unque to govax (those calling VMS, or testing what only
 govax chooses) was built so, and so was fcalc, with only `FCPLATFORM.F90` changed (its twin for
 gfortran, which has no LIB$GET_FOREIGN, is `internal/fcalc/src/gfortran/fcplatform.f90`): every
 line of every script and every file it writes is the same, built plainly, optimized, and with
@@ -11318,13 +11320,22 @@ left.
 
 #### The FORTRAN run-time library
 
-FTNRTL.EXE, which compiled FORTRAN programs call, is govax's own, written in MACRO-32 rather
-than Go, and any program may call it too: its routines, from I/O statements to the Fortran 90
-intrinsic procedures MTHRTL hasn't (`FTN$ADJUSTL`, `FTN$REPEAT`, `FTN$SCAN`, the `COMPLEX(16)`
-functions `FTN$CHABS` to `FTN$CHPOW`, the model functions `FTN$SCALE_F` to `FTN$NEAREST_H`,
-`FTN$DATE_AND_TIME`, `FTN$SYSTEM_CLOCK`, `FTN$RANDOM_F` to `_H`, and `FTN$RANDOM_SEED`), are in
-the table in [section 14.6](#146-ftnrtl-the-run-time-library). VMS's FORTRAN run-time library,
-FORRTL, isn't provided.
+FTNRTL.EXE, which compiled FORTRAN programs call, is unique to govax. It is
+written in MACRO-32 rather than Go, and any program may call it. Because it's 
+written in MACRO-32, you can view it's internal operation and make changes as
+needed. FTNRTL routines handle language support for:
+
+- I/O statements
+- Fortran 90 intrinsic procedures MTHRTL hasn't such as `FTN$ADJUSTL`,
+ `FTN$REPEAT`, `FTN$SCAN`
+- the `COMPLEX(16) functions `FTN$CHABS` to `FTN$CHPOW`
+- model functions `FTN$SCALE_F` to `FTN$NEAREST_H`, `FTN$DATE_AND_TIME`, `FTN$SYSTEM_CLOCK`, 
+ `FTN$RANDOM_F` to `_H`, and `FTN$RANDOM_SEED`)
+
+These are documented in more detail in the table in [section 14.6](#146-ftnrtl-the-run-time-library). 
+VMS's FORTRAN run-time library, FORRTL, isn't provided. If you have programs compiled with
+the DIGITAL FORTRAN V compiler, you will need to support FORRTL.EXE to be able to run them
+on govax.
 
 ### Appendix C: Where govax differs from VMS
 
@@ -11333,31 +11344,35 @@ The main differences, gathered from the rest of the manual:
 - No VMS boot, executive, or compilers; MACRO-32 and govax's own FORTRAN are
   the languages you can build in (sections 1 and 14).
 - Process 1 logs in as SYSTEM, with all privileges, or as an account
-  `--user` names (section 5); AUTHORIZE keeps no password lifetimes,
+  `--user` names (section 5)
+- AUTHORIZE keeps no password lifetimes,
   access times, or expiration dates, of its flags only DISUSER does
-  anything, and there are no remote logins. Every privilege VMS checks is
-  checked (section 11). Batch queues only: no print, server, or generic
-  queues, and the queue manager is govax's own, not a process. No networking or clusters. Installed
-  images' qualifiers but `/PRIVILEGED` are recorded and do nothing. File protection and ACLs are enforced on volume files, but a
-  volume's own protection isn't, and alarms and audits do nothing.
+  anything
+- Batch queues only: there are no print, server, or generic
+  queues, and the queue manager is internal to govax and not a process.
+- There are no remote logins, no networking or clusters. 
+- Installed images are paritally supported, only `/PRIVILEGED` has any effect.
+- File protection and ACLs are enforced on volume files, but a
+  volume's own protection isn't. There are no alarms or audits.
 - A program's RMS calls reach only files on mounted Files-11 volumes,
-  not host files (section 5). Indexed files are Prolog 3 only: a lower
-  prolog is `RMS$_PLV`. VMS 7.1's ANALYZE/RMS_FILE/CHECK and RMS read and change govax's
-  indexed files, and govax's VMS's; a file govax's RMS makes is VMS's to the byte but where
-  a bucket splits after many records, which can fall a record apart (`testdata/vms88`).
-  There's no `$SPACE`, and no CONVERT/RECLAIM, EDIT/FDL, or ANALYZE/RMS_FILE/INTERACTIVE.
+  not host files (section 5).
+- Indexed files are Prolog 3 only: a lower prolog is `RMS$_PLV`.
+- There's no `$SPACE`
+- No CONVERT/RECLAIM, EDIT/FDL, or ANALYZE/RMS_FILE/INTERACTIVE.
 - govax's own system macro library lacks some of VMS's definition macros
   (`$STSDEF`, for one); VMS's own library can be used instead (section 8).
 - Some LIBRTL routines aren't implemented yet (Appendix B).
 - A handler that continues from a condition of the mathematics library gets
   what the first signal left, where VMS's routine may go on, and signal again
   (Appendix B).
-- With paging on: no swapping, no paging waits, a smaller minimum working
-  set (section 13.5).
+- With paging on: there is no swapping, no paging waits, and a process uses
+  a smaller minimum working set due to differences in process and system
+  memory layouts (section 13.5).
 - BACKUP works with save sets of files only: no image, physical, or
-  incremental operations, no tapes, and no copies of files to files. It
-  reads a save set stored as 512-byte records, which VMS refuses.
-- The console has commands VMS's DCL doesn't (`INITIALIZE/MEMORY`, `PRINT`,
+  incremental operations, no tapes, and no copies of files to files. It can
+  read a save set stored as 512-byte records, which VMS won't -- this can be
+  helpful when reading save sets downloaded from web sites.
+- The console has commands VMS's DCL doesn't (`INITIALIZE/MEMORY`,
   `DEBUG` without an image, ...), and lacks some VMS has (section 7).
 
 `docs/DEVIATIONS.md` is the full, detailed list, including every known
@@ -11397,7 +11412,7 @@ library, STARLET.MLB, is a fourth. Each can be changed in two places:
   session that mounts the volume, and kept when a newer govax starts
   ([When govax is upgraded](#when-govax-is-upgraded)). Delete the versions you made to
   go back to govax's, or start govax once with `--system-initialize`.
-- **In govax's own source tree**, where the same sources are built into the `govax`
+- **In govax's source tree**, where the same sources are built into the `govax`
   program itself by `go generate`, for everyone who runs that build. This is the place to
   change govax for good; the next start with a writable system volume gives the volume the
   new copies, as new versions of the files you haven't changed.
@@ -11431,7 +11446,7 @@ elsewhere and point the logical name `FTNRTL` at it instead.
 In govax's tree the sources are `internal/ftnrtl/mar/*.mar`, linked in the order
 `internal/ftnrtl/ftnrtl.opt` names them (a new module needs its line there and in
 `internal/bootdata/files/buildftn.com`). `go generate ./internal/ftnrtl` assembles and links
-them with govax's own MACRO and LINK into `internal/ftnrtl/ftnrtl.exe`, which is committed and
+them with govax's MACRO and LINK into `internal/ftnrtl/ftnrtl.exe`, which is committed and
 built into govax; `go test ./internal/ftnrtl` checks that the image is what the sources build.
 fcalc is linked against FTNRTL, so after a change to the transfer vector run
 `go generate ./internal/fcalc` too. Then rebuild govax (`go build ./cmd/govax`) and run the
@@ -11511,7 +11526,7 @@ In govax's tree the sources are `internal/fcalc/src/*.f90`, compiled in the orde
 `internal/fcalc/src/compiles.txt` gives (a new module needs its place there and in
 `internal/fcalc/buildfcalc.com`), with `src/gfortran/fcplatform.f90`, the one module gfortran
 builds instead of VMS's. `go generate ./internal/fcalc` compiles, assembles, and links them with
-govax's own compiler, MACRO, and LINK into `internal/fcalc/fcalc.exe`, which is committed and
+govax's FORTRAN compiler, MACRO, and LINK into `internal/fcalc/fcalc.exe`, which is committed and
 built into govax; `go test ./internal/fcalc` checks the image is what the sources build. Then
 rebuild govax, and run fcalc's tests: `go test ./internal/console -run Fcalc` runs every script
 in `testdata/fcalc` (each `name.in`, with the output it must print, `name.out`) in every mode the
