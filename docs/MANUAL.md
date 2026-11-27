@@ -3731,20 +3731,20 @@ $ EXIT
 
 ### Differences from VMS DCL
 
-govax's DCL was checked against VMS 7.3 with probe procedures, and
-behaves as VMS's in the cases they cover. The differences to know about:
+govax's DCL was compared against VMS 7.1 with probe procedures, and
+behaves as VMS does in most cases. The differences to know about:
 
-- The prompt is `VAX>` (change it with `SET PROMPT` or
+- The default prompt is `VAX>` (change it with `SET PROMPT` or
   `vax.console.prompt`); a subprocess's is `$`.
-- At the terminal, `EXIT` ends govax, as `LOGOUT` would end a VMS session.
-- Commands that aren't VMS's: the machine commands of section 6.10, `PRINT`,
-  `TIME`, and `F$CONFIG`.
-- Commands VMS has that govax doesn't include `PRINT` (VMS's,
-  for print queues), `RUN/DETACH`, `SET FILE` (but for `/PROTECTION` and `/OWNER_UIC`), `SORT`, `SEARCH`, `ANALYZE/DISK`, and
-  the compilers.
+- At the terminal, `EXIT` ends govax, just as `LOGOUT` would end a VMS session. You can also use LOGOUT to exit govax.
+- There are govax commands and DCL features that aren't in VMS: the commands to examime or modify machine state of section 6.10,
+  the `TIME` command, and the `F$CONFIG` lexical function.
+- Commands VMS has that govax doesn't include `PRINT` (to send a job to a print queue),
+  `RUN/DETACH`, `SET FILE` (except for `/PROTECTION` and `/OWNER_UIC`), `SORT`, `SEARCH`, `ANALYZE/DISK`, and
+  the layered product compilers like C or Pascal.
 - `F$MODE()` is `INTERACTIVE` or, in a batch job, `BATCH`; there is no
   network mode.
-- govax's `@` reads a procedure from a host file as well as a volume.
+- govax's `@` can read a command procedure from a host file as well as a VMS volume.
 
 ---
 
@@ -3770,17 +3770,18 @@ MACRO source[/UPDATE[=(file,...)]][{,|+}...][/HOST] [/OBJECT[=file] | /NOOBJECT]
 Sources separated by commas are each assembled by themselves, to an object and
 listing of their own; an error in one doesn't stop the next, and the command ends
 with the last failure's status. Sources joined by `+` are concatenated into one
-input, for a single object and listing named for the first file; as in VMS's
+input, for a single object and listing named for the first file. Just like VMS's
 MACRO, the listing numbers each file's lines from 1 and heads a page with the
-file it starts in, the debugger's records name each file, and a file after an
-`.END` isn't read. Qualifiers after the verb apply to every source.
+file it starts in. Debugger object records name each file. A file after an
+`.END` isn't read, the `.END` terminates the assembly. Qualifiers after the MACRO verb
+apply to every source.
 
 | Qualifier | Meaning |
 | --- | --- |
-| `/OBJECT[=file]` | Write the object module (the default). It's named after the source, with type `.OBJ`, in the default directory ([Where a utility's output goes](#where-a-utilitys-output-goes)). |
+| `/OBJECT[=file]` | Write the object module (the default). It's named after the source, with type `.OBJ` |
 | `/NOOBJECT` | Check the source without writing an object. |
 | `/LIST[=file]` | Write a listing (`.LIS`): the source with the generated code, the symbol table, the psect synopsis, and statistics. |
-| `/SHOW=(...)`, `/NOSHOW=(...)` | Listing options: `BINARY`, `CALLS`, `CONDITIONALS`, `DEFINITIONS`, `EXPANSIONS`. By default all but `BINARY` and `EXPANSIONS` are on. `/SHOW=EXPANSIONS` lists every line macros generate. |
+| `/SHOW=(...)`, `/NOSHOW=(...)` | Listing options: `BINARY`, `CALLS`, `CONDITIONALS`, `DEFINITIONS`, `EXPANSIONS`. |
 | `/CROSS_REFERENCE[=(...)]` | End the listing with a cross reference of `SYMBOLS`, `MACROS`, `OPCODES`, `DIRECTIVES`, `REGISTERS`, or `ALL` (default: symbols and macros). |
 | `/DEBUG[=(...)]`, `/NODEBUG` | What the object carries for the debugger: `TRACEBACK` (the default), `SYMBOLS`, `ALL` (what `/DEBUG` alone means), or `NONE`. Use `/DEBUG` for source-line debugging. |
 | `/ENABLE=(...)`, `/DISABLE=(...)` | Assembler functions, as `.ENABLE`/`.DISABLE`: `ABSOLUTE`, `DEBUG`, `GLOBAL`, `SUPPRESSION`, `TRACEBACK`, `TRUNCATION`, `VECTOR`. |
@@ -3903,7 +3904,7 @@ example uses it:
 
 This program prints a table of factorials. It shows a loop with local
 labels, a recursive procedure that takes an argument, and the `$FAO_S`
-system service macro, which formats text as `printf` does.
+system service macro, which formats text similar to how `printf` does.
 
 ```asm
         .TITLE  FACT    Print a table of factorials

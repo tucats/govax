@@ -4244,7 +4244,7 @@ contains
 end program tour
 ```
 
-### One house, two front doors
+### TYPE and STRUCTURE Congruence
 
 The parser reads `TYPE POINT ... END TYPE` into an `ast.TypeDefStmt`, and sema
 (`sema/derived.go`) turns it into the same `Structure` a STRUCTURE declaration becomes, with
@@ -4853,7 +4853,7 @@ at any depth; `clearRecords` loops over an array of them), and the memory ALLOCA
 type with pointers in it, by FTNRTL's clear flag below. The price is a few CLRLs per entry; the
 gain is that `ASSOCIATED` means something from the first statement.
 
-### One name, two meanings
+### Disambiguating Name Meanings
 
 `P = 5` changes P's target; `P => T` changes P. The parser can't tell which a mention means
 (it reads `P` either way), so sema decides by where the mention stands, as it decides whether
@@ -5910,7 +5910,7 @@ end program tour
 It prints `5.0 6.0 10.0 10.0 15.0 14.0 60.0 PEAR 10.00`, and then the last PRINT uses a pointer
 that points nowhere, a bug left in on purpose.
 
-### One walk, two standards
+### Syntax Tree Walks
 
 `/STANDARD` (section 7) is one walk over the syntax tree, `sema/standard.go`, with tables of what
 FORTRAN-77 has: each statement kind, each declaration form, each intrinsic, each specifier, each
@@ -7199,7 +7199,7 @@ phase's method showed, which applies to any compiler built against a system you 
 
 ### Two oracles, and telling them apart
 
-The phase's probe round ran VMS's own FORTRAN library, FORRTL.EXE, two ways: on a real VAX
+The phase's probe round ran VMS's own FORTRAN library (FORRTL.EXE) two ways: on a real VAX
 (VMS 7.1 on simh), and on govax, as a black box over govax's RMS (section 14's rule: its behavior
 studied, its code neither copied nor disassembled). The difference between the two runs is
 the useful part. Whatever FORRTL decides by itself, the associated variable's next value or which
