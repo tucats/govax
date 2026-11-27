@@ -108,6 +108,14 @@
                                      ~/ is your home directory.
                                      Default ~/.govax/sysuaf.json.
 
+       vax.default.user              The default username to use to 
+                                     "log in" to govax. If not specified,
+                                     SYSTEM is the default. If the name
+                                     does not exist in the authorization
+                                     file, govax ends with an error.
+                                     Can also be set by the environment
+                                     variable GOVAX_DEFAULT_USER.
+
    The queue database
 
        govax's batch queues and the jobs in them are kept in a host file

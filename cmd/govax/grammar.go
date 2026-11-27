@@ -236,6 +236,9 @@ var grammar = []cli.Option{
 		OptionType:           cli.StringType,
 		Action: func(c *cli.Context) error {
 			loginUser, _ = c.String("user")
+			if loginUser == "" {
+				loginUser = settings.Get("vax.default.user")
+			}
 
 			return nil
 		},

@@ -25,6 +25,22 @@ func loginAccount() string {
 		return name
 	}
 
+	// No --user saved, so let's check to see if there was an environment
+	// variable set for the default user. If so, use that.
+	defaultUser := strings.ToUpper(strings.TrimSpace(os.Getenv("GOVAX_DEFAULT_USER")))
+	if defaultUser != "" {
+		return defaultUser
+	}
+
+	// No --user saved, and no environment variable set, so let's check to see if there
+	// is a configuration setting for the default user. If so, use that.
+	defaultUser = strings.ToUpper(strings.TrimSpace(settings.Get("vax.default.user")))
+	if defaultUser != "" {
+		return defaultUser
+	}
+
+	// No --user saved, no environment variable set, and no configuration setting, so
+	// let's just use the default username of the SYSTEM authorization record..
 	return uaf.SystemRecord().Username
 }
 

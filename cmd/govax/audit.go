@@ -58,8 +58,10 @@ var configKeys = func() []settings.Key {
 		{Name: "vax.default.system.device"},
 		{Name: "vax.default.system.type"},
 
-		// The authorization file (docs/planning/PHASE-95 - authentication.md).
+		// The authorization file (docs/planning/PHASE-95 - authentication.md)
+		// and the default user. If not specified, the default user is SYSTEM.
 		{Name: "vax.authorization.file"},
+		{Name: "vax.default.user"},
 
 		// The queue database (docs/planning/PHASE-98 - batch queues.md).
 		{Name: "vax.queue.file"},
