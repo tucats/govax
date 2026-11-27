@@ -1,14 +1,14 @@
 # govax User's Manual
 
-govax is a VAX/VMS environment that runs on your own computer. It runs
+govax is a VAX/VMS environment that runs on your own computer. It executes
 VAX machine code, provides the VMS system services and run-time library
 that VAX programs call, and gives you a DCL command line with the tools
-to build programs: a MACRO-32 assembler, a linker, a librarian, and a
-debugger modeled on the VMS debugger.
+to build programs: a Fotran compiler, a MACRO-32 assembler, a linker, a 
+librarian, and a debugger modeled on the VMS debugger.
 
 This manual is for people who know VMS as users (DCL, file
 specifications, logical names, `RUN`, `MACRO`, `LINK`) and want to run
-existing VAX programs, or write new ones, without a VAX. It doesn't
+existing VAX programs -- or write new ones -- without a VAX. It doesn't
 assume you know VAX system internals; the last part of the manual
 explains as much of them as you need to understand what govax is doing.
 
@@ -40,10 +40,10 @@ times, node names, and version numbers will differ on your system.
 
 ### What it is
 
-govax emulates a VAX processor and, around it, enough of VMS for VAX
-programs to run as they would under VMS:
+govax emulates a VAX processor and, around it, enough of VMS for most
+VAX programs to run as they would under VMS:
 
-- **The VAX instruction set, complete.** Every VAX instruction is
+- **The complete VAX instruction set.** Every VAX instruction is
   implemented, including the F, D, G, and H floating-point formats (with
   VAX rounding, not IEEE), packed decimal, the string and character
   instructions, the queue instructions, and the octaword instructions.
@@ -54,20 +54,25 @@ programs to run as they would under VMS:
   processes (`$CREPRC`, `$HIBER`, `$WAKE`), mailboxes, global sections,
   the lock manager (`$ENQ`, `$DEQ`), memory (`$EXPREG`, `$CRETVA`,
   `$CRMPSC`), and information (`$GETJPI`, `$GETSYI`, `$GETDVI`). Appendix
-  A lists them.
-- **RMS**, on real Files-11 (ODS-2) disk volumes: `$OPEN`, `$CREATE`,
+  A lists them in more detail.
+- **RMS**, on Files-11 (ODS-2) disk volumes: `$OPEN`, `$CREATE`,
   `$CONNECT`, `$GET`, `$PUT`, `$UPDATE`, `$FIND`, `$DELETE`, `$PARSE`,
-  `$SEARCH`, and the rest, with FABs, RABs, NAM blocks, and XABs, file
-  sharing between processes, and record locks, on sequential, relative, and
-  indexed files laid out as VMS lays them out.
-- **The run-time library.** About 170 `LIB$` routines (strings,
+  `$SEARCH`, and the rest. RMS support includes FABs, RABs, NAM blocks,and XABs.
+  The RMS support allows file
+  sharing between processes with record locks. File formstts supported include
+  sequential, relative, and indexed files, byte-for-byte compatible with how
+  VMS 7.1 lays them out on a disk.
+- **The run-time library.** User programs can call most `LIB$` routines (strings,
   descriptors, conversions, dates and times, memory zones, condition
   handling, file searches, the CLI routines, `LIB$SPAWN`), and the whole
-  mathematics library, `MTH$` and its `OTS$` powers, written in Go
-  and reached from VAX code exactly as the real LIBRTL is reached.
-- **Processes.** Several VMS processes run at once, scheduled by VMS's
-  priority rules: subprocesses, detached processes, mailboxes between
-  them, shared files, common event flags.
+  mathematics library, `MTH$` and its `OTS$` powers. These run-time library
+  functions are written in Go in the `govax` emulator, but are called from
+  VAX code exactly as the real LIBRTL is reached via `G^` external library
+  entrypoints.
+- **Processes.** Several VMS processes can run at once, scheduled by VMS's
+  priority rules for subprocesses and detached processes. Synchronization
+  features between processes are fully supported including mailboxes, shareed
+  image sections and common event flags.
 - **Optional VMS paging.** With paging turned on, govax runs VMS's
   memory management: working sets, page faults, the free and modified
   page lists, a page file, and images mapped from their files.
@@ -76,12 +81,15 @@ programs to run as they would under VMS:
   `ON`, file I/O with `OPEN`/`READ`/`WRITE`, `SPAWN`, and the usual file
   commands (`DIRECTORY`, `COPY`, `TYPE`, `DELETE`, `RENAME`, ...).
 - **BACKUP save sets.** `BACKUP` lists, restores, compares, and writes
-  VMS save sets, on a volume or on the host. Save sets made on a VAX
-  restore in govax with every file attribute, and VMS restores govax's.
-- **Program development tools.** `MACRO` assembles MACRO-32 source into
-  VMS object modules. `LINK` links them into VMS executable and
-  shareable images. `LIBRARY` makes and maintains object, macro, and
-  shareable image libraries. `ANALYZE/OBJECT` and `ANALYZE/IMAGE`
+  VMS save sets, on a volume or on the host. Save sets
+  can be used to move whole directoires (maintaining every file attribute)
+  between govax and a real VMS system, and is a common way for freeware
+  VMS software to be distributed.
+- **Program development tools.** `FORTRAN` compiles VAX Fortran V with
+  Fortran 90 extensions into macro assembler code. `MACRO` assembles 
+  MACRO-32 source into VMS object modules. `LINK` links them into VMS 
+  executable and shareable images. `LIBRARY` makes and maintains object, 
+  macro, and shareable image libraries. `ANALYZE/OBJECT` and `ANALYZE/IMAGE`
   describe object and image files. The debugger debugs programs at the
   source line and instruction level.
 
@@ -94,13 +102,17 @@ system's behavior (message texts, statuses, DCL's rules, the layout of
 against VMS 7.1 and 7.3 running on a VAX emulator, and govax's test suite
 replays those VMS runs to keep it that way.
 
+Only the `FORTRAN` compiler is unique to govax, but it's output of MACRO-32
+assembler files have been vetted on a real VAX and the output of the programs
+match the VMS system byte-for-byte.
+
 ### What it isn't
 
 - **It isn't a hardware emulator that boots VMS.** govax doesn't emulate
   disk controllers, terminal multiplexers, or a console boot ROM, and it
   can't boot a VMS distribution. If you want to run the real VMS
   operating system, use [SIMH](https://simh.trailing-edge.com), which
-  does that very well. govax is VMS-compatible from the program's point
+  does that very well. govax is VMS-compatible from the user and program's point
   of view: its "operating system" is a small microkernel plus Go code
   that behaves as VMS's services do.
 - **It doesn't include VMS's compilers or utilities.** There is no C,
@@ -128,8 +140,8 @@ replays those VMS runs to keep it that way.
 
 ### Who it's for
 
-- You have VAX programs (MACRO-32 sources, or images and objects from a
-  VAX) and want to run, study, or debug them.
+- You have VAX programs (FORTRAN or MACRO-32 sources, or images and 
+  objects from a VAX) and want to run, study, or debug them.
 - You want to learn or teach VAX assembly language and VMS programming
   with a fast edit-assemble-run cycle on a modern machine.
 - You're curious how VMS works inside: govax lets you watch page faults,
@@ -141,12 +153,11 @@ replays those VMS runs to keep it that way.
 
 ### Building govax
 
-govax is written in Go. With Go installed (1.26 or later), from a clone
-of the repository:
+govax is written in Go. With Go installed (1.26 or later), you can build directly
+from a clone of the repository:
 
 ```sh
-go build ./cmd/govax          # makes ./govax
-go install ./cmd/govax        # or installs govax in your Go bin directory
+tools/build      # makes ./govax with version number injected into build
 ```
 
 govax needs no other files: the files it reads at startup (its command
@@ -163,7 +174,7 @@ time, govax makes its system volume:
 
 ```text
 $ govax
-govax 1.0-745
+govax 1.1-1075
 %MOUNT-I-CREATED, container /Users/me/.govax/govax-system.dsk created as an RD54 volume labeled GOVAXSYS
 %MOUNT-I-MOUNTED, GOVAXSYS mounted on _DUA0:
 %SYSTEM-S-INIT, Kernel initialized
@@ -175,7 +186,7 @@ After that, it mounts the one it made:
 
 ```text
 $ govax
-govax 1.0-745
+govax 1.1-1075
 %MOUNT-I-MOUNTED, GOVAXSYS mounted on _DUA0:
 %SYSTEM-S-INIT, Kernel initialized
 
@@ -184,9 +195,10 @@ VAX>
 
 Before the prompt appears, govax runs its startup procedure,
 `SYS$MANAGER:STARTUP.COM` on the system volume (see [What happens at
-startup](#what-happens-at-startup)): it configures 8 MB of memory, builds
+startup](#what-happens-at-startup)): it configures 8 MB of VAX memory, builds
 the page tables, loads and starts the microkernel, and defines the
-terminal and null devices. `%SYSTEM-S-INIT` says that has been done.
+terminal and null devices. `%SYSTEM-S-INIT` reports that initialization
+is complete.
 
 At the `VAX>` prompt you type DCL commands, as at VMS's `$` prompt. Some
 things to try:
@@ -207,11 +219,12 @@ VAX> HELP
 `HELP` lists every command and topic; `HELP DIRECTORY`, `HELP LINK`,
 `HELP LEXICAL`, and so on describe each one in detail. The help text and
 this manual cover the same ground; the help text is the place to look up
-a qualifier quickly.
+a qualifier quickly while this manual goes into more detail with more
+examples.
 
 To leave govax, type `EXIT` (or `LOGOUT`) at the `VAX>`
-prompt, or press **Ctrl/Y**. `EXIT` ends it silently; `LOGOUT` says so,
-as a VMS session does, and `LOGOUT/FULL` adds the accounting
+prompt, or press **Ctrl/Y**. `EXIT` exits govax silently; `LOGOUT` reports
+session logout just like a VMS session does, and `LOGOUT/FULL` adds the accounting
 information:
 
 ```text
@@ -228,14 +241,14 @@ VAX> LOGOUT/FULL
 The prompt has a line editor: the arrow keys move through the line and
 through earlier commands, which govax keeps between sessions in
 `~/.govax/history.txt`. The debugger's `DBG>` and the assembler's `ASM>`
-prompts recall their own commands, kept in `debug_history.txt` and
-`asm_history.txt` beside it, so the console's history holds only
-console commands.
+prompts recall their own commands, which kept in `debug_history.txt` and
+`asm_history.txt` in the `~/.govax/` directory.
 
 ### Hello, world
 
 Here is the classic first program, in MACRO-32. Put it in a file called
-`hello.mar` in your current directory:
+`hello.mar` in your current directory on your host computer (macOS, Linux,
+or Windows):
 
 ```asm
         .TITLE  HELLO   Hello, world
@@ -265,17 +278,20 @@ Hello, world!
 or at the `VAX>` prompt:
 
 ```text
+$ govax
 VAX> MACRO "./hello.mar"
 VAX> LINK "./hello"
 VAX> RUN "./hello.exe"
 Hello, world!
 ```
 
-Notice the `./` in front of each name. govax is a VMS system, and a bare
-name like `hello.mar` is a Files-11 name: it means a file in your
-default directory on a VAX disk. With no work volume configured (see
-the next section), that's `SYS$SYSROOT:[SYSMGR]`, SYSTEM's home
-directory on the system volume, where `hello.mar` isn't:
+Notice the `./` in front of each name. govax emulates a VMS system,
+and a bare name like `hello.mar` is treated as a Files-11 name: it
+means a file in your default directory on a VAX disk. With no work
+volume configured (see the next section), the default is `SYS$SYSROOT:[SYSMGR]`, 
+SYSTEM's home directory on the system volume. However, in this example
+`hello.mar` isn't on the VMS disk. If you typed it as `hello.mar`, you'd
+get errors like:
 
 ```text
 $ govax macro hello.mar
@@ -283,8 +299,9 @@ govax: SYSTEM-W-NOSUCHFILE, File hello.mar not found: ...
 ```
 
 A name with a `/` in it is always a host path, so `./hello.mar` means
-the file in the directory you started govax in. MACRO's object, LINK's
-image, and so on, made from a host file, are written to that directory
+the file in the directory you started govax in. When referencing a file
+in the host directory, MACRO's object, LINK's
+image, and so on are written to that same host directory
 too.
 
 Notice also the quotes at the `VAX>` prompt. DCL makes everything you
@@ -297,7 +314,7 @@ means a host file or a file on a VAX disk.
 ### Working on a VAX disk
 
 You can keep your work in host files, as above, but VAX programs that
-use RMS (`$OPEN`, `$GET`, `$PUT`, ...) read and write files on Files-11
+use RMS (`$OPEN`, `$GET`, `$PUT`, ...) only read and write files on Files-11
 disk volumes, and VMS-style file names, versions, and directories only
 exist there. govax keeps a Files-11 volume in a single host file, called
 a *container*. The easiest way to get one is to let govax make it for
@@ -307,13 +324,13 @@ you each time it starts:
 govax config set vax.default.volume.file="~/vax/work.dsk"
 ```
 
-The next time govax starts, it creates the container (the first time
-only), mounts it as `DUA1:`, beside the system volume on `DUA0:`, and
+The next time govax starts, it creates the container if it doesn't already
+exist, mounts it as `DUA1:` beside the system volume on `DUA0:`, and
 sets your default directory to `DUA1:[WORK]`:
 
 ```text
 $ govax
-govax 1.0-745
+govax 1.1-1075
 %MOUNT-I-MOUNTED, GOVAXSYS mounted on _DUA0:
 %MOUNT-I-CREATED, container /Users/me/vax/work.dsk created as an RD54 volume labeled WORK
 %MOUNT-I-MOUNTED, WORK mounted on _DUA1:
@@ -337,17 +354,19 @@ Total of 3 files.
 
 Now names work as they do on VMS: `HELLO` means `DUA1:[WORK]HELLO.MAR`
 to `MACRO` and `DUA1:[WORK]HELLO.EXE` to `RUN`, and each new file is a
-new version. `COPY ... /HOST` moves files between your host and the
-volume in either direction. The volume is an ordinary ODS-2 disk image;
-SIMH and other VAX emulators can mount it too.
+new version. The `COPY ... /HOST` command moves files between your host and the
+volume in either direction. The volume is an ordinary ODS-2 disk image.
+This means command line tools that read and write ODS-2 images can also
+access your files on a govax container. SIMH and other VAX emulators can mount
+it as well.
 
 ### What happens at startup
 
 Each time govax starts, it:
 
-1. Mounts the system volume on `DUA0:`, making it the first time ([The
+1. Mounts the system volume on `DUA0:`, creating it the first time ([The
    system volume](#the-system-volume)).
-2. Mounts the containers named by `--mount` and `--mount-write` options.
+2. Mounts the containers named by `--mount` and `--mount-write` command line options.
 3. Mounts the default volume, if `vax.default.volume.file` is set.
 4. Runs `SYS$MANAGER:STARTUP.COM` from the system volume, govax's
    equivalent of a system startup and login procedure. It is a DCL
@@ -356,37 +375,40 @@ Each time govax starts, it:
    - sets the size of physical memory (`INITIALIZE/VAX`),
    - builds the page tables for the P0, P1, and S0 address regions and
      the access modes' stacks (`INITIALIZE/MEMORY`),
-   - loads the console ROM, `SYS$SYSTEM:DEFAULT.ROM`, and the NVRAM
-     (`LOAD/ROM/NOERROR`),
    - assembles the microkernel, `SYS$SOURCES:KERNEL.ASM`, into memory
-     (`ASM`) and runs its initialization under the debugger,
+     (`ASM`) and runs its initialization (under control of the debugger
+     since govax can't run .EXE files until it exists),
    - defines the terminal `TTA0:` and the null device `NLA0:`,
    - and last runs `SYS$MANAGER:SYSTARTUP_VMS.COM`, the place for your
      own startup commands.
 5. Installs the page file, if paging is on.
 6. Runs your own startup procedure, if `vax.startup.procedure` names one.
    Like STARTUP.COM, it runs as SYSTEM, with every privilege.
-7. Logs process 1 in as its account: SYSTEM, or the account `--user`
-   names, whose UIC, privileges, and quotas it has from here on. An
-   account with a password must give it first. The account's home
+7. Logs process 1 in as its account: SYSTEM, or the account the command
+   line option `--user`
+   names, whose UIC, privileges, and quotas it uses from here on. An
+   account with a password prompts the user for that password before
+   creating the process. The account's home
    directory becomes `SYS$LOGIN` and the default directory, and at a
-   terminal govax says when the account last logged in.
+   terminal govax reports when the account last logged in.
 8. In a session (not for a one-shot command), runs the login procedures:
    `SYS$SYLOGIN`, then the account's own, `SYS$LOGIN:LOGIN.COM` unless
    the account names another ([Accounts and logging
    in](#accounts-and-logging-in)).
-9. Runs the command given on govax's command line and exits, or else
-   shows the `VAX>` prompt.
+9. Runs the command given on govax's command line and exits (the one-shot
+   command form), or else
+   shows the `VAX>` prompt to start a session.
 
 The memory sizes STARTUP.COM uses can be changed with configuration
 settings (see [Memory](#memory)), so you rarely need to change
 STARTUP.COM itself. Commands of your own go in SYSTARTUP_VMS.COM, or in
-the procedure `vax.startup.procedure` names. With no system volume
-(`--system-file none`), govax runs its built-in copy of STARTUP.COM,
-which uses its built-in kernel and ROM and defines no system logical
+the procedure the configuration option `vax.startup.procedure` names.
+
+You can run govax in a stripped-down mode for debugging startup if needed.
+With no system volume (`--system-file none`), govax runs its built-in
+copy of STARTUP.COM, which uses its built-in kernel and defines no system logical
 names; a `startup.com` in the current directory or a `--path` directory
-is run in its place then. (Older versions of govax ran a procedure
-called `vax.init`; that name is no longer read.)
+is run in its place then.
 
 ---
 
@@ -396,8 +418,8 @@ called `vax.init`; that name is no longer read.)
 
 ```text
 govax [global-options]                          interactive session
-govax [global-options] command [args...]        one DCL command, then exit
-govax [global-options] subcommand [options] [args...]
+govax [global-options] vms-command [args...]        one DCL command, then exit
+govax [global-options] govax-command [options] [args...]
 ```
 
 With no command, govax starts an interactive session. Anything else on
@@ -408,7 +430,7 @@ they too find the system volume's libraries and FTNRTL.
 
 ```text
 $ govax show system
-GOVAX 1.0-280  on node mymac  20-OCT-2026 10:10:37.70  Uptime  0 00:00:00
+GOVAX 1.1-1075  on node mymac  20-OCT-2026 10:10:37.70  Uptime  0 00:00:00
   Pid    Process Name    State  Pri      I/O       CPU       Page flts  Pages
 00000301 SYSTEM          CUR      4        0   0 00:00:00.01         6      6
 $ govax console 'write sys$output f$getsyi("HW_NAME")'
@@ -442,7 +464,7 @@ you, so their case is kept.
 | `govax version` | | Show govax's version. |
 
 Each subcommand's options mirror the DCL qualifiers; `govax SUBCOMMAND
---help` lists them:
+--help` is used to list them:
 
 ```text
 govax run [--debug | --no-debug] IMAGE [text...]
