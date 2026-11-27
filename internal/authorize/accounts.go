@@ -110,6 +110,7 @@ func (u *Utility) add(r *dcl.Result) error {
 	u.change(func(f *uaf.File, say *sayings) error {
 		if _, exists := f.Find(name); exists {
 			say.message("UAEERR", "")
+
 			u.status = uafStatus("UAEERR")
 
 			return errNoChange
@@ -127,6 +128,7 @@ func (u *Utility) add(r *dcl.Result) error {
 		f.Accounts = append(f.Accounts, rec)
 
 		say.message("ADDMSG", "")
+
 		u.changedAccounts = true
 
 		if e.cli {
@@ -166,8 +168,9 @@ func (u *Utility) addUICIdentifier(f *uaf.File, say *sayings, name string, uic u
 	}
 
 	f.Identifiers = append(f.Identifiers, uaf.Identifier{Name: name, Value: value})
-	say.message("RDBADDMSGU", "", name, identifierValue(value))
 	u.changedRights = true
+
+	say.message("RDBADDMSGU", "", name, identifierValue(value))
 }
 
 // addGroupIdentifier adds account as the identifier of uic's group,
@@ -188,6 +191,7 @@ func (u *Utility) addGroupIdentifier(f *uaf.File, say *sayings, account string, 
 
 	f.Identifiers = append(f.Identifiers, uaf.Identifier{Name: name, Value: value})
 	say.message("RDBADDMSGU", "", name, identifierValue(value))
+
 	u.changedRights = true
 }
 
@@ -218,6 +222,7 @@ func (u *Utility) copyAccount(r *dcl.Result) error {
 		old, ok := f.Find(oldName)
 		if !ok {
 			say.message("BADUSR", oldName)
+
 			u.status = stsInhibitMsg
 
 			return errNoChange
@@ -225,6 +230,7 @@ func (u *Utility) copyAccount(r *dcl.Result) error {
 
 		if _, exists := f.Find(newName); exists {
 			say.message("UAEERR", "")
+			
 			u.status = uafStatus("UAEERR")
 
 			return errNoChange
@@ -238,6 +244,7 @@ func (u *Utility) copyAccount(r *dcl.Result) error {
 		f.Accounts = append(f.Accounts, rec)
 
 		say.message("COPMSG", "")
+
 		u.changedAccounts = true
 
 		if !e.password {
@@ -291,6 +298,7 @@ func (u *Utility) modify(r *dcl.Result, pattern string) error {
 
 		if len(matched) == 0 {
 			say.message("BADSPC", "")
+
 			u.status = uafStatus("BADSPC")
 
 			return errNoChange
@@ -316,6 +324,7 @@ func (u *Utility) modify(r *dcl.Result, pattern string) error {
 		}
 
 		say.message("MDFYMSG", "")
+
 		u.changedAccounts = true
 
 		if e.cli {
@@ -346,8 +355,9 @@ func (u *Utility) moveUICIdentifier(f *uaf.File, say *sayings, name string, uic 
 
 	f.MoveHolder(uaf.UIC(id.Value), uic)
 	id.Value = uaf.IdentifierValue(uic)
-	say.message("RDBMDFYMSG", "", id.Name)
 	u.changedRights = true
+
+	say.message("RDBMDFYMSG", "", id.Name)
 }
 
 // remove is REMOVE username: the account, and the UIC identifier named
@@ -369,6 +379,7 @@ func (u *Utility) remove(r *dcl.Result) error {
 		}
 
 		say.message("REMMSG", "")
+
 		u.changedAccounts = true
 
 		id, ok := f.IdentifierNamed(name)
@@ -381,6 +392,7 @@ func (u *Utility) remove(r *dcl.Result) error {
 		f.DropHolder(uaf.UIC(gone.Value))
 
 		say.message("RDBREMMSGU", "", gone.Name, identifierValue(gone.Value))
+
 		u.changedRights = true
 
 		return nil
@@ -427,6 +439,7 @@ func (u *Utility) rename(r *dcl.Result) error {
 
 		say.message("RENMSG", "")
 		say.message("DEFPWD", "")
+
 		u.changedAccounts = true
 
 		id, ok := f.IdentifierWithValue(uaf.IdentifierValue(rec.UIC))
@@ -445,6 +458,7 @@ func (u *Utility) rename(r *dcl.Result) error {
 		id.Name = newName
 
 		say.message("RDBMDFYMSG", "", was)
+
 		u.changedRights = true
 
 		return nil

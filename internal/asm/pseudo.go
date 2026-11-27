@@ -907,6 +907,7 @@ func (a *Assembler) pseudoPacked(c *cursor) error {
 	}
 
 	start := c.pos
+	
 	for isDigit(c.peek()) {
 		c.next()
 	}

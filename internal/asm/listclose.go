@@ -459,7 +459,7 @@ func (a *Assembler) libraryStatistics(p *listPager) {
 	// No real listing yet shows one macro defined; govax writes it
 	// singular, as real MACRO's "1 page of virtual memory was used to
 	// define 1 macro." is.
-	noun := "macros"
+	noun := macrosString
 	if macros == 1 {
 		noun = "macro"
 	}

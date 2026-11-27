@@ -88,6 +88,7 @@ func TestOTS72TOracle(t *testing.T) {
 	}
 
 	got := ots72tCases(strings.Split(dispatch("RUN OTS72T"), "|"))
+	
 	if status := strings.TrimSpace(dispatch("SHOW SYMBOL $STATUS")); status != `$STATUS == "%X00000001"` {
 		t.Errorf("RUN OTS72T: %s, want SS$_NORMAL", status)
 	}

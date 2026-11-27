@@ -135,6 +135,7 @@ func (w *Writer) Add(attrs Attributes, flags RecordFlag, data []byte) error {
 	}
 
 	vbn := uint32(1)
+
 	for len(data) > 0 && w.err == nil {
 		blocks := w.room() / VBNSize
 		if blocks == 0 {

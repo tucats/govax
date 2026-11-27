@@ -126,7 +126,7 @@ func TestLibraryOpcode(t *testing.T) {
 	})
 
 	a := libAssembler(lib)
-	requireBytes(t, libBytes(t, a, "\t.PSECT\tCODE\n\tNOP\n\t.MCALL\tNOP\n\tNOP"), 0x01, 9)
+	requireBytes(t, libBytes(t, a, "\t.PSECT\tCODE\n\tNOP\n\t.MCALL\tNOP\n\tNOP"), 0x01, 9) //nolint:dupword
 }
 
 // TestMcall: .MCALL defines each macro from the libraries, replacing a

@@ -179,6 +179,7 @@ func runProbeCases(t *testing.T, cases []probeCase) {
 		}
 
 		got = slices.DeleteFunc(got, func(line string) bool { return line == systemIdentifier })
+
 		for name, lines := range listings {
 			listings[name] = slices.DeleteFunc(lines, func(line string) bool { return line == systemIdentifier })
 		}
@@ -191,9 +192,9 @@ func runProbeCases(t *testing.T, cases []probeCase) {
 
 		ran++
 
-		want := comparable(c.output)
-		if fmt.Sprint(comparable(got)) != fmt.Sprint(want) || status != c.status {
-			t.Errorf("case %s, %s: got %%X%08X, want %%X%08X\n%s", c.label, c.command, status, c.status, lineDiff(comparable(got), want))
+		want := comparableLines(c.output)
+		if fmt.Sprint(comparableLines(got)) != fmt.Sprint(want) || status != c.status {
+			t.Errorf("case %s, %s: got %%X%08X, want %%X%08X\n%s", c.label, c.command, status, c.status, lineDiff(comparableLines(got), want))
 		}
 
 		// A listing VMS's TYPE showed is held to the file this case wrote;
@@ -201,8 +202,8 @@ func runProbeCases(t *testing.T, cases []probeCase) {
 		if wrote, ok := listings[c.listingName]; ok {
 			listed++
 
-			if fmt.Sprint(comparable(wrote)) != fmt.Sprint(comparable(c.listing)) {
-				t.Errorf("case %s, %s's %s:\n%s", c.label, c.command, c.listingName, lineDiff(comparable(wrote), comparable(c.listing)))
+			if fmt.Sprint(comparableLines(wrote)) != fmt.Sprint(comparableLines(c.listing)) {
+				t.Errorf("case %s, %s's %s:\n%s", c.label, c.command, c.listingName, lineDiff(comparableLines(wrote), comparableLines(c.listing)))
 			}
 		} else if len(listings) > 0 {
 			t.Errorf("case %s wrote %v, VMS's TYPE showed %q", c.label, listings, c.listingName)
@@ -233,9 +234,9 @@ var unkeptLines = []struct {
 	{regexp.MustCompile(`^Pwdlifetime: .*$`), "Pwdlifetime: (not kept)"},
 }
 
-// comparable is lines with unkeptLines' changes, and without UAFO's full
+// comparableLines is lines with unkeptLines' changes, and without UAFO's full
 // report, which VMS's case 134 has (govax never added UAFO, case 123).
-func comparable(lines []string) []string {
+func comparableLines(lines []string) []string {
 	var out []string
 
 	for i := 0; i < len(lines); i++ {

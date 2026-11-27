@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
 )
 
 // TestPhase23Acceptance_fullOperatorSession is docs/planning/PHASE-23.md subtask

@@ -24,6 +24,7 @@ func TestConsolePagesPagingOn(t *testing.T) {
 	if testproc.Isolate(t) {
 		return
 	}
+	
 	withSettings(t, map[string]string{machine.PagingSetting: "true"})
 
 	c := newServiceConsole(t)

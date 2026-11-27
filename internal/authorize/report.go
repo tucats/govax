@@ -267,6 +267,7 @@ func privilegeLines(p uaf.Privileges) []string {
 		if n++; n == 8 {
 			lines = append(lines, strings.TrimRight(line.String(), " "))
 			line.Reset()
+
 			n = 0
 		}
 	}

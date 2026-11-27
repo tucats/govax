@@ -316,6 +316,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 	// S^#literal: either just decided above, or spelled out explicitly.
 	if constant == litShort || (ch == 'S' && c.peek() == '^') {
 		end := c.pos
+
 		if constant == litShort {
 			c.pos = valuePos
 		}
@@ -340,7 +341,9 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 				// tool read only hex digits here, whatever the radix.
 				endMark := a.xrefOperandMark()
 				v, err := a.exprNoForward(c)
+
 				endMark()
+				
 				if err != nil {
 					return err
 				}

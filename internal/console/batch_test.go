@@ -408,6 +408,7 @@ func TestBatchRunningJobsOracle(t *testing.T) {
 	if testproc.Isolate(t) {
 		return
 	}
+	
 	if testing.Short() {
 		t.Skip("runs batch jobs")
 	}
@@ -478,6 +479,7 @@ func TestBatchEndingsOracle(t *testing.T) {
 	if testproc.Isolate(t) {
 		return
 	}
+
 	if testing.Short() {
 		t.Skip("runs batch jobs")
 	}
@@ -623,7 +625,7 @@ func restartDifferences(steps []probeStep) map[string]string {
 // row with its number and the lines after it, to the blank line that ends
 // its paragraph (and that blank line).
 func dropEntries(out string, entries ...string) string {
-	var kept []string
+	kept := make([]string, 0)
 
 	dropping := false
 

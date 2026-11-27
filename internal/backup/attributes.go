@@ -150,6 +150,7 @@ func parseSummary(body []byte) (Summary, error) {
 
 	for _, a := range list {
 		v := a.Value
+
 		switch a.Type {
 		case AttrSaveSetName:
 			s.Name = string(v)
@@ -243,6 +244,7 @@ func parseAttributes(body []byte) (Attributes, error) {
 
 	for _, a := range list {
 		v := a.Value
+		
 		switch a.Type {
 		case AttrFileName:
 			f.Name = string(v)

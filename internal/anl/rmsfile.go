@@ -291,7 +291,7 @@ func (a *rmsAnalysis) fileHeader() {
 		w.linef("\tBackup Date:     %s", vmsDate(attr.Backup))
 	}
 
-	contiguity := "none"
+	contiguity := none
 
 	switch {
 	case attr.Contiguous():
@@ -319,7 +319,7 @@ func reliabilityText(attr rms.FileAttributes) string {
 	}
 
 	if len(names) == 0 {
-		return "none"
+		return none
 	}
 
 	return strings.Join(names, ", ")
@@ -684,7 +684,7 @@ func (a *rmsAnalysis) fdl(now time.Time) {
 	w.line("RECORD")
 	w.fdlLine("BLOCK_SPAN", yesNo(attr.RecordAttributes&ratNoSpan == 0))
 
-	control := "none"
+	control := none
 
 	switch {
 	case attr.RecordAttributes&ratFortran != 0:

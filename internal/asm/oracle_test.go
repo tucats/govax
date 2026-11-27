@@ -53,9 +53,9 @@ func TestOracleObjects(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			real, err := filepath.Glob(filepath.Join(oracleDir, "vax", toUpperASCII(name)+".OBJ;*"))
-			if err != nil || len(real) != 1 {
-				t.Fatalf("real MACRO's object for %s: %v, %v", name, real, err)
+			realFileName, err := filepath.Glob(filepath.Join(oracleDir, "vax", toUpperASCII(name)+".OBJ;*"))
+			if err != nil || len(realFileName) != 1 {
+				t.Fatalf("real MACRO's object for %s: %v, %v", name, realFileName, err)
 			}
 
 			a := macroAssembler()
@@ -65,7 +65,7 @@ func TestOracleObjects(t *testing.T) {
 				t.Fatalf("assemble: %v", err)
 			}
 
-			want := readObjectFile(t, real[0])
+			want := readObjectFile(t, realFileName[0])
 
 			// Real MACRO's $RENAME, called with no arguments, emits its
 			// CALLG and then reports an unrecognized statement
@@ -188,7 +188,7 @@ func codeStream(t *testing.T, m *obj.Module) string {
 	code := -1
 
 	for i, p := range psects {
-		if p.Name == "CODE" {
+		if p.Name == codeString {
 			code = i
 		}
 	}
@@ -217,6 +217,7 @@ func codeStream(t *testing.T, m *obj.Module) string {
 				if _, err := fmt.Sscanf(stack[len(stack)-1], "%d|", &current); err != nil {
 					t.Fatal(err)
 				}
+				
 				stack = stack[:len(stack)-1]
 			case op == "STO_IMM":
 				if current == code {
@@ -293,16 +294,17 @@ func TestOracleStoreProbesWithErrors(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			real, err := filepath.Glob(filepath.Join(oracleDir, "vax", toUpperASCII(name)+".OBJ;*"))
-			if err != nil || len(real) != 1 {
-				t.Fatalf("real MACRO's object: %v, %v", real, err)
+			realFileName, err := filepath.Glob(filepath.Join(oracleDir, "vax", toUpperASCII(name)+".OBJ;*"))
+			if err != nil || len(realFileName) != 1 {
+				t.Fatalf("real MACRO's object: %v, %v", realFileName, err)
 			}
 
-			want := strings.Replace(codeStream(t, readObjectFile(t, real[0])), "de 58 a0 30 ", "", 1)
+			want := strings.Replace(codeStream(t, readObjectFile(t, realFileName[0])), "de 58 a0 30 ", "", 1)
 
 			// Collapse each MOVAL of the block's address that a rejected
 			// line left, which the next line's MOVAL follows directly.
 			moval := regexp.MustCompile(`(de ef <STO_LD [^>]+> 50 )(de ef <STO_LD [^>]+> 50 )`)
+
 			for {
 				next := moval.ReplaceAllStringFunc(want, func(s string) string {
 					m := moval.FindStringSubmatch(s)
@@ -312,6 +314,7 @@ func TestOracleStoreProbesWithErrors(t *testing.T) {
 
 					return s
 				})
+				
 				if next == want {
 					break
 				}

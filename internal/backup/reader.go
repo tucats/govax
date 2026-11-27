@@ -203,6 +203,7 @@ func (s *SaveSet) repair(blocks [][]byte, opts Options) map[int]bool {
 	for _, i := range bad {
 		if !s.rebuild(blocks, i, group, opts) {
 			lost[i] = true
+
 			s.Lost = append(s.Lost, i+1)
 		}
 	}
@@ -251,6 +252,7 @@ func (s *SaveSet) rebuild(blocks [][]byte, i, group int, opts Options) bool {
 	}
 
 	rebuilt := make([]byte, s.BlockSize)
+
 	for j := start; j <= xor; j++ {
 		if j == i {
 			continue
@@ -270,6 +272,7 @@ func (s *SaveSet) rebuild(blocks [][]byte, i, group int, opts Options) bool {
 	// operating system, subsystem, and flags, and its checks.
 	le := binary.LittleEndian
 	p := ParseHeader(parity)
+
 	le.PutUint16(rebuilt[bhdSize:], HeaderSize)
 	le.PutUint16(rebuilt[bhdOpSys:], p.OpSys)
 	le.PutUint16(rebuilt[bhdSubsystem:], p.Subsystem)
@@ -285,6 +288,7 @@ func (s *SaveSet) rebuild(blocks [][]byte, i, group int, opts Options) bool {
 	le.PutUint16(rebuilt[bhdChecksum:], HeaderChecksum(rebuilt))
 
 	blocks[i] = rebuilt
+	
 	s.Recovered = append(s.Recovered, i+1)
 
 	return true

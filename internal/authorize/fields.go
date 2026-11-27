@@ -130,6 +130,7 @@ func (u *Utility) readEdit(r *dcl.Result) (e *edit, ok bool) {
 		}
 
 		field := f.field
+
 		e.changes = append(e.changes, func(rec *uaf.Record) { *field(rec) = text })
 
 		switch f.name {
@@ -158,6 +159,7 @@ func (u *Utility) readEdit(r *dcl.Result) (e *edit, ok bool) {
 		}
 
 		field := q.field
+
 		e.changes = append(e.changes, func(rec *uaf.Record) { *field(rec) = n })
 	}
 
@@ -172,6 +174,7 @@ func (u *Utility) readEdit(r *dcl.Result) (e *edit, ok bool) {
 		}
 
 		field := q.field
+
 		e.changes = append(e.changes, func(rec *uaf.Record) { *field(rec) = n })
 	}
 
@@ -200,7 +203,7 @@ func (u *Utility) readEdit(r *dcl.Result) (e *edit, ok bool) {
 // NOALL every privilege. An unknown name is CLI's IVKEYW.
 func (u *Utility) readKeywords(r *dcl.Result, e *edit) bool {
 	if r.Present("FLAGS") {
-		set, clear, ok := u.keywordBits(r.List("FLAGS"), func(name string) (uint64, bool) {
+		set, isClear, ok := u.keywordBits(r.List("FLAGS"), func(name string) (uint64, bool) {
 			bit, ok := uaf.FlagBit(name)
 			if !ok {
 				return 0, false
@@ -213,7 +216,7 @@ func (u *Utility) readKeywords(r *dcl.Result, e *edit) bool {
 		}
 
 		e.changes = append(e.changes, func(rec *uaf.Record) {
-			rec.Flags = uaf.Flags((uint64(rec.Flags) | set) &^ clear)
+			rec.Flags = uaf.Flags((uint64(rec.Flags) | set) &^ isClear)
 		})
 	}
 
@@ -228,14 +231,15 @@ func (u *Utility) readKeywords(r *dcl.Result, e *edit) bool {
 			continue
 		}
 
-		set, clear, ok := u.keywordBits(r.List(q.name), privilegeMask)
+		set, isClear, ok := u.keywordBits(r.List(q.name), privilegeMask)
 		if !ok {
 			return false
 		}
 
 		field := q.field
+
 		e.changes = append(e.changes, func(rec *uaf.Record) {
-			*field(rec) = uaf.Privileges((uint64(*field(rec)) | set) &^ clear)
+			*field(rec) = uaf.Privileges((uint64(*field(rec)) | set) &^ isClear)
 		})
 	}
 
@@ -261,19 +265,19 @@ func privilegeMask(name string) (uint64, bool) {
 // front, into the bits they set and clear, applied in order (a later
 // name undoing an earlier one). A name maskOf knows as it is (the
 // privilege NOACNT) is taken as it is.
-func (u *Utility) keywordBits(names []string, maskOf func(string) (uint64, bool)) (set, clear uint64, ok bool) {
+func (u *Utility) keywordBits(names []string, maskOf func(string) (uint64, bool)) (set, isClear uint64, ok bool) {
 	for _, name := range names {
 		word := strings.ToUpper(strings.TrimSpace(name))
 
 		if mask, ok := maskOf(word); ok {
-			set, clear = set|mask, clear&^mask
+			set, isClear = set|mask, isClear&^mask
 
 			continue
 		}
 
 		if bare, negated := strings.CutPrefix(word, "NO"); negated {
 			if mask, ok := maskOf(bare); ok {
-				set, clear = set&^mask, clear|mask
+				set, isClear = set&^mask, isClear|mask
 
 				continue
 			}
@@ -284,7 +288,7 @@ func (u *Utility) keywordBits(names []string, maskOf func(string) (uint64, bool)
 		return 0, 0, false
 	}
 
-	return set, clear, true
+	return set, isClear, true
 }
 
 // readPassword reads /PASSWORD and /NOPASSWORD. A password is kept as
@@ -320,6 +324,7 @@ func (u *Utility) readPassword(r *dcl.Result, e *edit) bool {
 	}
 
 	now := time.Now().UTC().Truncate(time.Second)
+	
 	e.changes = append(e.changes, func(rec *uaf.Record) { rec.Password, rec.PasswordChanged = hash, now })
 
 	return true

@@ -252,7 +252,8 @@ OVER:	PUSHAQ	LBL
 		first     bool
 	}
 
-	var got []row
+	got := make([]row, 0, len(a.lineRows()))
+
 	for _, r := range a.lineRows() {
 		got = append(got, row{r.line, r.loc, r.size, r.first})
 	}

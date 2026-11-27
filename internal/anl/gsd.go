@@ -114,6 +114,7 @@ func (a *objectAnalyzer) subrecord(show bool, k int, s obj.Subrecord) {
 
 func (a *objectAnalyzer) psect(p *obj.Psect) {
 	a.line(fmt.Sprintf("\t\t%-49s<-- psect %d", fmt.Sprintf("alignment: %d-byte boundary", 1<<p.Align), a.psects))
+	
 	a.psects++
 
 	a.keep(keepFlags, "\t\tattribute flags:")
@@ -130,7 +131,7 @@ func (a *objectAnalyzer) psect(p *obj.Psect) {
 func (a *objectAnalyzer) symbol(s *obj.Symbol) {
 	name, ok := dataTypeNames[s.DataType]
 	if !ok {
-		name = "unknown"
+		name = unknown
 	}
 
 	a.line(fmt.Sprintf("\t\tdata type: %s (%d)", name, s.DataType))
@@ -199,7 +200,7 @@ func (a *objectAnalyzer) identCheck(c *obj.IdentCheck) {
 	match := flags >> objConst("IDC$V_IDMATCH") & (1<<objConst("IDC$S_IDMATCH") - 1)
 	severity := flags >> objConst("IDC$V_ERRSEV") & (1<<objConst("IDC$S_ERRSEV") - 1)
 
-	matchName := "unknown"
+	matchName := unknown
 
 	switch match {
 	case objConst("IDC$C_LEQ"):

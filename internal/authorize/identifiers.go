@@ -104,7 +104,7 @@ func parseNumber(text string) (uint64, error) {
 
 // attributeEdit reads /ATTRIBUTES's names into the bits they set and
 // clear (NO in front clearing one); an unknown name is CLI's IVKEYW.
-func (u *Utility) attributeEdit(r *dcl.Result) (set, clear uaf.Attributes, ok bool) {
+func (u *Utility) attributeEdit(r *dcl.Result) (isSet, isClear uaf.Attributes, ok bool) {
 	if !r.Present("ATTRIBUTES") {
 		return 0, 0, true
 	}
@@ -293,7 +293,7 @@ func (u *Utility) modifyIdentifierCommand(r *dcl.Result) error {
 	hasValue := r.Present("VALUE")
 	valueText := r.String("VALUE")
 
-	set, clear, ok := u.attributeEdit(r)
+	isSet, isClear, ok := u.attributeEdit(r)
 	if !ok {
 		return nil
 	}
@@ -311,6 +311,7 @@ func (u *Utility) modifyIdentifierCommand(r *dcl.Result) error {
 				v, shown, ok := valueOf(valueText)
 				if !ok {
 					say.message("BADVALUE", shown)
+
 					u.status = stsInhibitMsg
 
 					return badValue
@@ -345,7 +346,7 @@ func (u *Utility) modifyIdentifierCommand(r *dcl.Result) error {
 				id.Name = newName
 			}
 
-			id.Attributes = (id.Attributes | set) &^ clear
+			id.Attributes = (id.Attributes | isSet) &^ isClear
 
 			return 0
 		})
@@ -386,6 +387,7 @@ func (u *Utility) modifyIdentifier(f *uaf.File, say *sayings, name string, edit 
 	}
 
 	say.message("RDBMDFYMSG", "", was)
+
 	u.changedRights = true
 
 	return nil
@@ -455,7 +457,9 @@ func (u *Utility) grant(r *dcl.Result) error {
 		}
 
 		id.Holders = append(id.Holders, uaf.Holder{UIC: uic, Attributes: set & id.Attributes})
+
 		say.message("GRANTMSG", "", name, holder)
+
 		u.changedRights = true
 
 		return nil
@@ -496,7 +500,9 @@ func (u *Utility) revoke(r *dcl.Result) error {
 		}
 
 		id.Holders = slices.Delete(id.Holders, i, i+1)
+
 		say.message("REVOKEMSG", "", name, holder)
+		
 		u.changedRights = true
 
 		return nil

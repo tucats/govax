@@ -69,6 +69,7 @@ func TestAnalyzeImage_hostFile(t *testing.T) {
 	if testproc.Isolate(t) {
 		return
 	}
+	
 	d, _, buf := newCommandDispatcher(t)
 	dir := t.TempDir()
 	exe := copyFixture(t, imageFixtureExe, dir)

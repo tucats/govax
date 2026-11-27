@@ -146,6 +146,7 @@ func serviceCodeStream(t *testing.T, m *obj.Module) ([]byte, []serviceReloc) {
 
 				if cur == codePsect {
 					at := off
+
 					if c.Op == picr {
 						code[off] = 0xEF
 						at++
@@ -524,8 +525,8 @@ func TestServiceMacroObjects(t *testing.T) {
 
 			calls := strings.Split(strings.TrimRight(string(callList), "\n"), "\n")
 
-			real := readObjectFile(t, filepath.Join(serviceDir, "vax", name+".obj"))
-			realBytes, realRelocs := serviceCodeStream(t, real)
+			realFileName := readObjectFile(t, filepath.Join(serviceDir, "vax", name+".obj"))
+			realBytes, realRelocs := serviceCodeStream(t, realFileName)
 			realText, realOK := callChunks(realBytes, realRelocs, len(calls), macroErrors(t, name))
 
 			// The probe without the calls real MACRO had an error for. A
@@ -582,7 +583,7 @@ func TestServiceMacroObjects(t *testing.T) {
 				t.Fatalf("assemble: %v", err)
 			}
 
-			ours := objectLike(t, a, real)
+			ours := objectLike(t, a, realFileName)
 			ourBytes, ourRelocs := serviceCodeStream(t, ours)
 			ourText, _ := callChunks(ourBytes, ourRelocs, len(calls), nil)
 

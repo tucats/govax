@@ -539,6 +539,7 @@ func (a *Assembler) finish() error {
 			}
 
 			failedStatement[f.stmt] = true
+			
 			failed = append(failed, err)
 		}
 	}

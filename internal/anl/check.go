@@ -125,7 +125,7 @@ var linkTypes = map[byte]string{
 func (a *objectAnalyzer) linkOption(l *obj.LNK) {
 	what := linkTypes[l.Type]
 	if what == "" {
-		what = "unknown"
+		what = unknown
 	}
 
 	a.line(fmt.Sprintf("\tlink option type: %s (%d)", what, l.Type))

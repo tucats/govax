@@ -157,6 +157,7 @@ func TestLoadVolumeFiles(t *testing.T) {
 // of a file beside it, and the ROM is the volume's.
 func TestBootFromEditedKernel(t *testing.T) {
 	t.Parallel()
+
 	c, buf, r := mountTestSystemVolume(t, dclcmd.SystemVolume{File: filepath.Join(t.TempDir(), "govax-system.dsk")})
 	if !r.Mounted || !r.Writable {
 		t.Fatalf("result = %+v", r)
@@ -215,6 +216,7 @@ func TestASMHostRefused(t *testing.T) {
 	if testproc.Isolate(t) {
 		return
 	}
+
 	c, d, buf := volumeFileConsole(t)
 
 	dir := t.TempDir()
@@ -244,6 +246,7 @@ func TestASMHostRefused(t *testing.T) {
 	}
 
 	c.ContainerSession.HostAccess = nil
+	
 	mustDispatch(t, d, `ASM "mine.asm"`)
 	machineSymbol(t, c, "MINE$LABEL")
 }

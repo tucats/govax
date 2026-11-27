@@ -96,6 +96,7 @@ func (a *Assembler) wideLiteral(c *cursor) (octa, bool) {
 
 		v.Mul(v, bigBase)
 		v.Add(v, big.NewInt(d))
+		
 		digits++
 
 		c.next()

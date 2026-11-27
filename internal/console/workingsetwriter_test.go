@@ -28,7 +28,9 @@ import (
 // passes them several times.
 const (
 	mpwHiLimit = 10
-	mpwLoLimit = 2
+
+	// Unused symbols, uncomment if we later need them.
+	// mpwLoLimit = 2 // Unused.
 )
 
 // mpwSource writes each of 80 pages of an array (checkpoint 1); maps

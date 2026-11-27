@@ -315,14 +315,14 @@ func (a *Assembler) listSourceLine(l *listLine) []string {
 	// A .PSECT or .RESTORE_PSECT line (to a relocatable psect) shows the
 	// psect's location where the binary field ends, over the location
 	// column.
-	case (l.op == ".PSECT" || l.op == ".RESTORE_PSECT") && l.endSect != nil && l.endSect.relocatable:
+	case (l.op == psectString || l.op == restorePSECT) && l.endSect != nil && l.endSect.relocatable:
 		return []string{fmt.Sprintf("%*s%08X%s", binaryWidth-3, "", l.endLoc, tail)}
 
 	// A direct assignment shows the value it assigned (.MDELETE how many
 	// macros it deleted, an .IF the value it tested, and a .PRINT its
 	// expression's), and a .BLKx the location it leaves, as a longword
 	// (with no mark, relocatable or not).
-	case (l.op == "=" || l.op == ".MDELETE" || l.op == ".IF" || l.op == ".PRINT") && l.hasValue:
+	case (l.op == "=" || l.op == mdeleteString || l.op == ifString || l.op == ".PRINT") && l.hasValue:
 		return []string{listColumns(fmt.Sprintf("%08X ", l.value), l.loc) + tail}
 
 	case strings.HasPrefix(l.op, ".BLK"):
@@ -374,7 +374,6 @@ func (l *listLine) tail() string {
 // carries their text, takes its place.
 func (a *Assembler) listNotedLine(l *listLine) []string {
 	var (
-		out    []string
 		fields = a.listFields(l)
 		value  = l.binaryValue()
 		next   int
@@ -383,6 +382,7 @@ func (a *Assembler) listNotedLine(l *listLine) []string {
 	// segment returns the fields stored before loc, from next on.
 	segment := func(loc uint32, last bool) []listBytes {
 		start := next
+
 		for next < len(fields) && (last || fields[next].offset < loc) {
 			next++
 		}
@@ -391,6 +391,7 @@ func (a *Assembler) listNotedLine(l *listLine) []string {
 	}
 
 	first := segment(l.notes[0].loc, false)
+	out := make([]string, 0)
 
 	if l.op != ".ERROR" && l.op != ".WARN" {
 		rows := layoutRows(first, l.instruction, false, l.binaryWidth())
@@ -435,7 +436,7 @@ func (a *Assembler) listNotedLine(l *listLine) []string {
 
 		if last && len(rows) == 0 {
 			switch {
-			case value != "" && (l.op == ".PSECT" || l.op == ".RESTORE_PSECT"):
+			case value != "" && (l.op == psectString || l.op == restorePSECT):
 				out = append(out, fmt.Sprintf("%*s%s%s", binaryWidth-3, "", value, strings.Repeat(" ", 7)))
 			case value != "":
 				out = append(out, listColumns(value+" ", n.loc)+strings.Repeat(" ", 7))
@@ -454,9 +455,9 @@ func (a *Assembler) listNotedLine(l *listLine) []string {
 // end (see listSourceLine).
 func (l *listLine) binaryValue() string {
 	switch {
-	case (l.op == ".PSECT" || l.op == ".RESTORE_PSECT") && l.endSect != nil && l.endSect.relocatable:
+	case (l.op == psectString || l.op == restorePSECT) && l.endSect != nil && l.endSect.relocatable:
 		return fmt.Sprintf("%08X", l.endLoc)
-	case (l.op == "=" || l.op == ".MDELETE" || l.op == ".IF" || l.op == ".PRINT") && l.hasValue:
+	case (l.op == "=" || l.op == mdeleteString || l.op == ifString || l.op == ".PRINT") && l.hasValue:
 		return fmt.Sprintf("%08X", l.value)
 	case strings.HasPrefix(l.op, ".BLK"):
 		return fmt.Sprintf("%08X", l.endLoc)
@@ -640,6 +641,7 @@ func binaryUnits(fields []listBytes, instruction bool) []binaryUnit {
 
 		for k := len(group) - 1; k >= 0; k-- {
 			piece := fieldText(group[k])
+			
 			if group[k].join {
 				text = strings.TrimSuffix(text, " ")
 			}

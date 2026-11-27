@@ -122,6 +122,7 @@ func (a *Assembler) Object(opts ObjectOptions) (*obj.Module, error) {
 			e.lines = obj.NewLineTable(obj.DSTSourceFileRecord(src))
 		}
 	}
+
 	for _, r := range a.relocs {
 		e.relocs[relocKey{r.sect, r.offset, r.sect.storedBy(r.offset, r.stmt)}] = r
 	}
@@ -191,7 +192,8 @@ func (a *Assembler) traceback(b *obj.Builder) error {
 
 	// With debugger records, each psect whose code begins with no
 	// .ENTRY has a routine with no name, which sorts first (debug.go).
-	var routines []obj.DSTRecord
+	routines := make([]obj.DSTRecord, 0, len(a.noCallRoutines()))
+
 	for _, s := range a.noCallRoutines() {
 		routines = append(routines, obj.DSTNoCallRoutineRecord("", uint16(s.index), 0))
 	}
@@ -606,7 +608,7 @@ func (e *emitter) data(s *section, offset, size uint32) error {
 		}
 
 		e.b.Emit(obj.Command{Op: store})
-		
+
 		p += uint32(fixupSize(r.kind))
 	}
 

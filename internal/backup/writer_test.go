@@ -66,6 +66,7 @@ func TestRewriteVAXSaveSets(t *testing.T) {
 		t.Run(set.name, func(t *testing.T) {
 			want := load(t, set.name+".bck")
 			s := readSet(t, set.name, Options{CheckCRC: true})
+
 			got := rewrite(t, s, ParseHeader(want).HasCRC(), set.breaks, nil)
 			if len(got) != len(want) {
 				t.Fatalf("%d bytes, want %d", len(got), len(want))
@@ -92,7 +93,7 @@ func TestWriterSaved(t *testing.T) {
 
 	rewrite(t, s, false, nil, func(name string) { order = append(order, name) })
 
-	var names []string
+	names := make([]string, 0, len(s.Files))
 	for _, f := range s.Files {
 		names = append(names, f.Name)
 	}

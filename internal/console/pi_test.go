@@ -73,6 +73,7 @@ func TestPi_count(t *testing.T) {
 // 100000, and returns SS$_BADPARAM with its message inhibited.
 func TestPi_badCount(t *testing.T) {
 	t.Parallel()
+	
 	const inhibit = 0x10000000
 
 	for _, command := range []string{"0", "abc", "12x", "1 2", "100001"} {

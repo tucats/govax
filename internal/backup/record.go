@@ -11,11 +11,13 @@ const RecordHeaderSize = 16
 
 // The record header's fields, by byte offset.
 const (
-	brhSize       = 0  // word: the body's size, not counting this header
-	brhType       = 2  // word: the record's type
-	brhFlags      = 4  // long: RecordFlag bits
-	brhAddress    = 8  // long: a data record's first VBN
-	brhBlockFlags = 12 // word: a per-block error mask
+	brhSize    = 0 // word: the body's size, not counting this header
+	brhType    = 2 // word: the record's type
+	brhFlags   = 4 // long: RecordFlag bits
+	brhAddress = 8 // long: a data record's first VBN
+
+	// unused items follow, uncomment if we determine they are needed
+	// brhBlockFlags = 12 // word: a per-block error mask.
 )
 
 // RecordType is a record's type. A save of files uses Null, Summary,

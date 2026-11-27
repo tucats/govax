@@ -437,25 +437,25 @@ func withoutMacroInternals(source string) func([]string) []string {
 // names the macros in named and defines the ones in defined.
 func withoutInternals(lines []string, named, defined map[string]bool) []string {
 	var (
-		out     []string
 		entries []string
 	)
 
 	const entryWidth = 58 // a 31-column name's entry
 
-	section := "symbols"
+	out := make([]string, 0, len(lines))
+	section := symbolsString
 	dropping := false
 
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
 
 		switch {
-		case section == "symbols" && strings.HasPrefix(trimmed, "+-"):
+		case section == symbolsString && strings.HasPrefix(trimmed, "+-"):
 			sort.Strings(entries)
 			out = append(out, entries...)
 			section = "other"
 
-		case section == "symbols":
+		case section == symbolsString:
 			for i := 0; i < len(line); i += entryWidth {
 				entry := strings.TrimRight(line[i:min(i+entryWidth, len(line))], " ")
 				if entry != "" && !macroInternal(entry) {
@@ -472,17 +472,17 @@ func withoutInternals(lines []string, named, defined map[string]bool) []string {
 		}
 
 		if strings.Contains(line, "Macros Cross Reference !") {
-			section = "macros"
+			section = macrosString
 		}
 
-		if section == "xref" || section == "macros" {
+		if section == "xref" || section == macrosString {
 			// An entry starts at the left margin; its continuation
 			// lines are indented references.
 			if line != "" && line[0] != ' ' && !strings.HasPrefix(line, "SYMBOL ") && !strings.HasPrefix(line, "MACRO ") && line[0] != '-' {
 				name, _, _ := strings.Cut(line, " ")
-				dropping = macroInternal(line) || (section == "macros" && !named[name])
+				dropping = macroInternal(line) || (section == macrosString && !named[name])
 
-				if section == "macros" && !dropping && !defined[name] && len(line) > 30 {
+				if section == macrosString && !dropping && !defined[name] && len(line) > 30 {
 					line = line[:18] + "(size)     " + line[29:]
 				}
 			} else if trimmed == "" || !isDigit(trimmed[0]) {
@@ -541,9 +541,8 @@ var recordCount = regexp.MustCompile(`producing (\d+) object records`)
 // differences applied, missing being the number of records its object
 // has that govax's doesn't.
 func realClosingAllowed(lines []string, missing int) []string {
-	var out []string
-
 	table := false
+	out := make([]string, 0, len(lines))
 
 	for _, line := range lines {
 		if matchesAny(listingDifferences, line) {

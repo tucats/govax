@@ -220,6 +220,7 @@ func (a *imageAnalyzer) header() {
 	if img.LinkFlags&vmsimage.IHDFlagINISHR != 0 {
 		a.line(fmt.Sprintf("\t\tshareable image initialization list: %%X'%08X'", img.InitShare))
 	}
+
 	a.blank()
 
 	a.part("Global Symbol Table & Debug Symbol Table Information")
@@ -230,9 +231,11 @@ func (a *imageAnalyzer) header() {
 	if !img.Legacy() {
 		a.line(fmt.Sprintf("\t\tdebug module/psect table VBN: %d, byte count: %d", img.DMTVBN, img.DMTBytes))
 	}
+
 	a.blank()
 
 	a.part("Image Identification Information")
+	
 	name, linkerID := img.Name, img.LinkerID
 	if img.Legacy() {
 		name, linkerID = legacyIdentField(name), legacyIdentField(linkerID)

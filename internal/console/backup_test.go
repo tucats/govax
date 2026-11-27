@@ -194,6 +194,7 @@ func TestBackupMessages(t *testing.T) {
 // VMS shows it, "%" first, and ends the procedure with its status.
 func TestBackupMessageShown(t *testing.T) {
 	t.Parallel()
+	
 	err, out, status := runStatusProcedure(t, "$ BACKUP/LIST NOSUCH.BCK", `$ PRINT "after"`)
 	if out != "%BACKUP-F-LISINPSAV, /LIST requires save set as input\n" || status != 0x10A3808C || !vmserrors.MessageInhibited(err) {
 		t.Errorf("output %q, $STATUS %%X%08X, %v", out, status, err)

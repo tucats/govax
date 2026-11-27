@@ -20,10 +20,12 @@ import (
 const vaxDir = "../../testdata/backup69/vax"
 
 // probeSets are the probe's save sets, SSCOPY's damaged copies last.
+const b69hdrdName = "b69hdrd"
+
 var probeSets = []string{
 	"b69", "b69k8", "b69g0", "b69g3", "b69crc", "b69nocrc", "b69com",
 	"b69exc", "b69byo", "b69txt", "b69none", "text", "b69own", "list",
-	"b69ign", "b69cut", "b69crcd", "b69g0d", "b69nocrcd", "b69hdrd",
+	"b69ign", "b69cut", "b69crcd", "b69g0d", "b69nocrcd", b69hdrdName,
 }
 
 // load reads a fixture.
@@ -147,11 +149,11 @@ func TestChecks(t *testing.T) {
 			number := at/size + 1
 			h := ParseHeader(block)
 
-			if h.Number != uint32(number) && !(name == "b69hdrd" && number == 2) {
+			if h.Number != uint32(number) && !(name == b69hdrdName && number == 2) {
 				t.Errorf("%s block %d: numbered %d", name, number, h.Number)
 			}
 
-			damagedHeader := name == "b69hdrd" && number == 2
+			damagedHeader := name == b69hdrdName && number == 2
 			if headerIntact(block) == damagedHeader {
 				t.Errorf("%s block %d: header checksum %#04x, computed %#04x", name, number, h.Checksum, HeaderChecksum(block))
 			}
@@ -380,8 +382,8 @@ func TestRecovery(t *testing.T) {
 		opts              Options
 		recovered         []int
 	}{
-		{"b69hdrd", "b69", Options{}, []int{2}},
-		{"b69hdrd", "b69", Options{CheckCRC: true}, []int{2}},
+		{b69hdrdName, "b69", Options{}, []int{2}},
+		{b69hdrdName, "b69", Options{CheckCRC: true}, []int{2}},
 		{"b69crcd", "b69crc", Options{CheckCRC: true}, []int{2}},
 		{"b69crcd", "b69crc", Options{}, nil},
 		{"b69g0d", "b69g0", Options{CheckCRC: true}, nil},
@@ -416,7 +418,7 @@ func TestRecovery(t *testing.T) {
 		contig := file(t, read, "[B69]CONTIG.DAT;1").Data()
 		matches := bytes.Equal(contig, file(t, readSet(t, c.original, Options{}), "[B69]CONTIG.DAT;1").Data())
 
-		if len(read.Files) != 25 || matches != (c.damaged == "b69hdrd" || c.recovered != nil) {
+		if len(read.Files) != 25 || matches != (c.damaged == b69hdrdName || c.recovered != nil) {
 			t.Errorf("%s %+v: %d files, CONTIG.DAT matches %v", c.damaged, c.opts, len(read.Files), matches)
 		}
 	}
@@ -446,7 +448,7 @@ func TestLostBlock(t *testing.T) {
 		t.Errorf("CONTIG.DAT is missing %v", got)
 	}
 
-	var names []string
+	names := make([]string, 0, len(s.Files))
 	for _, f := range s.Files {
 		names = append(names, f.Name)
 

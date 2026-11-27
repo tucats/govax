@@ -449,7 +449,7 @@ func severityName(s byte) string {
 		return "abort"
 	}
 
-	return "unknown"
+	return unknown
 }
 
 func (a *objectAnalyzer) summary(total int) {

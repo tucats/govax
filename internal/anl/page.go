@@ -70,6 +70,7 @@ func (p *Pager) Write(lines []Line) error {
 		}
 
 		p.text(l.Text + "\n")
+		
 		p.count++
 	}
 

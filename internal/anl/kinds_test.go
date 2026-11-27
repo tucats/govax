@@ -17,7 +17,7 @@ var update = flag.Bool("update", false, "rewrite testdata/kinds.txt")
 func everyCommand(t *testing.T) []obj.Command {
 	t.Helper()
 
-	var out []obj.Command
+	out := make([]obj.Command, 0, 0x80)
 
 	for code := range 0x80 {
 		b := append([]byte{byte(code)}, make([]byte, 16)...)
@@ -55,6 +55,7 @@ func TestEveryCommandShown(t *testing.T) {
 		}
 
 		var a objectAnalyzer
+
 		a.command(true, 1, c)
 
 		heading := a.lines[0].Text
@@ -77,7 +78,7 @@ func everyKind(t *testing.T) [][]byte {
 	formals := &obj.Formals{Min: 1, Max: 3, Args: []obj.FormalArg{{ValCtl: 1}, {ValCtl: 2}, {ValCtl: 3, Detail: []byte{9}}}}
 	def := obj.SymDEF | obj.SymREL
 
-	var symbols []obj.Subrecord
+	symbols := make([]obj.Subrecord, 0)
 
 	for _, typ := range []obj.GSDType{
 		obj.GSDSymbol, obj.GSDEntry, obj.GSDProcedure, obj.GSDSymbolW, obj.GSDEntryW, obj.GSDProcedureW,
@@ -101,7 +102,7 @@ func everyKind(t *testing.T) [][]byte {
 
 	// Each command, with what it pops pushed before it and what it
 	// pushes stored after it, so the stack balances.
-	var commands []obj.Command
+	commands := make([]obj.Command, 0)
 
 	for _, c := range everyCommand(t) {
 		pop, push := c.Op.StackEffect()

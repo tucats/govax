@@ -311,8 +311,8 @@ func TestSystartupBatchBlock(t *testing.T) {
 		t.Fatal("SYSTARTUP_VMS.COM has no batch queue block")
 	}
 
-	var lines []string
-
+	lines := make([]string, 0)
+	
 	for _, line := range strings.SplitAfter(strings.TrimSuffix(block, "\n"), "\n") {
 		rest, ok := strings.CutPrefix(line, "$! ")
 		if !ok {

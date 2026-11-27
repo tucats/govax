@@ -36,6 +36,7 @@ func TestBat98Probe(t *testing.T) {
 	if testproc.Isolate(t) {
 		return
 	}
+	
 	if testing.Short() {
 		t.Skip("the probe's whole run is long")
 	}
