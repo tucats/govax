@@ -9,19 +9,20 @@ green-bar listings of your MACRO-32 program, and the first time you saw
 `%SYSTEM-F-ACCVIO` and knew it was your fault.
 
 govax brings that world back, on your own computer. It executes real VAX
-machine code and gives it the system services, run-time library, and files
-it expects, behind a DCL prompt, with an assembler, a FORTRAN compiler, a
-linker, and a debugger ready to go. It runs on macOS, Linux, and Windows.
-**You don't need a VMS license, a VMS distribution, or a single file from
-DIGITAL.**
+machine code and provides the system services, run-time library, and file
+system programs expect. There is the familiar DCL prompt, with an assembler, a
+FORTRAN compiler, a linker, and a debugger ready to go. It runs on macOS,
+Linux, and Windows. **You don't need a VMS license, a VMS distribution, or
+a single file from DIGITAL.**
 
-A VAX-11/780 executed about half a million instructions a second, and a
-whole department shared it. On a current laptop govax executes 10 to 20
-million, all of them yours. You're logged in as `SYSTEM`, with every
-privilege, and nobody from operations is going to call. (When you want to
-see what a user without privileges is refused, `@SYS$MANAGER:ADDUSER`
-makes an account, and `govax --user NAME` logs in as it: file protection,
-ACLs, and privileges are all checked.)
+A VAX-11/780 executed about half a million instructions per second (MIPS), and it
+was typically shared by a whole department. On a modern computer, govax
+can execute 10 to 20 million MIPS, all at your disposal. You're logged in as
+`SYSTEM`, with every privilege, and nobody from operations is going to call.
+When you want to see how your code runs as a user with different identity, 
+privileges or quotas, you can use the `@SYS$MANAGER:ADDUSER` command file to make
+an account, and `govax --user NAME` to log in as that user: file protection,
+ACLs, and privileges are all in force.
 
 ## Hello, VAX
 
@@ -30,19 +31,19 @@ You'll need [Go](https://go.dev) 1.26 or later:
 ```sh
 git clone https://github.com/tucats/govax.git
 cd govax
-cmd/govax/build.sh
+tools/build
 ```
 
-That builds `./govax` with the build number from `cmd/govax/tools/buildver.txt`
-injected, so `govax --version` reports it (`build.sh -i` bumps the number
-first, `-o NAME` picks the output file). Put the binary somewhere on your
-`PATH`. A plain `go install ./cmd/govax` also works, but the binary then
-reports version 0.0-0.
+That builds `./govax` with the build version number and timestamp,
+so `govax --version` reports it. (See `build -h` for more options
+you can use with the provided build script.) Put the binary somewhere on your
+`PATH`. You can use a plain `go install ./cmd/govax` if you wish, but
+the binary then reports version 0.0-0 and has no build timestamp to report.
 
 That's the whole installation. The first time it runs, govax makes itself
 a system disk in `~/.govax`.
 
-Now put this in a file called `hello.for`, with the statements starting in
+Now creawte a file called `hello.for`, with the statements starting in
 column 7, as nature intended:
 
 ```fortran
@@ -54,12 +55,16 @@ column 7, as nature intended:
 Compile, assemble, link, and run it:
 
 ```text
-$ govax fortran hello.for
-$ govax macro hello.mar
-$ govax link hello.obj
-$ govax run hello.exe
+$ govax fortran ./hello.for
+$ govax macro ./hello.mar
+$ govax link ./hello.obj
+$ govax run ./hello.exe
 Hello from a VAX that isn't there
 ```
+
+(NOTE: You need to specify the `./` in the filename so govax knows to use
+files in your local directory -- otherwise, it will attempt to use
+files in your default directory on your VAX/VMS volume -- more on that later.)
 
 Then have a look at `hello.mar`. The compiler writes ordinary MACRO-32,
 with each FORTRAN statement above the instructions it became, so it's a
@@ -83,7 +88,8 @@ MSG:    .ASCID  /Hello from a VAX that isn't there/
 ## Run VAX/VMS programs
 
 govax runs VMS executable images, including ones linked on a real VAX. Here
-is one from this repository:
+is one from this repository, compiled with a DEC C compiler on a VAX 8600
+from 2003 that was long ago decommissioned:
 
 ```text
 $ govax run testdata/exe/put.exe
@@ -97,20 +103,23 @@ decimal instructions. Behind it are over ninety system services, about 170
 once, mailboxes, global sections, the lock manager, and, if you'd like to
 watch it work, VMS's paging.
 
-Your old programs may well run. An image needs only the services and
+Your old programs can be run on govax. An image needs only the services and
 routines it calls, and if one is missing, govax tells you its name.
 Programs built by DEC's compilers also need their language's run-time
-library from a VMS system.
+library from a VMS system, which you can supply to govax if you need them.
 
 And what's the point of all this if it can't play DUNGEON? Bring your own
-copy of the source kit for the FORTRAN port of the game that became Zork:
-govax's compiler builds it, and it plays.
+copy of the source kit for the FORTRAN port of the game that became Zork
+(easily found on the Internet in DECUS or other freeware VMS sites). You can
+then use govax's own FORTRAN compiler to build and run it, like it's 1980
+all over again (you'll have to supply your own cassette tape of Blondie's
+"Call Me" for the full nostalgia effect).
 
 ## Take it apart
 
-The best part of having a VAX all to yourself is being able to poke at it.
-Give govax a disk to work on, then start it up. The disk is a Files-11
-volume kept in a single file on your computer:
+One of the most fun parts of having a VAX all to yourself is being able to
+tinker with it. Give govax a disk to work on, then start it up. The disk is
+a Files-11 volume managed in a single container file on your computer:
 
 ```sh
 govax config set vax.default.volume.file="~/vax/work.dsk"
@@ -158,30 +167,30 @@ FACT\FACT.I:    00000003
 FACT\FACT.N:    00000006
 ```
 
-The usual suspects are all here:
+The most common VMS tools and features are all here:
 
 | | |
 | --- | --- |
 | **DCL** | A full command interpreter: command procedures, symbols, lexical functions, `ON`, `GOSUB`, `SPAWN`, file I/O, and `HELP` |
 | **MACRO-32** | The assembler and macro facility, with its own system macro library, so `$QIOW_S` and `$FAB` just work |
-| **FORTRAN** | VAX FORTRAN V5.0 and DEC's extensions: records, `NAMELIST`, keyed files, an optimizer, listings |
+| **FORTRAN** | VAX FORTRAN V5.0 with DEC's extensions and Fortran 90 support |
 | **LINK and LIBRARY** | Executable and shareable images, and object, macro, text, and help libraries |
 | **The debugger** | Modeled on the VMS debugger: breakpoints, stepping, `EXAMINE`, source lines, by symbol |
 | **RMS on Files-11** | Sequential, relative, and indexed files on ODS-2 disk containers, laid out as VMS lays them out |
 | **BACKUP** | Reads, restores, compares, and writes real VMS save sets |
 | **Batch Queues** | Manage batch queues and submit jobs (including under different user ids) |
 
-None of these is a loose imitation. The objects, images, libraries, and
+These aren't loose imitations. The objects, images, libraries, and
 save sets govax writes are built the way VMS's own tools build them, and
-VMS reads them. Its behavior has been checked against VMS 7.1 and 7.3
-themselves, and the test suite replays those runs to keep it honest.
+VMS reads them. Its behavior has been checked against VMS 7.1, and the
+test suite replays those runs to keep any changes honest.
 
 ## What govax isn't
 
 govax is not a full simulated VAX/VMS system. It doesn't emulate disk
 controllers or a console boot ROM, and it can't boot VMS. Its operating
 system is a small microkernel plus Go code that behaves, from a program's
-point of view, as VMS does. It's a single-user system that only supports
+point of view, just like VMS does. It's a single-user system that only supports
 multiple processess via batch queues or process creation via LIB$SPAWN,
 SYS$CREPRC, and so on. There's no DECnet or TCP/IP, and no clusters.
 FORTRAN and MACRO-32 are the only languages you can build with using
@@ -194,12 +203,13 @@ fine: SIMH can mount the disks govax makes.
 
 ## Go deeper
 
-The [user's manual](docs/MANUAL.md) covers it all: the command line, every
+The [user's manual](docs/MANUAL.md) goes into detail: the command line, every
 DCL command, MACRO-32, FORTRAN, the linker, the debugger, and how govax
 works inside. Its examples were run on govax. At the `VAX>` prompt, `HELP`
 works the way you remember, and if you've ever wanted to write a compiler
-for the VAX, [FORTRAN-INTERNALS](docs/FORTRAN-INTERNALS.md) follows one
-through every pass.
+for the VAX, [FORTRAN-INTERNALS](docs/FORTRAN-INTERNALS.md) documents how
+the FORTRAN compiler supplied with govax was built, through every step of
+its's development.
 
 ## Tell us what you find
 
