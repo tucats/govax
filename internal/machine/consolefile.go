@@ -10,27 +10,27 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// This file is how the machine's own commands that read a file, ASM and
-// LOAD/ROM and LOAD/NVRAM, find it (docs/planning/PHASE-87 - system volume.md,
+// This file is how the machine's own commands that read a file **ASM) 
+// find it (docs/planning/PHASE-87 - system volume.md,
 // Decision 9). They once read only host files, through the console's
 // resolver (m.Paths: the host's current directory, the --path
 // directories, then govax's built-in files). Now a name is placed as RUN
 // and @ place theirs, by rms.Session.Locate's rules:
 //
-//   - a VMS file specification ("SYS$SOURCES:KERNEL.ASM",
-//     "DUA0:[SYSTEM.SYSEXE]DEFAULT.ROM") is a file on a mounted volume;
-//   - a host path ("./kernel.asm", "/tmp/my.rom") is a host file, found
+//   - a VMS file specification ("SYS$SOURCES:KERNEL.ASM") is a file on a
+// 	   mounted volume;
+//   - a host path ("./kernel.asm") is a host file, found
 //     through the resolver as before;
 //   - a bare name ("kernel.asm") is a file in the default directory when
 //     a SET DEFAULT onto a volume is in effect, and a host file otherwise.
 //
 // One rule is the console's own: a bare name that isn't in the default
 // volume directory is then looked for through the resolver, so that
-// `ASM "kernel.asm"` and `LOAD/ROM/NOERROR` still find govax's built-in
+// `ASM "kernel.asm"` still finds govax's built-in
 // files when the default is a work volume. RUN and @ don't do this: their
 // bare names are the user's files, where these are usually govax's.
 
-// consoleFile is a file ASM or LOAD read: its contents, the name to
+// consoleFile is a file ASM reads: its contents, the name to
 // report it by, and where it was found (for ASM's .INCLUDE, which looks
 // beside it).
 type consoleFile struct {
@@ -39,9 +39,9 @@ type consoleFile struct {
 	loc  rms.FileLocation
 }
 
-// readConsoleFile reads the file name for ASM or LOAD by the rules above.
+// readConsoleFile reads the file name for ASM  by the rules above.
 // text reads a volume file's records as lines (ASM's source), each ended
-// by a line feed; otherwise its bytes are read whole (LOAD's images).
+// by a line feed; otherwise its bytes are read whole.
 func (m *Machine) readConsoleFile(name string, text bool) (consoleFile, error) {
 	s := m.Hooks.Session()
 	if s == nil {

@@ -69,39 +69,6 @@ func TestShowMode(t *testing.T) {
 	}
 }
 
-func TestShowNVRAM_none(t *testing.T) {
-	t.Parallel()
-	d, _, buf := newShowDispatcher(t)
-
-	if err := d.Dispatch("SHOW NVRAM"); err != nil {
-		t.Fatalf("Dispatch: %v", err)
-	}
-
-	if !strings.Contains(buf.String(), "No NVRAM") {
-		t.Errorf("output = %q, want a \"No NVRAM\" message", buf.String())
-	}
-}
-
-func TestShowROM_loaded(t *testing.T) {
-	t.Parallel()
-	d, c, buf := newShowDispatcher(t)
-
-	if err := c.LoadROM(romFixturePath(t), false); err != nil {
-		t.Fatalf("LoadROM: %v", err)
-	}
-
-	buf.Reset()
-
-	if err := d.Dispatch("SHOW ROM"); err != nil {
-		t.Fatalf("Dispatch: %v", err)
-	}
-
-	out := buf.String()
-	if !strings.Contains(out, "20040000") || !strings.Contains(out, romFixturePath(t)) {
-		t.Errorf("output = %q, want it to mention the ROM base and file path", out)
-	}
-}
-
 func TestShowShim(t *testing.T) {
 	t.Parallel()
 	d, c, buf := newShowRunnableDispatcher(t)

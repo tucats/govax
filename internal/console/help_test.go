@@ -55,7 +55,6 @@ func TestHelpTopics(t *testing.T) {
 		{[]string{"HINTS", "Programs"}, []string{"FORTRAN"}},
 		{[]string{"SPECIFY", "Host_files"}, []string{"/HOST"}},
 		{[]string{"INITIALIZE", "/MEMORY", "Qualifiers", "/PAGING"}, []string{"vax.sysgen.paging.enable"}},
-		{[]string{"LOAD", "Qualifiers", "/ERROR"}, []string{"/NOERROR"}},
 		{[]string{"XFC"}, []string{"XFC$CONSOLE_PUT"}},
 		{[]string{"SYSTEM_VOLUME", "Contents"}, []string{"HELPLIB.HLB", "BUILDHELP.COM"}},
 		{[]string{"CONFIG"}, []string{"govax config set KEY=VALUE"}},

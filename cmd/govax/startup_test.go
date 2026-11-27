@@ -94,23 +94,13 @@ func TestRun_systemVolumeStartup(t *testing.T) {
 	}
 }
 
-// TestRun_systemVolumeKernel checks the microkernel and ROM STARTUP.COM
-// loads (subtask 6): the volume's with a system volume, an edited
-// KERNEL.ASM the one that boots; govax's built-in ones without.
+// TestRun_systemVolumeKernel checks the microkernel loads (subtask 6):
+// the volume's with a system volume, an edited KERNEL.ASM the one that
+// boots; govax's built-in ones without.
 func TestRun_systemVolumeKernel(t *testing.T) {
-	out := runOnce(t, nil, "SHOW ROM")
-	if want := `ROM FILE="default.rom"`; !strings.Contains(out, want) {
-		t.Errorf("with no system volume, output lacks %s:\n%s", want, out)
-	}
+	const message = "%SYSTEM-S-INIT, Kernel initialized"
 
 	withSystemVolume(t, systemFlags{file: filepath.Join(t.TempDir(), "govax-system.dsk")})
-
-	out = runOnce(t, nil, "SHOW ROM")
-	if want := `ROM FILE="SYS$SYSROOT:[SYSEXE]DEFAULT.ROM;1"`; !strings.Contains(out, want) {
-		t.Errorf("with a system volume, output lacks %s:\n%s", want, out)
-	}
-
-	const message = "%SYSTEM-S-INIT, Kernel initialized"
 
 	kernel := builtin(t, "kernel.asm")
 	if !strings.Contains(kernel, message) {
@@ -119,7 +109,7 @@ func TestRun_systemVolumeKernel(t *testing.T) {
 
 	putOnSystemVolume(t, "[SYSTEM.SOURCES]KERNEL.ASM", strings.Replace(kernel, message, "%SYSTEM-S-INIT, Your kernel initialized", 1))
 
-	out = runOnce(t, nil)
+	out := runOnce(t, nil)
 	if !strings.Contains(out, "%SYSTEM-S-INIT, Your kernel initialized\n") {
 		t.Errorf("the edited kernel didn't boot:\n%s", out)
 	}

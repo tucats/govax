@@ -123,17 +123,6 @@ func TestCommands_ifErrors(t *testing.T) {
 	}
 }
 
-func TestCommands_notImplemented(t *testing.T) {
-	t.Parallel()
-	d, _, _ := newCommandDispatcher(t)
-
-	for _, line := range []string{"ROM"} {
-		if err := d.Dispatch(line); !errors.Is(err, vmserrors.New(vmserrors.CLI_NEEDDEP)) {
-			t.Errorf("%s: %v, want CLI_NEEDDEP", line, err)
-		}
-	}
-}
-
 // TestCommands_removed: the console's BOOT, TEST, ZERO, QUIT, VMINIT
 // (INITIALIZE/MEMORY now), and CLEAR are gone (2026-11-08).
 func TestCommands_removed(t *testing.T) {
@@ -194,53 +183,6 @@ func TestCommands_asmOnlyBeforeKernel(t *testing.T) {
 
 	if err := d.Dispatch("ASM"); err == nil || c.InAssemblerMode() {
 		t.Errorf("bare ASM after the microkernel = %v (assembler mode %v)", err, c.InAssemblerMode())
-	}
-}
-
-// TestCommands_saveLoad checks SAVE's and LOAD's qualifiers, /NOERROR
-// among them (which LoadROM used to recognize as its file name).
-func TestCommands_saveLoad(t *testing.T) {
-	t.Parallel()
-	d, c, _ := newCommandDispatcher(t)
-	dir := t.TempDir()
-
-	c.Engine.Memory().NVRAMBase = 0x20140400
-	c.Engine.Memory().NVRAM = []byte{1, 2, 3, 4, 5, 6, 7, 8}
-
-	ok := []string{
-		`LOAD/ROM "` + romFixturePath(t) + `"`,
-		`SAVE/ROM "` + filepath.Join(dir, "x.rom") + `"`,
-		`LOAD "` + filepath.Join(dir, "x.rom") + `" /ROM`,
-		`SAVE/NVRAM "` + filepath.Join(dir, "x.nvram") + `"`,
-		`LOAD/NVRAM "` + filepath.Join(dir, "x.nvram") + `"`,
-		"LOAD/ROM/NOERROR",
-		`LOAD/NVRAM/NOERROR "` + filepath.Join(dir, "missing.nvram") + `"`,
-	}
-
-	for _, line := range ok {
-		if err := d.Dispatch(line); err != nil {
-			t.Errorf("%s: %v", line, err)
-		}
-	}
-
-	bad := []struct {
-		line   string
-		status uint32
-	}{
-		{"SAVE FOO.VAX", vmserrors.CLI_NEEDROMNVRAM},
-		{"LOAD/ROM", vmserrors.CLI_NEEDFILENAME},
-		{"SAVE/ROM/NVRAM X", vmserrors.CLI_BADQUALIFIERCOMBO},
-		{"SAVE/NOROM X", vmserrors.CLI_NONEGATE},
-	}
-
-	for _, c := range bad {
-		if err := d.Dispatch(c.line); !errors.Is(err, vmserrors.New(c.status)) {
-			t.Errorf("%s: %v, want %v", c.line, err, vmserrors.New(c.status))
-		}
-	}
-
-	if err := d.Dispatch(`LOAD/ROM "` + filepath.Join(dir, "missing.rom") + `"`); err == nil {
-		t.Error("LOAD/ROM of a missing file: no error")
 	}
 }
 

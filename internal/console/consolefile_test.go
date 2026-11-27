@@ -122,39 +122,9 @@ func TestASMVolumeFileMissing(t *testing.T) {
 	}
 }
 
-// TestLoadVolumeFiles checks LOAD/ROM of the system volume's DEFAULT.ROM,
-// named in SHOW ROM by its full name; /NOERROR's quiet failure for a
-// volume file that isn't there; and LOAD/NVRAM of a missing volume file.
-func TestLoadVolumeFiles(t *testing.T) {
-	t.Parallel()
-	c, d, buf := volumeFileConsole(t)
-
-	mustDispatch(t, d, "LOAD/ROM SYS$SYSDEVICE:[SYSTEM.SYSEXE]DEFAULT.ROM", "SHOW ROM")
-
-	if want := `ROM FILE="SYS$SYSDEVICE:[SYSTEM.SYSEXE]DEFAULT.ROM;1"`; !strings.Contains(buf.String(), want) {
-		t.Errorf("SHOW ROM lacks %s:\n%s", want, buf)
-	}
-
-	// The same bytes as the built-in ROM.
-	builtinROM := c.Engine.Memory().ROM
-
-	c2, d2, _ := volumeFileConsole(t)
-	mustDispatch(t, d2, "LOAD/ROM/NOERROR")
-
-	if !bytes.Equal(builtinROM, c2.Engine.Memory().ROM) {
-		t.Error("the volume's ROM differs from the built-in one")
-	}
-
-	mustDispatch(t, d, "LOAD/ROM/NOERROR DUA0:[SYSTEM.SYSEXE]NONE.ROM")
-
-	if err := d.Dispatch("LOAD/NVRAM DUA0:[SYSTEM.SYSEXE]NONE.NVRAM"); !errors.Is(err, vmserrors.New(vmserrors.SS_NOSUCHFILE)) {
-		t.Errorf("LOAD/NVRAM of a missing file: err = %v", err)
-	}
-}
-
 // TestBootFromEditedKernel checks STARTUP.COM's kernel on the system
 // volume: an edited KERNEL.ASM is the one that boots, with its .INCLUDE
-// of a file beside it, and the ROM is the volume's.
+// of a file beside it.
 func TestBootFromEditedKernel(t *testing.T) {
 	t.Parallel()
 
@@ -201,10 +171,6 @@ func TestBootFromEditedKernel(t *testing.T) {
 	if !strings.Contains(buf.String(), "%SYSTEM-S-INIT, Edited kernel initialized\n") {
 		t.Errorf("the edited kernel didn't boot:\n%s", buf)
 	}
-
-	if got, want := c.Engine.Memory().ROMFile, "SYS$SYSROOT:[SYSEXE]DEFAULT.ROM;1"; got != want {
-		t.Errorf("ROM file = %q, want %q", got, want)
-	}
 }
 
 // TestASMHostRefused checks ASM for a process that may not use a host
@@ -246,7 +212,7 @@ func TestASMHostRefused(t *testing.T) {
 	}
 
 	c.ContainerSession.HostAccess = nil
-	
+
 	mustDispatch(t, d, `ASM "mine.asm"`)
 	machineSymbol(t, c, "MINE$LABEL")
 }

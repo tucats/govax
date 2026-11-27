@@ -7,8 +7,6 @@ import (
 )
 
 const (
-	romTOKEN   = "ROM"
-	nvramTOKEN = "NVRAM"
 	timeTOKEN  = "TIME"
 	printTOKEN = "PRINT"
 	helpTOKEN  = "HELP"
@@ -24,8 +22,6 @@ const (
 // evaluates it with the console's expression evaluator.
 func (d *Dispatcher) bindConsoleCommands() {
 	g := d.Grammar
-
-	g.Bind(romTOKEN, notImplemented(romTOKEN, "device support"))
 
 	g.Bind(timeTOKEN, func(id int64, r *dcl.Result) error {
 		return d.Console.Time(r.String("COMMAND"), d.Dispatch)
@@ -43,8 +39,6 @@ func (d *Dispatcher) bindConsoleCommands() {
 	g.Bind("AUTHORIZE", func(id int64, r *dcl.Result) error { return d.Console.Authorize(r.String("COMMAND")) })
 
 	g.Bind(asmTOKEN, d.asmCommand)
-	g.Bind("SAVE", d.saveCommand)
-	g.Bind("LOAD", d.loadCommand)
 
 	d.bindSetCommands()
 }
@@ -74,69 +68,6 @@ func (d *Dispatcher) asmCommand(id int64, r *dcl.Result) error {
 	}
 
 	return nil
-}
-
-// romOrNVRAM returns which of /ROM and /NVRAM a SAVE or LOAD command was
-// given, and its file; one of them is required, and so is the file unless
-// noError allows a default.
-func romOrNVRAM(r *dcl.Result, noError bool) (kind, file string, err error) {
-	switch {
-	case r.Present("ROM"):
-		kind = romTOKEN
-	case r.Present("NVRAM"):
-		kind = nvramTOKEN
-	default:
-		return "", "", vmserrors.New(vmserrors.CLI_NEEDROMNVRAM)
-	}
-
-	file = r.String("FILE")
-	if file == "" && !noError {
-		return "", "", vmserrors.New(vmserrors.CLI_NEEDFILENAME, kind)
-	}
-
-	return kind, file, nil
-}
-
-// saveCommand implements SAVE/ROM file and SAVE/NVRAM file (rom.go). The
-// plain .VAX-file SAVE isn't implemented; see rom.go's doc comment.
-func (d *Dispatcher) saveCommand(id int64, r *dcl.Result) error {
-	// check `if (!vax_init) return VAX_NOVAX;` before doing anything
-	// else -- ROM/NVRAM live on Engine.Memory(), which
-	// doesn't exist until INIT has allocated a machine.
-	if err := d.Console.RequireInit(); err != nil {
-		return err
-	}
-
-	kind, file, err := romOrNVRAM(r, false)
-	if err != nil {
-		return err
-	}
-
-	if kind == "ROM" {
-		return d.Console.SaveROM(file)
-	}
-
-	return d.Console.SaveNVRAM(file)
-}
-
-// loadCommand implements LOAD/ROM and LOAD/NVRAM [/NOERROR] [file].
-func (d *Dispatcher) loadCommand(id int64, r *dcl.Result) error {
-	if err := d.Console.RequireInit(); err != nil {
-		return err
-	}
-
-	noError := r.Present("ERROR") && r.Negated("ERROR")
-
-	kind, file, err := romOrNVRAM(r, noError)
-	if err != nil {
-		return err
-	}
-
-	if kind == "ROM" {
-		return d.Console.LoadROM(file, noError)
-	}
-
-	return d.Console.LoadNVRAM(file, noError)
 }
 
 // runOptions applies RUN's qualifiers to defaults, whose RunInits is

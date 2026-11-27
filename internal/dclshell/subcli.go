@@ -146,7 +146,7 @@ var (
 var processOneCommands = map[string]bool{
 	"ASM": true, "ASSEMBLE": true,
 	"DEBUG": true, "INITIALIZE_MEMORY": true, "INITIALIZE_VAX": true,
-	"LOAD": true, "ROM": true, "SAVE": true, "SET_QUANTUM": true,
+	"SET_QUANTUM": true,
 }
 
 // useShell makes s the console's Shell, the DCL whose commands run now,

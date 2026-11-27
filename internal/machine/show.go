@@ -754,50 +754,6 @@ func (m *Machine) ShowMode() error {
 	return nil
 }
 
-// ShowNVRAM prints the loaded NVRAM image's file name and extent, matching
-// SHOW NVRAM.
-func (m *Machine) ShowNVRAM() error {
-	if err := m.requireInit(); err != nil {
-		return err
-	}
-
-	if len(m.Engine.Memory().NVRAM) == 0 {
-		m.Printf("No NVRAM initialized\n")
-
-		return nil
-	}
-
-	size := m.Engine.Memory().NVRAMEnd + 1 - m.Engine.Memory().NVRAMBase
-	m.Printf("    NVRAM  FILE=%q\n", m.Engine.Memory().NVRAMFile)
-	m.Printf("        CONSOLE$NVRAM_BASE = %08X\n", m.Engine.Memory().NVRAMBase)
-	m.Printf("        CONSOLE$NVRAM_END  = %08X\n", m.Engine.Memory().NVRAMEnd)
-	m.Printf("        CONSOLE$NVRAM_SIZE = %08X (%dK)\n", size, size/1024)
-
-	return nil
-}
-
-// ShowROM prints the loaded ROM image's file name and extent, matching
-// SHOW ROM.
-func (m *Machine) ShowROM() error {
-	if err := m.requireInit(); err != nil {
-		return err
-	}
-
-	if len(m.Engine.Memory().ROM) == 0 {
-		m.Printf("No ROM loaded\n")
-
-		return nil
-	}
-
-	size := m.Engine.Memory().ROMEnd + 1 - m.Engine.Memory().ROMBase
-	m.Printf("    ROM FILE=%q\n", m.Engine.Memory().ROMFile)
-	m.Printf("        CONSOLE$ROM_BASE  = %08X\n", m.Engine.Memory().ROMBase)
-	m.Printf("        CONSOLE$ROM_END   = %08X\n", m.Engine.Memory().ROMEnd)
-	m.Printf("        CONSOLE$ROM_SIZE  = %08X (%dK)\n", size, size/1024)
-
-	return nil
-}
-
 // ShowShim prints every RTL shim symbol (kernel.asm's `.shim` table, see
 // shim.go's ensureShims): for a nonzero
 // numeric-dispatch code, whether internal/corevms.Environment has a live

@@ -293,20 +293,6 @@ func TestDispatch_clearInterrupt(t *testing.T) {
 	}
 }
 
-// TestDispatch_notImplementedCommand checks ROM, still gated behind
-// notImplemented (commands.go; device support) -- ASM used to be this test's own
-// example (its bare, no-filename form returned CLI_NOASMREPL) until
-// docs/planning/PHASE-19.md implemented interactive assembler mode; see
-// TestDispatchASM_bareEntersInteractiveMode (asm_repl_test.go) for its
-// current behavior.
-func TestDispatch_notImplementedCommand(t *testing.T) {
-	t.Parallel()
-	d, _ := newTestDispatcher(t)
-	if err := d.Dispatch("ROM"); err == nil {
-		t.Error("expected an error for ROM")
-	}
-}
-
 func TestDispatch_saveLoadROMRequiresQualifier(t *testing.T) {
 	t.Parallel()
 	d, _ := newTestDispatcher(t)
@@ -325,7 +311,6 @@ func TestDispatch_help(t *testing.T) {
 		t.Fatalf("Dispatch(HELP): %v", err)
 	}
 }
-
 
 // TestDispatch_initializeVax exercises Phase 23 subtask 1's unified
 // INITIALIZE verb end to end through the real Dispatcher: /VAX carries

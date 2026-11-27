@@ -152,9 +152,6 @@ func (d *Dispatcher) bindGrammar() {
 	// taking its place, and so is the routine.)
 	g.Bind("SHOW_VERSION", func(id int64, r *dcl.Result) error { return d.Console.ShowVersion() })
 
-	g.Bind("SHOW_NVRAM", func(id int64, r *dcl.Result) error { return d.Console.ShowNVRAM() })
-	g.Bind("SHOW_ROM", func(id int64, r *dcl.Result) error { return d.Console.ShowROM() })
-
 	g.Bind("SHOW_SHARE", func(id int64, r *dcl.Result) error { return d.Console.ShowSharePrefix() })
 
 	// Phase 23 (docs/planning/PHASE-23.md, subtask 3): SHOW DEFAULT displays the

@@ -927,7 +927,7 @@ privilege for access to objects as the system. That covers
 - `SPAWN/HOST`, which runs a host program;
 - the container file of `INITIALIZE/CONTAINER` and `MOUNT`, beside the
   privileges they already need;
-- `SAVE/ROM`, `SAVE/NVRAM`, `LOAD`, `ASM`, and the debugger's log.
+- `ASM`, and the debugger's log.
 
 Without `SYSPRV` a file is refused as a volume file's protection refuses
 it, with `$STATUS` set the same way; the other commands say
@@ -1467,7 +1467,7 @@ sparse host file, taking only the space its files use.
 
 | Directory | Logical name | Files |
 | --- | --- | --- |
-| `[SYSTEM.SYSEXE]` | `SYS$SYSTEM` | `DEFAULT.ROM`, the console ROM; `FCALC.EXE`, the calculator (see [FCALC](#fcalc-a-calculator)); `PAGEFILE.SYS`, the page file, with paging on |
+| `[SYSTEM.SYSEXE]` | `SYS$SYSTEM` | `FCALC.EXE`, the calculator (see [FCALC](#fcalc-a-calculator)); `PAGEFILE.SYS`, the page file, with paging on |
 | `[SYSTEM.SYSMGR]` | `SYS$MANAGER` | `STARTUP.COM`, `SYSTARTUP_VMS.COM`, `SYLOGIN.COM`, `ADDUSER.COM`; `CONSOLE.DCL` and `DEBUG.DCL`, the console's and the debugger's command grammars |
 | `[SYSTEM.SYSHLP]` | `SYS$HELP` | `HELPLIB.HLB`, `DBG$HELP.HLB`, and `UAFHELP.HLB`, DCL's, the debugger's, and AUTHORIZE's help libraries; their help files in `[.SOURCES]` (the debugger's `DEBUG.HLP` in `[.SOURCES.DEBUG]`, AUTHORIZE's `AUTHORIZE.HLP` in `[.SOURCES.AUTHORIZE]`); in `[.EXAMPLES.FCALC]`, fcalc's Fortran 90 sources and `BUILDFCALC.COM` |
 | `[SYSTEM.SYSLIB]` | `SYS$LIBRARY`, `SYS$SHARE` | `STARLET.MLB`, the system macro library; `FORSYSDEF.TLB`, FORTRAN's definition modules; `FTNRTL.EXE`, the FORTRAN run-time library |
@@ -1489,7 +1489,7 @@ Every program-development command reads these files through the names,
 ahead of the copies built into govax: `MACRO` the macro library in
 `SYS$LIBRARY`, `FORTRAN` its `FORSYSDEF.TLB`, `LINK` and `RUN` the
 `FTNRTL.EXE` in `SYS$SHARE`, the console and the debugger their grammars,
-HELP and the debugger's HELP their help libraries in `SYS$HELP`, and STARTUP.COM the kernel and ROM. So what you change
+HELP and the debugger's HELP their help libraries in `SYS$HELP`, and STARTUP.COM the kernel. So what you change
 on the volume is what govax uses.
 
 #### STARTUP.COM and SYSTARTUP_VMS.COM
@@ -1532,8 +1532,8 @@ change, add to, or delete them. The page file is (S:RWED,O:RWED,G,W):
 nobody else may read it.
 
 ```text
-$ DELETE SYS$SYSTEM:DEFAULT.ROM;*
-%DELETE-W-FILNOTDEL, error deleting SYS$SYSROOT:[SYSEXE]DEFAULT.ROM;1
+$ DELETE SYS$SYSTEM:FCALC.EXE;*
+%DELETE-W-FILNOTDEL, error deleting SYS$SYSROOT:[SYSEXE]FCALC.EXE;1
 -RMS-E-PRV, insufficient privilege or file protection violation
 ```
 
@@ -3128,8 +3128,6 @@ change how the machine is set up.
 | --- | --- |
 | `INITIALIZE/VAX pages` | Set physical memory to `pages` 512-byte pages, clearing the machine. The count is in the console's radix, hexadecimal by default: write `^D16384` for decimal. |
 | `INITIALIZE/MEMORY [/P0=n] [/P1=n] [/S0=n] [/KSP=n] [/ESP=n] [/SSP=n] [/ISP=n] [/[NO]PAGING]` | Build page tables for the address regions, and turn memory management on (section 13). |
-| `SAVE file`, `LOAD file` | Save and restore memory and registers. |
-| `SAVE/ROM`, `LOAD/ROM`, `INIT/NVRAM`, `SAVE/NVRAM`, `LOAD/NVRAM` | The console ROM and NVRAM areas. |
 | `DEBUG` | Start the debugger on the machine as it is (section 12). |
 | `SET WORKING_SET [/LIMIT=n] [/QUOTA=n] [/EXTENT=n]` | Change your process's working set values. |
 | `SET QUANTUM n` | Instructions between clock ticks in instruction-count mode. |
@@ -3139,7 +3137,7 @@ change how the machine is set up.
 | `PRINT item[,...]` | Print quoted text and machine expressions, numbers in the console's radix (`PRINT "Base: ", 200+10`). A name is a DCL symbol's value first, if it's an integer or a string holding a number (`COUNT = 5`, then `PRINT COUNT+1`), then the machine's symbol. For DCL string values use `WRITE SYS$OUTPUT`. |
 | `TIME command` | Run a command and say how long it took. |
 
-`ROM` is reserved and not implemented. The console's string pool is the
+The console's string pool is the
 debugger's to show (`SHOW STRING_POOL`) and empty (`CANCEL STRINGS`).
 
 ---
@@ -5737,8 +5735,7 @@ directory when `SET DEFAULT` is on a volume. A bare name that isn't
 there, or any name when the default is on the host, is looked for in the
 host's current directory, the `--path` directories, and govax's built-in
 files. A `.INCLUDE` of a bare name looks beside the including file first,
-on the same volume or in the same host directory. `LOAD/ROM` and
-`LOAD/NVRAM` find their files the same way.
+on the same volume or in the same host directory.
 
 The debugger's `HELP` covers every command: `HELP SET BREAK`, `HELP
 EXAMINE /INSTRUCTION`, `HELP EXPRESSIONS`, and so on. As the VMS

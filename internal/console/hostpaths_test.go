@@ -21,12 +21,12 @@ const hostNOPRIV = "%SYSTEM-F-NOPRIV, insufficient privilege or object protectio
 // host; with SYSPRV turned on, and with the key off, each allowed.
 // PRIV94 turns on SYSNAM and VOLPRO first, so MOUNT and
 // INITIALIZE/CONTAINER of an existing container are refused for SYSPRV
-// alone. EXE$OPEN is corevms's TestExeOpenHostAccess. SAVE/NVRAM asks
-// as SAVE/ROM does, but this console has no NVRAM to save.
+// alone. EXE$OPEN is corevms's TestExeOpenHostAccess.
 func TestHostPathsNeedSYSPRV(t *testing.T) {
 	if testproc.Isolate(t) {
 		return
 	}
+
 	for _, pass := range []struct {
 		name        string
 		key, sysprv bool
@@ -65,7 +65,6 @@ func TestHostPathsNeedSYSPRV(t *testing.T) {
 				{"INITIALIZE/CONTAINER " + h("old.dsk") + " /DEVICE=RD51 OLD97", ""},
 				{"MOUNT/NOLOG DUA2 " + h("old.dsk"), ""},
 				{"SPAWN/HOST echo from-host", "from-host"},
-				{"SAVE/ROM " + h("x.rom"), ""},
 			} {
 				got := dispatch(c.line)
 				t.Logf("%s:\n%s", c.line, got)
@@ -89,7 +88,7 @@ func TestHostPathsNeedSYSPRV(t *testing.T) {
 			}
 
 			if !refused {
-				for _, name := range []string{"new.dsk", "x.rom"} {
+				for _, name := range []string{"new.dsk"} {
 					if _, err := os.Stat(filepath.Join(host, name)); err != nil {
 						t.Errorf("%s not made: %v", name, err)
 					}

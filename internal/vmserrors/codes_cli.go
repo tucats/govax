@@ -708,7 +708,6 @@ func init() {
 	DefineMessage(CLI_NEEDBREAKADDR, CLIFacility, "NEEDBREAKADDR", "SET BREAKPOINT requires an address")
 	DefineMessage(CLI_BADSETSYNTAX, CLIFacility, "BADSETSYNTAX", "Unrecognized SET syntax !Q")
 	DefineMessage(CLI_BADDEBUGFLAG, CLIFacility, "BADDEBUGFLAG", "Invalid SET DEBUG flag !Q")
-	DefineMessage(CLI_NEEDROMNVRAM, CLIFacility, "NEEDROMNVRAM", "SAVE/LOAD requires /ROM or /NVRAM (the plain .VAX form isn't implemented)")
 	DefineMessage(CLI_NEEDFILENAME, CLIFacility, "NEEDFILENAME", "!S requires a file name")
 	DefineMessage(CLI_VMTOOLARGE, CLIFacility, "VMTOOLARGE", "Requested VM size exceeds physical memory")
 	DefineMessage(CLI_S0TOOSMALL, CLIFacility, "S0TOOSMALL", "S0 region too small to hold its own page tables")

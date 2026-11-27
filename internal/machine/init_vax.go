@@ -8,8 +8,8 @@ import (
 
 // Init is INIT/VAX: it ends every other process and makes a new machine
 // of physBytes (rounded by allocPhysMemory), a new CPU, memory, engine,
-// and VMS (newRTL), with no address space: MAPEN is 0. The ROM and NVRAM
-// are LOAD/ROM's and LOAD/NVRAM's. The console's radix, verbosity, and
+// and VMS (newRTL), with no address space: MAPEN is 0.
+// The console's radix, verbosity, and
 // verification, the devices, the mounts, and process 1's logical names
 // belong to the console and outlive it.
 //

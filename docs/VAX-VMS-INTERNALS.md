@@ -427,7 +427,7 @@ there a twelve-byte stub that hands the call to Go (section 10).
 | `console` | The front end: a `Console` holds a `machine.Machine` and DCL's interpreter, and routes each line typed to DCL, the debugger, or the assembler. |
 | `debugger` | The machine debugger, modeled on VMS's. |
 | `asm` | The assembler, both the console's ASM (which assembles the microkernel into memory) and MACRO-32. |
-| `bootdata` | Files built into govax: the microkernel's source (`files/kernel.asm`), the default ROM, STARTUP.COM, the grammars, govax's system macros, the help libraries. |
+| `bootdata` | Files built into govax: the microkernel's source (`files/kernel.asm`), STARTUP.COM, the grammars, govax's system macros, the help libraries. |
 | `sysvol` | What the system volume holds, and how it's made and refreshed. |
 
 The other packages (`dcl`, `dclshell`, `dclcmd`, `fortran`, `link`,
@@ -511,6 +511,9 @@ them back before the instruction runs again (section 4).
 
 `vm.Memory` (`vm/memory.go`) owns the machine's RAM, a Go byte slice in
 which `ram[n]` is physical address `n`, and the ROM and NVRAM beside it.
+(While the memory architecture supports ROM and NVRAM in physical memory,
+there are no user-accessible commands for loading ROM or NVRAM into the
+physical memory.)
 Everything that reads or writes emulated memory goes through its
 methods: the decoder, the instruction handlers, the console's EXAMINE
 and DEPOSIT, and every Go system service that reads an argument.
@@ -1229,12 +1232,12 @@ govax reads them the same way (`Memory.LoadPhysical` and
 (at SCBB), and a process's hardware PCB (at PCBB).
 
 Beside RAM are two more buffers, the console's ROM and NVRAM, each with a
-physical base address beyond RAM's end. STARTUP.COM loads
-`SYS$SYSTEM:DEFAULT.ROM` at `20040000`–`200BFFFF`, where a MicroVAX II's
-boot ROM is, and no NVRAM. Every physical access goes through `phys`
+physical base address beyond RAM's end. While the emulated hardware supports
+ROM and NVRAM, there is currently no user-accessible mechanism for loading
+these values into physical memory. Every physical access goes through `phys`
 (`vm/memory.go`), which looks in RAM, then the ROM, then the NVRAM, and
 reports a `*vm.PhysicalAddressError` for anything else. Nothing in govax's
-VMS maps them; they're the console's (LOAD/ROM, SHOW ROM).
+VMS maps them.
 
 ### 5.2 Page table entries
 
@@ -4552,9 +4555,9 @@ refusal marked as an output's), and one that only asks which side a name
 is on, or refuses a host file whoever asks (DUMP, INSTALL, SET SECURITY),
 calls `Side`, so a question is never refused. A path that reaches the
 host without a name RMS places asks `Session.MayUseHost` or the gate
-itself: `EXE$OPEN`, SAVE/ROM, and DCL's SPAWN/HOST, MOUNT, and
-INITIALIZE/CONTAINER (`Environment.HostCommandAllowed`). ASM and LOAD, which
-fall back to the console's search path for a bare name, read only the places
+itself: `EXE$OPEN`, DCL's SPAWN/HOST, MOUNT, and
+INITIALIZE/CONTAINER (`Environment.HostCommandAllowed`). ASM, which
+falls back to the console's search path for a bare name, reads only the places
 the configuration names when the process may not use the host
 (`respath.Resolver.ReadConfigured`). `TestNoUncheckedHostAccess`
 (`corevms/hostunchecked_test.go`) holds every function under `internal`
@@ -5225,12 +5228,12 @@ itself and creates the swapper and then a STARTUP process, which runs
 `SYS$SYSTEM:STARTUP.COM` and, last, the site's `SYSTARTUP_VMS.COM`; only
 then can anyone log in.
 
-govax has the same pieces in a different order, because the console *is*
+govax has most of the same pieces in a different order, because the console *is*
 the program the user runs. The Go program starts first, with a console and
 no machine; it mounts the system volume and reads its grammars; and then
 process 1, the console's own process, runs `STARTUP.COM` as its login
 command procedure. That procedure builds the VAX with console commands:
-memory, the address space, the microkernel, the devices. After it come the
+memory, the address space, the microkernel, and the initial devices. After it come the
 page file, the user's own startup, and the user's commands. Each step
 measured below is from a session started on a fresh system volume.
 
@@ -5241,7 +5244,7 @@ measured below is from a session started on a fresh system volume.
 | 3 | `dclcmd.MountSystemVolume` | the system volume made or refreshed, mounted as `DUA0:`, and its logical names |
 | 4 | `cmd/govax/grammarfiles.go` | the console's and the debugger's grammars |
 | 5 | `cmd/govax` | the `--mount` volumes and the default volume |
-| 6 | `STARTUP.COM` | the system names, `INIT/VAX`, `INITIALIZE/MEMORY`, the ROM, the microkernel and its initialization, the devices, `SYSTARTUP_VMS.COM` |
+| 6 | `STARTUP.COM` | the system names, `INIT/VAX`, `INITIALIZE/MEMORY`, the microkernel and its initialization, the devices, `SYSTARTUP_VMS.COM` |
 | 7 | `Machine.StartPageFile` | the page file, with paging on |
 | 8 | `vax.startup.procedure` | the user's own procedure, if one is configured |
 | 9 | `Console.RunCommandLine`, the prompt | the one-shot command, or the user's commands |
@@ -5292,7 +5295,7 @@ read, edit, and rebuild with DCL's own commands
 
 | Directory | Logical name | What |
 | --- | --- | --- |
-| `[SYSTEM.SYSEXE]` | SYS$SYSTEM | `DEFAULT.ROM`, the console ROM; `PAGEFILE.SYS`, the default page file (made by the pager, not supplied) |
+| `[SYSTEM.SYSEXE]` | SYS$SYSTEM | `PAGEFILE.SYS`, the default page file (made by the pager, not supplied) |
 | `[SYSTEM.SYSMGR]` | SYS$MANAGER | `STARTUP.COM`, `SYSTARTUP_VMS.COM`, `SYLOGIN.COM`, `ADDUSER.COM`, the grammars `CONSOLE.DCL` and `DEBUG.DCL` |
 | `[SYSTEM.SYSHLP]` | SYS$HELP | `HELPLIB.HLB`, `DBG$HELP.HLB`, `UAFHELP.HLB`, and their `.HLP` sources below it |
 | `[SYSTEM.SYSLIB]` | SYS$LIBRARY, SYS$SHARE | `STARLET.MLB`, `FTNRTL.EXE`, `FORSYSDEF.TLB` |
@@ -5412,8 +5415,6 @@ $ define/system/executive_mode sys$system  sys$sysroot:[sysexe]
 $ init/vax ^d16384
 $ initialize/memory /p0=16384 /p1=8192 /s0=8192 -
      /ksp=20 /esp=8 /ssp=8 /isp=4
-$ load/rom/noerror sys$system:default.rom
-$ load/nvram/noerror
 $ asm sys$sources:kernel.asm
 $ set quantum 1
 $ debug
@@ -5431,9 +5432,9 @@ $ if f$search("SYS$MANAGER:SYSTARTUP_VMS.COM") .nes. "" then -
 
 The rest of the file is comments and the DCL that chooses the values. The
 system names are defined only when `SYS$SYSDEVICE` says there's a system
-volume. The kernel and ROM are the volume's files, so an edited
-`KERNEL.ASM` is the one that boots, or govax's built-in `kernel.asm` and
-`default.rom` without a volume. The memory's sizes are the procedure's
+volume. The kernel is the volume's file, so an edited
+`KERNEL.ASM` is the one that boots, or govax's built-in `kernel.asm` without
+a volume. The memory's sizes are the procedure's
 defaults unless the configuration's `vax.memory.*` settings name others
 (read with govax's own lexical function `F$CONFIG`), and with
 `vax.sysgen.paging.enable` set, P0, P1, and S0 are 0, which
@@ -5505,14 +5506,6 @@ address space section 5.5 describes. In order, it:
 
 It also forgets the interactive assembler's session and that a microkernel
 was placed: the memory they described is gone.
-
-`LOAD/ROM/NOERROR SYS$SYSTEM:DEFAULT.ROM` then reads the console ROM
-(`Machine.LoadROM`, `machine/rom.go`): a file that starts `;ROMIMG` and a
-carriage return, then the ROM's physical base and end addresses, then its
-non-zero pages, each with its offset. govax's is at `20040000`, as a
-MicroVAX II's boot ROM is (section 5.1). Nothing in govax's VMS uses it.
-`LOAD/NVRAM/NOERROR` reads `DEFAULT.NVRAM` the same way if one is found
-through the search path; govax supplies none, so there is no NVRAM.
 
 ### 11.7 The microkernel
 
@@ -6005,7 +5998,6 @@ doesn't cover.
 | `bootdata/files/startup.com` | STARTUP.COM |
 | `machine/init_vax.go`, `machine/vminit.go` | `INIT/VAX` and `INITIALIZE/MEMORY` |
 | `bootdata/files/kernel.asm`, `machine/asm.go` | the microkernel, and ASM into live memory |
-| `machine/rom.go` | `LOAD/ROM` and `LOAD/NVRAM` |
 | `machine/run.go`, `machine/activate.go`, `machine/shareable.go`, `machine/image.go` | RUN, the image activator, and the copying loader |
 
 ### 12.2 The tests that hold it to the VAX and to VMS

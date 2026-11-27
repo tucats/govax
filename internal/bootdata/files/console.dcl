@@ -343,11 +343,9 @@ grammar console
         keyword		translation	/syntax=show_translation
         keyword		devices		/syntax=show_device
         keyword         version         /syntax=show_version
-        keyword         nvram           /syntax=show_nvram      
         keyword         debug           /syntax=show_debug
         keyword         radix           /syntax=show_radix
         keyword         symbols         /syntax=show_sym
-        keyword         rom             /syntax=show_rom
         keyword         share_prefix    /syntax=show_share
         ! SYSTEM and PROCESS (docs/PHASE-44.md, subtask 10): the process
         ! table and one process, as VMS's DCL shows them.
@@ -388,7 +386,6 @@ grammar console
                         /type=show_types            -
                         /prompt="What"
 
-        syntax          show_rom/id=154
         ! SHOW SYMBOL [/LOCAL | /GLOBAL] [/ALL] [name]: DCL's symbols, as
         ! DCL shows them (dclsym.go). The machine's symbol table is the
         ! debugger's SHOW SYMBOL.
@@ -400,7 +397,6 @@ grammar console
                         /type=$name
             disallow    local and global
         syntax          show_radix/id=146
-        syntax          show_nvram/id=122
         syntax          show_debug/id=129
         syntax          show_version/id=162
         syntax          show_share/id=161
@@ -1570,8 +1566,6 @@ grammar console
                     /type=$string
         qualifier   full/id=2868/nonegatable
 
-    verb rom/id=1602
-
     ! TIME runs a command and reports how long it took; with none, it
     ! prints the time of day.
     verb time/id=1610
@@ -1801,24 +1795,6 @@ grammar console
     ! any verb, as the console's dispatcher does (internal/console/
     ! procedure.go): it has no verb here. INCLUDE, eVAX's version of it, is
     ! gone (docs/PHASE-50 - DCL command procedures.md).
-
-    ! SAVE/ROM file and SAVE/NVRAM file write the ROM or NVRAM; LOAD
-    ! reads one back. With LOAD's /NOERROR, a file that can't be opened
-    ! loads nothing, and the file defaults to DEFAULT.ROM/DEFAULT.NVRAM.
-    verb save/id=1740
-        qualifier   rom/id=1741/nonegatable
-        qualifier   nvram/id=1742/nonegatable
-        parameter   file/id=1743                -
-                    /type=$string
-        disallow    rom and nvram
-
-    verb load/id=1750
-        qualifier   rom/id=1751/nonegatable
-        qualifier   nvram/id=1752/nonegatable
-        qualifier   error/id=1753
-        parameter   file/id=1754                -
-                    /type=$string
-        disallow    rom and nvram
 
     ! SET keyword ...: the keyword picks the syntax. Docs/PHASE-42.md
     ! moved the machine's keywords (BREAK, STEP, TRACE, PSL, MODE, PTE, VM,
