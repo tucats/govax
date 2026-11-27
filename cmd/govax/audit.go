@@ -44,6 +44,7 @@ var configKeys = func() []settings.Key {
 		{Name: "vax.path"},
 		{Name: "vax.quantum", Kind: settings.Int, Validate: positive},
 		{Name: "vax.console.prompt"},
+		{Name: "vax.console.exit", Kind: settings.Bool},
 		{Name: "vax.console.lines", Kind: settings.Int},
 		{Name: "vax.language"},
 		{Name: "vax.runtime.random", Kind: settings.Bool},

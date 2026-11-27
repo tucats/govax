@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/tucats/gopackages/app-cli/settings"
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/dcl"
 	"github.com/tucats/govax/internal/dclcmd"
@@ -948,7 +949,20 @@ func (c *Interpreter) Exit(status *uint32) error {
 			return nil
 		}
 
-		return c.Quit()
+		// Can EXIT be used to silently exit govax? IF the vax.console.exit setting is
+		// set to false, then EXIT will not exit the console. The default is true if the
+		// setting is not present.
+		canExit := true
+
+		if settings.Exists("vax.console.exit") {
+			canExit = settings.GetBool("vax.console.exit")
+		}
+
+		if canExit {
+			return c.Quit()
+		}
+
+		return nil
 	}
 
 	level.exiting = true

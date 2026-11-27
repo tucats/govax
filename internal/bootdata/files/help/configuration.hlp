@@ -212,6 +212,14 @@
                                      own size can't be read (output not
                                      to a terminal).  Default 24.
 
+       vax.console.exit              When true, an EXIT command at the
+                                     console with no pending command
+                                     procedure levels exits govax silently.
+                                     When false, you must use LOGOUT to
+                                     leave govax. The default is true if
+                                     not specified; EXIT will exit govax.
+                                     LOGOUT can be used in either case.
+    
        vax.disassemble.symbolic      true or false: whether DISASSEMBLE
                                      and SHOW CALLS show the VMS
                                      debugger's symbolic layout by

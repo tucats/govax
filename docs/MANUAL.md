@@ -222,9 +222,10 @@ this manual cover the same ground; the help text is the place to look up
 a qualifier quickly while this manual goes into more detail with more
 examples.
 
-To leave govax, type `EXIT` (or `LOGOUT`) at the `VAX>`
-prompt, or press **Ctrl/Y**. `EXIT` exits govax silently; `LOGOUT` reports
-session logout just like a VMS session does, and `LOGOUT/FULL` adds the accounting
+To leave govax, type `LOGOUT` at the `VAX>`
+prompt, or press **Ctrl/Y**. Unless the configuration key "vax.console.exit"
+is explicitly set to false, you can also use`EXIT` to exit govax silently. Like VMS,
+`LOGOUT` reports session logout, and `LOGOUT/FULL` adds the accounting
 information:
 
 ```text
@@ -3025,7 +3026,7 @@ A job still running when you end govax can't go on, since its process
 goes with the session. govax asks first, at a terminal:
 
 ```text
-VAX> EXIT
+VAX> LOGOUT
 %VAX-W-JOBSEXECUTING, 1 batch job executing; ending govax ends it
 End them and exit? (Y or N) [N]: Y
 %VAX-I-JOBSENDED, batch jobs requeued to restart: 1; ended (queue reset): 0
@@ -3086,7 +3087,7 @@ These are described in [section 7](#7-command-procedures-and-the-dcl-language).
 | Command | Purpose |
 | --- | --- |
 | `@file [p1 ... p8]` | Run a command procedure. |
-| `EXIT [status]` | End the procedure (at the prompt, end govax). |
+| `EXIT [status]` | End the procedure (or at the console prompt, end govax). |
 | `IF expr THEN command`, `IF`/`THEN`/`ELSE`/`ENDIF` | Conditional commands and blocks. |
 | `GOTO label` | Jump to a label. |
 | `GOSUB label`, `RETURN [status]` | Call a subroutine in the same procedure. |
@@ -3734,7 +3735,8 @@ behaves as VMS does in most cases. The differences to know about:
 
 - The default prompt is `VAX>` (change it with `SET PROMPT` or
   `vax.console.prompt`); a subprocess's is `$`.
-- At the terminal, `EXIT` ends govax, just as `LOGOUT` would end a VMS session. You can also use LOGOUT to exit govax.
+- At the terminal, `EXIT` ends govax, just as `LOGOUT` would end a VMS session. You can also use LOGOUT to exit govax. The
+  configuration setting `vax.console.exit` can explicity be set to `false` to disallow `EXIT` as a way to leave govax.
 - There are govax commands and DCL features that aren't in VMS: the commands to examime or modify machine state of section 6.10,
   the `TIME` command, and the `F$CONFIG` lexical function.
 - Commands VMS has that govax doesn't include `PRINT` (to send a job to a print queue),
