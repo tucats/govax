@@ -52,13 +52,13 @@ column 7, as nature intended:
       END
 ```
 
-Compile, assemble, link, and run it:
+Compile, assemble, link, and run it. Here's an example from a Mac terminal console:
 
 ```text
-$ govax fortran ./hello.for
-$ govax macro ./hello.mar
-$ govax link ./hello.obj
-$ govax run ./hello.exe
+bob@mac % govax fortran ./hello.for
+bob@mac % govax macro ./hello.mar
+bob@mac % govax link ./hello.obj
+bob@mac % govax run ./hello.exe
 Hello from a VAX that isn't there
 ```
 
@@ -92,7 +92,7 @@ is one from this repository, compiled with a DEC C compiler on a VAX 8600
 from 2003 that was long ago decommissioned:
 
 ```text
-$ govax run testdata/exe/put.exe
+bob@mac % govax run testdata/exe/put.exe
 This is a test
 that I am performing.
 ```
@@ -144,11 +144,11 @@ C     Ten factorials, and a good place for a breakpoint.
 Copy it to the VAX disk, build it for the debugger, and stop it mid-loop:
 
 ```text
-VAX> COPY "fact.for"/HOST *
-VAX> FORTRAN/DEBUG/NOOPTIMIZE FACT
-VAX> MACRO/DEBUG FACT
-VAX> LINK/DEBUG FACT
-VAX> RUN FACT
+$ COPY "fact.for"/HOST *
+$ FORTRAN/DEBUG/NOOPTIMIZE FACT
+$ MACRO/DEBUG FACT
+$ LINK/DEBUG FACT
+$ RUN FACT
 
          GOVAX DEBUG
 
@@ -205,7 +205,7 @@ fine: SIMH can mount the disks govax makes.
 
 The [user's manual](docs/MANUAL.md) goes into detail: the command line, every
 DCL command, MACRO-32, FORTRAN, the linker, the debugger, and how govax
-works inside. Its examples were run on govax. At the `VAX>` prompt, `HELP`
+works inside. Its examples were run on govax. At the `$` prompt, `HELP`
 works the way you remember, and if you've ever wanted to write a compiler
 for the VAX, [FORTRAN-INTERNALS](docs/FORTRAN-INTERNALS.md) documents how
 the FORTRAN compiler supplied with govax was built, through every step of

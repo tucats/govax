@@ -151,7 +151,7 @@ the last one's text (an empty string for a plain RUN). Three paths set
 | How the image is started | Text | Treatment |
 |---|---|---|
 | `RUN file` | none | — |
-| a foreign command at the `VAX>` prompt (`FORTH 2 3 + .`) | the rest of the line | DCL's (below) |
+| a foreign command at the `$` prompt (`FORTH 2 3 + .`) | the rest of the line | DCL's (below) |
 | `govax run file text...` from the host shell | the arguments after the file, joined by blanks | none: the shell already parsed it, so case and quotes are as the shell left them |
 
 The host path: `cmd/govax/grammar.go`'s `runCmd` puts the extra

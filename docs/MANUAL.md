@@ -179,7 +179,7 @@ govax 1.1-1075
 %MOUNT-I-MOUNTED, GOVAXSYS mounted on _DUA0:
 %SYSTEM-S-INIT, Kernel initialized
 
-VAX>
+$
 ```
 
 After that, it mounts the one it made:
@@ -190,7 +190,7 @@ govax 1.1-1075
 %MOUNT-I-MOUNTED, GOVAXSYS mounted on _DUA0:
 %SYSTEM-S-INIT, Kernel initialized
 
-VAX>
+$
 ```
 
 Before the prompt appears, govax runs its startup procedure,
@@ -200,20 +200,20 @@ the page tables, loads and starts the microkernel, and defines the
 terminal and null devices. `%SYSTEM-S-INIT` reports that initialization
 is complete.
 
-At the `VAX>` prompt you type DCL commands, as at VMS's `$` prompt. Some
+At the `$` prompt you type DCL commands, just like VMS. Some
 things to try:
 
 ```text
-VAX> SHOW SYSTEM
+$ SHOW SYSTEM
 GOVAX 1.0-280  on node mymac  20-OCT-2026 09:56:01.44  Uptime  0 00:00:00
   Pid    Process Name    State  Pri      I/O       CPU       Page flts  Pages
 00000301 SYSTEM          CUR      4        0   0 00:00:00.04         7      7
-VAX> X = 6 * 7
-VAX> SHOW SYMBOL X
+$ X = 6 * 7
+$ SHOW SYMBOL X
   X = 42   Hex = 0000002A  Octal = 00000000052
-VAX> WRITE SYS$OUTPUT "Answer: ", X, " at ", F$TIME()
+$ WRITE SYS$OUTPUT "Answer: ", X, " at ", F$TIME()
 Answer: 42 at 20-OCT-2026 09:56:01.44
-VAX> HELP
+$ HELP
 ```
 
 `HELP` lists every command and topic; `HELP DIRECTORY`, `HELP LINK`,
@@ -222,14 +222,14 @@ this manual cover the same ground; the help text is the place to look up
 a qualifier quickly while this manual goes into more detail with more
 examples.
 
-To leave govax, type `LOGOUT` at the `VAX>`
+To leave govax, type `LOGOUT` at the `$`
 prompt, or press **Ctrl/Y**. Unless the configuration key "vax.console.exit"
 is explicitly set to false, you can also use`EXIT` to exit govax silently. Like VMS,
 `LOGOUT` reports session logout, and `LOGOUT/FULL` adds the accounting
 information:
 
 ```text
-VAX> LOGOUT/FULL
+$ LOGOUT/FULL
   SYSTEM       logged out at 16-NOV-2026 17:02:56.40
 
   Accounting information:
@@ -276,13 +276,13 @@ $ govax run ./hello.exe
 Hello, world!
 ```
 
-or at the `VAX>` prompt:
+or at the `$` prompt:
 
 ```text
 $ govax
-VAX> MACRO "./hello.mar"
-VAX> LINK "./hello"
-VAX> RUN "./hello.exe"
+$ MACRO "./hello.mar"
+$ LINK "./hello"
+$ RUN "./hello.exe"
 Hello, world!
 ```
 
@@ -305,7 +305,7 @@ in the host directory, MACRO's object, LINK's
 image, and so on are written to that same host directory
 too.
 
-Notice also the quotes at the `VAX>` prompt. DCL makes everything you
+Notice also the quotes at the `$` prompt. DCL makes everything you
 type uppercase unless it's in quotes, and your host's file names are
 often lowercase (and on Linux, case-sensitive); the quotes also keep the
 `/` from being read as a qualifier. The host subcommands quote their
@@ -337,14 +337,14 @@ govax 1.1-1075
 %MOUNT-I-MOUNTED, WORK mounted on _DUA1:
 %SYSTEM-S-INIT, Kernel initialized
 
-VAX> SHOW DEFAULT
+$ SHOW DEFAULT
   DUA1:[WORK]
-VAX> COPY "hello.mar"/HOST *
-VAX> MACRO HELLO
-VAX> LINK HELLO
-VAX> RUN HELLO
+$ COPY "hello.mar"/HOST *
+$ MACRO HELLO
+$ LINK HELLO
+$ RUN HELLO
 Hello, world!
-VAX> DIRECTORY
+$ DIRECTORY
 
 Directory DUA1:[WORK]
 
@@ -398,7 +398,7 @@ Each time govax starts, it:
    in](#accounts-and-logging-in)).
 9. Runs the command given on govax's command line and exits (the one-shot
    command form), or else
-   shows the `VAX>` prompt to start a session.
+   shows the `$` prompt to start a session.
 
 The memory sizes STARTUP.COM uses can be changed with configuration
 settings (see [Memory](#memory)), so you rarely need to change
@@ -560,9 +560,9 @@ govax macro ./prog.mar && govax link ./prog.obj && govax run ./prog.exe
 
 govax handles control keys the VMS way:
 
-| Key | At the `VAX>` prompt | While a program or command runs |
+| Key | At the `$` prompt | While a program or command runs |
 | --- | --- | --- |
-| **Ctrl/C** | Cancels the line being typed. | Interrupts it, back to the prompt it was started from (`VAX>` or `DBG>`). A program that enabled a Ctrl/C AST gets the AST instead. |
+| **Ctrl/C** | Cancels the line being typed. | Interrupts it, back to the prompt it was started from (`$` or `DBG>`). A program that enabled a Ctrl/C AST gets the AST instead. |
 | **Ctrl/Y** | Ends govax. | Ends govax (a second Ctrl/Y exits at once if the first doesn't). A program with a Ctrl/Y AST gets it instead. In a command procedure, Ctrl/Y is DCL's: see [Ctrl/Y in procedures](#ctrly-in-procedures). |
 | **Ctrl/Z** | Echoes `*Exit*`, as DCL does. At `DBG>` it's `EXIT`. | End of file for the program's read (RMS's `RMS$_EOF`). |
 
@@ -576,7 +576,7 @@ including how the keys go to a subprocess that `SPAWN` is waiting for. **Ctrl/T*
 govax keeps settings in a *profile*: a file in the `.govax` directory of
 your home directory, read each time govax starts. You change configuration
 settings from your host shell with `govax config` (not from within the VMS
-ssytem at the `VAX>` prompt).
+ssytem at the `$` prompt).
 
 ### Setting, showing, and deleting
 
@@ -705,7 +705,7 @@ read-only.
 | Key | Meaning | Default |
 | --- | --- | --- |
 | `vax.startup.procedure` | A DCL procedure to run after STARTUP.COM each time govax starts: a volume file (`DUA1:[WORK]LOGIN.COM`) or a host file. If it doesn't exist, nothing happens. | none |
-| `vax.console.prompt` | The prompt. `SET PROMPT` changes it and saves it here. | `VAX> ` |
+| `vax.console.prompt` | The prompt. `SET PROMPT` changes it and saves it here. | `$ ` |
 | `vax.console.lines` | The screen height `TYPE/PAGE` uses when it can't ask the terminal. | 24 |
 | `vax.disassemble.symbolic` | Whether the debugger shows instructions with symbolic names by default. | true |
 | `vax.language` | The user's language, as `LIB$GET_USERS_LANGUAGE` returns it when `SYS$LANGUAGE` isn't defined. | the host's locale |
@@ -875,7 +875,7 @@ directory when `vax.default.volume.file` is set, and otherwise SYSTEM's
 home, `SYS$SYSROOT:[SYSMGR]` on the system volume. So a bare `HELLO.MAR`
 is a volume file, even when the file you mean is in the host directory
 you started govax in. Give a host file a `/` (`"./hello.mar"`) or
-`/HOST` (`"hello.mar"/HOST`), at the `VAX>` prompt and on the host
+`/HOST` (`"hello.mar"/HOST`), at the `$` prompt and on the host
 command line alike: `govax macro ./hello.mar`, not `govax macro
 hello.mar`. Only when govax runs with no system volume
 (`--system-file none`) and no work volume is the default directory the
@@ -891,11 +891,11 @@ ANALYZE's report) is named for its input, with the output's own type, and
 goes in your **default directory**, not beside the input, as on VMS:
 
 ```text
-VAX> SET DEFAULT DUA1:[WORK]
-VAX> MACRO [SRC]HELLO                ! writes DUA1:[WORK]HELLO.OBJ
-VAX> MACRO [SRC]HELLO/OBJECT=OTHER   ! DUA1:[WORK]OTHER.OBJ
-VAX> MACRO [SRC]HELLO/OBJECT=[SRC]   ! DUA1:[SRC]HELLO.OBJ
-VAX> LINK HELLO                      ! DUA1:[WORK]HELLO.EXE
+$ SET DEFAULT DUA1:[WORK]
+$ MACRO [SRC]HELLO                ! writes DUA1:[WORK]HELLO.OBJ
+$ MACRO [SRC]HELLO/OBJECT=OTHER   ! DUA1:[WORK]OTHER.OBJ
+$ MACRO [SRC]HELLO/OBJECT=[SRC]   ! DUA1:[SRC]HELLO.OBJ
+$ LINK HELLO                      ! DUA1:[WORK]HELLO.EXE
 ```
 
 Only the input's name and type carry over (RMS's "output file parse"). A
@@ -967,13 +967,13 @@ make one with `INITIALIZE/CONTAINER`, attach it to a device with `MOUNT`,
 and detach it with `DISMOUNT`:
 
 ```text
-VAX> INITIALIZE/CONTAINER "project.dsk" /DEVICE=RD54 PROJECT
-VAX> MOUNT DUA1: "project.dsk"
+$ INITIALIZE/CONTAINER "project.dsk" /DEVICE=RD54 PROJECT
+$ MOUNT DUA1: "project.dsk"
 %MOUNT-I-MOUNTED, PROJECT mounted on _DUA1:
-VAX> CREATE/DIRECTORY DUA1:[SRC]
-VAX> SET DEFAULT DUA1:[SRC]
-VAX> ...
-VAX> DISMOUNT DUA1:
+$ CREATE/DIRECTORY DUA1:[SRC]
+$ SET DEFAULT DUA1:[SRC]
+$ ...
+$ DISMOUNT DUA1:
 ```
 
 `MOUNT` defines `DISK$label` in the system table, as VMS does, so the
@@ -1119,10 +1119,10 @@ the highest version unless you give one. `SET DEFAULT` sets the default
 device and directory, which fill in any part of a name you leave out:
 
 ```text
-VAX> SET DEFAULT DUA1:[WORK]
-VAX> SET DEFAULT [.SRC]           ! DUA1:[WORK.SRC]
-VAX> SET DEFAULT [-]              ! back up to DUA1:[WORK]
-VAX> SHOW DEFAULT
+$ SET DEFAULT DUA1:[WORK]
+$ SET DEFAULT [.SRC]           ! DUA1:[WORK.SRC]
+$ SET DEFAULT [-]              ! back up to DUA1:[WORK]
+$ SHOW DEFAULT
   DUA1:[WORK]
 ```
 
@@ -1165,10 +1165,10 @@ PROCESS/PRIVILEGES` does that, and shows what someone without them would
 be refused (SYSTEM's UIC still puts it in the SYSTEM category):
 
 ```text
-VAX> SET DEFAULT DUA1:[PROJECT]
-VAX> SET SECURITY/OWNER=[200,1]/PROTECTION=(S:RWED,O:RWED,G:R,W) NOTES.TXT
-VAX> SET SECURITY/ACL=(IDENTIFIER=[300,1],ACCESS=READ+WRITE) NOTES.TXT
-VAX> DIRECTORY/SECURITY
+$ SET DEFAULT DUA1:[PROJECT]
+$ SET SECURITY/OWNER=[200,1]/PROTECTION=(S:RWED,O:RWED,G:R,W) NOTES.TXT
+$ SET SECURITY/ACL=(IDENTIFIER=[300,1],ACCESS=READ+WRITE) NOTES.TXT
+$ DIRECTORY/SECURITY
 
 Directory DUA1:[PROJECT]
 
@@ -1176,20 +1176,20 @@ NOTES.TXT;1          [200,1]                          (RWED,RWED,R,)
           (IDENTIFIER=[300,1],ACCESS=READ+WRITE)
 
 Total of 1 file.
-VAX> SHOW SECURITY NOTES.TXT
+$ SHOW SECURITY NOTES.TXT
 
 DUA1:[PROJECT]NOTES.TXT;1 object of class FILE
      Owner: [200,1]
      Protection: (System: RWED, Owner: RWED, Group: R, World)
      Access Control List:
           (IDENTIFIER=[300,1],ACCESS=READ+WRITE)
-VAX> SET SECURITY/PROTECTION=(S) NOTES.TXT
-VAX> SET PROCESS/PRIVILEGES=(NOREADALL,NOGRPPRV,NOSYSPRV,NOBYPASS)
-VAX> TYPE NOTES.TXT
+$ SET SECURITY/PROTECTION=(S) NOTES.TXT
+$ SET PROCESS/PRIVILEGES=(NOREADALL,NOGRPPRV,NOSYSPRV,NOBYPASS)
+$ TYPE NOTES.TXT
 %TYPE-W-OPENIN, error opening DUA1:[PROJECT]NOTES.TXT;1 as input
 -RMS-E-PRV, insufficient privilege or file protection violation
-VAX> SET PROCESS/PRIVILEGES=(READALL,GRPPRV,SYSPRV,BYPASS)
-VAX> TYPE NOTES.TXT
+$ SET PROCESS/PRIVILEGES=(READALL,GRPPRV,SYSPRV,BYPASS)
+$ TYPE NOTES.TXT
 These are the notes.
 ```
 
@@ -1339,11 +1339,11 @@ Without it, each name follows the rules of
 so a quoted path with a `/` in it is a host file too:
 
 ```text
-VAX> COPY "prog.mar"/HOST DUA1:[WORK]       ! host to volume, same name
-VAX> COPY "prog.mar"/HOST *                 ! the same, into the default directory
-VAX> COPY PROG.LIS "prog.lis"/HOST          ! volume to host
-VAX> COPY PROG.LIS "./prog.lis"             ! the same: the "/" makes it a host path
-VAX> COPY *.MAR [BACKUP]*.SAV               ! volume to volume, wildcards
+$ COPY "prog.mar"/HOST DUA1:[WORK]       ! host to volume, same name
+$ COPY "prog.mar"/HOST *                 ! the same, into the default directory
+$ COPY PROG.LIS "prog.lis"/HOST          ! volume to host
+$ COPY PROG.LIS "./prog.lis"             ! the same: the "/" makes it a host path
+$ COPY *.MAR [BACKUP]*.SAV               ! volume to volume, wildcards
 ```
 
 How the contents are copied:
@@ -1360,7 +1360,7 @@ How the contents are copied:
   location to another always keeps the file's record format.
 
 ```text
-VAX> COPY/BINARY "fromvax.exe"/HOST DUA1:[WORK]PROG.EXE
+$ COPY/BINARY "fromvax.exe"/HOST DUA1:[WORK]PROG.EXE
 ```
 
 To move a whole directory tree, with each file's record format, dates,
@@ -1378,15 +1378,15 @@ and TERMINAL attributes. File names are translated through them, by the
 console's commands and by RMS in a running program:
 
 ```text
-VAX> DEFINE SRC DUA1:[WORK.SRC]
-VAX> MACRO SRC:PROG
-VAX> DEFINE/TRANSLATION=CONCEALED PROJ DUA1:
-VAX> DIRECTORY PROJ:[PROJECT.SRC]
+$ DEFINE SRC DUA1:[WORK.SRC]
+$ MACRO SRC:PROG
+$ DEFINE/TRANSLATION=CONCEALED PROJ DUA1:
+$ DIRECTORY PROJ:[PROJECT.SRC]
 
 Directory PROJ:[PROJECT.SRC]
 ...
-VAX> DEFINE LIBS DUA1:[LIB1],DUA1:[LIB2]      ! a search list
-VAX> TYPE LIBS:HELLO.MAR                      ! the first one that has it
+$ DEFINE LIBS DUA1:[LIB1],DUA1:[LIB2]      ! a search list
+$ TYPE LIBS:HELLO.MAR                      ! the first one that has it
 ```
 
 A *rooted* logical name is one whose equivalence ends its directory in a
@@ -1396,21 +1396,21 @@ its subdirectories look like top-level directories, the root itself is
 is, the name is what every command and program shows:
 
 ```text
-VAX> DEFINE/TRANSLATION=CONCEALED PROJ DUA1:[PROJECT.]
-VAX> DIRECTORY PROJ:[SRC]                     ! really DUA1:[PROJECT.SRC]
+$ DEFINE/TRANSLATION=CONCEALED PROJ DUA1:[PROJECT.]
+$ DIRECTORY PROJ:[SRC]                     ! really DUA1:[PROJECT.SRC]
 
 Directory PROJ:[SRC]
 
 HELLO.MAR;1
 
 Total of 1 file.
-VAX> SET DEFAULT PROJ:[SRC]
-VAX> SET DEFAULT [-]
-VAX> SHOW DEFAULT
+$ SET DEFAULT PROJ:[SRC]
+$ SET DEFAULT [-]
+$ SHOW DEFAULT
   PROJ:[000000]
-VAX> SET DEFAULT [-]
+$ SET DEFAULT [-]
 %RMS-F-DIR, error in directory name
-VAX> WRITE SYS$OUTPUT F$PARSE("PROJ:[SRC]HELLO.MAR",,,,"NO_CONCEAL")
+$ WRITE SYS$OUTPUT F$PARSE("PROJ:[SRC]HELLO.MAR",,,,"NO_CONCEAL")
 DUA1:[PROJECT.][SRC]HELLO.MAR;
 ```
 
@@ -1510,7 +1510,7 @@ queues](#67-batch-queues)). Yours might add:
 $! SYS$MANAGER:SYSTARTUP_VMS.COM
 $ DEFINE/SYSTEM WORK$DISK DUA1:
 $ DEFINE/SYSTEM/EXECUTIVE_MODE SYS$SHARE DUA1:[MYLIB],SYS$SYSDEVICE:[SYSTEM.SYSLIB]
-$ SET PROMPT="MYVAX> "
+$ SET PROMPT="VAX> "
 $ EXIT
 ```
 
@@ -1582,9 +1582,9 @@ A start with nothing to bring up to date writes nothing.
 library, with a procedure to rebuild each:
 
 ```text
-VAX> @SYS$SOURCES:BUILDFTN
+$ @SYS$SOURCES:BUILDFTN
 FTNRTL.EXE built and installed in SYS$SHARE
-VAX> @SYS$SOURCES:BUILDSTARLET
+$ @SYS$SOURCES:BUILDSTARLET
 STARLET.MLB built and installed in SYS$LIBRARY
 ```
 
@@ -1640,7 +1640,7 @@ or device for one run, and the `vax.default.system.*` keys for every run
 
 ## 6. DCL command reference
 
-This section describes every command the `VAX>` prompt accepts, grouped
+This section describes every command the `$` prompt accepts, grouped
 by purpose. For each, it gives the syntax and the qualifiers you're
 likely to use; `HELP command` at the prompt has the complete list.
 
@@ -1682,7 +1682,7 @@ is the default directory), and files found in the directory just
 listed go under the same heading and total:
 
 ```text
-VAX> DIRECTORY/SIZE DUA1:[WORK.DUNGEON]*.EXE,*.DAT
+$ DIRECTORY/SIZE DUA1:[WORK.DUNGEON]*.EXE,*.DAT
 
 Directory DUA1:[WORK.DUNGEON]
 
@@ -1695,7 +1695,7 @@ Total of 4 files, 907 blocks.
 ```
 
 ```text
-VAX> DIRECTORY/SIZE/DATE
+$ DIRECTORY/SIZE/DATE
 
 Directory DUA1:[HELLO]
 
@@ -1847,8 +1847,8 @@ file to make. Without `/BINARY` the host file is read as lines, each a record. W
 line feed before the line and a carriage return after), and `NONE` with `/BINARY`.
 
 ```text
-VAX> COPY "table"/HOST TABLE.DAT/BINARY/RECORD_FORMAT=FIXED/RECORD_SIZE=80
-VAX> COPY "report.txt"/HOST REPORT.LIS/RECORD_FORMAT=VFC
+$ COPY "table"/HOST TABLE.DAT/BINARY/RECORD_FORMAT=FIXED/RECORD_SIZE=80
+$ COPY "report.txt"/HOST REPORT.LIS/RECORD_FORMAT=VFC
 ```
 
 #### CREATE
@@ -1985,7 +1985,7 @@ there is none). Neither may have wildcards. Either may be a host file or a
 volume file, of any record format: records are compared, not formats.
 
 ```text
-VAX> DIFFERENCES "foo.txt" "foo.tst"
+$ DIFFERENCES "foo.txt" "foo.tst"
 ************
 File foo.txt
     3   line 3
@@ -2015,7 +2015,7 @@ in any combination; `/SLP` instead writes an edit script for VMS's SLP editor
 that turns the first file into the second:
 
 ```text
-VAX> DIFFERENCES/SLP/OUTPUT=SYS$OUTPUT "foo.txt" "foo.tst"
+$ DIFFERENCES/SLP/OUTPUT=SYS$OUTPUT "foo.txt" "foo.tst"
 -    2
 extra cat
 extra dog
@@ -2068,16 +2068,16 @@ script, then the input updated by it, then the comparison of the result
 with the revision.
 
 ```text
-VAX> DIFFERENCES/SLP MEMO.TXT MEMO2.TXT
-VAX> TYPE MEMO.DIF
+$ DIFFERENCES/SLP MEMO.TXT MEMO2.TXT
+$ TYPE MEMO.DIF
 -    2,    4
 The meeting is on Thursday, at ten.
 Please bring the minutes.
 We will discuss the budget.
 And the new building.
 /
-VAX> EDIT/SUM/LISTING MEMO.TXT/UPDATE=MEMO.DIF
-VAX> TYPE MEMO.LIS
+$ EDIT/SUM/LISTING MEMO.TXT/UPDATE=MEMO.DIF
+$ TYPE MEMO.LIS
                                                             25-NOV-2026 22:45:00    VAX-11 SUMSLP V01.00                Page    1
                                                             25-NOV-2026 22:45:00    DUA1:[WORK]MEMO.TXT;1
 
@@ -2088,7 +2088,7 @@ VAX> TYPE MEMO.LIS
                      .4 And the new building.
 -3                    5 Regards,
                       6 Pat
-VAX> DIFFERENCES MEMO.TXT MEMO2.TXT
+$ DIFFERENCES MEMO.TXT MEMO2.TXT
 Number of difference sections found: 0
 Number of difference records found: 0
 
@@ -2263,8 +2263,8 @@ of each file unless the specifier names one, and with `[dir...]` into
 each subdirectory:
 
 ```text
-VAX> SET DEFAULT [WORK]
-VAX> BACKUP/LOG [.PROJ...]*.* PROJ.BCK/SAVE_SET
+$ SET DEFAULT [WORK]
+$ BACKUP/LOG [.PROJ...]*.* PROJ.BCK/SAVE_SET
 %BACKUP-S-COPIED, copied DUA1:[WORK.PROJ]DOC.DIR;1
 %BACKUP-S-COPIED, copied DUA1:[WORK.PROJ.DOC]README.TXT;1
 %BACKUP-S-COPIED, copied DUA1:[WORK.PROJ]NOTES.TXT;2
@@ -2276,7 +2276,7 @@ it also has 8192-byte blocks and a CRC in each block, and `;0` saves
 only each file's newest version:
 
 ```text
-VAX> BACKUP/LOG [.PROJ...]*.TXT;0 "./proj.bck"/SAVE_SET/CRC/BLOCK_SIZE=8192
+$ BACKUP/LOG [.PROJ...]*.TXT;0 "./proj.bck"/SAVE_SET/CRC/BLOCK_SIZE=8192
 ```
 
 **Listing.** `/LIST` shows the save set's summary and its files, each
@@ -2285,7 +2285,7 @@ dates, owner, protection, and record attributes, as DIRECTORY/FULL does.
 `/LIST=file` writes the listing to a file.
 
 ```text
-VAX> BACKUP/LIST PROJ.BCK/SAVE_SET
+$ BACKUP/LIST PROJ.BCK/SAVE_SET
 Listing of save set(s)
 
 Save set:          PROJ.BCK
@@ -2320,7 +2320,7 @@ that one directory. Under `[dir...]` a file keeps its whole directory
 names a tree, in which case the part its `...` matched is kept:
 
 ```text
-VAX> BACKUP/LOG PROJ.BCK/SAVE_SET/SELECT=[WORK.PROJ...] [RESTORED...]
+$ BACKUP/LOG PROJ.BCK/SAVE_SET/SELECT=[WORK.PROJ...] [RESTORED...]
 %BACKUP-S-CREDIR, created directory DUA1:[RESTORED.DOC]
 %BACKUP-S-CREATED, created DUA1:[RESTORED.DOC]README.TXT;1
 %BACKUP-S-CREATED, created DUA1:[RESTORED]NOTES.TXT;2
@@ -2337,11 +2337,11 @@ specifier has `/NEW_VERSION` (restore it as the next version),
 restore it again):
 
 ```text
-VAX> BACKUP PROJ.BCK/SAVE_SET/SELECT=[...]NOTES.TXT;1 [*...]
+$ BACKUP PROJ.BCK/SAVE_SET/SELECT=[...]NOTES.TXT;1 [*...]
 %BACKUP-E-OPENOUT, error opening DUA1:[WORK.PROJ]NOTES.TXT;1 as output
 -RMS-E-FEX, file already exists, not superseded
 %BACKUP-W-NOFILES, no files selected from DUA1:[WORK]PROJ.BCK;
-VAX> BACKUP PROJ.BCK/SAVE_SET/SELECT=[...]NOTES.TXT;1 [*...]/NEW_VERSION/LOG
+$ BACKUP PROJ.BCK/SAVE_SET/SELECT=[...]NOTES.TXT;1 [*...]/NEW_VERSION/LOG
 %BACKUP-S-CREATED, created DUA1:[WORK.PROJ]NOTES.TXT;3
 ```
 
@@ -2350,7 +2350,7 @@ tree); its files are written as COPY writes them to the host, with
 their versions in their names:
 
 ```text
-VAX> BACKUP PROJ.BCK/SAVE_SET/SELECT=[WORK.PROJ...] "out/..."/LOG
+$ BACKUP PROJ.BCK/SAVE_SET/SELECT=[WORK.PROJ...] "out/..."/LOG
 %BACKUP-S-CREDIR, created directory out/DOC
 %BACKUP-S-CREATED, created out/DOC/README.TXT;1
 %BACKUP-S-CREATED, created out/NOTES.TXT;2
@@ -2364,7 +2364,7 @@ compared too). After `out/DOC/README.TXT;1` was deleted and a line added
 to `out/NOTES.TXT;2`:
 
 ```text
-VAX> BACKUP/COMPARE PROJ.BCK/SAVE_SET/SELECT=[WORK.PROJ...] "out/..."
+$ BACKUP/COMPARE PROJ.BCK/SAVE_SET/SELECT=[WORK.PROJ...] "out/..."
 %BACKUP-E-OPENIN, error opening out/DOC/README.TXT;1 as input
 -RMS-E-FNF, file not found
 %BACKUP-E-VERIFYERR, verification error for block 1 of out/NOTES.TXT;2
@@ -2443,8 +2443,8 @@ refused. SHOW DEFAULT says so when the default
 directory doesn't exist:
 
 ```text
-VAX> SET DEFAULT DUA1:[NOSUCH]
-VAX> SHOW DEFAULT
+$ SET DEFAULT DUA1:[NOSUCH]
+$ SHOW DEFAULT
   DUA1:[NOSUCH]
 %DCL-I-INVDEF, DUA1:[NOSUCH] does not exist
 ```
@@ -2454,7 +2454,7 @@ one. A host path is refused, and a host file is named by its own path
 (`"./prog.mar"`) or with `/HOST` instead:
 
 ```text
-VAX> SET DEFAULT "/Users/me/src"
+$ SET DEFAULT "/Users/me/src"
 %VAX-E-HOSTDEF, /Users/me/src is a host directory; the default must be on a mounted volume (name host files with a path such as "./name", or /HOST)
 ```
 
@@ -2464,7 +2464,7 @@ are host files in the directory govax was started in, and SHOW DEFAULT
 says so:
 
 ```text
-VAX> SHOW DEFAULT
+$ SHOW DEFAULT
   No default volume: names without a device or
   directory are host files in /Users/me/project
 ```
@@ -2517,7 +2517,7 @@ and detaches it; it refuses a volume with files open (a process still
 using them, say), and the system volume:
 
 ```text
-VAX> DISMOUNT DUA0:
+$ DISMOUNT DUA0:
 %DISM-W-CANNOTDMT, DUA0: cannot be dismounted
 %DISM-W-SYSDISK, device is the system volume
 ```
@@ -2568,9 +2568,9 @@ passes over a table you may not read with `%SYSTEM-W-IVLOGTAB`.
 `SHOW LOGICAL` follows a name through each level of translation:
 
 ```text
-VAX> DEFINE MYDISK WORK4
-VAX> DEFINE/SYSTEM WORK4 $255$DUA17:
-VAX> SHOW LOGICAL MYDISK
+$ DEFINE MYDISK WORK4
+$ DEFINE/SYSTEM WORK4 $255$DUA17:
+$ SHOW LOGICAL MYDISK
    "MYDISK" = "WORK4" (LNM$PROCESS_TABLE)
 1  "WORK4" = "$255$DUA17:" (LNM$SYSTEM_TABLE)
 ```
@@ -2587,10 +2587,10 @@ DELETE/SYMBOL [/LOCAL|/GLOBAL] [/ALL] [name]
 DCL symbols hold integers and strings; section 7 describes them.
 
 ```text
-VAX> SD :== SET DEFAULT
-VAX> FO*RTH :== $DUA1:[TOOLS]FORTH.EXE
-VAX> N = 42
-VAX> SHOW SYMBOL *
+$ SD :== SET DEFAULT
+$ FO*RTH :== $DUA1:[TOOLS]FORTH.EXE
+$ N = 42
+$ SHOW SYMBOL *
   N = 42   Hex = 0000002A  Octal = 00000000052
   $SEVERITY == "1"
   $STATUS == "%X00030001"
@@ -2684,8 +2684,8 @@ the image, which reads the rest of the line with `LIB$GET_FOREIGN`. `MCR`
 does the same without a symbol.
 
 ```text
-VAX> ECHO :== $DUA1:[TOOLS]ECHO.EXE
-VAX> ECHO one   two "Three"
+$ ECHO :== $DUA1:[TOOLS]ECHO.EXE
+$ ECHO one   two "Three"
 ONE TWO "Three"
 ```
 
@@ -2708,9 +2708,9 @@ transcript. With a line, fcalc runs it and ends; without one, it reads lines
 at its prompt until EXIT or end of file.
 
 ```text
-VAX> FCALC 2^10 + 1
+$ FCALC 2^10 + 1
 1025
-VAX> FCALC
+$ FCALC
 fcalc> f(x) = x^3 - 2*x - 5
 f(x) = x^3 - 2*x - 5
 fcalc> solve f(x) for x from 2
@@ -2718,7 +2718,7 @@ x = 2.09455148154
 fcalc> integrate exp(-x^2) for x from 0 to 3
 0.88620734826
 fcalc> exit
-VAX>
+$
 ```
 
 `HELP FCALC` describes it, a topic for each function group and command, and
@@ -2754,14 +2754,14 @@ passed to it.
 `SPAWN`'s status is the subprocess's final status.
 
 ```text
-VAX> SPAWN DIRECTORY/SIZE
+$ SPAWN DIRECTORY/SIZE
 %DCL-S-SPAWNED, process SYSTEM_1 spawned
 %DCL-S-ATTACHED, terminal now attached to process SYSTEM_1
 
 Directory DUA1:[HELLO]
 ...
 %DCL-S-RETURNED, control returned to process SYSTEM
-VAX> SPAWN/NOWAIT @NIGHTLY
+$ SPAWN/NOWAIT @NIGHTLY
 ```
 
 A `/NOWAIT` subprocess runs alongside you: between your commands, while
@@ -2956,22 +2956,22 @@ stopped that way before `DELETE/QUEUE`.
 #### Submitting a job
 
 ```text
-VAX> START/QUEUE/MANAGER
-VAX> INITIALIZE/QUEUE/BATCH/JOB_LIMIT=2/START SYS$BATCH
-VAX> SUBMIT/PARAMETERS=(ALPHA,"two words") BUILD
+$ START/QUEUE/MANAGER
+$ INITIALIZE/QUEUE/BATCH/JOB_LIMIT=2/START SYS$BATCH
+$ SUBMIT/PARAMETERS=(ALPHA,"two words") BUILD
 Job BUILD (queue SYS$BATCH, entry 1) started on SYS$BATCH
-VAX> SUBMIT/AFTER=TOMORROW/HOLD/NAME=NIGHTLY BUILD
+$ SUBMIT/AFTER=TOMORROW/HOLD/NAME=NIGHTLY BUILD
 Job NIGHTLY (queue SYS$BATCH, entry 2) holding
-VAX> SHOW QUEUE SYS$BATCH
+$ SHOW QUEUE SYS$BATCH
 Batch queue SYS$BATCH, idle, on GOVAX::
 
   Entry  Jobname         Username             Status
   -----  -------         --------             ------
       2  NIGHTLY         SYSTEM               Holding
-VAX> SYNCHRONIZE/ENTRY=1
-VAX> SHOW SYMBOL $STATUS
+$ SYNCHRONIZE/ENTRY=1
+$ SHOW SYMBOL $STATUS
   $STATUS == "%X10010001"
-VAX> TYPE SYS$LOGIN:BUILD.LOG
+$ TYPE SYS$LOGIN:BUILD.LOG
 Building ALPHA and two words
   P2 = "two words"
 Mode: BATCH
@@ -3026,7 +3026,7 @@ A job still running when you end govax can't go on, since its process
 goes with the session. govax asks first, at a terminal:
 
 ```text
-VAX> LOGOUT
+$ LOGOUT
 %VAX-W-JOBSEXECUTING, 1 batch job executing; ending govax ends it
 End them and exit? (Y or N) [N]: Y
 %VAX-I-JOBSENDED, batch jobs requeued to restart: 1; ended (queue reset): 0
@@ -3064,7 +3064,7 @@ queue's profile ([SET SECURITY](#set-security-set-acl-set-file-and-set-protectio
 For example, a queue only group 200 may use:
 
 ```text
-VAX> INITIALIZE/QUEUE/BATCH/OWNER_UIC=[200,0]/PROTECTION=(S:M,O:M,G:S,W)/START GROUP200_BATCH
+$ INITIALIZE/QUEUE/BATCH/OWNER_UIC=[200,0]/PROTECTION=(S:M,O:M,G:S,W)/START GROUP200_BATCH
 ```
 
 and a user of another group then gets
@@ -3176,7 +3176,7 @@ given are `""`). Unquoted parameters are made uppercase; quotes keep
 blanks and case, and `""` passes an empty one:
 
 ```text
-VAX> @SETUP "Test Run" fast
+$ @SETUP "Test Run" fast
 ```
 
 gives `P1` the value `Test Run` and `P2` the value `FAST`.
@@ -3601,7 +3601,7 @@ $ WRITE SYS$OUTPUT "Hex: ", F$FAO("!XL", 255), "  Upcase: ", F$EDIT("  mixed   C
 ```
 
 ```text
-VAX> @LEX
+$ @LEX
 Process:  SYSTEM  PID 00000301
 Node:     GOVAX running V7.1
 Today is  Tuesday, 20-OCT-2026
@@ -3686,13 +3686,13 @@ $ EXIT $STATUS
 ```
 
 ```text
-VAX> @BUILD HELLO
+$ @BUILD HELLO
 Building DUA1:[HELLO]HELLO.MAR;1
 Hello, world!
 HELLO exited with status %X00000001
-VAX> @BUILD NOSUCH
+$ @BUILD NOSUCH
 No source file for NOSUCH
-VAX> TYPE BUILD.LOG
+$ TYPE BUILD.LOG
 20-OCT-2026 09:57:39.58 built FACT
 20-OCT-2026 09:57:40.15 built HELLO
 ```
@@ -3702,8 +3702,8 @@ that the false `IF` block's lines are skipped, and the `GOSUB`'s lines
 appear where they run:
 
 ```text
-VAX> SET VERIFY
-VAX> @BUILD HELLO
+$ SET VERIFY
+$ @BUILD HELLO
 ...
 $ IF SOURCE .EQS. ""
 $ ENDIF
@@ -3733,7 +3733,7 @@ $ EXIT
 govax's DCL was compared against VMS 7.1 with probe procedures, and
 behaves as VMS does in most cases. The differences to know about:
 
-- The default prompt is `VAX>` (change it with `SET PROMPT` or
+- The default prompt is `$` (change it with `SET PROMPT` or
   `vax.console.prompt`); a subprocess's is `$`.
 - At the terminal, `EXIT` ends govax, just as `LOGOUT` would end a VMS session. You can also use LOGOUT to exit govax. The
   configuration setting `vax.console.exit` can explicity be set to `false` to disallow `EXIT` as a way to leave govax.
@@ -3800,15 +3800,15 @@ and counted as warnings. An update file that can't be opened is
 `HELLO.MAR`, marking it `FIX1`:
 
 ```text
-VAX> TYPE HELLO.UPD
+$ TYPE HELLO.UPD
 -3,3,/FIX1/
 MSG:    .ASCID  /Hello, VAX!/
 /
-VAX> MACRO HELLO/UPDATE/LIST
-VAX> LINK HELLO
-VAX> RUN HELLO
+$ MACRO HELLO/UPDATE/LIST
+$ LINK HELLO
+$ RUN HELLO
 Hello, VAX!
-VAX> TYPE HELLO.LIS
+$ TYPE HELLO.LIS
 ...
                                      0000     1         .TITLE  HELLO
                                  00000000     2         .PSECT  DATA, WRT, NOEXE, LONG
@@ -4049,19 +4049,19 @@ OUTDSC: .LONG   160
 ```
 
 ```text
-VAX> SET DEFAULT DUA1:[DEMO]
-VAX> COPY "lines.mar"/HOST *
-VAX> COPY "lines.dat"/HOST *
-VAX> MACRO LINES
-VAX> LINK LINES
-VAX> RUN LINES
+$ SET DEFAULT DUA1:[DEMO]
+$ COPY "lines.mar"/HOST *
+$ COPY "lines.dat"/HOST *
+$ MACRO LINES
+$ LINK LINES
+$ RUN LINES
    1  The VAX-11/780 was announced in October 1977.
    2  It was the first VAX.
    3  Its successors ran VMS for decades.
-VAX> RENAME LINES.DAT GONE.DAT
-VAX> RUN LINES
+$ RENAME LINES.DAT GONE.DAT
+$ RUN LINES
 %RMS-E-FNF, file not found
-VAX> SHOW SYMBOL $STATUS
+$ SHOW SYMBOL $STATUS
   $STATUS == "%X00018292"
 ```
 
@@ -4143,16 +4143,16 @@ OUTDSC: .LONG   100
 Build the macro library, then the program:
 
 ```text
-VAX> LIBRARY/CREATE/MACRO MYMAC MYMAC
-VAX> LIBRARY/LIST MYMAC.MLB
+$ LIBRARY/CREATE/MACRO MYMAC MYMAC
+$ LIBRARY/LIST MYMAC.MLB
 Directory of MACRO library DUA1:[DEMO]MYMAC.MLB;1 on 20-OCT-2026 10:09:28
 Creation date:  20-OCT-2026 10:09:28      Creator:  GOVAX Librarian
 ...
 CHECK
 PRINT
-VAX> MACRO GREET
-VAX> LINK GREET
-VAX> RUN GREET
+$ MACRO GREET
+$ LINK GREET
+$ RUN GREET
 What is your name? Ada Lovelace
 Hello, Ada Lovelace!
 ```
@@ -4569,14 +4569,14 @@ file:   object[.OBJ]
 The simplest link is one object:
 
 ```text
-VAX> LINK HELLO
+$ LINK HELLO
 ```
 
 and several objects and a library:
 
 ```text
-VAX> LINK MAIN,SUBS,DUA1:[LIB]MATHLIB/LIBRARY
-VAX> LINK/EXECUTABLE=PROG/MAP/FULL MAIN,PROG/OPTIONS
+$ LINK MAIN,SUBS,DUA1:[LIB]MATHLIB/LIBRARY
+$ LINK/EXECUTABLE=PROG/MAP/FULL MAIN,PROG/OPTIONS
 ```
 
 ### How symbols are resolved
@@ -4619,8 +4619,8 @@ each module's part of them, the global symbols, and the image synopsis.
 `/BRIEF` keeps only the first and last; for example:
 
 ```text
-VAX> LINK/EXECUTABLE=MAIN3/MAP=MAIN3/BRIEF MAIN,MATHLIB/LIBRARY
-VAX> TYPE MAIN3.MAP
+$ LINK/EXECUTABLE=MAIN3/MAP=MAIN3/BRIEF MAIN,MATHLIB/LIBRARY
+$ TYPE MAIN3.MAP
                                              +------------------------+
                                              ! Object Module Synopsis !
                                              +------------------------+
@@ -4739,13 +4739,13 @@ and its options file, `MAIN.OPT`, one line: `MYSHR/SHAREABLE`.
 Build and run them:
 
 ```text
-VAX> MACRO VECTOR
-VAX> MACRO ROUTINES
-VAX> LINK/SHAREABLE=MYSHR VECTOR,ROUTINES,MYSHR/OPTIONS
-VAX> MACRO MAIN
-VAX> DEFINE MYSHR DUA1:[SHR]MYSHR.EXE
-VAX> LINK MAIN,MAIN/OPTIONS
-VAX> RUN MAIN
+$ MACRO VECTOR
+$ MACRO ROUTINES
+$ LINK/SHAREABLE=MYSHR VECTOR,ROUTINES,MYSHR/OPTIONS
+$ MACRO MAIN
+$ DEFINE MYSHR DUA1:[SHR]MYSHR.EXE
+$ LINK MAIN,MAIN/OPTIONS
+$ RUN MAIN
 double(7) = 14, square = 49
 ```
 
@@ -4766,10 +4766,10 @@ shareable image is.
 define symbols, so programs needn't name them:
 
 ```text
-VAX> LIBRARY/CREATE/SHARE SHRLIB MYSHR.EXE
-VAX> DEFINE LNK$LIBRARY DUA1:[SHR]SHRLIB.OLB
-VAX> LINK/EXECUTABLE=MAIN2 MAIN
-VAX> RUN MAIN2
+$ LIBRARY/CREATE/SHARE SHRLIB MYSHR.EXE
+$ DEFINE LNK$LIBRARY DUA1:[SHR]SHRLIB.OLB
+$ LINK/EXECUTABLE=MAIN2 MAIN
+$ RUN MAIN2
 double(7) = 14, square = 49
 ```
 
@@ -4878,9 +4878,9 @@ which VMS's librarian goes on from, is the exception). VMS's `/COMPRESS`
 isn't here.
 
 ```text
-VAX> LIBRARY/CREATE/LOG MATHLIB ROUTINES
+$ LIBRARY/CREATE/LOG MATHLIB ROUTINES
 %LIBRAR-S-INSERTED, module ROUTINES inserted in DUA1:[SHR]MATHLIB.OLB;1
-VAX> LIBRARY/LIST/FULL/NAMES MATHLIB
+$ LIBRARY/LIST/FULL/NAMES MATHLIB
 Directory of OBJECT library DUA1:[SHR]MATHLIB.OLB;1 on 20-OCT-2026 10:10:06
 Creation date:  20-OCT-2026 10:10:06      Creator:  GOVAX Librarian
 Revision date:  20-OCT-2026 10:10:06      Library format:   3.0
@@ -4892,33 +4892,33 @@ Max. Number history records:      20      Library history records:        0
 Module ROUTINES         Ident 0                Inserted 20-OCT-2026 10:10:06 2 symbols
 DOUBLE                           SQUARE
 
-VAX> LINK MAIN,MATHLIB/LIBRARY
-VAX> LIBRARY/EXTRACT=ROUTINES/OUTPUT=COPY.OBJ MATHLIB
-VAX> LIBRARY/DELETE=ROUTINES MATHLIB
+$ LINK MAIN,MATHLIB/LIBRARY
+$ LIBRARY/EXTRACT=ROUTINES/OUTPUT=COPY.OBJ MATHLIB
+$ LIBRARY/DELETE=ROUTINES MATHLIB
 ```
 
 A macro library:
 
 ```text
-VAX> LIBRARY/CREATE/MACRO MYMAC MYMAC.MAR
-VAX> LIBRARY/REPLACE/MACRO MYMAC NEWMACS.MAR      ! update some macros
-VAX> MACRO PROG+MYMAC/LIBRARY
+$ LIBRARY/CREATE/MACRO MYMAC MYMAC.MAR
+$ LIBRARY/REPLACE/MACRO MYMAC NEWMACS.MAR      ! update some macros
+$ MACRO PROG+MYMAC/LIBRARY
 ```
 
 A text library, for FORTRAN ([section 14.4](#144-source-lines)):
 
 ```text
-VAX> LIBRARY/CREATE/TEXT MYDEFS LIMITS.TXT,TIMES.TXT/MODULE=$TIMES
-VAX> LIBRARY/TEXT/EXTRACT=$TIMES/OUTPUT=OUT.TXT MYDEFS
-VAX> FORTRAN PROG+MYDEFS/LIBRARY
+$ LIBRARY/CREATE/TEXT MYDEFS LIMITS.TXT,TIMES.TXT/MODULE=$TIMES
+$ LIBRARY/TEXT/EXTRACT=$TIMES/OUTPUT=OUT.TXT MYDEFS
+$ FORTRAN PROG+MYDEFS/LIBRARY
 ```
 
 A help library:
 
 ```text
-VAX> LIBRARY/CREATE/HELP MYHELP TOOLS.HLP,NOTES.HLP
-VAX> LIBRARY/LIST/HELP MYHELP
-VAX> LIBRARY/HELP/EXTRACT=TOOLS/OUTPUT=SYS$OUTPUT MYHELP
+$ LIBRARY/CREATE/HELP MYHELP TOOLS.HLP,NOTES.HLP
+$ LIBRARY/LIST/HELP MYHELP
+$ LIBRARY/HELP/EXTRACT=TOOLS/OUTPUT=SYS$OUTPUT MYHELP
 ```
 
 HELP reads a help library as VMS's HELP does. `/LIBRARY=` names it (the
@@ -4931,8 +4931,8 @@ system tables) is searched when the main library has no such topic, and
 answers to the prompts are the data lines after the command.
 
 ```text
-VAX> DEFINE HLP$LIBRARY DUA1:[WORK]MYHELP
-VAX> HELP/LIBRARY=DUA1:[WORK]OTHER TOOLS
+$ DEFINE HLP$LIBRARY DUA1:[WORK]MYHELP
+$ HELP/LIBRARY=DUA1:[WORK]OTHER TOOLS
 ```
 
 With no `/LIBRARY`, HELP reads `SYS$HELP:HELPLIB.HLB`, the system
@@ -4981,7 +4981,7 @@ text.
 
 2 Examples
 
-   VAX> TOOLS/BRIEF
+   $ TOOLS/BRIEF
 ```
 
 HELP shows a topic's keys first, each a line, then its text, moved right
@@ -5035,7 +5035,7 @@ shareable images it uses and its references to them). Errors in a file
 are flagged with `***` and counted at the end.
 
 ```text
-VAX> ANALYZE/OBJECT/GSD ROUTINES
+$ ANALYZE/OBJECT/GSD ROUTINES
 Analyze Object File                          20-OCT-2026 10:10:06.53   Page 1
 DUA1:[SHR]ROUTINES.OBJ;1
 ANALYZ V07-04
@@ -5097,20 +5097,20 @@ a shareable image is `NOTFR`. `RUN/NOINIT` leaves them all out, for testing
 a run-time library.
 
 ```text
-VAX> RUN HELLO
+$ RUN HELLO
 Hello, world!
-VAX> RUN "/Users/me/vax/fact.exe"
-VAX> RUN/DEBUG FACT
+$ RUN "/Users/me/vax/fact.exe"
+$ RUN/DEBUG FACT
 ```
 
 `RUN` gives the image no command text. To pass it some, use a foreign
 command or `MCR`, or from the host shell, `govax run image text...`:
 
 ```text
-VAX> ECHO :== $DUA1:[TOOLS]ECHO.EXE
-VAX> ECHO one   two "Three"
+$ ECHO :== $DUA1:[TOOLS]ECHO.EXE
+$ ECHO one   two "Three"
 ONE TWO "Three"
-VAX> MCR DUA1:[TOOLS]ECHO via mcr
+$ MCR DUA1:[TOOLS]ECHO via mcr
 VIA MCR
 $ govax run echo.exe Hello there, '"Mixed Case"'
 Hello there, "Mixed Case"
@@ -5210,8 +5210,8 @@ Copy the image into govax with `COPY/BINARY` (or mount the VAX disk it's
 on), and run it:
 
 ```text
-VAX> COPY/BINARY "prog.exe"/HOST DUA1:[WORK]PROG.EXE
-VAX> RUN PROG
+$ COPY/BINARY "prog.exe"/HOST DUA1:[WORK]PROG.EXE
+$ RUN PROG
 ```
 
 A program that calls a run-time routine govax doesn't have yet links and
@@ -5316,11 +5316,11 @@ SYSNAM. What it keeps without a privilege is what an account in a system
 group keeps on VMS.
 
 ```text
-VAX> SET PROCESS/PRIVILEGES=(NOSYSNAM,NOSYSPRV,NOLOG_IO,NOPHY_IO)
-VAX> DEFINE/SYSTEM/EXECUTIVE_MODE GREETING "HELLO"
-VAX> SHOW LOGICAL/FULL GREETING
+$ SET PROCESS/PRIVILEGES=(NOSYSNAM,NOSYSPRV,NOLOG_IO,NOPHY_IO)
+$ DEFINE/SYSTEM/EXECUTIVE_MODE GREETING "HELLO"
+$ SHOW LOGICAL/FULL GREETING
    "GREETING" [super] = "HELLO" (LNM$SYSTEM_TABLE)
-VAX> SET TERMINAL/PERMANENT/WIDTH=80
+$ SET TERMINAL/PERMANENT/WIDTH=80
 %SET-W-NOTSET, error modifying TTA0:
 -SYSTEM-F-NOPRIV, insufficient privilege or object protection violation
 ```
@@ -5381,11 +5381,11 @@ operation, what it needs, and the answer. Where a logical name table's
 protection may grant the operation first, its answer is a line too:
 
 ```text
-VAX> SET DEBUG PRIVILEGES
-VAX> DEFINE/GROUP/EXECUTIVE_MODE COLOR "BLUE"
+$ SET DEBUG PRIVILEGES
+$ DEFINE/GROUP/EXECUTIVE_MODE COLOR "BLUE"
 DEBUG(PRIVILEGES): 00000301 SUPERVISOR mode: logical name: a mode inner to the caller's (needs SYSNAM): refused, SS$_NOPRIV
 DEBUG(PRIVILEGES): 00000301 SUPERVISOR mode: logical name: write LNM$GROUP_000001: by its protection [1,*] (S:RWCD,O:R,G:R,W), granted, has RWCD (system,group,ownership); no privilege asked
-VAX> SET DEBUG NOPRIVILEGES
+$ SET DEBUG NOPRIVILEGES
 ```
 
 The name was made at supervisor mode, DCL's: the first line is why.
@@ -5410,7 +5410,7 @@ debugger sessions. It also has commands of its own for looking at the
 machine underneath (registers, page tables, the translation buffer).
 
 The debugger has its own prompt, `DBG>`, and its own commands. DCL's
-commands aren't available there; `EXIT` returns to `VAX>`.
+commands aren't available there; `EXIT` returns to `$`.
 
 ### Starting the debugger
 
@@ -5419,7 +5419,7 @@ There are three ways in:
 - **`RUN/DEBUG image`**, or `RUN` of an image linked `/DEBUG`: the image is
   loaded and stopped at the first instruction of its main routine.
   (`RUN/NODEBUG` runs a `/DEBUG` image without the debugger.)
-- **`DEBUG`** at the `VAX>` prompt: a session on the machine as it is,
+- **`DEBUG`** at the `$` prompt: a session on the machine as it is,
   with nothing running, for examining memory, setting breakpoints, or
   assembling code.
 - **A breakpoint** reached while a program runs from the debugger.
@@ -5439,9 +5439,9 @@ For source-line debugging, assemble with `/DEBUG` and link with
 `/DEBUG`:
 
 ```text
-VAX> MACRO/DEBUG FACT
-VAX> LINK/DEBUG FACT
-VAX> RUN FACT
+$ MACRO/DEBUG FACT
+$ LINK/DEBUG FACT
+$ RUN FACT
 
          GOVAX DEBUG
 
@@ -5518,7 +5518,7 @@ DBG> GO
 10! = 3628800
 %DEBUG-I-EXITSTATUS, is '%SYSTEM-S-NORMAL, normal successful completion'
 DBG> EXIT
-VAX>
+$
 ```
 
 After the program exits, the debugger stays, as VMS's does, until you
@@ -5636,9 +5636,9 @@ BREAK/EXCEPTION`, and its handler gets it; the breakpoint on the
 `SOBGTR` takes the next trace, and the `GO` from there ends the tracing:
 
 ```text
-VAX> MACRO/DEBUG TRACER
-VAX> LINK/DEBUG TRACER
-VAX> RUN TRACER
+$ MACRO/DEBUG TRACER
+$ LINK/DEBUG TRACER
+$ RUN TRACER
 
          GOVAX DEBUG
 
@@ -5695,7 +5695,7 @@ assemble). `.END` returns to `DBG>`; `.END name` also calls the routine
 `name`. This makes the debugger a laboratory for trying instructions:
 
 ```text
-VAX> DEBUG
+$ DEBUG
 DBG> ASM
 ASM> .BASE ^X1000
 ASM> START:: MOVL #5, R1
@@ -5769,7 +5769,7 @@ govax is one Go program. Inside it:
 
 ```text
   +---------------------------------------------------------------+
-  |  Front end: the VAX> console, the DBG> debugger, cmd/govax     |
+  |  Front end: the $ console, the DBG> debugger, cmd/govax     |
   +---------------------------------------------------------------+
   |  DCL interpreter (one per process that runs DCL)               |
   |  MACRO, LINK, LIBRARY, ANALYZE, DIRECTORY, COPY, ...           |
@@ -5958,7 +5958,7 @@ followed by a code byte calls into govax. The codes include console
 character I/O (`XFC$CONSOLE_WRITE`, `XFC$CONSOLE_READ`), running a
 console command from a program (`XFC$CONSOLE_CMD`), the system service
 vector, the run-time library shims, and DCL's own entry points. `HELP
-XFC` at `VAX>` lists the ones a program may use. A program built on VMS
+XFC` at `$` lists the ones a program may use. A program built on VMS
 never contains `XFC`; govax puts it only in the memory it manages (the
 system service vector and the shims).
 
@@ -6076,7 +6076,7 @@ something; and the interrupt stack), loads the page table registers, and
 turns memory management on (`MAPEN`). `SHOW MEMORY` shows the result:
 
 ```text
-VAX> SHOW MEMORY
+$ SHOW MEMORY
 
     Physical Memory (8.00Mb)
         00004000 (16384 decimal) pages
@@ -6275,7 +6275,7 @@ the translation buffer, `TBSKIPWSL`, and locked pages: `$LKWSET`,
 goes back to the limit.
 
 ```text
-VAX> SHOW WORKING_SET
+$ SHOW WORKING_SET
   Working Set      /Limit=512   /Quota=1024    /Extent=16400
   Adjustment enabled      Authorized Quota=1024  Authorized Extent=16400
 ```
@@ -6375,9 +6375,9 @@ ARRAY:  .BLKB   512*2000                ; 2000 pages, demand zero
 Run with paging on, a page file, and a working set of 200 pages:
 
 ```text
-VAX> SET WORKING_SET/LIMIT=200/QUOTA=200
-VAX> RUN TOUCH
-VAX> SHOW MEMORY
+$ SET WORKING_SET/LIMIT=200/QUOTA=200
+$ RUN TOUCH
+$ SHOW MEMORY
     ...
     Page faults                4010
         Free list              2000
@@ -6520,10 +6520,10 @@ Compiled, assembled, linked, and run (FORTRAN, MACRO, and LINK say
 nothing when all is well):
 
 ```text
-VAX> FORTRAN AVERAGE
-VAX> MACRO AVERAGE
-VAX> LINK AVERAGE
-VAX> RUN AVERAGE
+$ FORTRAN AVERAGE
+$ MACRO AVERAGE
+$ LINK AVERAGE
+$ RUN AVERAGE
 Mean:   3.750000
 ```
 
@@ -6532,7 +6532,7 @@ The compiler checks the units of one file against each other. Without
 it an INTEGER function there:
 
 ```text
-VAX> FORTRAN AVERAGE
+$ FORTRAN AVERAGE
 %FORT-E-FUNCTYPE, the function MEAN is REAL (line 8), but is used here as INTEGER
   at line 5 of DUA1:[WORK]AVERAGE.FOR;1
         PRINT *, 'Mean:', MEAN(V, 4)
@@ -6569,12 +6569,12 @@ three files,
 ```
 
 ```text
-VAX> FORTRAN STORE,SHOW,START
-VAX> MACRO STORE
-VAX> MACRO SHOW
-VAX> MACRO START
-VAX> LINK STORE,SHOW,START
-VAX> RUN STORE
+$ FORTRAN STORE,SHOW,START
+$ MACRO STORE
+$ MACRO SHOW
+$ MACRO START
+$ LINK STORE,SHOW,START
+$ RUN STORE
           7   2.500000       2.500000       2.500000
 ```
 
@@ -7453,7 +7453,7 @@ after an error no MACRO file is written, and a fatal error (an INCLUDE
 file that can't be read) stops the compilation:
 
 ```text
-VAX> FORTRAN BAD
+$ FORTRAN BAD
 %FORT-E-BADLABEL, statement label field holds "X", which is not a label of 1 to 5 digits
   at line 2 of DUA1:[WORK]BAD.FOR;1
     X   Y = 2
@@ -7764,7 +7764,7 @@ wrong kind for its item, or a number too large for it, is `%FOR-F-INPCONERR`.
 Either way the item keeps its value.
 
 ```text
-VAX> TYPE STOPPER.MAR
+$ TYPE STOPPER.MAR
 	.TITLE	STOPPER
 	.PSECT	DATA,NOWRT,NOEXE,LONG
 TEXT:	.ASCID	/ALL DONE/
@@ -7773,11 +7773,11 @@ TEXT:	.ASCID	/ALL DONE/
 	PUSHAQ	TEXT
 	CALLS	#1,G^FTN$STOP	; STOP 'ALL DONE'
 	.END	START
-VAX> MACRO STOPPER
-VAX> LINK STOPPER
-VAX> RUN STOPPER
+$ MACRO STOPPER
+$ LINK STOPPER
+$ RUN STOPPER
 ALL DONE
-VAX> SHOW SYMBOL $STATUS
+$ SHOW SYMBOL $STATUS
   $STATUS == "%X00000001"
 ```
 
@@ -7789,12 +7789,12 @@ own elsewhere and point the logical name at it. With the 21 `.MAR` files
 and `ftnrtl.opt` on your volume:
 
 ```text
-VAX> MACRO FTN_VECTOR,FTN_CONTROL,FTN_UNITS,FTN_STATEMENT,FTN_FORMAT,FTN_EDIT
-VAX> MACRO FTN_FLOAT,FTN_LISTOUT,FTN_LISTIN,FTN_NAMELIST,FTN_INTERNAL,FTN_OPEN
-VAX> MACRO FTN_INQUIRE,FTN_POSITION,FTN_UNFORMATTED,FTN_DIRECT,FTN_RECORD
-VAX> MACRO FTN_KEYED,FTN_INTRINSICS,FTN_SYSTEM,FTN_ALLOC
-VAX> LINK/SHAREABLE=FTNRTL/NOSYSLIB FTNRTL/OPTIONS
-VAX> DEFINE FTNRTL DUA1:[WORK]FTNRTL.EXE
+$ MACRO FTN_VECTOR,FTN_CONTROL,FTN_UNITS,FTN_STATEMENT,FTN_FORMAT,FTN_EDIT
+$ MACRO FTN_FLOAT,FTN_LISTOUT,FTN_LISTIN,FTN_NAMELIST,FTN_INTERNAL,FTN_OPEN
+$ MACRO FTN_INQUIRE,FTN_POSITION,FTN_UNFORMATTED,FTN_DIRECT,FTN_RECORD
+$ MACRO FTN_KEYED,FTN_INTRINSICS,FTN_SYSTEM,FTN_ALLOC
+$ LINK/SHAREABLE=FTNRTL/NOSYSLIB FTNRTL/OPTIONS
+$ DEFINE FTNRTL DUA1:[WORK]FTNRTL.EXE
 ```
 
 ### 14.7 Differences from VAX FORTRAN
@@ -8539,9 +8539,9 @@ Compile with `/DEBUG` and `/NOOPTIMIZE`, and link with `/DEBUG`, and `RUN` start
 A session with it:
 
 ```
-VAX> FORTRAN/DEBUG/NOOPTIMIZE/OBJECT TOTALS
-VAX> LINK/DEBUG TOTALS
-VAX> RUN TOTALS
+$ FORTRAN/DEBUG/NOOPTIMIZE/OBJECT TOTALS
+$ LINK/DEBUG TOTALS
+$ RUN TOTALS
 
          GOVAX DEBUG
 
@@ -8660,14 +8660,14 @@ commands in its own documentation, with one addition. VAX FORTRAN has no ITIME, 
 do. The kit's data file `dtext` is binary, so it comes in as fixed-length records ([COPY](#copy)):
 
 ```text
-VAX> COPY "dindx"/HOST DINDX.DAT
-VAX> COPY "dtext"/HOST DTEXT.DAT/BINARY/RECORD_FORMAT=FIXED/RECORD_SIZE=80
-VAX> FORT/NOCHECK/CONT=40 DUNGEON.F,GAME.F,GDT.F,PARSER.F,SUBR.F
-VAX> FORT/NOCHECK/CONT=40 ROOMS.F,VERBS.F,OBJECTS.F,TIMEFNC.F,VMSSUBR.FOR
-VAX> MACRO DUNGEON,GAME,GDT,PARSER,SUBR,ROOMS,VERBS,OBJECTS,TIMEFNC,VMSSUBR
-VAX> LINK DUNGEON,GAME,GDT,PARSER,SUBR,-
-_VAX> ROOMS,VERBS,OBJECTS,TIMEFNC,VMSSUBR
-VAX> RUN DUNGEON
+$ COPY "dindx"/HOST DINDX.DAT
+$ COPY "dtext"/HOST DTEXT.DAT/BINARY/RECORD_FORMAT=FIXED/RECORD_SIZE=80
+$ FORT/NOCHECK/CONT=40 DUNGEON.F,GAME.F,GDT.F,PARSER.F,SUBR.F
+$ FORT/NOCHECK/CONT=40 ROOMS.F,VERBS.F,OBJECTS.F,TIMEFNC.F,VMSSUBR.FOR
+$ MACRO DUNGEON,GAME,GDT,PARSER,SUBR,ROOMS,VERBS,OBJECTS,TIMEFNC,VMSSUBR
+$ LINK DUNGEON,GAME,GDT,PARSER,SUBR,-
+_$ ROOMS,VERBS,OBJECTS,TIMEFNC,VMSSUBR
+$ RUN DUNGEON
 ```
 
 Here the sources and `DPARAM.FOR` have been copied to the default directory on a volume too. They, the
@@ -10626,11 +10626,11 @@ tried in the case of the source's type, then the other; and last, govax's defini
 looked for:
 
 ```text
-VAX> FORTRAN SHAPES
-VAX> FORTRAN/MODULE_PATH=([LIB]) PROG
-VAX> MACRO SHAPES
-VAX> MACRO PROG
-VAX> LINK PROG,SHAPES
+$ FORTRAN SHAPES
+$ FORTRAN/MODULE_PATH=([LIB]) PROG
+$ MACRO SHAPES
+$ MACRO PROG
+$ LINK PROG,SHAPES
 ```
 
 **Definition modules to USE.** Each of govax's definition modules
@@ -11380,7 +11380,7 @@ difference in instruction behavior.
 
 ### Appendix D: Further reading
 
-- `HELP` at the `VAX>` and `DBG>` prompts: every command and qualifier.
+- `HELP` at the `$` and `DBG>` prompts: every command and qualifier.
 - `docs/planning/PLAN.md`: the project's plan and the list of development phases.
 - `docs/planning/PHASE-nn - topic.md`: a design document for each phase, with its
   decisions, the VMS behavior it reproduces, and the probe programs used
@@ -11429,7 +11429,7 @@ library, STARLET.MLB, is a fourth. Each can be changed in two places:
 Edit a module in `SYS$SOURCES` (`FTN_FORMAT.MAR`, say), then:
 
 ```text
-VAX> @SYS$SOURCES:BUILDFTN
+$ @SYS$SOURCES:BUILDFTN
 FTNRTL.EXE built and installed in SYS$SHARE
 ```
 
@@ -11462,9 +11462,9 @@ a topic below it; and AUTHORIZE's, `UAFHELP.HLB`, from `[.SOURCES.AUTHORIZE]AUTH
 Edit a file and rebuild all three, or replace only the module you changed:
 
 ```text
-VAX> @SYS$SOURCES:BUILDHELP
+$ @SYS$SOURCES:BUILDHELP
 HELPLIB.HLB, DBG$HELP.HLB, and UAFHELP.HLB built in SYS$HELP
-VAX> LIBRARY/HELP/REPLACE SYS$HELP:HELPLIB SYS$SYSROOT:[SYSHLP.SOURCES]FCALC.HLP
+$ LIBRARY/HELP/REPLACE SYS$HELP:HELPLIB SYS$SYSROOT:[SYSHLP.SOURCES]FCALC.HLP
 ```
 
 For help of your own, a module you insert into `HELPLIB.HLB` with `LIBRARY/HELP/INSERT` is kept
@@ -11488,13 +11488,13 @@ fcalc's sources on the system volume belong to the system, and `BUILDFCALC.COM` 
 directory it is in, so copy them to a directory of your own and build there:
 
 ```text
-VAX> CREATE/DIRECTORY DUA1:[FCALC]
-VAX> COPY SYS$SYSROOT:[SYSHLP.EXAMPLES.FCALC]*.* DUA1:[FCALC]
-VAX> SET DEFAULT DUA1:[FCALC]
-VAX> @BUILDFCALC
+$ CREATE/DIRECTORY DUA1:[FCALC]
+$ COPY SYS$SYSROOT:[SYSHLP.EXAMPLES.FCALC]*.* DUA1:[FCALC]
+$ SET DEFAULT DUA1:[FCALC]
+$ @BUILDFCALC
 FCALC.EXE built
-VAX> MYCALC :== $DUA1:[FCALC]FCALC
-VAX> MYCALC 2^10 + 1
+$ MYCALC :== $DUA1:[FCALC]FCALC
+$ MYCALC 2^10 + 1
 1025
 ```
 

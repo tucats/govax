@@ -31,7 +31,7 @@ interactive assembler mode instead of assembling a whole file in one batch. This
   per-statement `assemble()`/`asm_pseudo()`); sets the one-shot `ASM_ENTRY` flag instead of
   `vax.PC` directly, letting `console.c`'s post-command hook issue `CALL __ENTRY`.
 - `reference/eVAX/eVAX/Source/Console/driver.c` — the interactive prompt switches from
-  `"VAX> "` to `"ASM> "` (or, if `ASM_ADDRPROMPT` were set — it isn't, by default —
+  `"$ "` to `"ASM> "` (or, if `ASM_ADDRPROMPT` were set — it isn't, by default —
   `"[%08X]  ASM> "`) while `assembler_mode` is on.
 
 ## Design decisions
@@ -62,7 +62,7 @@ interactive assembler mode instead of assembling a whole file in one batch. This
   post-`VMINIT` default (0x200) before assembling.
 - **Errors don't exit the mode.** `assemble()` returns a statement's error without ever
   touching `assembler_mode` itself — a typo stays correctable, it doesn't kick you back
-  to the `VAX>` prompt. `Console.AssembleInteractiveLine` matches this: an error is
+  to the `$` prompt. `Console.AssembleInteractiveLine` matches this: an error is
   returned for display, but `assemblerMode` stays true and the caller keeps routing
   lines to it.
 - **`END`'s auto-`CALL __ENTRY` is unified, not duplicated.** This port's own
@@ -93,7 +93,7 @@ interactive assembler mode instead of assembling a whole file in one batch. This
 - **Prompt.** `cmd/govax/main.go`'s `readline.Config.Prompt` is fixed at construction
   time in the reference port; switched to a per-iteration `rl.SetPrompt` call based on
   `Console`'s new `InAssemblerMode()` query, matching `driver.c`'s own
-  `"ASM> "`/`"VAX> "` switch (the `ASM_ADDRPROMPT` address-in-prompt variant is the
+  `"ASM> "`/`"$ "` switch (the `ASM_ADDRPROMPT` address-in-prompt variant is the
   scope cut noted above).
 
 ## Deliverables
@@ -108,7 +108,7 @@ interactive assembler mode instead of assembling a whole file in one batch. This
   where `console_dispatch.c` does, ahead of verb-table lookup. `cmdAssemble` now enters
   interactive mode instead of returning `CLI_NOASMREPL` (removed — no longer reachable,
   and it was the only reference to the old "not implemented" message).
-- `cmd/govax/main.go`: dynamic `ASM> `/`VAX> ` prompt.
+- `cmd/govax/main.go`: dynamic `ASM> `/`$ ` prompt.
 - Tests: `internal/asm` unit tests for the new incremental API; `internal/console`
   end-to-end tests driving `Dispatcher.Dispatch` through a bare `ASM` / statements / `END`
   sequence (mirroring `TestAssemble_xorDepositsAndIsCallable`'s style, but line-by-line),

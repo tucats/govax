@@ -12,8 +12,9 @@
                               R0's low byte; the rest of R0 is kept.
      XFC$CONSOLE_CMD     03   Runs the console command in the counted
                               string R0 addresses (a word of length,
-                              then the text), as if typed at VAX>.  R0
-                              becomes 0 if it succeeded, 1 if not.
+                              then the text), as if typed at the DCL
+                              "$" prpompt.  R0 becomes 0 if success,
+                              1 if not.
      XFC$CONSOLE_PUT     04   Writes the string whose descriptor R0
                               addresses to the terminal, all at once.
                               R0 becomes SS$_NORMAL.

@@ -38,10 +38,10 @@
 
 2 Examples
 
-   1.VAX> SPAWN
+   1.$ SPAWN
      $ ATTACH SYSTEM
      %DCL-S-RETURNED, control returned to process SYSTEM
-     VAX> ATTACH SYSTEM_1
+     $ ATTACH SYSTEM_1
      %DCL-S-RETURNED, control returned to process SYSTEM_1
      $ LOGOUT
 

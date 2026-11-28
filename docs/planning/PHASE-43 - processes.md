@@ -263,7 +263,7 @@ every oracle comparison stays as it is.
 
 The console runs process 1's work in the foreground: RUN, GO, CALL, and
 the debugger start and stop process 1. Other processes run whenever the
-engine runs, and are frozen while the console waits at `VAX>` or `DBG>`
+engine runs, and are frozen while the console waits at `$` or `DBG>`
 (Decision 4). A run ends when process 1's image ends (or HALT, Ctrl-C, a
 breakpoint, a limit), not when another process's does: a subprocess's
 image exit becomes that process's deletion.
@@ -375,7 +375,7 @@ recorded here.
    access mode, when IPL < 3 and not on the interrupt stack — with
    `vax.process.preempt=user` to limit it to user mode while debugging the
    scheduler, and `none` for cooperative switching (waits only).
-4. **Other processes while the console waits at `VAX>`/`DBG>`.**
+4. **Other processes while the console waits at `$`/`DBG>`.**
    *Decided:* frozen. They run whenever the engine runs (a RUN, GO,
    CALL, or debugger GO/STEP), and a process left running when its parent's
    image ends waits for the next run. Running them in the background while

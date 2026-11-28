@@ -67,7 +67,7 @@ will turn up as the code moves.
   instruction and by line, SET BREAK, GO, SHOW CALLS, source display,
   the unhandled-exception break, and the image-exit message. Phase 41
   used only their `EXAMINE/INSTRUCTION` lines.
-- **The REPL** (`cmd/govax/main.go`): readline with a `VAX> ` prompt,
+- **The REPL** (`cmd/govax/main.go`): readline with a `$ ` prompt,
   or `ASM> ` in assembler mode. Ctrl-C (`attention.go`) stops a running
   program through `cpu.Engine.Attention`.
 - **The boot script** (`internal/bootdata/files/vax.init`) uses
@@ -166,7 +166,7 @@ here, for the probe in subtask 1 or a later simh round.
 
 ```
 cmd/govax            wires console and debugger together; the REPL picks
-                     the prompt (VAX>, ASM>, DBG>) from the active mode.
+                     the prompt ($, ASM>, DBG>) from the active mode.
 internal/debugger    (new) the debugger: session state (breakpoints,
                      watchpoints, tracepoints, step defaults, radix,
                      modes, current location), run control (the run
@@ -441,7 +441,7 @@ bug found and fixed on the way.
    `internal/debugger` (`execute_test`, `step_test`, `instbreak_test`,
    `faultbreak_test`, `dbgstep_test`, ...), changed only where they
    entered the debugger implicitly. Tests: the moved tests; GO that
-   halts returns to `VAX>`; GO that hits a breakpoint gives `DBG>`;
+   halts returns to `$`; GO that hits a breakpoint gives `DBG>`;
    `CALL/STEP`; Ctrl-C through `Engine.Attention`.
 5. **RUN under the debugger.** `RUN /[NO]DEBUG` (with `/STEP` kept as a
    synonym), `IHD$V_LNKDEBUG` from the image header, the start-up
@@ -572,7 +572,7 @@ The author took each recommendation at review (2026-10-05).
    no behavior gained. It can come later if the console's exported
    surface grows awkward.
 2. **When `DBG>` appears for the console's GO and CALL.** *Decided:*
-   only when the run stops; a run that finishes returns to `VAX>`, and
+   only when the run stops; a run that finishes returns to `$`, and
    once `DBG>` has appeared it stays until `EXIT`. Keeps `vax.init` and
    one-shot `GO`s as they are. The alternative is that GO and CALL
    always leave the user at `DBG>`.
@@ -1048,7 +1048,7 @@ DEBUG enters and EXIT/QUIT leave without quitting the console; the
 console's EXIT still quits; the prompt follows the mode; a console verb
 at `DBG>` is refused with the hint and doesn't run, while an unknown word
 and an unknown qualifier get the plain syntax error; `HELP` reads
-`debug.help` at `DBG>` and `vax.help` at `VAX>`; a command file changes
+`debug.help` at `DBG>` and `vax.help` at `$`; a command file changes
 grammar at the right lines, in both directions, and `@file` at `DBG>`
 does the same; `XFC$CONSOLE_CMD` reaches the console grammar during a
 session; DEBUG with no debugger installed; and the whole thing through
@@ -1086,7 +1086,7 @@ now live in `internal/debugger` (`runcontrol.go`, `step.go`,
   as ended (HALT, CALL return, a govax limit, a CHF-reported exception) or
   stopped (breakpoint, completed STEP, a fault breakpoint, Ctrl-C). A stop
   opens the session (`DBG>`); an end opens none, so `go exe$initialize` in
-  `vax.init` and any GO that halts return to `VAX>`. A session already
+  `vax.init` and any GO that halts return to `$`. A session already
   open stays open however the run ends. A run started inside another (a
   condition handler) doesn't decide this; only the outermost does. A
   `STEP` at the console always stops, so it opens a session.
@@ -1103,7 +1103,7 @@ now live in `internal/debugger` (`runcontrol.go`, `step.go`,
   `execute_test`/`dispatch_test`/`set_test`/`misc_test` moved to
   `internal/debugger` (package `debugger_test`, helpers in
   `helpers_test.go`), changed only where they used console-private names.
-  New `session_test.go`: GO that halts returns to `VAX>`; GO that breaks
+  New `session_test.go`: GO that halts returns to `$`; GO that breaks
   gives `DBG>` and the debugger's own GO continues it; STEP at `DBG>` and
   at the console; `CALL/STEP`; `CALL` with arguments at `DBG>`; Ctrl-C
   through `Engine.Attention`; breakpoint commands without a debugger.
@@ -1178,7 +1178,7 @@ now live in `internal/debugger` (`runcontrol.go`, `step.go`,
 (`internal/debugger/breakcmd.go`, the `set`/`show`/`cancel` verbs in
 `debug.dcl`), with the VMS messages from `break.dlg` and `brkcls.dlg`.
 The console's own `SET BREAKPOINT`, `SHOW BREAKPOINTS`, and `CLEAR
-BREAKPOINT` still work at `VAX>` (subtask 14 removes them); they and
+BREAKPOINT` still work at `$` (subtask 14 removes them); they and
 the debugger's commands share the one list.
 
 - **One list, more kinds.** `Breakpoint.Kind` is now `BreakAddress`,
@@ -1252,7 +1252,7 @@ the debugger's commands share the one list.
 `STEP`, `SET STEP`, and `SHOW STEP` are the debugger's commands now
 (`internal/debugger/step.go`, the `step`/`set`/`show` verbs in `debug.dcl`),
 with the output of `step.dlg` and `dbgdis.dlg`. The console's own `STEP`,
-`SET STEP`, and `SHOW STEP_MODE` still work at `VAX>` (subtask 14 removes
+`SET STEP`, and `SHOW STEP_MODE` still work at `$` (subtask 14 removes
 them) and reach the same code.
 
 - **Three choices, not one mode.** The unit (`/LINE`, the default, or

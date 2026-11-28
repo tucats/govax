@@ -393,7 +393,7 @@
 
    Quote the text, so that its case and any blanks (such as a trailing
    one) are kept.  An empty string ("") returns to the default prompt,
-   "VAX> ".
+   "$ ".
 
 3 Examples
 

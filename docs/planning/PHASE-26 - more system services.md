@@ -1616,7 +1616,7 @@ The requests are the Environment's (`attentionASTs`: key, channel,
 routine, parameter, mode), since every terminal is the console. The
 terminal driver's `ttSetMode` records them (`ttAttentionAST`).
 
-Host Ctrl-Y isn't intercepted: readline uses it at the `VAX>` prompt,
+Host Ctrl-Y isn't intercepted: readline uses it at the `$` prompt,
 and macOS treats it as DSUSP. So a program's CTRL/Y AST is reached
 through Ctrl-C with no CTRL/C AST enabled, as VMS itself does; the engine
 API accepts either key for tests and later use.

@@ -2,7 +2,7 @@
    govax keeps configuration settings in a profile in the .govax
    directory of your home directory.  They are read each time govax
    starts.  The settings are set and shown with the govax command's
-   CONFIG verb, from the host shell, not from the VAX> prompt:
+   CONFIG verb, from the host shell, not from the console "$" prompt:
 
        govax config set KEY=VALUE      Set a setting.  A KEY alone,
                                        with no =VALUE, sets it to true.
@@ -204,8 +204,9 @@
                                      does not exist, or is empty, there
                                      is no error.
 
-       vax.console.prompt            The console's prompt.  Default
-                                     "VAX> ".  SET PROMPT changes it.
+       vax.console.prompt            The console's prompt.  The default
+                                     is "$". The DCL command SET PROMPT
+                                     also changes this configuration value.
 
        vax.console.lines             The screen's height in lines for
                                      TYPE/PAGE, used when the terminal's

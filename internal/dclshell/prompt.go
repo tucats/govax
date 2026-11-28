@@ -7,7 +7,7 @@ import "github.com/tucats/gopackages/app-cli/settings"
 const PromptSetting = "vax.console.prompt"
 
 // DefaultPrompt is the console's prompt when vax.console.prompt isn't set.
-const DefaultPrompt = "VAX> "
+const DefaultPrompt = "$ "
 
 // Prompt returns the console's prompt: the vax.console.prompt setting, or
 // DefaultPrompt when it isn't set. The run loop (cmd/govax) asks for it

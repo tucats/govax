@@ -117,7 +117,7 @@
    /NOWAIT doesn't wait: the subprocess runs beside the console.  It
    takes turns with the console's DCL: between its commands (one command
    each, in a procedure), during WAIT, while the machine runs (RUN, GO,
-   CALL), and while the VAX> prompt waits for a line.  What it writes
+   CALL), and while the "$" prompt waits for a line.  What it writes
    meanwhile appears above the line being typed, which is shown again
    below it.  (With input from a pipe, not a terminal, it runs at the
    prompt only until it waits or has run a while.)

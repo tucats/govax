@@ -2407,7 +2407,7 @@ expect adjustment as phases land):
   starts at the console's `DEBUG`, when a `GO`/`CALL` stops, and for `RUN`
   of an image linked `/DEBUG` (or `RUN/DEBUG`), stopped at the main
   routine's first instruction; a run that ends by itself returns to
-  `VAX>`. While a session is active `Dispatcher.Dispatch` routes lines to
+  `$`. While a session is active `Dispatcher.Dispatch` routes lines to
   the debugger (`Interpreter.DispatchConsole` is DCL's, which
   `XFC$CONSOLE_CMD` uses); `EXIT` returns. Run control (`runcontrol.go`,
   `step.go`, eventpoints), EXAMINE/DEPOSIT (`data.go`, `examine.go`), the

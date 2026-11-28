@@ -28,7 +28,7 @@
         then the account's LGICMD, or SYS$LOGIN:LOGIN.COM when it has
         none.  One that isn't there, or can't be read, is passed over.
      8. Runs the command on govax's command line and exits, or else
-        shows the VAX> prompt.
+        shows the DCL $ prompt.
 
    Your own startup commands belong in SYS$MANAGER:SYSTARTUP_VMS.COM:
    govax makes it once and never changes it.  Without a system volume

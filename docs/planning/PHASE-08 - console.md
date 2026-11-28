@@ -620,7 +620,7 @@ SHOW, and friends — plus the DCL grammar-driven command parser, and stand up
   by Ctrl-C again; readline instead recognizes byte `0x03` itself, inside
   its own read loop, and returns `readline.ErrInterrupt` from `Readline()`
   (already handled in `main.go`'s command loop). That mechanism only helps
-  while sitting idle at the "VAX> " prompt: during a GO/CALL/STEP loop,
+  while sitting idle at the "$ " prompt: during a GO/CALL/STEP loop,
   nothing is reading the terminal at all (`Engine.Step`'s loop never calls
   Read itself unless the running VAX program does console I/O via
   `Console.ConsoleReadByte`/`XFC$CONSOLE_READ`), so a Ctrl-C keystroke
